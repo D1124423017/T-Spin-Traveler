@@ -184,6 +184,13 @@ const BALANCE = {
   upgradeGrowthPerTier: 4,
   comboMilestoneEvery: 5,
   comboMilestoneDamage: 50,
+  gravityStepWaves: 5,
+  gravityStepMs: 45,
+  minGravityMs: 145,
+  garbageDelayStepWaves: 10,
+  guardMax: 18,
+  guardPerLine: 2,
+  guardSpinBonus: 3,
 };
 
 const TUTORIAL_STEPS = [
@@ -342,6 +349,30 @@ const translations = {
     on: "開",
     off: "關",
     pcShort: "PC",
+    dmgShort: "DMG",
+    guardLabel: "護盾",
+    guardBlocked: "護盾抵擋",
+    floaterGuard: "護盾 +{amount}",
+    floaterB2BGuard: "B2B 保護",
+    b2bReady: "B2B Ready",
+    b2bBroken: "B2B Broken",
+    b2bChain: "B2B Chain {count}",
+    enemyInfoCancel: "抵銷",
+    enemyCancelable: "可抵銷",
+    enemyUncancelable: "不可抵銷",
+    bossPhaseBar: "階段壓力",
+    firstRunHint: "首次遊玩建議先完成 3 分鐘教學。",
+    nextRunHook: "下一局目標：撐到第 20 波並擊破 Boss。",
+    damageEquationHint: "消行 + 技術 + Combo + 弱點 + 升級 = 總傷害",
+    damageRuleLine: "Single 10 / Double 25 / Triple 45 / Tetris 70 / Spin 30-140 / B2B +15 / Weak x1.35",
+    effectTierTitle: "特效分級",
+    effectTierText: "Single 低調，Tetris/Spin 強化，B2B 金光，Perfect Clear 霸屏。",
+    noaRole: "Tetr 能量劍士 / 導航術士",
+    dasHelp: "按住左右後，開始自動連移前的等待時間。",
+    arrHelp: "自動連移的間隔；0ms 代表貼牆瞬移。",
+    softDropHelp: "按住軟降時每格下降間隔；越低越快。",
+    lockDelayHelp: "方塊碰地後可微調的鎖定時間。",
+    gravityCurveHelp: "難度曲線：每 5 波重力提升；第 10 波後垃圾延遲逐步縮短。",
     challengePanel: "互動挑戰",
     challengeStart: "挑戰開始",
     clickToStart: "點擊開始挑戰",
@@ -418,6 +449,7 @@ const translations = {
     "summaryDamage": "總傷害",
     "summaryBestHit": "最高單擊",
     "summaryDamageSources": "傷害來源",
+    "summaryUpgradeSource": "強化",
     rating: "評級 {rating}",
     settingPressKey: "按新鍵",
     languageZhShort: "中文",
@@ -466,6 +498,7 @@ const translations = {
     floaterMistHolesDrift: "霧洞漂移",
     floaterBossPressure: "Boss 壓迫 +1",
     floaterQueueHex: "Next 干擾",
+    floaterVineBlocksRemoved: "藤蔓障礙清除",
     floaterRelicWave: "Relic 波次 {wave}",
     floaterMiniBossClear: "小 Boss 擊破",
     floaterWave: "波次 {wave}",
@@ -524,6 +557,10 @@ const translations = {
     "upgrade.arcane_suture": "最大 HP +10，Spin 類招式命中時額外回復 +5 HP。",
     "upgrade.bossbreaker_relic": "B2B 與 Spin 對 Boss 額外 +20 傷害。",
     "upgrade.grey_star_reactor": "最大 HP +40，所有傷害提高 10%。",
+    "upgrade.guard_lattice": "護盾上限 +8，每次消行額外獲得 +1 護盾。",
+    "upgrade.b2b_preserver": "獲得 2 層 B2B 保護；普通消行不會立刻打斷 B2B。",
+    "upgrade.spin_vamp": "Spin 命中額外回復 +6 HP，並額外獲得護盾。",
+    "upgrade.combo_aegis": "3 Combo 以上時，每次消行額外獲得 +2 護盾。",
     "upgradeName.tspin_amp": "T-Core 增幅器",
     "upgradeName.garbage_guard": "重力濾鏡",
     "upgradeName.combo_clock": "節奏錨點",
@@ -543,6 +580,10 @@ const translations = {
     "upgradeName.arcane_suture": "祕法縫合",
     "upgradeName.bossbreaker_relic": "Bossbreaker 遺物",
     "upgradeName.grey_star_reactor": "灰星反應爐",
+    "upgradeName.guard_lattice": "導航護盾格",
+    "upgradeName.b2b_preserver": "B2B 記憶護符",
+    "upgradeName.spin_vamp": "Spin 吸能刃",
+    "upgradeName.combo_aegis": "Combo 守勢",
     "enemy.slime.name": "森林黏液幼體",
     "enemy.slime.trait": "基礎打擊",
     "enemy.vine.name": "藤蔓跳躍獸",
@@ -626,6 +667,30 @@ const translations = {
     on: "ON",
     off: "OFF",
     pcShort: "PC",
+    dmgShort: "DMG",
+    guardLabel: "Guard",
+    guardBlocked: "Guard blocked",
+    floaterGuard: "Guard +{amount}",
+    floaterB2BGuard: "B2B Preserved",
+    b2bReady: "B2B Ready",
+    b2bBroken: "B2B Broken",
+    b2bChain: "B2B Chain {count}",
+    enemyInfoCancel: "Cancel",
+    enemyCancelable: "Cancelable",
+    enemyUncancelable: "Uncancelable",
+    bossPhaseBar: "Phase Pressure",
+    firstRunHint: "First run: finish the 3-minute tutorial first.",
+    nextRunHook: "Next run goal: reach Wave 20 and defeat the Boss.",
+    damageEquationHint: "Clear + Technique + Combo + Weakness + Upgrade = Total Damage",
+    damageRuleLine: "Single 10 / Double 25 / Triple 45 / Tetris 70 / Spin 30-140 / B2B +15 / Weak x1.35",
+    effectTierTitle: "Effect Tiers",
+    effectTierText: "Single is restrained, Tetris/Spin hit harder, B2B glows gold, Perfect Clear takes over the screen.",
+    noaRole: "Tetr energy swordsman / navigator",
+    dasHelp: "Delay before held left/right starts repeating.",
+    arrHelp: "Repeat interval after DAS; 0ms means instant wall movement.",
+    softDropHelp: "Cell interval while holding Soft Drop; lower is faster.",
+    lockDelayHelp: "Time to adjust a grounded piece before it locks.",
+    gravityCurveHelp: "Curve: gravity rises every 5 waves; garbage delay shrinks after Wave 10.",
     challengePanel: "Challenges",
     challengeStart: "Challenge Start",
     clickToStart: "Click to start",
@@ -702,6 +767,7 @@ const translations = {
     "summaryDamage": "Total Damage",
     "summaryBestHit": "Best Hit",
     "summaryDamageSources": "Damage Sources",
+    "summaryUpgradeSource": "Upgrade",
     rating: "Rating {rating}",
     settingPressKey: "PRESS KEY",
     languageZhShort: "ZH",
@@ -750,6 +816,7 @@ const translations = {
     floaterMistHolesDrift: "MIST HOLES DRIFT",
     floaterBossPressure: "BOSS PRESSURE +1",
     floaterQueueHex: "QUEUE HEX",
+    floaterVineBlocksRemoved: "VINE BLOCKS REMOVED",
     floaterRelicWave: "RELIC WAVE {wave}",
     floaterMiniBossClear: "MINI BOSS CLEAR",
     floaterWave: "WAVE {wave}",
@@ -808,6 +875,10 @@ const translations = {
     "upgrade.arcane_suture": "Max HP +10. Spin hits recover +5 extra HP.",
     "upgrade.bossbreaker_relic": "B2B and Spin deal +20 extra damage to Bosses.",
     "upgrade.grey_star_reactor": "Max HP +40. All damage dealt increases by 10%.",
+    "upgrade.guard_lattice": "Guard cap +8. Every line clear grants +1 extra Guard.",
+    "upgrade.b2b_preserver": "Gain 2 B2B preserves. Normal clears do not immediately break B2B.",
+    "upgrade.spin_vamp": "Spin hits recover +6 extra HP and gain extra Guard.",
+    "upgrade.combo_aegis": "At 3+ Combo, each line clear grants +2 extra Guard.",
     "upgradeName.tspin_amp": "T-Core Amplifier",
     "upgradeName.garbage_guard": "Gravity Filter",
     "upgradeName.combo_clock": "Tempo Anchor",
@@ -827,6 +898,10 @@ const translations = {
     "upgradeName.arcane_suture": "Arcane Suture",
     "upgradeName.bossbreaker_relic": "Bossbreaker Relic",
     "upgradeName.grey_star_reactor": "Grey Star Reactor",
+    "upgradeName.guard_lattice": "Navigation Guard Lattice",
+    "upgradeName.b2b_preserver": "B2B Memory Charm",
+    "upgradeName.spin_vamp": "Spin Siphon Blade",
+    "upgradeName.combo_aegis": "Combo Aegis",
     "enemy.slime.name": "FOREST SLIME HATCHLING",
     "enemy.slime.trait": "BASIC STRIKE",
     "enemy.vine.name": "VINE HOPPER",
@@ -983,6 +1058,35 @@ const UPGRADES = [
     },
   },
   {
+    id: "guard_lattice",
+    name: "Navigation Guard Lattice",
+    rarity: "common",
+    textKey: "upgrade.guard_lattice",
+    apply: () => {
+      state.maxGuard += 8;
+      state.upgrades.guardGain += 1;
+      state.guard = Math.min(state.maxGuard, state.guard + 8);
+    },
+  },
+  {
+    id: "combo_aegis",
+    name: "Combo Aegis",
+    rarity: "rare",
+    textKey: "upgrade.combo_aegis",
+    apply: () => {
+      state.upgrades.comboGuardGain += 2;
+    },
+  },
+  {
+    id: "b2b_preserver",
+    name: "B2B Memory Charm",
+    rarity: "rare",
+    textKey: "upgrade.b2b_preserver",
+    apply: () => {
+      state.upgrades.b2bShield += 2;
+    },
+  },
+  {
     id: "all_spin_codex",
     name: "All-Spin Codex",
     rarity: "rare",
@@ -1039,6 +1143,16 @@ const UPGRADES = [
     apply: () => {
       increasePlayerMaxHp(10, 10);
       state.upgrades.spinHeal += 5;
+    },
+  },
+  {
+    id: "spin_vamp",
+    name: "Spin Siphon Blade",
+    rarity: "rare",
+    textKey: "upgrade.spin_vamp",
+    apply: () => {
+      state.upgrades.spinHeal += 6;
+      state.upgrades.guardGain += 1;
     },
   },
   {
@@ -1397,6 +1511,8 @@ const state = {
   canHold: true,
   playerMaxHp: PLAYER_MAX_HP,
   playerHp: PLAYER_MAX_HP,
+  guard: 0,
+  maxGuard: BALANCE.guardMax,
   runMode: "endless",
   enemyHp: 120,
   enemyMaxHp: 120,
@@ -1433,6 +1549,7 @@ const state = {
   lastClearedBoss: false,
   b2bActive: false,
   b2bChain: 0,
+  b2bBrokenFlash: 0,
   lastPerfectClear: false,
   perfectClears: 0,
   ultimateCharge: 0,
@@ -1465,6 +1582,9 @@ const state = {
     clearHeal: 0,
     spinHeal: 0,
     damageMultiplier: 0,
+    guardGain: 0,
+    comboGuardGain: 0,
+    b2bShield: 0,
   },
   message: "",
   messageKey: "",
@@ -1548,6 +1668,7 @@ function loadSave() {
           bestDamage: 0,
           bestHit: 0,
           perfectClears: 0,
+          tutorialCompleted: false,
           settings: {
             masterVolume: audio.masterVolume,
             musicVolume: audio.musicVolume,
@@ -1559,7 +1680,7 @@ function loadSave() {
           },
         };
   } catch {
-    return { bestWave: 0, bestCombo: 0, bestB2B: 0, bestDamage: 0, bestHit: 0, perfectClears: 0, settings: {} };
+    return { bestWave: 0, bestCombo: 0, bestB2B: 0, bestDamage: 0, bestHit: 0, perfectClears: 0, tutorialCompleted: false, settings: {} };
   }
 }
 
@@ -1647,6 +1768,8 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.canHold = true;
   state.playerMaxHp = PLAYER_MAX_HP;
   state.playerHp = state.playerMaxHp;
+  state.guard = 0;
+  state.maxGuard = BALANCE.guardMax;
   state.wave = 1;
   state.defeated = 0;
   configureEnemyForWave();
@@ -1677,6 +1800,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.lastClearedBoss = false;
   state.b2bActive = false;
   state.b2bChain = 0;
+  state.b2bBrokenFlash = 0;
   state.lastPerfectClear = false;
   state.perfectClears = 0;
   state.ultimateCharge = 0;
@@ -1708,6 +1832,9 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
     clearHeal: 0,
     spinHeal: 0,
     damageMultiplier: 0,
+    guardGain: 0,
+    comboGuardGain: 0,
+    b2bShield: 0,
   };
   state.message = "";
   state.messageKey = "";
@@ -1774,6 +1901,8 @@ function advanceTutorialStep(stepId) {
       life: 1600,
     });
     playSfx("upgrade");
+    state.save.tutorialCompleted = true;
+    saveGame();
     return;
   }
   const next = TUTORIAL_STEPS[state.tutorial.step];
@@ -2201,9 +2330,12 @@ function finishPlayerTurnAfterHit(context) {
 function applyEnemyHit(hit) {
   if (state.mode !== "playing") return;
   const { enemy, damageTaken, garbageAdded } = hit;
-  state.playerHp = Math.max(0, state.playerHp - damageTaken);
+  const blocked = Math.min(state.guard, damageTaken);
+  state.guard -= blocked;
+  const finalDamage = Math.max(0, damageTaken - blocked);
+  state.playerHp = Math.max(0, state.playerHp - finalDamage);
   state.pendingGarbage += garbageAdded;
-  if (garbageAdded > 0) state.garbageGrace = 1 + state.upgrades.garbageGrace;
+  if (garbageAdded > 0) state.garbageGrace = getGarbageDelayForWave();
   applyEnemyBoardEffect(enemy);
   state.playerHit = 300;
   state.shake = Math.max(state.shake, 9 + garbageAdded * 2);
@@ -2211,8 +2343,8 @@ function applyEnemyHit(hit) {
   state.floaters.push({
     x: 244,
     y: 216,
-    text: `-${damageTaken}`,
-    color: "#ff7782",
+    text: blocked > 0 ? `${t("guardBlocked")} ${blocked} / -${finalDamage}` : `-${finalDamage}`,
+    color: blocked > 0 ? "#9df7da" : "#ff7782",
     life: 900,
   });
   if (garbageAdded > 0) {
@@ -2343,15 +2475,10 @@ function applyBattle(lines, pieceType, spinType) {
     });
     playSfx("cancel");
   }
+  gainGuardFromClear(lines, spinType);
 
   addUpgradeProgress(effectiveLines);
   addUltimateCharge(lines);
-  pushOperationReadout(lines, pieceType, spinType, {
-    combo: state.combo,
-    b2b: b2bAttackRows > 0,
-    effectiveLines,
-    perfect: state.lastPerfectClear,
-  });
   updateBackToBack(lines, isDifficultClear);
   updateChallengeProgress(lines, spinType, canceled);
   recordTutorialBattleEvents(lines, spinType, canceled);
@@ -2368,6 +2495,14 @@ function applyBattle(lines, pieceType, spinType) {
     effectiveLines,
   };
   if (damage > 0) state.lastDamageBreakdown = breakdown;
+  pushOperationReadout(lines, pieceType, spinType, {
+    combo: state.combo,
+    b2b: b2bAttackRows > 0,
+    effectiveLines,
+    perfect: state.lastPerfectClear,
+    damage,
+    breakdown,
+  });
 
   let heal = [0, 2, 4, 6, 10][lines] || 0;
   if (isTSpin) heal += lines >= 2 ? 10 : 6;
@@ -2469,6 +2604,34 @@ function getComboMilestoneDamage(combo) {
   return Math.floor(combo / BALANCE.comboMilestoneEvery) * BALANCE.comboMilestoneDamage;
 }
 
+function gainGuardFromClear(lines, spinType) {
+  if (lines <= 0) return;
+  const comboGuard = state.combo >= 3 ? state.upgrades.comboGuardGain : 0;
+  const gain = lines * BALANCE.guardPerLine + (spinType ? BALANCE.guardSpinBonus : 0) + state.upgrades.guardGain + comboGuard;
+  const before = state.guard;
+  state.guard = Math.min(state.maxGuard, state.guard + gain);
+  const gained = state.guard - before;
+  if (gained > 0 && (lines >= 3 || spinType)) {
+    state.floaters.push({
+      x: 86,
+      y: 270,
+      text: fmt("floaterGuard", { amount: gained }),
+      color: "#9df7da",
+      life: 850,
+    });
+  }
+}
+
+function getGravityMsForWave() {
+  const steps = Math.floor((state.wave - 1) / BALANCE.gravityStepWaves);
+  const bossPressure = state.enemyType.id === "king" ? getBossPhase() * 12 : 0;
+  return Math.max(BALANCE.minGravityMs, state.tuning.gravity - steps * BALANCE.gravityStepMs - bossPressure);
+}
+
+function getGarbageDelayForWave() {
+  return Math.max(0, 1 + state.upgrades.garbageGrace - Math.floor((state.wave - 1) / BALANCE.garbageDelayStepWaves));
+}
+
 function addUltimateCharge(lines) {
   if (lines <= 0 || state.ultimateActive) return;
   state.ultimateCharge = Math.min(ULTIMATE_REQUIRED_LINES, state.ultimateCharge + lines);
@@ -2549,6 +2712,7 @@ function getHeroAttackStyle(lines, spinType, perfectClear, b2bBonus, comboAttack
 
 function startPerfectClearFx(damage) {
   const now = performance.now();
+  duckMusic(0.42, 1.35);
   state.perfectClearFx = {
     startedAt: now,
     duration: 1350,
@@ -2565,6 +2729,17 @@ function startPerfectClearFx(damage) {
     duration: 880,
     intensity: 2.6,
   });
+}
+
+function duckMusic(depth = 0.5, seconds = 0.8) {
+  if (!audio.ctx || !audio.musicGain || audio.muted) return;
+  const now = audio.ctx.currentTime;
+  const base = audio.musicVolume;
+  const ducked = Math.max(0.08, base * depth);
+  audio.musicGain.gain.cancelScheduledValues(now);
+  audio.musicGain.gain.setValueAtTime(audio.musicGain.gain.value, now);
+  audio.musicGain.gain.linearRampToValueAtTime(ducked, now + 0.06);
+  audio.musicGain.gain.linearRampToValueAtTime(base, now + seconds);
 }
 
 function startHeroAttackAnimation(kind) {
@@ -2639,11 +2814,33 @@ function pushOperationReadout(lines, pieceType, spinType, meta = {}) {
     combo: meta.combo || 0,
     b2b: Boolean(meta.b2b),
     effectiveLines: meta.effectiveLines || lines,
+    damage: meta.damage || 0,
+    equation: meta.breakdown ? buildDamageEquation(meta.breakdown, true) : "",
     color,
     life: 1650,
     duration: 1650,
   });
   state.operationReadouts = state.operationReadouts.slice(0, 4);
+}
+
+function buildDamageEquation(breakdown, compact = false) {
+  if (!breakdown) return t("damageEquationHint");
+  const parts = [breakdown.title];
+  if (breakdown.b2b) parts.push("B2B");
+  if (breakdown.combo >= 2) parts.push(`${t("comboLabel")} ${breakdown.combo}`);
+  if (breakdown.weakness) parts.push(t("weaknessHit"));
+  for (const part of breakdown.parts) {
+    if (!part.value) continue;
+    parts.push(`${t(part.key)} +${part.value}`);
+  }
+  for (const multi of breakdown.multipliers || []) {
+    const name = multi.key ? t(multi.key) : multi.label;
+    parts.push(`${name} ${multi.value}`);
+  }
+  const maxParts = compact ? 5 : 9;
+  const shown = parts.slice(0, maxParts);
+  if (parts.length > maxParts) shown.push("+...");
+  return `${shown.join(" + ")} = ${breakdown.total} ${t("dmgShort")}`;
 }
 
 function getOperationTitle(lines, pieceType, spinType, perfect) {
@@ -2705,6 +2902,20 @@ function updateBackToBack(lines, isDifficultClear) {
     state.stats.b2bCount += 1;
     return;
   }
+  if (state.b2bActive && state.upgrades.b2bShield > 0) {
+    state.upgrades.b2bShield -= 1;
+    state.b2bBrokenFlash = 0;
+    state.floaters.push({
+      x: HOLD_PANEL_X + 14,
+      y: HOLD_PANEL_Y + 190,
+      text: t("floaterB2BGuard"),
+      color: "#fff0a6",
+      life: 900,
+    });
+    playSfx("cancel");
+    return;
+  }
+  if (state.b2bActive || state.b2bChain > 0) state.b2bBrokenFlash = 1200;
   state.b2bActive = false;
   state.b2bChain = 0;
 }
@@ -2761,6 +2972,7 @@ function resolveEnemyAttack() {
   const damageTaken = Math.max(1, state.enemyAttackDamage - state.upgrades.defense);
   state.enemyCountdown = getEnemyCountdownForWave();
   if (enemy.id === "king" && getBossPhase() >= 3) state.enemyCountdown = Math.max(3, state.enemyCountdown - 1);
+  if (enemy.id === "king" && getBossPhase() >= 4) state.enemyCountdown = Math.max(2, state.enemyCountdown - 1);
   startEnemyAttackAnimation(enemy.id);
   const enemyAttackDuration = getEnemyAnimationDuration(enemy.id);
   state.attacks.push({
@@ -2787,7 +2999,19 @@ function getEnemyAttackGarbage(enemy) {
   if (enemy.id === "mushroom" && Math.random() < 0.28) garbageAdded += 1;
   if (enemy.id === "king" && state.wave % 3 === 0) garbageAdded += 1;
   if (enemy.id === "king" && getBossPhase() >= 2) garbageAdded += 1;
+  if (enemy.id === "king" && getBossPhase() >= 3) garbageAdded += 1;
+  if (enemy.id === "king" && getBossPhase() >= 4) garbageAdded += 1;
   return garbageAdded;
+}
+
+function getEnemyAttackGarbagePreview(enemy) {
+  let garbage = enemy.garbage;
+  if (enemy.id === "mushroom") garbage += 1;
+  if (enemy.id === "king" && state.wave % 3 === 0) garbage += 1;
+  if (enemy.id === "king" && getBossPhase() >= 2) garbage += 1;
+  if (enemy.id === "king" && getBossPhase() >= 3) garbage += 1;
+  if (enemy.id === "king" && getBossPhase() >= 4) garbage += 1;
+  return garbage;
 }
 
 function applyEnemyBoardEffect(enemy) {
@@ -2814,7 +3038,7 @@ function applyEnemyBoardEffect(enemy) {
     const phase = getBossPhase();
     if (phase >= 2) {
       state.pendingGarbage += 1;
-      state.garbageGrace = Math.max(state.garbageGrace, 1 + state.upgrades.garbageGrace);
+      state.garbageGrace = Math.max(state.garbageGrace, getGarbageDelayForWave());
       state.floaters.push({
         x: BOARD_X + COLS * TILE + 34,
         y: BOARD_Y + 132,
@@ -2845,8 +3069,9 @@ function scrambleNextQueue(turns = 3) {
 function getBossPhase() {
   if (state.enemyType.id !== "king") return 1;
   const hpRatio = state.enemyMaxHp ? state.enemyHp / state.enemyMaxHp : 1;
-  if (hpRatio <= 0.33) return 3;
-  if (hpRatio <= 0.66) return 2;
+  if (hpRatio <= 0.2) return 4;
+  if (hpRatio <= 0.4) return 3;
+  if (hpRatio <= 0.7) return 2;
   return 1;
 }
 
@@ -3061,31 +3286,36 @@ function update(time) {
   const dt = Math.min(34, time - (state.lastTime || time));
   state.lastTime = time;
 
-  if (state.mode === "playing") {
-    purgeLegacyVineBlocks();
-    if (state.ultimateActive) {
-      state.ultimateTimer = Math.max(0, state.ultimateTimer - dt);
-      if (state.ultimateTimer <= 0) endUltimateMode();
-    }
-    updateHorizontalInput(dt);
-    if (state.input.softDrop) updateSoftDrop(dt);
-    state.dropTimer += dt;
-    if (state.dropTimer >= state.tuning.gravity) {
-      state.dropTimer = 0;
-      if (!move(0, 1) && state.lockTimer === null) {
-        state.lockTimer = time;
+  try {
+    if (state.mode === "playing") {
+      purgeLegacyVineBlocks();
+      if (state.ultimateActive) {
+        state.ultimateTimer = Math.max(0, state.ultimateTimer - dt);
+        if (state.ultimateTimer <= 0) endUltimateMode();
+      }
+      updateHorizontalInput(dt);
+      if (state.input.softDrop) updateSoftDrop(dt);
+      state.dropTimer += dt;
+      if (state.dropTimer >= getGravityMsForWave()) {
+        state.dropTimer = 0;
+        if (!move(0, 1) && state.lockTimer === null) {
+          state.lockTimer = time;
+        }
+      }
+      if (touchingGround()) {
+        if (state.lockTimer === null) state.lockTimer = time;
+        if (time - state.lockTimer >= state.tuning.lockDelay) lockPiece();
+      } else {
+        state.lockTimer = null;
       }
     }
-    if (touchingGround()) {
-      if (state.lockTimer === null) state.lockTimer = time;
-      if (time - state.lockTimer >= state.tuning.lockDelay) lockPiece();
-    } else {
-      state.lockTimer = null;
-    }
-  }
 
-  tickEffects(dt);
-  draw();
+    tickEffects(dt);
+    updateScreenNoteMode();
+    draw();
+  } catch (error) {
+    console.error("T-Spin Traveler update failed:", error);
+  }
   requestAnimationFrame(update);
 }
 
@@ -3103,7 +3333,7 @@ function purgeLegacyVineBlocks() {
     state.floaters.push({
       x: BOARD_X + COLS * TILE + 34,
       y: BOARD_Y + 132,
-      text: "VINE BLOCKS REMOVED",
+      text: t("floaterVineBlocksRemoved"),
       color: "#9df7da",
       life: 700,
     });
@@ -3456,10 +3686,18 @@ function syncControlHints() {
     ...hints.map((hint, index) => {
       const span = document.createElement("span");
       if (index === 7) span.id = "pause-hint";
+      if (index === 8) span.id = "music-hint";
       span.textContent = hint;
       return span;
     }),
   );
+  updateScreenNoteMode();
+}
+
+function updateScreenNoteMode() {
+  const note = document.querySelector(".screen-note");
+  if (!note) return;
+  note.classList.toggle("compact", state.mode === "playing" && state.placed > 0);
 }
 
 function previewSfx() {
@@ -3473,6 +3711,7 @@ function tickEffects(dt) {
   state.shake = Math.max(0, state.shake - dt * 0.04);
   state.enemyHit = Math.max(0, state.enemyHit - dt);
   state.playerHit = Math.max(0, state.playerHit - dt);
+  state.b2bBrokenFlash = Math.max(0, state.b2bBrokenFlash - dt);
   state.lineFlash = state.lineFlash
     .map((flash) => ({ ...flash, life: flash.life - dt }))
     .filter((flash) => flash.life > 0);
@@ -3526,7 +3765,7 @@ function draw() {
 function drawBackground() {
   if (forestBg.complete && forestBg.naturalWidth > 0) {
     ctx.drawImage(forestBg, 0, 0, W, H);
-    ctx.fillStyle = "rgba(4, 7, 12, 0.28)";
+    ctx.fillStyle = "rgba(4, 7, 12, 0.4)";
     ctx.fillRect(0, 0, W, H);
     drawVignette();
     return;
@@ -3780,6 +4019,7 @@ function drawPlayer() {
   const playerAttack = state.attacks.find((attack) => attack.type === "player");
   drawHpBar(54, 146, 190, 20, state.playerHp, state.playerMaxHp, hit ? "#ff7782" : "#76d4ff", t("hp"));
   drawStatChip(54, 180, t("traveler").toUpperCase(), "#7ee7ff");
+  drawGuardMeter(54, 212);
   ctx.save();
   ctx.translate(160, 360);
   if (hit) ctx.translate(-10, 0);
@@ -3790,7 +4030,22 @@ function drawPlayer() {
   if (playerAttack) drawNoaAttackPose(playerAttack);
   ctx.restore();
   drawBuildPanel();
-  label(t("travelerNote"), 60, 596, 15, "rgba(238,244,252,0.62)");
+  label(t("noaRole"), 60, 596, 15, "rgba(238,244,252,0.68)");
+  label(t("travelerNote"), 60, 615, 13, "rgba(238,244,252,0.48)");
+}
+
+function drawGuardMeter(x, y) {
+  const w = 190;
+  const ratio = state.maxGuard ? state.guard / state.maxGuard : 0;
+  ctx.save();
+  ctx.fillStyle = "rgba(7, 10, 16, 0.5)";
+  roundedRect(x, y, w, 18, 6, true, false);
+  ctx.fillStyle = "rgba(157, 247, 218, 0.22)";
+  roundedRect(x, y, w * ratio, 18, 6, true, false);
+  ctx.strokeStyle = "rgba(157, 247, 218, 0.3)";
+  roundedRect(x, y, w, 18, 6, false, true);
+  label(`${t("guardLabel")} ${state.guard}/${state.maxGuard}`, x + 10, y + 13, 11, state.guard > 0 ? "#9df7da" : "rgba(238,244,252,0.46)");
+  ctx.restore();
 }
 
 function drawHeroSprite(hit) {
@@ -4301,6 +4556,9 @@ function getBuildSummary() {
   if (state.upgrades.bossDamage > 0) items.push(fmt("build.bossbreaker", { value: state.upgrades.bossDamage }));
   if (state.upgrades.clearHeal > 0) items.push(fmt("build.clearHeal", { value: state.upgrades.clearHeal }));
   if (state.upgrades.spinHeal > 0) items.push(fmt("build.spinHeal", { value: state.upgrades.spinHeal }));
+  if (state.upgrades.guardGain > 0) items.push(`${t("guardLabel")} +${state.upgrades.guardGain}`);
+  if (state.upgrades.comboGuardGain > 0) items.push(`Combo ${t("guardLabel")} +${state.upgrades.comboGuardGain}`);
+  if (state.upgrades.b2bShield > 0) items.push(`B2B ${t("guardLabel")} ${state.upgrades.b2bShield}`);
   return items.length ? items.slice(0, 3) : [t("noUpgrades")];
 }
 
@@ -4350,6 +4608,7 @@ function drawEnemy() {
   const hit = state.enemyHit > 0;
   const enemy = state.enemyType;
   drawHpBar(914, 146, 220, 20, state.enemyHp, state.enemyMaxHp, hit ? "#fff2ad" : "#75e298", t("hp"));
+  if (enemy.id === "king") drawBossPhaseBar(914, 172);
   drawCountdownBadge(914, 181, state.enemyCountdown);
   drawStatChip(914, 224, enemyTrait(enemy), enemy.color);
   drawEnemyIntent(914, 260, getEnemyIntent(enemy));
@@ -4396,12 +4655,12 @@ function drawEnemy() {
 }
 
 function drawEnemyBehaviorChips(x, y, enemy) {
-  const expectedGarbage = enemy.garbage + (enemy.id === "king" && state.wave % 3 === 0 ? 1 : 0) + (enemy.id === "king" && getBossPhase() >= 2 ? 1 : 0);
+  const expectedGarbage = getEnemyAttackGarbagePreview(enemy);
   const chips = [
-    { label: t("enemyInfoDamage"), value: state.enemyAttackDamage, color: "#ffb7bd" },
-    { label: t("enemyInfoGarbage"), value: expectedGarbage, color: expectedGarbage > 0 ? "#c9d4da" : "rgba(238,244,252,0.46)" },
-    { label: t("enemyInfoWeakness"), value: enemyWeaknessLabel(enemy).replace(/^.*[:：]\s*/, ""), color: "#fff0a6" },
-    { label: t("enemyInfoSpecial"), value: t(`special.${enemy.id}`), color: enemy.color },
+    { label: `◆ ${t("enemyInfoDamage")}`, value: state.enemyAttackDamage, color: "#ffb7bd" },
+    { label: `▥ ${t("enemyInfoGarbage")}`, value: `${expectedGarbage} · ${expectedGarbage > 0 ? t("enemyCancelable") : "-"}`, color: expectedGarbage > 0 ? "#c9d4da" : "rgba(238,244,252,0.46)" },
+    { label: `◇ ${t("enemyInfoWeakness")}`, value: enemyWeaknessLabel(enemy).replace(/^.*[:：]\s*/, ""), color: "#fff0a6" },
+    { label: `✦ ${t("enemyInfoSpecial")}`, value: t(`special.${enemy.id}`), color: enemy.color },
   ];
   ctx.save();
   for (let i = 0; i < chips.length; i += 1) {
@@ -4414,6 +4673,28 @@ function drawEnemyBehaviorChips(x, y, enemy) {
     roundedRect(cx, cy, 116, 29, 7, false, true);
     label(String(chip.label).toUpperCase(), cx + 8, cy + 12, 9, "rgba(238,244,252,0.48)");
     label(String(chip.value), cx + 8, cy + 25, 11, chip.color);
+  }
+  ctx.restore();
+}
+
+function drawBossPhaseBar(x, y) {
+  const phase = getBossPhase();
+  const ratio = state.enemyMaxHp ? clamp(1 - state.enemyHp / state.enemyMaxHp, 0, 1) : 0;
+  ctx.save();
+  label(`${t("bossPhaseBar").toUpperCase()} P${phase}`, x, y - 2, 10, "#fff0a6");
+  ctx.fillStyle = "rgba(8, 13, 20, 0.68)";
+  roundedRect(x + 104, y - 11, 126, 7, 4, true, false);
+  const g = ctx.createLinearGradient(x + 104, y - 11, x + 230, y - 11);
+  g.addColorStop(0, "#9df7da");
+  g.addColorStop(0.5, "#fff0a6");
+  g.addColorStop(1, "#ff7782");
+  ctx.fillStyle = g;
+  roundedRect(x + 104, y - 11, 126 * ratio, 7, 4, true, false);
+  ctx.strokeStyle = "rgba(255, 240, 166, 0.24)";
+  roundedRect(x + 104, y - 11, 126, 7, 4, false, true);
+  for (const marker of [0.3, 0.6, 0.8]) {
+    ctx.fillStyle = "rgba(255,255,255,0.42)";
+    ctx.fillRect(x + 104 + 126 * marker, y - 13, 1, 11);
   }
   ctx.restore();
 }
@@ -4639,18 +4920,19 @@ function drawSlimeKingBody(enemy) {
 }
 
 function getEnemyIntent(enemy) {
-  const garbage = enemy.garbage + (enemy.id === "king" && state.wave % 3 === 0 ? 1 : 0);
+  const garbage = getEnemyAttackGarbagePreview(enemy);
+  const cancelText = garbage > 0 ? t("enemyCancelable") : "-";
   if (enemy.id === "mushroom") {
-    return { title: t("intentSporeHex"), detail: fmt("intentSporeHexDetail", { damage: state.enemyAttackDamage }), color: "#77e8ff" };
+    return { title: t("intentSporeHex"), detail: `${fmt("intentSporeHexDetail", { damage: state.enemyAttackDamage })} / ${cancelText}`, color: "#77e8ff" };
   }
   if (enemy.id === "beetle") {
-    return { title: t("intentArmorCrush"), detail: fmt("intentArmorCrushDetail", { damage: state.enemyAttackDamage, garbage }), color: "#c6b38a" };
+    return { title: t("intentArmorCrush"), detail: `${fmt("intentArmorCrushDetail", { damage: state.enemyAttackDamage, garbage })} / ${cancelText}`, color: "#c6b38a" };
   }
   if (enemy.id === "king") {
-    return { title: fmt("intentBossPhase", { phase: getBossPhase() }), detail: fmt("intentBossPhaseDetail", { damage: state.enemyAttackDamage }), color: "#f1d36b" };
+    return { title: fmt("intentBossPhase", { phase: getBossPhase() }), detail: `${fmt("intentBossPhaseDetail", { damage: state.enemyAttackDamage })} / +${garbage}`, color: "#f1d36b" };
   }
   if (garbage > 0) {
-    return { title: t("intentGarbageSurge"), detail: fmt("intentGarbageSurgeDetail", { damage: state.enemyAttackDamage, garbage }), color: "#c9d4da" };
+    return { title: t("intentGarbageSurge"), detail: `${fmt("intentGarbageSurgeDetail", { damage: state.enemyAttackDamage, garbage })} / ${cancelText}`, color: "#c9d4da" };
   }
   return { title: t("intentStrike"), detail: fmt("intentStrikeDetail", { damage: state.enemyAttackDamage }), color: "#98f07e" };
 }
@@ -5043,12 +5325,12 @@ function drawOperationReadouts() {
   label(ultimateText, x + 14, y + 44, 12, state.ultimateActive ? "#ffbe5f" : "#caa2ff");
   for (let i = 0; i < state.operationReadouts.length; i += 1) {
     const readout = state.operationReadouts[i];
-    const t = 1 - readout.life / readout.duration;
+    const progress = 1 - readout.life / readout.duration;
     const alpha = Math.max(0, Math.min(1, readout.life / 260));
     const yy = y + 76 + i * 38;
     ctx.globalAlpha = alpha * (i === 0 ? 1 : 0.58);
     ctx.save();
-    ctx.translate(i === 0 ? Math.sin(t * Math.PI) * 4 : 0, 0);
+    ctx.translate(i === 0 ? Math.sin(progress * Math.PI) * 4 : 0, 0);
     ctx.shadowColor = readout.color;
     ctx.shadowBlur = i === 0 ? 18 : 6;
     ctx.fillStyle = hexToRgba(readout.color, i === 0 ? 0.18 : 0.08);
@@ -5063,7 +5345,8 @@ function drawOperationReadouts() {
     const comboText = readout.combo >= 2 ? fmt("floaterCombo", { combo: readout.combo }) : "";
     const b2bText = readout.b2b ? "B2B" : "";
     const effectiveText = `E${readout.effectiveLines}`;
-    ctx.fillText([comboText, b2bText, effectiveText].filter(Boolean).join("  "), x + 16, yy + 13);
+    const damageText = readout.damage ? `= ${readout.damage} ${t("dmgShort")}` : "";
+    ctx.fillText([comboText, b2bText, effectiveText, damageText].filter(Boolean).join("  "), x + 16, yy + 13);
     ctx.restore();
   }
   ctx.globalAlpha = 1;
@@ -5080,20 +5363,16 @@ function drawDamageFormulaPanel(x, y) {
   roundedRect(x, y, 142, 118, 10, false, true);
   label(t("damageFormula").toUpperCase(), x + 12, y + 21, 12, "#8fe8dc");
   if (!breakdown) {
-    wrapText(`${t("damageBase")} + Combo + B2B`, x + 12, y + 45, 112, 16, "rgba(238,244,252,0.5)", 11);
+    wrapText(t("damageEquationHint"), x + 12, y + 45, 112, 16, "rgba(238,244,252,0.5)", 11);
     ctx.restore();
     return;
   }
-  label(`${t("damageTotal")} ${breakdown.total}`, x + 12, y + 43, 18, "#fff0a6");
-  const items = breakdown.parts.filter((part) => part.value).slice(-4);
-  for (let i = 0; i < items.length; i += 1) {
-    const item = items[i];
-    label(`${t(item.key)} +${item.value}`, x + 12, y + 64 + i * 14, 11, "rgba(238,244,252,0.62)");
-  }
+  label(`${t("damageTotal")} ${breakdown.total} ${t("dmgShort")}`, x + 12, y + 43, 17, "#fff0a6");
+  wrapText(buildDamageEquation(breakdown), x + 12, y + 64, 116, 14, "rgba(238,244,252,0.66)", 10);
   const multi = breakdown.multipliers[0];
   if (multi) {
     const name = multi.key ? t(multi.key) : multi.label;
-    label(`${name} ${multi.value}`, x + 12, y + 110, 11, "#d7c2ff");
+    label(`${name} ${multi.value}`, x + 12, y + 110, 10, "#d7c2ff");
   }
   ctx.restore();
 }
@@ -5103,20 +5382,48 @@ function drawCombatReadout() {
   const x = 904;
   const y = 518;
   ctx.fillStyle = "rgba(5, 8, 12, 0.42)";
-  roundedRect(x - 4, y - 22, 246, 122, 8, true, false);
+  roundedRect(x - 4, y - 22, 246, 136, 8, true, false);
   ctx.strokeStyle = "rgba(152, 228, 235, 0.14)";
-  roundedRect(x - 4, y - 22, 246, 122, 8, false, true);
+  roundedRect(x - 4, y - 22, 246, 136, 8, false, true);
   label(`${t("waveLabel")} ${state.wave} / ${t("kos")} ${state.defeated}`, x, y, 16, "#98f07e");
   label(state.wave % 10 === 0 ? fmt("bossPhase", { phase: getBossPhase() }).toUpperCase() : state.miniBoss ? t("miniBoss").toUpperCase() : `${t("nextBossLabel")} ${10 - (state.wave % 10)}`, x + 118, y, 12, state.enemyType.id === "king" ? "#fff0a6" : "#d7c2ff");
   label(`${t("piecesLabel")} ${state.placed}`, x, y + 22, 15, "rgba(238,244,252,0.62)");
   label(`${t("comboLabel")} ${state.combo}`, x, y + 44, 15, state.combo >= 3 ? "#7ef7ff" : "rgba(238,244,252,0.58)");
-  label(`B2B ${state.b2bActive ? t("on") : t("off")} / ${t("pcShort")} ${state.perfectClears}`, x, y + 66, 13, state.b2bActive ? "#fff0a6" : "rgba(238,244,252,0.5)");
-  label(`${t("incomingLabel")} ${state.pendingGarbage}: ${t("incomingHelp")}`, x, y + 88, 12, state.pendingGarbage > 0 ? "#ffb7bd" : "rgba(238,244,252,0.42)");
+  drawB2BStatusLight(x, y + 64);
+  label(`${t("guardLabel")} ${state.guard}/${state.maxGuard} / ${t("pcShort")} ${state.perfectClears}`, x, y + 84, 12, state.guard > 0 ? "#9df7da" : "rgba(238,244,252,0.48)");
+  label(`${t("incomingLabel")} ${state.pendingGarbage}: ${t("incomingHelp")}`, x, y + 104, 12, state.pendingGarbage > 0 ? "#ffb7bd" : "rgba(238,244,252,0.42)");
   if (state.challenge) {
     const config = CHALLENGES.find((challenge) => challenge.id === state.challenge.id);
-    if (config) label(`${config.title}: ${state.challenge.progress}/${config.target}`, x, y + 110, 12, state.challenge.complete ? "#fff0a6" : "#9df7da");
+    if (config) label(`${config.title}: ${state.challenge.progress}/${config.target}`, x + 126, y + 104, 12, state.challenge.complete ? "#fff0a6" : "#9df7da");
   }
   ctx.restore();
+}
+
+function drawB2BStatusLight(x, y) {
+  const status = getB2BStatus();
+  ctx.save();
+  ctx.fillStyle = hexToRgba(status.color, 0.18);
+  roundedRect(x, y - 13, 144, 18, 9, true, false);
+  ctx.strokeStyle = hexToRgba(status.color, 0.48);
+  roundedRect(x, y - 13, 144, 18, 9, false, true);
+  ctx.fillStyle = status.color;
+  ctx.beginPath();
+  ctx.arc(x + 10, y - 4, 4.5 + (state.b2bActive ? Math.sin(performance.now() * 0.01) * 1.4 : 0), 0, Math.PI * 2);
+  ctx.fill();
+  label(status.text, x + 22, y + 1, 12, status.color);
+  if (state.upgrades.b2bShield > 0) label(`x${state.upgrades.b2bShield}`, x + 116, y + 1, 12, "#fff0a6");
+  ctx.restore();
+}
+
+function getB2BStatus() {
+  if (state.b2bActive) {
+    return {
+      text: state.b2bChain > 1 ? fmt("b2bChain", { count: state.b2bChain }) : t("b2bReady"),
+      color: "#fff0a6",
+    };
+  }
+  if (state.b2bBrokenFlash > 0) return { text: t("b2bBroken"), color: "#ff7782" };
+  return { text: `B2B ${t("off")}`, color: "#7b8791" };
 }
 
 function drawAttackEffects() {
@@ -5340,11 +5647,11 @@ function drawPerfectClearFx() {
   const fx = state.perfectClearFx;
   if (!fx) return;
   const elapsed = performance.now() - fx.startedAt;
-  const t = clamp(elapsed / fx.duration, 0, 1);
-  const fadeIn = clamp(t / 0.12, 0, 1);
-  const fadeOut = clamp((1 - t) / 0.22, 0, 1);
+  const progress = clamp(elapsed / fx.duration, 0, 1);
+  const fadeIn = clamp(progress / 0.12, 0, 1);
+  const fadeOut = clamp((1 - progress) / 0.22, 0, 1);
   const alpha = Math.min(fadeIn, fadeOut);
-  const burst = Math.sin(Math.min(1, t * 1.28) * Math.PI);
+  const burst = Math.sin(Math.min(1, progress * 1.28) * Math.PI);
   const cx = BOARD_X + (COLS * TILE) / 2;
   const cy = BOARD_Y + ROWS * TILE * 0.42;
   const now = performance.now();
@@ -5362,14 +5669,14 @@ function drawPerfectClearFx() {
   ctx.fillStyle = radial;
   ctx.fillRect(0, 0, W, H);
 
-  const flash = Math.max(0, 1 - Math.abs(t - 0.38) / 0.08);
+  const flash = Math.max(0, 1 - Math.abs(progress - 0.38) / 0.08);
   if (flash > 0) {
     ctx.fillStyle = `rgba(255, 255, 255, ${0.42 * flash * alpha})`;
     ctx.fillRect(0, 0, W, H);
   }
 
   for (let i = 0; i < 18; i += 1) {
-    const a = (Math.PI * 2 * i) / 18 + t * 2.8;
+    const a = (Math.PI * 2 * i) / 18 + progress * 2.8;
     const inner = 36 + burst * 18;
     const outer = 480 + burst * 220;
     ctx.strokeStyle = i % 3 === 0 ? `rgba(255, 239, 165, ${0.34 * alpha})` : `rgba(150, 236, 255, ${0.24 * alpha})`;
@@ -5384,13 +5691,13 @@ function drawPerfectClearFx() {
     ctx.strokeStyle = i % 2 ? `rgba(199, 167, 255, ${0.42 * alpha})` : `rgba(255, 244, 168, ${0.36 * alpha})`;
     ctx.lineWidth = 3 + i;
     ctx.beginPath();
-    ctx.ellipse(cx, cy, 92 + i * 58 + burst * 120, 34 + i * 24 + burst * 46, -0.32 + t * 2.1, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy, 92 + i * 58 + burst * 120, 34 + i * 24 + burst * 46, -0.32 + progress * 2.1, 0, Math.PI * 2);
     ctx.stroke();
   }
 
   for (let i = 0; i < 42; i += 1) {
     const seed = fx.seed + i * 19.17;
-    const a = seed + t * (2.2 + (i % 5) * 0.18);
+    const a = seed + progress * (2.2 + (i % 5) * 0.18);
     const r = 95 + ((i * 37) % 360) + burst * 92;
     const x = cx + Math.cos(a) * r;
     const y = cy + Math.sin(a) * r * 0.56;
@@ -5399,8 +5706,8 @@ function drawPerfectClearFx() {
     ctx.fillRect(x - size / 2, y - size / 2, size, size);
   }
 
-  if (t > 0.28 && t < 0.72) {
-    const k = Math.sin(((t - 0.28) / 0.44) * Math.PI);
+  if (progress > 0.28 && progress < 0.72) {
+    const k = Math.sin(((progress - 0.28) / 0.44) * Math.PI);
     ctx.strokeStyle = `rgba(255, 255, 255, ${0.86 * k * alpha})`;
     ctx.lineWidth = 12;
     ctx.beginPath();
@@ -5432,7 +5739,7 @@ function drawPerfectClearFx() {
   ctx.shadowColor = "rgba(255, 240, 166, 0.9)";
   ctx.shadowBlur = 26 + burst * 24;
   ctx.font = "900 64px Georgia, Trebuchet MS, serif";
-  const titleY = 132 + Math.sin(t * Math.PI) * -8;
+  const titleY = 132 + Math.sin(progress * Math.PI) * -8;
   const titleGradient = ctx.createLinearGradient(380, titleY - 54, 900, titleY + 18);
   titleGradient.addColorStop(0, "#ffffff");
   titleGradient.addColorStop(0.5, "#fff0a6");
@@ -5575,6 +5882,7 @@ function drawOverlay() {
     drawMenuButton(384, 454, 244, 44, t("settings"), "Esc");
     drawMenuButton(650, 454, 244, 44, t("moveGuide"), "spins");
     label(t("startHint"), 384, 534, 18, "#9fb4ff");
+    if (!state.save.tutorialCompleted) label(t("firstRunHint"), 384, 562, 14, "#fff0a6");
   } else {
     drawRunSummary();
     drawMenuButton(384, 468, 248, 44, t("retry"), "Enter");
@@ -5609,9 +5917,14 @@ function drawPauseSettingsOverlay() {
 
   label(t("feel"), 430, 404, 18, "#fff0a6");
   drawTuningSlider(t("das"), "das", 430, 438);
+  label(t("dasHelp"), 430, 459, 10, "rgba(238,244,252,0.42)");
   drawTuningSlider(t("arr"), "arr", 430, 490);
+  label(t("arrHelp"), 430, 511, 10, "rgba(238,244,252,0.42)");
   drawTuningSlider(t("softDropMs"), "softDrop", 430, 542);
+  label(t("softDropHelp"), 430, 563, 10, "rgba(238,244,252,0.42)");
   drawTuningSlider(t("lockDelayMs"), "lockDelay", 430, 594);
+  label(t("lockDelayHelp"), 430, 615, 10, "rgba(238,244,252,0.42)");
+  label(t("gravityCurveHelp"), 430, 636, 10, "rgba(255,240,166,0.5)");
 
   label(t("controls"), 792, 154, 18, "#8fe8dc");
   label(state.bindingAction ? t("binding") : t("bindHelp"), 792, 180, 12, "rgba(238,244,252,0.54)");
@@ -5656,6 +5969,7 @@ function drawRunSummary() {
   }
   label(t("summaryDamageSources"), 384, 436, 14, "#8fe8dc");
   wrapText(formatDamageSources(), 520, 436, 360, 18, "rgba(238,244,252,0.66)", 12);
+  label(t("nextRunHook"), 384, 458, 13, "#fff0a6");
   ctx.restore();
 }
 
@@ -5667,7 +5981,7 @@ function formatDamageSources() {
     b2b: "B2B",
     perfect: "Perfect",
     weakness: t("enemyInfoWeakness"),
-    upgrade: t("chooseUpgrade").split(" ")[0],
+    upgrade: t("summaryUpgradeSource"),
   };
   const top = Object.entries(state.stats.damageSources || {})
     .filter(([, value]) => value > 0)
@@ -5718,9 +6032,10 @@ function drawUpgradeOverlay() {
 function getUpgradeFamily(upgrade) {
   if (["tspin_amp", "spin_circuit", "all_spin_codex"].includes(upgrade.id)) return BUILD_FAMILY.spin;
   if (["combo_clock", "combo_resonator", "tempo_engine"].includes(upgrade.id)) return BUILD_FAMILY.combo;
+  if (["combo_aegis", "guard_lattice", "b2b_preserver"].includes(upgrade.id)) return BUILD_FAMILY.defense;
   if (["garbage_guard", "null_barrier"].includes(upgrade.id)) return BUILD_FAMILY.garbage;
   if (["b2b_blade", "bossbreaker_relic", "blade_polish", "stellar_caliber", "grey_star_reactor"].includes(upgrade.id)) return BUILD_FAMILY.burst;
-  if (["star_mender", "aegis_shell", "vital_core", "recovery_glyph", "void_carapace", "arcane_suture"].includes(upgrade.id)) return BUILD_FAMILY.defense;
+  if (["star_mender", "aegis_shell", "vital_core", "recovery_glyph", "void_carapace", "arcane_suture", "spin_vamp"].includes(upgrade.id)) return BUILD_FAMILY.defense;
   return BUILD_FAMILY.burst;
 }
 
@@ -5740,9 +6055,9 @@ function drawMoveGuideOverlay() {
     ["Incoming Cancel", t("guideIncomingCancelText"), "#ffb7bd"],
   ];
   rows.forEach((row, i) => drawGuideRow(232, 216 + i * 52, row[0], row[1], row[2], 558));
-  drawDamageRulesBox(232, 532, 558, 42);
+  drawDamageRulesBox(232, 528, 558, 56);
   drawChallengePanel(820, 216);
-  drawMenuButton(232, 588, 180, 40, t("back"), "Esc");
+  drawMenuButton(232, 596, 180, 40, t("back"), "Esc");
   ctx.restore();
 }
 
@@ -5753,8 +6068,8 @@ function drawDamageRulesBox(x, y, w, h) {
   ctx.strokeStyle = "rgba(255, 240, 166, 0.22)";
   roundedRect(x, y, w, h, 8, false, true);
   label(t("damageFormula"), x + 14, y + 26, 16, "#fff0a6");
-  const rule = "Single 10 / Double 25 / Triple 45 / Tetris 70 / T-Spin 30-140 / B2B +15 / Combo scales / Weak x1.35";
-  label(rule, x + 134, y + 26, 12, "rgba(238,244,252,0.66)");
+  wrapText(t("damageRuleLine"), x + 134, y + 20, w - 154, 14, "rgba(238,244,252,0.66)", 10);
+  label(`${t("effectTierTitle")}: ${t("effectTierText")}`, x + 14, y + 48, 11, "rgba(238,244,252,0.56)");
   ctx.restore();
 }
 
@@ -5897,9 +6212,14 @@ function drawSettings() {
 
   label(t("feel"), 282, 392, 18, "#fff0a6");
   drawTuningSlider(t("das"), "das", 282, 426);
+  label(t("dasHelp"), 282, 447, 10, "rgba(238,244,252,0.42)");
   drawTuningSlider(t("arr"), "arr", 282, 478);
+  label(t("arrHelp"), 282, 499, 10, "rgba(238,244,252,0.42)");
   drawTuningSlider(t("softDropMs"), "softDrop", 282, 530);
+  label(t("softDropHelp"), 282, 551, 10, "rgba(238,244,252,0.42)");
   drawTuningSlider(t("lockDelayMs"), "lockDelay", 282, 582);
+  label(t("lockDelayHelp"), 282, 603, 10, "rgba(238,244,252,0.42)");
+  label(t("gravityCurveHelp"), 282, 624, 10, "rgba(255,240,166,0.5)");
 
   label(t("controls"), 620, 144, 18, "#8fe8dc");
   wrapText(state.bindingAction ? t("binding") : t("bindHelp"), 620, 172, 444, 16, "rgba(238,244,252,0.54)", 12);
@@ -6345,7 +6665,7 @@ canvas.addEventListener("mousedown", (event) => {
         }
       }
     }
-    if (state.mode === "guide" && pointInRect(p.x, p.y, 232, 588, 180, 40)) {
+    if (state.mode === "guide" && pointInRect(p.x, p.y, 232, 596, 180, 40)) {
       state.mode = "start";
       playSfx("hold");
       return;
