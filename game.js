@@ -1,31 +1,38 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+const ASSET_VERSION = "2026-05-13-133e4ee";
+
+function assetPath(path) {
+  const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
+  return isFilePreview ? path : `${path}?v=${ASSET_VERSION}`;
+}
+
 const forestBg = new Image();
-forestBg.src = "assets/magic-forest-bg-v2.png";
+forestBg.src = assetPath("assets/magic-forest-bg-v2.png");
 const noaArt = new Image();
-noaArt.src = "assets/noa.png";
+noaArt.src = assetPath("assets/noa.png");
 const slimeArt = new Image();
-slimeArt.src = "assets/forest-slime.png";
+slimeArt.src = assetPath("assets/forest-slime.png");
 const rosterArt = new Image();
-rosterArt.src = "assets/character-roster-v4-alpha.png";
+rosterArt.src = assetPath("assets/character-roster-v4-alpha.png");
 const heroIdleArt = new Image();
-heroIdleArt.src = "assets/images/clean/ET_Character_alpha.png";
+heroIdleArt.src = assetPath("assets/images/clean/ET_Character_alpha.png");
 const heroMeleeSheet = new Image();
-heroMeleeSheet.src = "assets/images/clean/Knife_alpha.png";
+heroMeleeSheet.src = assetPath("assets/images/clean/Knife_alpha.png");
 const heroRangedSheet = new Image();
-heroRangedSheet.src = "assets/images/clean/Gun_alpha.png";
+heroRangedSheet.src = assetPath("assets/images/clean/Gun_alpha.png");
 const heroCombo1Sheet = new Image();
-heroCombo1Sheet.src = "assets/images/clean/hero_combo_01_spritesheet_alpha.png";
+heroCombo1Sheet.src = assetPath("assets/images/clean/hero_combo_01_spritesheet_alpha.png");
 const heroCombo2Sheet = new Image();
-heroCombo2Sheet.src = "assets/images/clean/hero_combo_02_spritesheet_alpha.png";
+heroCombo2Sheet.src = assetPath("assets/images/clean/hero_combo_02_spritesheet_alpha.png");
 const heroCombo3Sheet = new Image();
-heroCombo3Sheet.src = "assets/images/clean/hero_combo_03_spritesheet_alpha.png";
+heroCombo3Sheet.src = assetPath("assets/images/clean/hero_combo_03_spritesheet_alpha.png");
 const heroUltimateSheet = new Image();
-heroUltimateSheet.src = "assets/images/clean/hero_perfect_clear_ultimate_alpha.png";
+heroUltimateSheet.src = assetPath("assets/images/clean/hero_perfect_clear_ultimate_alpha.png");
 const enemyConceptSheetA = new Image();
-enemyConceptSheetA.src = "assets/images/clean/Enemy01_alpha.png";
+enemyConceptSheetA.src = assetPath("assets/images/clean/Enemy01_alpha.png");
 const enemyConceptSheetB = new Image();
-enemyConceptSheetB.src = "assets/images/clean/Enemy02_alpha.png";
+enemyConceptSheetB.src = assetPath("assets/images/clean/Enemy02_alpha.png");
 const enemyAttackSheets = {
   slime: new Image(),
   vine: new Image(),
@@ -34,12 +41,12 @@ const enemyAttackSheets = {
   mist: new Image(),
   king: new Image(),
 };
-enemyAttackSheets.slime.src = "assets/images/clean/enemy_attack_slime_redesign.png";
-enemyAttackSheets.vine.src = "assets/images/clean/enemy_attack_vine_redesign.png";
-enemyAttackSheets.mushroom.src = "assets/images/clean/enemy_attack_mushroom_redesign.png";
-enemyAttackSheets.beetle.src = "assets/images/clean/enemy_attack_beetle_redesign.png";
-enemyAttackSheets.mist.src = "assets/images/clean/enemy_attack_mist_redesign.png";
-enemyAttackSheets.king.src = "assets/images/clean/enemy_attack_king_redesign.png";
+enemyAttackSheets.slime.src = assetPath("assets/images/clean/enemy_attack_slime_redesign.png");
+enemyAttackSheets.vine.src = assetPath("assets/images/clean/enemy_attack_vine_redesign.png");
+enemyAttackSheets.mushroom.src = assetPath("assets/images/clean/enemy_attack_mushroom_redesign.png");
+enemyAttackSheets.beetle.src = assetPath("assets/images/clean/enemy_attack_beetle_redesign.png");
+enemyAttackSheets.mist.src = assetPath("assets/images/clean/enemy_attack_mist_redesign.png");
+enemyAttackSheets.king.src = assetPath("assets/images/clean/enemy_attack_king_redesign.png");
 
 const HERO_FRAME_RECTS = [
   { x: 0, y: 58, w: 362, h: 386 },
