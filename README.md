@@ -6,7 +6,7 @@
 
 ## English Introduction
 
-**T-Spin Traveler** is a 2D HTML Canvas game that combines falling block puzzle gameplay with fantasy RPG combat.
+**T-Spin Traveler** is a 2D HTML Canvas game prototype that combines falling block puzzle gameplay with fantasy RPG combat.
 
 Players do not simply clear lines for points. Instead, they use line clears, combos, T-Spins, Perfect Clears, and stacking strategies to attack monsters, trigger skills, and control the rhythm of battle.
 
@@ -14,9 +14,23 @@ Players do not simply clear lines for points. Instead, they use line clears, com
 
 ## 中文介紹
 
-《T-Spin Traveler》是一款結合下落方塊消除與奇幻 RPG 戰鬥的 2D 網頁遊戲。
+**《T-Spin Traveler》** 是一款結合下落方塊消除與奇幻 RPG 戰鬥的 2D 網頁遊戲原型。
 
-玩家不是單純為了消除方塊而遊玩，而是透過消除、連擊、T-Spin、Perfect Clear 與堆疊策略來攻擊怪物、觸發技能，並推進戰鬥節奏。
+玩家不是單純為了消除方塊而遊玩，而是透過消除、連擊、T-Spin、Perfect Clear 與堆疊策略來攻擊怪物、觸發技能，並掌控戰鬥節奏。
+
+---
+
+## Game Concept｜遊戲概念
+
+The core concept of this project is to turn puzzle-solving actions into direct combat feedback.
+
+Every successful line clear should feel meaningful. Clearing lines, building combos, performing T-Spins, and achieving Perfect Clears can trigger different types of attacks, making traditional falling block gameplay feel more aggressive, strategic, and satisfying.
+
+---
+
+本專案的核心概念，是將「方塊消除行為」轉化成直接的「戰鬥回饋」。
+
+每一次成功消除都不只是得分，而是會轉化為攻擊、連擊、技能或特殊效果。玩家透過消除方塊、製造 Combo、完成 T-Spin 與 Perfect Clear 來攻擊敵人，讓傳統下落方塊玩法變得更有攻擊性、策略性與爽感。
 
 ---
 
@@ -33,6 +47,9 @@ Players do not simply clear lines for points. Instead, they use line clears, com
 
 - T-Spin focused gameplay concept  
   以 T-Spin 為核心的進階操作概念
+
+- Perfect Clear ultimate attack concept  
+  Perfect Clear 大招攻擊概念
 
 - Character attack animations  
   角色攻擊動畫
@@ -67,17 +84,19 @@ Players do not simply clear lines for points. Instead, they use line clears, com
 
 ---
 
-## Gameplay Concept｜玩法概念
+## Battle Feedback Design｜戰鬥回饋設計
 
-The core idea of this project is to connect puzzle-solving actions with battle feedback.
+The game is designed around the idea that different puzzle actions should create different combat results.
 
-Clearing lines, creating combos, performing T-Spins, and achieving Perfect Clears can trigger attacks against enemies. The goal is to make every successful clear feel impactful, turning traditional falling block gameplay into a more aggressive and satisfying battle experience.
-
----
-
-本專案的核心概念，是將「解謎消除行為」與「戰鬥回饋」連結在一起。
-
-玩家透過消除方塊、製造 Combo、完成 T-Spin 與 Perfect Clear 來攻擊敵人。目標是讓每一次成功消除都具有打擊感，將傳統下落方塊玩法轉化成更具攻擊性與爽感的戰鬥體驗。
+| Puzzle Action｜方塊行為 | Combat Result｜戰鬥效果 |
+|---|---|
+| Single Line Clear｜消除 1 行 | Basic attack｜普通攻擊 |
+| Double Line Clear｜消除 2 行 | Stronger attack｜較強攻擊 |
+| Triple Line Clear｜消除 3 行 | Heavy attack｜重攻擊 |
+| Tetris｜消除 4 行 | Powerful attack｜強力攻擊 |
+| Combo｜連續消除 | Chain attack｜連鎖攻擊 |
+| T-Spin｜T-Spin 操作 | Special attack｜特殊攻擊 |
+| Perfect Clear｜完美清除 | Ultimate attack｜大招攻擊 |
 
 ---
 
@@ -95,6 +114,15 @@ T-Spin-Traveler/
 
 ---
 
+## How to Play Online｜線上遊玩方式
+
+Play the game here:  
+點擊下方連結即可線上遊玩：
+
+https://d1124423017.github.io/T-Spin-Traveler/
+
+---
+
 ## How to Play Locally｜本機遊玩方式
 
 ### English
@@ -103,7 +131,7 @@ T-Spin-Traveler/
 2. Open the project folder.
 3. Open `index.html` in a web browser.
 
-You can also run it with a local server such as VS Code Live Server.
+You can also run the project with a local server, such as the **Live Server** extension in Visual Studio Code.
 
 ### 中文
 
@@ -111,40 +139,20 @@ You can also run it with a local server such as VS Code Live Server.
 2. 開啟專案資料夾。
 3. 使用瀏覽器開啟 `index.html`。
 
-也可以使用 VS Code 的 Live Server 執行。
-
----
-
-## Online Demo｜線上遊玩
-
-Play the game here:  
-線上遊玩連結：
-
-https://d1124423017.github.io/T-Spin-Traveler/
+也可以使用 Visual Studio Code 的 **Live Server** 套件執行。
 
 ---
 
 ## Feedback｜遊玩回饋
 
-If you have played the game, feel free to leave feedback, bug reports, or suggestions in the Discussions or Issues section.
+If you have played the game, feel free to leave feedback, bug reports, or suggestions through GitHub Discussions or Issues.
 
-如果你有遊玩過這款遊戲，歡迎到 Discussions 或 Issues 留下遊玩感想、錯誤回報或功能建議。
+如果你有遊玩過這款遊戲，歡迎透過 GitHub Discussions 或 Issues 留下遊玩感想、錯誤回報或功能建議。
 
-- Discussions: player feedback, suggestions, and general comments  
-  Discussions：玩家心得、建議與一般討論
-
-- Issues: bug reports and feature requests  
-  Issues：錯誤回報與功能請求
-
----
-
-## Technologies Used｜使用技術
-
-- HTML
-- CSS
-- JavaScript
-- HTML Canvas
-- GitHub Pages
+| Section｜區域 | Purpose｜用途 |
+|---|---|
+| Discussions｜討論區 | Player feedback, suggestions, and general comments｜玩家心得、建議與一般討論 |
+| Issues｜問題回報 | Bug reports and feature requests｜錯誤回報與功能請求 |
 
 ---
 
@@ -171,6 +179,9 @@ This project is currently a playable HTML Canvas prototype.
 - Combo impact  
   Combo 打擊感
 
+- T-Spin feedback  
+  T-Spin 回饋表現
+
 - Sound and music direction  
   音效與音樂方向
 
@@ -188,8 +199,14 @@ This project is currently a playable HTML Canvas prototype.
 - Skill system  
   技能系統
 
+- Enemy attack and player HP system  
+  敵人攻擊與玩家血量系統
+
 - Better tutorial flow  
   更完整的新手教學
+
+- Stronger line clear feedback  
+  更強的消除爽感
 
 - More polished UI transitions  
   更細緻的 UI 轉場
@@ -199,6 +216,30 @@ This project is currently a playable HTML Canvas prototype.
 
 - Mobile-friendly controls  
   手機版操作支援
+
+---
+
+## Technologies Used｜使用技術
+
+- HTML
+- CSS
+- JavaScript
+- HTML Canvas
+- GitHub Pages
+
+---
+
+## Design Goal｜設計目標
+
+The goal of **T-Spin Traveler** is to explore how falling block puzzle mechanics can be transformed into a fantasy battle experience.
+
+Instead of treating line clears as simple scoring actions, this project connects them to attack timing, enemy damage, combo feedback, and player motivation.
+
+---
+
+**《T-Spin Traveler》** 的設計目標，是探索如何將下落方塊玩法轉化成奇幻戰鬥體驗。
+
+本作不把消除方塊只視為得分行為，而是將它與攻擊節奏、敵人受傷、Combo 回饋與玩家成就感連結起來，讓益智玩法產生更明確的戰鬥目標。
 
 ---
 
