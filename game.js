@@ -133,6 +133,7 @@ const audio = {
   master: null,
   musicGain: null,
   sfxGain: null,
+  currentSfxBus: null,
   musicTimer: null,
   step: 0,
   energy: 0,
@@ -198,6 +199,34 @@ const BALANCE = {
   guardMax: 18,
   guardPerLine: 2,
   guardSpinBonus: 3,
+  perfectClear4WideExtendMs: 3000,
+  ...(window.TST_BALANCE || {}),
+};
+
+const SFX_MIX = {
+  move: 0.42,
+  rotate: 0.52,
+  rotateT: 0.72,
+  drop: 0.72,
+  hold: 0.55,
+  clear: 0.82,
+  bigClear: 1,
+  combo: 1.08,
+  b2b: 1.08,
+  tspin: 1.12,
+  perfect: 1.18,
+  hitLight: 0.76,
+  hitHeavy: 1.08,
+  hitArcane: 1.22,
+  weakness: 1.05,
+  cancel: 0.86,
+  enemy: 0.95,
+  wave: 0.84,
+  upgrade: 0.82,
+  upgradeReady: 0.66,
+  start: 0.78,
+  defeat: 0.9,
+  ...(window.TST_SFX_MIX || {}),
 };
 
 const TUTORIAL_STEPS = [
@@ -270,6 +299,24 @@ const DEFAULT_CONTROLS = {
   hold: "shift",
   pause: "p",
   mute: "m",
+};
+
+const UI_LAYOUT = {
+  playerPanel: { x: 32, y: 72, w: 260, h: 560 },
+  enemyPanel: { x: 900, y: 72, w: 340, h: 560 },
+  boardFrame: { x: BOARD_X - 18, y: BOARD_Y - 18, w: COLS * TILE + 36, h: ROWS * TILE + 36 },
+  menu: {
+    x: 370,
+    y: 116,
+    w: 540,
+    h: 488,
+    titleY: 198,
+    subtitleY: 246,
+    primaryY: 322,
+    tutorialY: 390,
+    utilityY: 462,
+  },
+  compactHints: ["screenMove", "screenSoftDrop", "screenHardDrop", "screenRotate"],
 };
 
 const CONTROL_ACTIONS = [
@@ -371,7 +418,23 @@ const translations = {
     firstRunHint: "首次遊玩建議先完成 3 分鐘教學。",
     nextRunHook: "下一局目標：撐到第 20 波並擊破 Boss。",
     damageEquationHint: "消行 + 技術 + Combo + 弱點 + 升級 = 總傷害",
+    damageDetailHint: "暫停可看完整來源",
+    lastHit: "最後命中",
+    detailPauseHint: "P 暫停看完整公式",
+    buildCompact: "流派",
+    buildDetailPause: "詳細 Build 在暫停",
+    threatShort: "威脅",
+    boardEffectShort: "盤面",
+    relicDraft: "遺物選擇",
+    safeNodeDraft: "安全節點，不打斷操作",
     damageRuleLine: "Single 10 / Double 25 / Triple 45 / Tetris 70 / Spin 30-140 / B2B +15 / Weak x1.35",
+    upgradeReadyShort: "升級待命",
+    upgradeReadyHint: "下一波選強化",
+    floaterUpgradeReady: "升級待命：下一波安全選擇",
+    ultimateExtend: "4-Wide +{seconds}s",
+    practice: "練習挑戰",
+    practiceHint: "從右側挑戰開始，完成目標即可獲得獎勵並學會招式。",
+    audioMixHelp: "混音：操作低音量，消行/命中突出，Perfect Clear 會壓低 BGM 後爆發。",
     effectTierTitle: "特效分級",
     effectTierText: "Single 低調，Tetris/Spin 強化，B2B 金光，Perfect Clear 霸屏。",
     noaRole: "Tetr 能量劍士 / 導航術士",
@@ -686,10 +749,26 @@ const translations = {
     enemyCancelable: "Cancelable",
     enemyUncancelable: "Uncancelable",
     bossPhaseBar: "Phase Pressure",
-    firstRunHint: "First run: finish the 3-minute tutorial first.",
+    firstRunHint: "Suggested first run: try the 3-minute tutorial.",
     nextRunHook: "Next run goal: reach Wave 20 and defeat the Boss.",
     damageEquationHint: "Clear + Technique + Combo + Weakness + Upgrade = Total Damage",
+    damageDetailHint: "Pause for full source details",
+    lastHit: "Last Hit",
+    detailPauseHint: "Press P for full formula",
+    buildCompact: "Build",
+    buildDetailPause: "Build details in pause",
+    threatShort: "Threat",
+    boardEffectShort: "Board",
+    relicDraft: "Relic Draft",
+    safeNodeDraft: "Safe node, never interrupts play",
     damageRuleLine: "Single 10 / Double 25 / Triple 45 / Tetris 70 / Spin 30-140 / B2B +15 / Weak x1.35",
+    upgradeReadyShort: "Upgrade Ready",
+    upgradeReadyHint: "Pick after wave",
+    floaterUpgradeReady: "UPGRADE READY: PICK AFTER WAVE",
+    ultimateExtend: "4-Wide +{seconds}s",
+    practice: "Practice Challenges",
+    practiceHint: "Start a challenge on the right. Complete the goal to learn the technique and earn a reward.",
+    audioMixHelp: "Mix: quiet inputs, clear hits, and Perfect Clear ducks BGM before impact.",
     effectTierTitle: "Effect Tiers",
     effectTierText: "Single is restrained, Tetris/Spin hit harder, B2B glows gold, Perfect Clear takes over the screen.",
     noaRole: "Tetr energy swordsman / navigator",
@@ -1566,6 +1645,7 @@ const state = {
   upgradeMeter: 0,
   nextUpgradeAt: 8,
   upgradeTier: 0,
+  upgradeReady: false,
   stats: makeStats(),
   save: loadSave(),
   runFinalized: false,
@@ -1817,6 +1897,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.upgradeMeter = 0;
   state.nextUpgradeAt = BALANCE.firstUpgradeAt;
   state.upgradeTier = 0;
+  state.upgradeReady = false;
   state.stats = makeStats();
   state.runFinalized = false;
   state.challenge = challengeId ? makeChallengeState(challengeId) : null;
@@ -2230,7 +2311,7 @@ function makeDamageSourceMap() {
 
 function addDamagePart(parts, sources, key, value, source) {
   if (!value) return;
-  parts.push({ key, value });
+  parts.push({ key, value, source });
   if (source && sources[source] !== undefined) sources[source] += value;
 }
 
@@ -2286,6 +2367,7 @@ function applyPlayerHit(hit) {
   if (state.mode === "defeat" || state.mode === "victory") return;
   const { damage, context } = hit;
   playSfx(hit.sfx);
+  reinforceHitAudioLayer(hit);
   if (hit.weaknessHit) playSfx("weakness");
   if (hit.b2bHit) playSfx("b2b");
   if (hit.comboBurst) playSfx("combo");
@@ -2324,6 +2406,27 @@ function applyPlayerHit(hit) {
   finishPlayerTurnAfterHit(context);
 }
 
+function reinforceHitAudioLayer(hit) {
+  if (!audio.ctx || audio.muted) return;
+  const strongHit = hit.context?.perfect || hit.damage >= 80 || hit.weaknessHit || hit.b2bHit || hit.context?.spinType;
+  const comboHeat = Math.max(0, hit.context?.combo || 0);
+  if (hit.context?.perfect) {
+    playSfx("hitArcane");
+    return;
+  }
+  if (strongHit) {
+    duckMusic(0.68, 0.24);
+    playSfx("hitHeavy");
+  } else {
+    playSfx("hitLight");
+  }
+  if (comboHeat >= 3) {
+    const t = audio.ctx.currentTime;
+    const pitch = Math.min(1.8, 1 + comboHeat * 0.045);
+    tone(520 * pitch, 0.045, "triangle", 0.055, audio.sfxGain, t + 0.015);
+  }
+}
+
 function finishPlayerTurnAfterHit(context) {
   if (state.mode !== "playing") return;
   state.enemyCountdown -= 1;
@@ -2331,7 +2434,6 @@ function finishPlayerTurnAfterHit(context) {
   if (context.lines === 0 && state.pendingGarbage > 0 && state.mode === "playing") {
     applyIncomingGarbage();
   }
-  triggerUpgradeIfReady(false, false);
 }
 
 function applyEnemyHit(hit) {
@@ -2456,6 +2558,7 @@ function applyBattle(lines, pieceType, spinType) {
       addDamagePart(parts, sources, "damageExecute", damage - before, "perfect");
     }
     startPerfectClearFx(damage);
+    extendUltimateOnPerfectClear();
   }
 
   const canceled = cancelIncomingGarbage(lines);
@@ -2705,7 +2808,6 @@ function getEffectiveClearLines(lines, spinType) {
 }
 
 function getComboAttackStyle(combo) {
-  if (combo === 1) return "melee";
   if (combo < 2) return "";
   return `combo${((combo - 2) % 3) + 1}`;
 }
@@ -2714,6 +2816,7 @@ function getHeroAttackStyle(lines, spinType, perfectClear, b2bBonus, comboAttack
   if (perfectClear) return "ultimate";
   if (!perfectClear && comboAttackStyle) return comboAttackStyle;
   if (spinType || b2bBonus > 0 || lines >= 4) return "melee";
+  if (lines > 0) return "ranged";
   return "ranged";
 }
 
@@ -2735,6 +2838,28 @@ function startPerfectClearFx(damage) {
     life: 880,
     duration: 880,
     intensity: 2.6,
+  });
+}
+
+function extendUltimateOnPerfectClear() {
+  if (!state.ultimateActive) return;
+  const extendMs = BALANCE.perfectClear4WideExtendMs || 3000;
+  state.ultimateTimer += extendMs;
+  state.floaters.push({
+    x: BOARD_X + (COLS * TILE) / 2,
+    y: BOARD_Y + 78,
+    text: fmt("ultimateExtend", { seconds: Math.round(extendMs / 1000) }).toUpperCase(),
+    color: "#ffbe5f",
+    life: 1250,
+  });
+  state.bursts.push({
+    x: BOARD_X + (COLS * TILE) / 2,
+    y: BOARD_Y + ROWS * TILE * 0.36,
+    radius: 20,
+    color: "#ffbe5f",
+    life: 560,
+    duration: 560,
+    intensity: 1.75,
   });
 }
 
@@ -2832,22 +2957,53 @@ function pushOperationReadout(lines, pieceType, spinType, meta = {}) {
 
 function buildDamageEquation(breakdown, compact = false) {
   if (!breakdown) return t("damageEquationHint");
-  const parts = [breakdown.title];
-  if (breakdown.b2b) parts.push("B2B");
-  if (breakdown.combo >= 2) parts.push(`${t("comboLabel")} ${breakdown.combo}`);
-  if (breakdown.weakness) parts.push(t("weaknessHit"));
-  for (const part of breakdown.parts) {
-    if (!part.value) continue;
-    parts.push(`${t(part.key)} +${part.value}`);
-  }
-  for (const multi of breakdown.multipliers || []) {
-    const name = multi.key ? t(multi.key) : multi.label;
-    parts.push(`${name} ${multi.value}`);
-  }
+  const terms = getDamageEquationTerms(breakdown);
+  const addParts = terms.filter((term) => term.source !== "multiplier").map((term) => term.text);
+  const multiplierParts = terms.filter((term) => term.source === "multiplier").map((term) => term.text);
+  const parts = [...addParts, ...multiplierParts.map((part) => `× ${part}`)];
   const maxParts = compact ? 5 : 9;
   const shown = parts.slice(0, maxParts);
   if (parts.length > maxParts) shown.push("+...");
-  return `${shown.join(" + ")} = ${breakdown.total} ${t("dmgShort")}`;
+  return `${shown.join(" + ").replace(/\+ ×/g, "×")} = ${breakdown.total} ${t("dmgShort")}`;
+}
+
+function getDamageEquationTerms(breakdown) {
+  if (!breakdown) return [];
+  const terms = [];
+  for (const part of breakdown.parts || []) {
+    if (!part.value) continue;
+    terms.push({
+      text: `${t(part.key)} +${part.value}`,
+      label: t(part.key),
+      value: `+${part.value}`,
+      source: part.source || "base",
+      color: damageSourceColor(part.source || "base"),
+    });
+  }
+  for (const multi of breakdown.multipliers || []) {
+    const name = multi.key ? t(multi.key) : multi.label;
+    terms.push({
+      text: `${name} ${multi.value}`,
+      label: name,
+      value: multi.value,
+      source: "multiplier",
+      color: "#d7c2ff",
+    });
+  }
+  return terms;
+}
+
+function damageSourceColor(source) {
+  return {
+    base: "#b9c2ff",
+    spin: "#d7c2ff",
+    combo: "#7ef7ff",
+    b2b: "#fff0a6",
+    perfect: "#fff0a6",
+    weakness: "#ffdf8a",
+    upgrade: "#9df7da",
+    multiplier: "#d7c2ff",
+  }[source] || "#f5f1e6";
 }
 
 function getOperationTitle(lines, pieceType, spinType, perfect) {
@@ -3156,14 +3312,29 @@ function createUpgradeChoices(forceRelic = false, forceRare = false) {
 
 function addUpgradeProgress(effectiveLines) {
   if (effectiveLines <= 0) return;
+  const wasReady = state.upgradeReady;
   state.upgradeMeter += effectiveLines;
+  state.upgradeReady = state.upgradeMeter >= state.nextUpgradeAt;
+  if (state.upgradeReady && !wasReady) {
+    state.floaters.push({
+      x: HOLD_PANEL_X + 8,
+      y: HOLD_PANEL_Y + 214,
+      text: t("floaterUpgradeReady"),
+      color: "#fff0a6",
+      life: 1200,
+    });
+    playSfx("upgradeReady");
+  }
 }
 
 function triggerUpgradeIfReady(forceRelic = false, forceRare = false) {
   if (state.mode !== "playing") return false;
-  if (state.upgradeMeter < state.nextUpgradeAt) return false;
+  const ready = state.upgradeMeter >= state.nextUpgradeAt;
+  if (!ready && !forceRelic && !forceRare) return false;
+  if (!ready) state.upgradeMeter = state.nextUpgradeAt;
   state.upgradeTier += 1;
   state.nextUpgradeAt += BALANCE.upgradeGrowthPerTier * state.upgradeTier;
+  state.upgradeReady = false;
   state.upgradeChoices = createUpgradeChoices(forceRelic, forceRare);
   state.mode = "upgrade";
   state.floaters.push({
@@ -3196,6 +3367,7 @@ function chooseUpgrade(index) {
   });
   state.upgradeChoices = [];
   state.mode = "playing";
+  state.upgradeReady = state.upgradeMeter >= state.nextUpgradeAt;
   if (!state.active) spawnPiece();
   playSfx("upgrade");
 }
@@ -3536,59 +3708,86 @@ function mysticBell(freq, volume, startTime = audio.ctx.currentTime) {
 function playSfx(name) {
   if (!audio.ctx || audio.muted) return;
   const t = audio.ctx.currentTime;
+  const out = beginSfxBus(name);
+  audio.currentSfxBus = out;
   if (name === "start") {
     arpeggio([220, 293.66, 369.99, 440, 587.33], 0.04, "triangle", 0.16);
   } else if (name === "move") {
-    tone(360, 0.028, "triangle", 0.055, audio.sfxGain, t);
+    tone(360, 0.028, "triangle", 0.055, out, t);
   } else if (name === "rotate") {
-    tone(520, 0.036, "square", 0.075, audio.sfxGain, t);
-    tone(780, 0.026, "triangle", 0.04, audio.sfxGain, t + 0.012);
+    tone(520, 0.036, "square", 0.075, out, t);
+    tone(780, 0.026, "triangle", 0.04, out, t + 0.012);
   } else if (name === "rotateT") {
     arpeggio([392, 493.88, 739.99], 0.028, "triangle", 0.12);
   } else if (name === "drop") {
     sweep(170, 58, 0.09, "sawtooth", 0.18);
-    noise(0.04, 0.11, audio.sfxGain, t);
+    noise(0.04, 0.11, out, t);
   } else if (name === "hold") {
     arpeggio([330, 247, 392], 0.032, "sine", 0.11);
   } else if (name === "clear") {
     arpeggio([440, 554.37, 659.25], 0.045, "triangle", 0.14);
-    noise(0.032, 0.045, audio.sfxGain, t + 0.02);
+    noise(0.032, 0.045, out, t + 0.02);
   } else if (name === "bigClear") {
     arpeggio([392, 493.88, 659.25, 880], 0.04, "triangle", 0.18);
     sweep(920, 1320, 0.16, "square", 0.11, t + 0.03);
-    noise(0.06, 0.08, audio.sfxGain, t + 0.04);
+    noise(0.06, 0.08, out, t + 0.04);
   } else if (name === "b2b") {
     arpeggio([554.37, 739.99, 987.77, 1479.98], 0.035, "square", 0.16);
-    tone(196, 0.16, "sawtooth", 0.08, audio.sfxGain, t);
+    tone(196, 0.16, "sawtooth", 0.08, out, t);
   } else if (name === "combo") {
     arpeggio([659.25, 783.99, 987.77, 1174.66], 0.032, "square", 0.13);
-    noise(0.045, 0.08, audio.sfxGain, t + 0.06);
+    noise(0.045, 0.08, out, t + 0.06);
   } else if (name === "cancel") {
     arpeggio([392, 523.25, 659.25, 783.99], 0.034, "sine", 0.13);
     sweep(720, 260, 0.11, "triangle", 0.08, t + 0.02);
   } else if (name === "perfect") {
     arpeggio([523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98], 0.042, "triangle", 0.18);
-    tone(261.63, 0.45, "sine", 0.12, audio.sfxGain, t);
-    noise(0.11, 0.1, audio.sfxGain, t + 0.09);
+    tone(261.63, 0.45, "sine", 0.12, out, t);
+    noise(0.11, 0.1, out, t + 0.09);
+  } else if (name === "hitLight") {
+    tone(620, 0.045, "triangle", 0.075, out, t);
+    noise(0.025, 0.035, out, t + 0.012);
+  } else if (name === "hitHeavy") {
+    tone(130, 0.11, "sawtooth", 0.12, out, t);
+    sweep(480, 1080, 0.12, "triangle", 0.095, t + 0.014);
+    noise(0.055, 0.075, out, t + 0.026);
+  } else if (name === "hitArcane") {
+    arpeggio([392, 523.25, 783.99, 1046.5], 0.034, "triangle", 0.16);
+    tone(98, 0.32, "sine", 0.13, out, t);
+    filteredNoise(0.14, 0.105, "bandpass", 1400, 4, out, t + 0.04);
   } else if (name === "upgrade") {
     arpeggio([293.66, 369.99, 440, 587.33, 739.99], 0.052, "triangle", 0.15);
+  } else if (name === "upgradeReady") {
+    arpeggio([369.99, 440, 587.33], 0.042, "triangle", 0.11);
   } else if (name === "tspin") {
     arpeggio([493.88, 659.25, 987.77, 1318.51], 0.038, "square", 0.19);
     sweep(260, 980, 0.18, "sawtooth", 0.11, t + 0.04);
-    noise(0.1, 0.09, audio.sfxGain, t + 0.08);
+    noise(0.1, 0.09, out, t + 0.08);
   } else if (name === "enemy") {
     sweep(220, 70, 0.26, "sawtooth", 0.22);
-    noise(0.09, 0.12, audio.sfxGain, t + 0.02);
+    noise(0.09, 0.12, out, t + 0.02);
   } else if (name === "weakness") {
     arpeggio([783.99, 987.77, 1174.66], 0.03, "triangle", 0.15);
     sweep(520, 1480, 0.13, "square", 0.08, t + 0.02);
   } else if (name === "wave") {
     arpeggio([196, 246.94, 293.66, 392, 493.88, 587.33], 0.058, "triangle", 0.16);
-    tone(98, 0.36, "sawtooth", 0.1, audio.sfxGain, t);
+    tone(98, 0.36, "sawtooth", 0.1, out, t);
   } else if (name === "defeat") {
     arpeggio([220, 174.61, 146.83, 110, 73.42], 0.11, "sine", 0.17);
-    noise(0.18, 0.08, audio.sfxGain, t + 0.08);
+    noise(0.18, 0.08, out, t + 0.08);
   }
+  audio.currentSfxBus = null;
+}
+
+function beginSfxBus(name) {
+  const gain = audio.ctx.createGain();
+  gain.gain.value = SFX_MIX[name] ?? 1;
+  gain.connect(audio.sfxGain);
+  return gain;
+}
+
+function getSfxDestination() {
+  return audio.currentSfxBus || audio.sfxGain;
 }
 
 function tone(freq, duration, type, volume, destination, startTime = audio.ctx.currentTime) {
@@ -3605,7 +3804,7 @@ function tone(freq, duration, type, volume, destination, startTime = audio.ctx.c
   osc.stop(startTime + duration + 0.02);
 }
 
-function sweep(from, to, duration, type, volume, startTime = audio.ctx.currentTime, destination = audio.sfxGain) {
+function sweep(from, to, duration, type, volume, startTime = audio.ctx.currentTime, destination = getSfxDestination()) {
   const osc = audio.ctx.createOscillator();
   const gain = audio.ctx.createGain();
   osc.type = type;
@@ -3620,13 +3819,13 @@ function sweep(from, to, duration, type, volume, startTime = audio.ctx.currentTi
   osc.stop(startTime + duration + 0.02);
 }
 
-function arpeggio(notes, gap, type, volume = 0.18, destination = audio.sfxGain, startTime = audio.ctx.currentTime) {
+function arpeggio(notes, gap, type, volume = 0.18, destination = getSfxDestination(), startTime = audio.ctx.currentTime) {
   notes.forEach((note, i) => {
     tone(note, gap * 1.8, type, volume, destination, startTime + i * gap);
   });
 }
 
-function noise(duration, volume, destination, startTime = audio.ctx.currentTime) {
+function noise(duration, volume, destination = getSfxDestination(), startTime = audio.ctx.currentTime) {
   const sampleRate = audio.ctx.sampleRate;
   const buffer = audio.ctx.createBuffer(1, Math.floor(sampleRate * duration), sampleRate);
   const data = buffer.getChannelData(0);
@@ -3641,7 +3840,7 @@ function noise(duration, volume, destination, startTime = audio.ctx.currentTime)
   source.start(startTime);
 }
 
-function filteredNoise(duration, volume, filterType, frequency, q = 1, destination = audio.sfxGain, startTime = audio.ctx.currentTime) {
+function filteredNoise(duration, volume, filterType, frequency, q = 1, destination = getSfxDestination(), startTime = audio.ctx.currentTime) {
   const sampleRate = audio.ctx.sampleRate;
   const buffer = audio.ctx.createBuffer(1, Math.floor(sampleRate * duration), sampleRate);
   const data = buffer.getChannelData(0);
@@ -3678,22 +3877,11 @@ function syncControlHints() {
   if (shell) shell.setAttribute("aria-label", t("ariaPrototype"));
   const note = document.querySelector(".screen-note");
   if (!note) return;
-  const hints = [
-    t("screenMove"),
-    t("screenSoftDrop"),
-    t("screenHardDrop"),
-    t("screenRotate"),
-    t("screenRotateCCW"),
-    t("screenRotate180"),
-    t("screenHold"),
-    `${formatControlKey(state.controls.pause)} ${t("paused")}`,
-    t("screenMusic"),
-  ];
+  const hints = UI_LAYOUT.compactHints.map((key) => t(key));
   note.replaceChildren(
     ...hints.map((hint, index) => {
       const span = document.createElement("span");
-      if (index === 7) span.id = "pause-hint";
-      if (index === 8) span.id = "music-hint";
+      span.id = `hint-${index}`;
       span.textContent = hint;
       return span;
     }),
@@ -3876,9 +4064,12 @@ function drawVignette() {
 
 function drawPanels() {
   drawTitle();
-  drawHudPanel(28, 70, 260, 560, t("ally").toUpperCase(), "NOA");
-  drawHudPanel(890, 70, 344, 560, t("enemy").toUpperCase(), enemyName(state.enemyType));
-  drawBoardFrame(BOARD_X - 18, BOARD_Y - 18, COLS * TILE + 36, ROWS * TILE + 36);
+  const player = UI_LAYOUT.playerPanel;
+  const enemy = UI_LAYOUT.enemyPanel;
+  const board = UI_LAYOUT.boardFrame;
+  drawHudPanel(player.x, player.y, player.w, player.h, t("ally").toUpperCase(), "NOA");
+  drawHudPanel(enemy.x, enemy.y, enemy.w, enemy.h, t("enemy").toUpperCase(), enemyName(state.enemyType));
+  drawBoardFrame(board.x, board.y, board.w, board.h);
   drawTopQuestBar();
 }
 
@@ -3903,18 +4094,18 @@ function drawTitle() {
 function drawCard(x, y, w, h) {
   ctx.save();
   const g = ctx.createLinearGradient(x, y, x + w, y + h);
-  g.addColorStop(0, "rgba(7, 13, 22, 0.82)");
-  g.addColorStop(0.5, "rgba(4, 7, 13, 0.76)");
-  g.addColorStop(1, "rgba(24, 14, 34, 0.74)");
+  g.addColorStop(0, "rgba(6, 11, 20, 0.76)");
+  g.addColorStop(0.52, "rgba(4, 7, 13, 0.68)");
+  g.addColorStop(1, "rgba(20, 13, 31, 0.66)");
   ctx.fillStyle = g;
-  ctx.shadowColor = "rgba(160, 112, 255, 0.16)";
-  ctx.shadowBlur = 24;
-  ctx.strokeStyle = "rgba(214, 159, 86, 0.42)";
+  ctx.shadowColor = "rgba(126, 231, 255, 0.1)";
+  ctx.shadowBlur = 18;
+  ctx.strokeStyle = "rgba(214, 159, 86, 0.34)";
   ctx.lineWidth = 2;
   roundedRect(x, y, w, h, 8, true, true);
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = "rgba(139, 102, 255, 0.22)";
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = "rgba(139, 102, 255, 0.18)";
+  ctx.lineWidth = 2;
   roundedRect(x + 5, y + 5, w - 10, h - 10, 5, false, true);
   ctx.strokeStyle = "rgba(255, 210, 128, 0.34)";
   ctx.lineWidth = 2;
@@ -3939,6 +4130,8 @@ function drawCard(x, y, w, h) {
   scan.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = scan;
   ctx.fillRect(x + 10, y + 10, w - 20, 1);
+  ctx.fillStyle = "rgba(126, 231, 255, 0.035)";
+  for (let yy = y + 22; yy < y + h - 16; yy += 26) ctx.fillRect(x + 12, yy, w - 24, 1);
   ctx.restore();
 }
 
@@ -4024,11 +4217,12 @@ function drawCornerGlyph(x, y, color) {
 function drawPlayer() {
   const hit = state.playerHit > 0;
   const playerAttack = state.attacks.find((attack) => attack.type === "player");
-  drawHpBar(54, 146, 190, 20, state.playerHp, state.playerMaxHp, hit ? "#ff7782" : "#76d4ff", t("hp"));
-  drawStatChip(54, 180, t("traveler").toUpperCase(), "#7ee7ff");
-  drawGuardMeter(54, 212);
+  const panel = UI_LAYOUT.playerPanel;
+  const left = panel.x + 22;
+  drawHpBar(left, panel.y + 74, 190, 20, state.playerHp, state.playerMaxHp, hit ? "#ff7782" : "#76d4ff", t("hp"));
+  drawGuardMeter(left, panel.y + 110);
   ctx.save();
-  ctx.translate(160, 360);
+  ctx.translate(panel.x + panel.w / 2, panel.y + 286);
   if (hit) ctx.translate(-10, 0);
   const bob = Math.sin(performance.now() * 0.0025) * 4;
   ctx.translate(0, bob);
@@ -4036,9 +4230,7 @@ function drawPlayer() {
   drawHeroSprite(hit);
   if (playerAttack) drawNoaAttackPose(playerAttack);
   ctx.restore();
-  drawBuildPanel();
-  label(t("noaRole"), 60, 596, 15, "rgba(238,244,252,0.68)");
-  label(t("travelerNote"), 60, 615, 13, "rgba(238,244,252,0.48)");
+  drawBuildPanel(panel.x + 22, panel.y + 438, panel.w - 44);
 }
 
 function drawGuardMeter(x, y) {
@@ -4532,18 +4724,23 @@ function drawNoaAttackPose(attack) {
   ctx.restore();
 }
 
-function drawBuildPanel() {
+function drawBuildPanel(x = 54, y = 510, w = 198) {
   const items = getBuildSummary();
   ctx.save();
-  ctx.fillStyle = "rgba(5, 8, 12, 0.42)";
-  roundedRect(54, 506, 198, 66, 8, true, false);
-  ctx.strokeStyle = "rgba(126, 231, 255, 0.16)";
+  ctx.fillStyle = "rgba(5, 8, 12, 0.34)";
+  roundedRect(x, y, w, 70, 8, true, false);
+  ctx.strokeStyle = "rgba(126, 231, 255, 0.14)";
   ctx.lineWidth = 1.5;
-  roundedRect(54, 506, 198, 66, 8, false, true);
-  label(t("build").toUpperCase(), 70, 527, 13, "#7ee7ff");
-  for (let i = 0; i < items.length; i += 1) {
-    label(items[i], 70, 548 + i * 17, 13, i === 0 && items[i] === t("noUpgrades") ? "rgba(238,244,252,0.44)" : "#f3f2ea");
+  roundedRect(x, y, w, 70, 8, false, true);
+  label(t("buildCompact").toUpperCase(), x + 16, y + 21, 12, "#7ee7ff");
+  label(t("buildDetailPause"), x + 76, y + 21, 10, "rgba(238,244,252,0.38)");
+  for (let i = 0; i < Math.min(2, items.length); i += 1) {
+    const yy = y + 42 + i * 16;
+    ctx.fillStyle = i === 0 && items[i] === t("noUpgrades") ? "rgba(238,244,252,0.08)" : "rgba(157,247,218,0.08)";
+    roundedRect(x + 14, yy - 11, w - 34, 13, 5, true, false);
+    label(items[i], x + 20, yy, 11, i === 0 && items[i] === t("noUpgrades") ? "rgba(238,244,252,0.42)" : "#f3f2ea");
   }
+  if (items.length > 2) label(`+${items.length - 2}`, x + w - 28, y + 58, 10, "#fff0a6");
   ctx.restore();
 }
 
@@ -4664,16 +4861,14 @@ function drawEnemy() {
 function drawEnemyBehaviorChips(x, y, enemy) {
   const expectedGarbage = getEnemyAttackGarbagePreview(enemy);
   const chips = [
-    { label: `◆ ${t("enemyInfoDamage")}`, value: state.enemyAttackDamage, color: "#ffb7bd" },
-    { label: `▥ ${t("enemyInfoGarbage")}`, value: `${expectedGarbage} · ${expectedGarbage > 0 ? t("enemyCancelable") : "-"}`, color: expectedGarbage > 0 ? "#c9d4da" : "rgba(238,244,252,0.46)" },
-    { label: `◇ ${t("enemyInfoWeakness")}`, value: enemyWeaknessLabel(enemy).replace(/^.*[:：]\s*/, ""), color: "#fff0a6" },
-    { label: `✦ ${t("enemyInfoSpecial")}`, value: t(`special.${enemy.id}`), color: enemy.color },
+    { label: t("threatShort"), value: `${state.enemyAttackDamage} / +${expectedGarbage}`, color: expectedGarbage > 0 ? "#ffb7bd" : "rgba(238,244,252,0.54)" },
+    { label: t("boardEffectShort"), value: t(`special.${enemy.id}`), color: enemy.color },
   ];
   ctx.save();
   for (let i = 0; i < chips.length; i += 1) {
     const chip = chips[i];
-    const cy = y + Math.floor(i / 2) * 35;
-    const cx = x + (i % 2) * 122;
+    const cy = y;
+    const cx = x + i * 122;
     ctx.fillStyle = "rgba(7, 10, 16, 0.5)";
     roundedRect(cx, cy, 116, 29, 7, true, false);
     ctx.strokeStyle = hexToRgba(chip.color.startsWith("#") ? chip.color : "#8fe8dc", 0.22);
@@ -4929,34 +5124,64 @@ function drawSlimeKingBody(enemy) {
 function getEnemyIntent(enemy) {
   const garbage = getEnemyAttackGarbagePreview(enemy);
   const cancelText = garbage > 0 ? t("enemyCancelable") : "-";
+  const icon = {
+    slime: "!",
+    vine: "G",
+    mushroom: "N",
+    beetle: "A",
+    mist: "?",
+    king: "B",
+  }[enemy.id] || "!";
   if (enemy.id === "mushroom") {
-    return { title: t("intentSporeHex"), detail: `${fmt("intentSporeHexDetail", { damage: state.enemyAttackDamage })} / ${cancelText}`, color: "#77e8ff" };
+    return { icon, title: t("intentSporeHex"), detail: `${fmt("intentSporeHexDetail", { damage: state.enemyAttackDamage })} / ${cancelText}`, color: "#77e8ff" };
   }
   if (enemy.id === "beetle") {
-    return { title: t("intentArmorCrush"), detail: `${fmt("intentArmorCrushDetail", { damage: state.enemyAttackDamage, garbage })} / ${cancelText}`, color: "#c6b38a" };
+    return { icon, title: t("intentArmorCrush"), detail: `${fmt("intentArmorCrushDetail", { damage: state.enemyAttackDamage, garbage })} / ${cancelText}`, color: "#c6b38a" };
   }
   if (enemy.id === "king") {
-    return { title: fmt("intentBossPhase", { phase: getBossPhase() }), detail: `${fmt("intentBossPhaseDetail", { damage: state.enemyAttackDamage })} / +${garbage}`, color: "#f1d36b" };
+    return { icon, title: fmt("intentBossPhase", { phase: getBossPhase() }), detail: `${fmt("intentBossPhaseDetail", { damage: state.enemyAttackDamage })} / +${garbage}`, color: "#f1d36b" };
   }
   if (garbage > 0) {
-    return { title: t("intentGarbageSurge"), detail: `${fmt("intentGarbageSurgeDetail", { damage: state.enemyAttackDamage, garbage })} / ${cancelText}`, color: "#c9d4da" };
+    return { icon, title: t("intentGarbageSurge"), detail: `${fmt("intentGarbageSurgeDetail", { damage: state.enemyAttackDamage, garbage })} / ${cancelText}`, color: "#c9d4da" };
   }
-  return { title: t("intentStrike"), detail: fmt("intentStrikeDetail", { damage: state.enemyAttackDamage }), color: "#98f07e" };
+  return { icon, title: t("intentStrike"), detail: fmt("intentStrikeDetail", { damage: state.enemyAttackDamage }), color: "#98f07e" };
 }
 
 function drawEnemyIntent(x, y, intent) {
+  const enemy = state.enemyType;
+  const garbage = getEnemyAttackGarbagePreview(enemy);
   ctx.save();
-  ctx.fillStyle = "rgba(7, 10, 16, 0.52)";
-  roundedRect(x, y, 238, 52, 7, true, false);
+  ctx.fillStyle = "rgba(7, 10, 16, 0.44)";
+  roundedRect(x, y, 238, 58, 7, true, false);
   ctx.strokeStyle = hexToRgba(intent.color, 0.36);
   ctx.lineWidth = 1.5;
-  roundedRect(x, y, 238, 52, 7, false, true);
+  roundedRect(x, y, 238, 58, 7, false, true);
+  ctx.fillStyle = hexToRgba(intent.color, 0.22);
+  roundedRect(x + 10, y + 10, 30, 36, 7, true, false);
+  ctx.strokeStyle = hexToRgba(intent.color, 0.48);
+  roundedRect(x + 10, y + 10, 30, 36, 7, false, true);
+  ctx.font = "900 18px Trebuchet MS";
+  ctx.fillStyle = intent.color;
+  ctx.textAlign = "center";
+  ctx.fillText(intent.icon || "!", x + 25, y + 33);
+  ctx.textAlign = "left";
   ctx.font = "800 12px Trebuchet MS";
   ctx.fillStyle = intent.color;
-  ctx.fillText(`${t("enemyIntent").toUpperCase()}: ${intent.title.toUpperCase()}`, x + 12, y + 18);
-  ctx.font = "700 13px Trebuchet MS";
-  ctx.fillStyle = "rgba(238,244,252,0.66)";
-  ctx.fillText(intent.detail, x + 12, y + 38);
+  ctx.fillText(intent.title.toUpperCase(), x + 50, y + 18);
+  drawIntentMiniChip(x + 50, y + 28, "DMG", state.enemyAttackDamage, "#ffb7bd");
+  drawIntentMiniChip(x + 103, y + 28, "GARB", garbage, garbage > 0 ? "#c9d4da" : "rgba(238,244,252,0.36)");
+  drawIntentMiniChip(x + 158, y + 28, "WEAK", enemyWeaknessToken(enemy), "#fff0a6", 68);
+  ctx.restore();
+}
+
+function drawIntentMiniChip(x, y, key, value, color, w = 48) {
+  ctx.save();
+  ctx.fillStyle = hexToRgba(color.startsWith("#") ? color : "#dce8ee", 0.1);
+  roundedRect(x, y, w, 18, 5, true, false);
+  ctx.strokeStyle = hexToRgba(color.startsWith("#") ? color : "#dce8ee", 0.22);
+  roundedRect(x, y, w, 18, 5, false, true);
+  label(key, x + 5, y + 12, 8, "rgba(238,244,252,0.42)");
+  label(String(value), x + 26, y + 12, 9, color);
   ctx.restore();
 }
 
@@ -5319,22 +5544,26 @@ function drawOperationReadouts() {
   const x = HOLD_PANEL_X - 12;
   const y = HOLD_PANEL_Y + 148;
   ctx.save();
-  ctx.fillStyle = "rgba(3, 5, 10, 0.38)";
-  roundedRect(x, y, 142, 232, 10, true, false);
+  ctx.fillStyle = "rgba(3, 5, 10, 0.28)";
+  roundedRect(x, y, 142, 196, 10, true, false);
   ctx.strokeStyle = "rgba(255, 224, 162, 0.2)";
   ctx.lineWidth = 1.5;
-  roundedRect(x, y, 142, 232, 10, false, true);
+  roundedRect(x, y, 142, 196, 10, false, true);
   label(t("attackPanel").toUpperCase(), x + 14, y + 24, 14, "#ffe0a3");
-  label(`${t("upgradeMeterShort")} ${state.upgradeMeter}/${state.nextUpgradeAt}`, x + 72, y + 24, 12, "#9df7da");
+  const upgradeText = state.upgradeReady
+    ? t("upgradeReadyShort").toUpperCase()
+    : `${t("upgradeMeterShort")} ${state.upgradeMeter}/${state.nextUpgradeAt}`;
+  label(upgradeText, x + 72, y + 24, 12, state.upgradeReady ? "#fff0a6" : "#9df7da");
   const ultimateText = state.ultimateActive
     ? `4-WIDE ${Math.ceil(state.ultimateTimer / 1000)}s`
     : `${t("ultimateShort")} ${state.ultimateCharge}/${ULTIMATE_REQUIRED_LINES}`;
   label(ultimateText, x + 14, y + 44, 12, state.ultimateActive ? "#ffbe5f" : "#caa2ff");
-  for (let i = 0; i < state.operationReadouts.length; i += 1) {
+  const visibleReadouts = Math.min(3, state.operationReadouts.length);
+  for (let i = 0; i < visibleReadouts; i += 1) {
     const readout = state.operationReadouts[i];
     const progress = 1 - readout.life / readout.duration;
     const alpha = Math.max(0, Math.min(1, readout.life / 260));
-    const yy = y + 76 + i * 38;
+    const yy = y + 74 + i * 39;
     ctx.globalAlpha = alpha * (i === 0 ? 1 : 0.58);
     ctx.save();
     ctx.translate(i === 0 ? Math.sin(progress * Math.PI) * 4 : 0, 0);
@@ -5358,29 +5587,26 @@ function drawOperationReadouts() {
   }
   ctx.globalAlpha = 1;
   ctx.restore();
-  drawDamageFormulaPanel(x, y + 246);
+  drawDamageFormulaPanel(x, y + 208);
 }
 
 function drawDamageFormulaPanel(x, y) {
   const breakdown = state.lastDamageBreakdown;
   ctx.save();
-  ctx.fillStyle = "rgba(3, 5, 10, 0.36)";
-  roundedRect(x, y, 142, 118, 10, true, false);
+  ctx.fillStyle = "rgba(3, 5, 10, 0.26)";
+  roundedRect(x, y, 142, 72, 10, true, false);
   ctx.strokeStyle = "rgba(145, 232, 222, 0.16)";
-  roundedRect(x, y, 142, 118, 10, false, true);
-  label(t("damageFormula").toUpperCase(), x + 12, y + 21, 12, "#8fe8dc");
+  roundedRect(x, y, 142, 72, 10, false, true);
+  label(t("lastHit").toUpperCase(), x + 12, y + 21, 12, "#8fe8dc");
   if (!breakdown) {
-    wrapText(t("damageEquationHint"), x + 12, y + 45, 112, 16, "rgba(238,244,252,0.5)", 11);
+    wrapText(t("damageEquationHint"), x + 12, y + 43, 116, 14, "rgba(238,244,252,0.48)", 10);
     ctx.restore();
     return;
   }
-  label(`${t("damageTotal")} ${breakdown.total} ${t("dmgShort")}`, x + 12, y + 43, 17, "#fff0a6");
-  wrapText(buildDamageEquation(breakdown), x + 12, y + 64, 116, 14, "rgba(238,244,252,0.66)", 10);
-  const multi = breakdown.multipliers[0];
-  if (multi) {
-    const name = multi.key ? t(multi.key) : multi.label;
-    label(`${name} ${multi.value}`, x + 12, y + 110, 10, "#d7c2ff");
-  }
+  label(`${breakdown.total} ${t("dmgShort")}`, x + 12, y + 45, 21, "#fff0a6");
+  const title = breakdown.title.length > 16 ? `${breakdown.title.slice(0, 15)}...` : breakdown.title;
+  label(title, x + 12, y + 61, 10, "rgba(238,244,252,0.58)");
+  label(t("detailPauseHint"), x + 12, y + 69, 8, "rgba(157,247,218,0.46)");
   ctx.restore();
 }
 
@@ -5388,21 +5614,34 @@ function drawCombatReadout() {
   ctx.save();
   const x = 904;
   const y = 518;
-  ctx.fillStyle = "rgba(5, 8, 12, 0.42)";
-  roundedRect(x - 4, y - 22, 246, 136, 8, true, false);
-  ctx.strokeStyle = "rgba(152, 228, 235, 0.14)";
-  roundedRect(x - 4, y - 22, 246, 136, 8, false, true);
-  label(`${t("waveLabel")} ${state.wave} / ${t("kos")} ${state.defeated}`, x, y, 16, "#98f07e");
-  label(state.wave % 10 === 0 ? fmt("bossPhase", { phase: getBossPhase() }).toUpperCase() : state.miniBoss ? t("miniBoss").toUpperCase() : `${t("nextBossLabel")} ${10 - (state.wave % 10)}`, x + 118, y, 12, state.enemyType.id === "king" ? "#fff0a6" : "#d7c2ff");
-  label(`${t("piecesLabel")} ${state.placed}`, x, y + 22, 15, "rgba(238,244,252,0.62)");
-  label(`${t("comboLabel")} ${state.combo}`, x, y + 44, 15, state.combo >= 3 ? "#7ef7ff" : "rgba(238,244,252,0.58)");
-  drawB2BStatusLight(x, y + 64);
-  label(`${t("guardLabel")} ${state.guard}/${state.maxGuard} / ${t("pcShort")} ${state.perfectClears}`, x, y + 84, 12, state.guard > 0 ? "#9df7da" : "rgba(238,244,252,0.48)");
-  label(`${t("incomingLabel")} ${state.pendingGarbage}: ${t("incomingHelp")}`, x, y + 104, 12, state.pendingGarbage > 0 ? "#ffb7bd" : "rgba(238,244,252,0.42)");
+  ctx.fillStyle = "rgba(5, 8, 12, 0.3)";
+  roundedRect(x - 4, y - 22, 246, 112, 8, true, false);
+  ctx.strokeStyle = "rgba(152, 228, 235, 0.12)";
+  roundedRect(x - 4, y - 22, 246, 112, 8, false, true);
+  drawMetricChip(x, y - 4, t("waveLabel"), state.wave, "#98f07e");
+  drawMetricChip(x + 82, y - 4, t("kos"), state.defeated, "#9df7da");
+  drawMetricChip(x + 164, y - 4, t("comboLabel"), state.combo, state.combo >= 3 ? "#7ef7ff" : "#d7c2ff");
+  drawB2BStatusLight(x, y + 42);
+  const nextBoss = state.wave % 10 === 0 ? fmt("bossPhase", { phase: getBossPhase() }).toUpperCase() : state.miniBoss ? t("miniBoss").toUpperCase() : `${t("nextBossLabel")} ${10 - (state.wave % 10)}`;
+  label(nextBoss, x + 154, y + 46, 11, state.enemyType.id === "king" ? "#fff0a6" : "#d7c2ff");
+  label(`${t("guardLabel")} ${state.guard}/${state.maxGuard}`, x, y + 70, 12, state.guard > 0 ? "#9df7da" : "rgba(238,244,252,0.46)");
+  label(`${t("incomingLabel")} ${state.pendingGarbage}`, x + 104, y + 70, 12, state.pendingGarbage > 0 ? "#ffb7bd" : "rgba(238,244,252,0.42)");
+  label(`${t("pcShort")} ${state.perfectClears}`, x + 190, y + 70, 12, "#fff0a6");
   if (state.challenge) {
     const config = CHALLENGES.find((challenge) => challenge.id === state.challenge.id);
-    if (config) label(`${config.title}: ${state.challenge.progress}/${config.target}`, x + 126, y + 104, 12, state.challenge.complete ? "#fff0a6" : "#9df7da");
+    if (config) label(`${config.title}: ${state.challenge.progress}/${config.target}`, x, y + 88, 11, state.challenge.complete ? "#fff0a6" : "#9df7da");
   }
+  ctx.restore();
+}
+
+function drawMetricChip(x, y, labelText, value, color) {
+  ctx.save();
+  ctx.fillStyle = hexToRgba(color, 0.09);
+  roundedRect(x, y, 72, 32, 8, true, false);
+  ctx.strokeStyle = hexToRgba(color, 0.22);
+  roundedRect(x, y, 72, 32, 8, false, true);
+  label(String(labelText).toUpperCase(), x + 8, y + 12, 9, "rgba(238,244,252,0.48)");
+  label(String(value), x + 8, y + 27, 15, color);
   ctx.restore();
 }
 
@@ -5849,6 +6088,46 @@ function drawTutorialPrompt() {
   ctx.restore();
 }
 
+function drawDimOverlay(alpha = 0.76) {
+  ctx.save();
+  ctx.fillStyle = `rgba(2, 4, 8, ${alpha})`;
+  ctx.fillRect(0, 0, W, H);
+  const g = ctx.createRadialGradient(W / 2, H / 2, 80, W / 2, H / 2, 620);
+  g.addColorStop(0, "rgba(48, 34, 70, 0.1)");
+  g.addColorStop(0.62, "rgba(0, 0, 0, 0.2)");
+  g.addColorStop(1, "rgba(0, 0, 0, 0.58)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
+function drawStartMenuOverlay() {
+  const m = UI_LAYOUT.menu;
+  drawDimOverlay(0.84);
+  drawCard(m.x, m.y, m.w, m.h);
+  ctx.save();
+  ctx.textAlign = "center";
+  ctx.shadowColor = "rgba(190, 140, 255, 0.48)";
+  ctx.shadowBlur = 18;
+  ctx.font = "900 48px Georgia, Trebuchet MS, serif";
+  const titleGradient = ctx.createLinearGradient(m.x + 80, m.titleY - 42, m.x + m.w - 80, m.titleY + 14);
+  titleGradient.addColorStop(0, "#fff8dc");
+  titleGradient.addColorStop(0.52, "#ffe0a3");
+  titleGradient.addColorStop(1, "#d7c2ff");
+  ctx.fillStyle = titleGradient;
+  ctx.fillText(t("startTitle"), m.x + m.w / 2, m.titleY);
+  ctx.shadowBlur = 0;
+  ctx.textAlign = "left";
+  wrapText(t("startSubtitle"), m.x + 58, m.subtitleY, m.w - 116, 25, "rgba(238,244,252,0.74)", 18);
+  drawMenuButton(m.x + 60, m.primaryY, m.w - 120, 56, t("endless"), "Enter", "primary");
+  drawMenuButton(m.x + 60, m.tutorialY, m.w - 120, 46, t("tutorialStart"), "3 min");
+  drawMenuButton(m.x + 60, m.utilityY, 198, 44, t("settings"), "Esc");
+  drawMenuButton(m.x + m.w - 258, m.utilityY, 198, 44, t("moveGuide"), "spins");
+  label(t("startHint"), m.x + 62, m.y + m.h - 54, 15, "#9fb4ff");
+  label(t("firstRunHint"), m.x + 62, m.y + m.h - 30, 12, "rgba(255, 240, 166, 0.72)");
+  ctx.restore();
+}
+
 function drawOverlay() {
   if (state.mode === "playing") return;
   if (state.mode === "upgrade") {
@@ -5864,9 +6143,12 @@ function drawOverlay() {
     drawPauseSettingsOverlay();
     return;
   }
+  if (state.mode === "start") {
+    drawStartMenuOverlay();
+    return;
+  }
   ctx.save();
-  ctx.fillStyle = "rgba(4, 6, 10, 0.68)";
-  ctx.fillRect(0, 0, W, H);
+  drawDimOverlay(0.74);
   const isResult = state.mode === "victory" || state.mode === "defeat";
   drawCard(318, isResult ? 82 : 126, 644, state.mode === "start" || isResult ? 456 : 324);
   const title =
@@ -5887,7 +6169,7 @@ function drawOverlay() {
     drawMenuButton(384, 318, 510, 54, t("endless"), "Enter");
     drawMenuButton(384, 386, 510, 44, t("tutorialStart"), "3 min");
     drawMenuButton(384, 454, 244, 44, t("settings"), "Esc");
-    drawMenuButton(650, 454, 244, 44, t("moveGuide"), "spins");
+    drawMenuButton(650, 454, 244, 44, t("practice"), "spins");
     label(t("startHint"), 384, 534, 18, "#9fb4ff");
     if (!state.save.tutorialCompleted) label(t("firstRunHint"), 384, 562, 14, "#fff0a6");
   } else {
@@ -5921,6 +6203,7 @@ function drawPauseSettingsOverlay() {
   drawSlider(t("music"), "musicVolume", 430, 242, audio.musicVolume);
   drawSlider(t("sfx"), "sfxVolume", 430, 294, audio.sfxVolume);
   drawToggle(430, 334, t("mute"), audio.muted);
+  wrapText(t("audioMixHelp"), 430, 374, 276, 13, "rgba(238,244,252,0.42)", 10);
 
   label(t("feel"), 430, 404, 18, "#fff0a6");
   drawTuningSlider(t("das"), "das", 430, 438);
@@ -5936,6 +6219,7 @@ function drawPauseSettingsOverlay() {
   label(t("controls"), 792, 154, 18, "#8fe8dc");
   label(state.bindingAction ? t("binding") : t("bindHelp"), 792, 180, 12, "rgba(238,244,252,0.54)");
   drawControlGrid(792, 204, 1);
+  drawPauseDamageDetail(792, 548, 306, 76);
   label(t("closeHint"), 792, 644, 13, "rgba(238,244,252,0.46)");
   ctx.restore();
 }
@@ -5948,6 +6232,24 @@ function drawPauseStat(x, y, name, value) {
   roundedRect(x, y - 22, 190, 28, 7, false, true);
   label(name, x + 14, y - 3, 14, "rgba(238,244,252,0.58)");
   label(String(value), x + 128, y - 3, 15, "#f5f1e6");
+  ctx.restore();
+}
+
+function drawPauseDamageDetail(x, y, w, h) {
+  const breakdown = state.lastDamageBreakdown;
+  ctx.save();
+  ctx.fillStyle = "rgba(8, 13, 20, 0.52)";
+  roundedRect(x, y, w, h, 8, true, false);
+  ctx.strokeStyle = "rgba(255, 240, 166, 0.18)";
+  roundedRect(x, y, w, h, 8, false, true);
+  label(t("damageFormula"), x + 14, y + 22, 15, "#fff0a6");
+  if (!breakdown) {
+    wrapText(t("damageEquationHint"), x + 14, y + 44, w - 28, 15, "rgba(238,244,252,0.52)", 11);
+    ctx.restore();
+    return;
+  }
+  label(`${breakdown.title} = ${breakdown.total} ${t("dmgShort")}`, x + 14, y + 43, 13, "#f5f1e6");
+  wrapText(buildDamageEquation(breakdown), x + 14, y + 62, w - 28, 14, "rgba(238,244,252,0.64)", 10);
   ctx.restore();
 }
 
@@ -6008,11 +6310,12 @@ function getRatingColor(rating) {
 
 function drawUpgradeOverlay() {
   ctx.save();
-  ctx.fillStyle = "rgba(4, 6, 10, 0.72)";
+  ctx.fillStyle = "rgba(4, 6, 10, 0.76)";
   ctx.fillRect(0, 0, W, H);
   drawCard(286, 126, 708, 442);
-  label(t("chooseUpgrade"), 348, 200, 38, "#f5f1e6");
-  label(fmt("waveClearPick", { wave: state.wave - 1 }), 350, 238, 18, "rgba(238,244,252,0.66)");
+  label(t("relicDraft").toUpperCase(), 348, 198, 35, "#f5f1e6");
+  label(fmt("waveClearPick", { wave: state.wave - 1 }), 350, 230, 17, "rgba(238,244,252,0.62)");
+  label(t("safeNodeDraft"), 350, 252, 13, "#9df7da");
   for (let i = 0; i < 3; i += 1) {
     const upgrade = state.upgradeChoices[i];
     if (!upgrade) continue;
@@ -6021,18 +6324,42 @@ function drawUpgradeOverlay() {
     const x = 342 + i * 204;
     const y = 292;
     const hovered = pointInRect(state.pointer.x, state.pointer.y, x, y, 180, 186);
-    ctx.fillStyle = hovered ? "rgba(109, 232, 255, 0.18)" : "rgba(8, 13, 20, 0.72)";
-    roundedRect(x, y, 180, 186, 10, true, false);
-    ctx.strokeStyle = hovered ? rarity.color : hexToRgba(rarity.color, 0.36);
-    ctx.lineWidth = 2;
-    roundedRect(x, y, 180, 186, 10, false, true);
-    label(`${i + 1}`, x + 18, y + 34, 24, "#fff0a6");
-    label(rarityLabel(upgrade.rarity).toUpperCase(), x + 58, y + 31, 12, rarity.color);
-    label(t(family.labelKey).toUpperCase(), x + 58, y + 48, 11, family.color);
-    wrapText(upgradeName(upgrade), x + 18, y + 70, 142, 24, "#f5f1e6", 19);
-    wrapText(upgradeText(upgrade), x + 18, y + 122, 142, 21, "rgba(238,244,252,0.68)", 14);
+    const cardG = ctx.createLinearGradient(x, y, x, y + 186);
+    cardG.addColorStop(0, hovered ? hexToRgba(rarity.color, 0.22) : "rgba(13, 18, 28, 0.78)");
+    cardG.addColorStop(1, hovered ? "rgba(33, 18, 46, 0.82)" : "rgba(7, 10, 16, 0.76)");
+    ctx.fillStyle = cardG;
+    roundedRect(x, y, 180, 186, 12, true, false);
+    ctx.strokeStyle = hovered ? rarity.color : hexToRgba(rarity.color, 0.42);
+    ctx.lineWidth = hovered ? 3 : 2;
+    roundedRect(x, y, 180, 186, 12, false, true);
+    drawUpgradeSigil(x + 90, y + 42, family.color, i + 1);
+    label(rarityLabel(upgrade.rarity).toUpperCase(), x + 18, y + 28, 11, rarity.color);
+    label(t(family.labelKey).toUpperCase(), x + 18, y + 48, 11, family.color);
+    wrapText(upgradeName(upgrade), x + 18, y + 89, 142, 23, "#f5f1e6", 18);
+    wrapText(upgradeText(upgrade), x + 18, y + 134, 142, 18, "rgba(238,244,252,0.64)", 12);
   }
   label(t("upgradeHelp"), 350, 522, 17, "#9fb4ff");
+  ctx.restore();
+}
+
+function drawUpgradeSigil(x, y, color, number) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 16;
+  ctx.strokeStyle = hexToRgba(color, 0.72);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0, 0, 22, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.rotate(Math.PI / 4);
+  ctx.strokeRect(-13, -13, 26, 26);
+  ctx.rotate(-Math.PI / 4);
+  ctx.fillStyle = hexToRgba(color, 0.18);
+  ctx.beginPath();
+  ctx.arc(0, 0, 18, 0, Math.PI * 2);
+  ctx.fill();
+  label(String(number), -4, 5, 16, "#fff0a6");
   ctx.restore();
 }
 
@@ -6053,6 +6380,7 @@ function drawMoveGuideOverlay() {
   drawCard(176, 70, 928, 580);
   label(t("moveGuide"), 232, 136, 44, "#f5f1e6");
   label(t("moveGuideSubtitle"), 236, 174, 16, "#9fb4ff");
+  label(t("practiceHint"), 820, 190, 12, "rgba(255,240,166,0.62)");
   const rows = [
     ["T-Spin", t("guideTSpinText"), "#f2d36b"],
     ["T-Spin Mini", t("guideTSpinMiniText"), "#d7c2ff"],
@@ -6110,20 +6438,36 @@ function drawChallengePanel(x, y) {
   ctx.restore();
 }
 
-function drawMenuButton(x, y, w, h, text, hint) {
+function drawMenuButton(x, y, w, h, text, hint, variant = "secondary") {
   const hovered = pointInRect(state.pointer.x, state.pointer.y, x, y, w, h);
   ctx.save();
-  ctx.fillStyle = hovered ? "rgba(109, 232, 255, 0.28)" : "rgba(10, 16, 25, 0.72)";
+  const primary = variant === "primary";
+  const fill = primary
+    ? (hovered ? "rgba(255, 224, 162, 0.26)" : "rgba(255, 224, 162, 0.13)")
+    : (hovered ? "rgba(109, 232, 255, 0.24)" : "rgba(10, 16, 25, 0.68)");
+  ctx.fillStyle = fill;
   roundedRect(x, y, w, h, 8, true, false);
-  ctx.strokeStyle = hovered ? "rgba(255, 244, 168, 0.6)" : "rgba(145, 232, 222, 0.32)";
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = primary
+    ? (hovered ? "rgba(255, 244, 168, 0.84)" : "rgba(255, 224, 162, 0.52)")
+    : (hovered ? "rgba(255, 244, 168, 0.5)" : "rgba(145, 232, 222, 0.26)");
+  ctx.lineWidth = primary ? 2.5 : 2;
   roundedRect(x, y, w, h, 8, false, true);
-  ctx.font = "800 18px Trebuchet MS";
-  ctx.fillStyle = "#f3f2ea";
-  ctx.fillText(text, x + 18, y + 28);
-  ctx.font = "800 12px Trebuchet MS";
-  ctx.fillStyle = "rgba(238,244,252,0.56)";
-  ctx.fillText(hint, x + w - 54, y + 28);
+  if (primary) {
+    ctx.shadowColor = "rgba(255, 224, 162, 0.32)";
+    ctx.shadowBlur = hovered ? 16 : 9;
+  }
+  ctx.font = `800 ${primary ? 21 : 17}px Trebuchet MS`;
+  ctx.fillStyle = primary ? "#fff7d2" : "#f3f2ea";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, x + 20, y + h / 2 + 1);
+  if (hint) {
+    ctx.font = "800 12px Trebuchet MS";
+    ctx.fillStyle = "rgba(238,244,252,0.56)";
+    ctx.textAlign = "right";
+    ctx.fillText(hint, x + w - 18, y + h / 2 + 1);
+    ctx.textAlign = "left";
+  }
+  ctx.textBaseline = "alphabetic";
   ctx.restore();
 }
 
@@ -6185,6 +6529,18 @@ function enemyWeaknessLabel(enemy) {
   return t(keyByWeakness[enemy.weakness] || "weaknessNone");
 }
 
+function enemyWeaknessToken(enemy) {
+  return {
+    none: "-",
+    combo: "Combo",
+    perfect: "PC",
+    spin: "Spin",
+    allspin: "All",
+    "all-spin": "All",
+    b2b: "B2B",
+  }[enemy.weakness] || "-";
+}
+
 function enemyName(enemy) {
   return t(`enemy.${enemy.id}.name`);
 }
@@ -6216,6 +6572,7 @@ function drawSettings() {
   drawSlider(t("music"), "musicVolume", 282, 232, audio.musicVolume);
   drawSlider(t("sfx"), "sfxVolume", 282, 284, audio.sfxVolume);
   drawToggle(282, 326, t("mute"), audio.muted);
+  wrapText(t("audioMixHelp"), 282, 368, 330, 14, "rgba(238,244,252,0.42)", 11);
 
   label(t("feel"), 282, 392, 18, "#fff0a6");
   drawTuningSlider(t("das"), "das", 282, 426);
@@ -6457,20 +6814,80 @@ function label(text, x, y, size, color) {
 function wrapText(text, x, y, maxWidth, lineHeight, color, size) {
   ctx.font = `700 ${size}px Trebuchet MS`;
   ctx.fillStyle = color;
-  const chars = [...text];
+  const tokens = tokenizeForWrap(String(text));
   let line = "";
   let cy = y;
-  for (const ch of chars) {
-    const test = line + ch;
-    if (ctx.measureText(test).width > maxWidth && line) {
-      ctx.fillText(line, x, cy);
-      line = ch;
+  for (const token of tokens) {
+    if (token === "\n") {
+      if (line.trim()) ctx.fillText(line.trimEnd(), x, cy);
+      line = "";
       cy += lineHeight;
+      continue;
+    }
+    const next = line ? line + token : token.trimStart();
+    const test = next.trimStart();
+    if (ctx.measureText(test).width > maxWidth && line) {
+      ctx.fillText(line.trimEnd(), x, cy);
+      line = token.trimStart();
+      cy += lineHeight;
+      if (ctx.measureText(line).width > maxWidth) {
+        const broken = breakOversizedToken(line, maxWidth);
+        for (let i = 0; i < broken.length - 1; i += 1) {
+          ctx.fillText(broken[i], x, cy);
+          cy += lineHeight;
+        }
+        line = broken[broken.length - 1] || "";
+      }
     } else {
-      line = test;
+      line = next;
     }
   }
-  if (line) ctx.fillText(line, x, cy);
+  if (line.trim()) ctx.fillText(line.trimEnd(), x, cy);
+}
+
+function tokenizeForWrap(text) {
+  const tokens = [];
+  let word = "";
+  const flush = () => {
+    if (word) tokens.push(word);
+    word = "";
+  };
+  for (const ch of [...text]) {
+    if (ch === "\n") {
+      flush();
+      tokens.push("\n");
+    } else if (/\s/.test(ch)) {
+      flush();
+      tokens.push(" ");
+    } else if (isCjkChar(ch)) {
+      flush();
+      tokens.push(ch);
+    } else {
+      word += ch;
+    }
+  }
+  flush();
+  return tokens;
+}
+
+function isCjkChar(ch) {
+  return /[\u3400-\u9fff\u3000-\u303f\uff00-\uffef]/.test(ch);
+}
+
+function breakOversizedToken(token, maxWidth) {
+  const parts = [];
+  let current = "";
+  for (const ch of [...token]) {
+    const test = current + ch;
+    if (ctx.measureText(test).width > maxWidth && current) {
+      parts.push(current);
+      current = ch;
+    } else {
+      current = test;
+    }
+  }
+  if (current) parts.push(current);
+  return parts;
 }
 
 window.addEventListener("keydown", (event) => {
@@ -6652,13 +7069,14 @@ canvas.addEventListener("mousedown", (event) => {
       }
     }
     if (state.mode === "start") {
-      if (pointInRect(p.x, p.y, 384, 318, 510, 54)) resetGame("endless");
-      else if (pointInRect(p.x, p.y, 384, 386, 510, 44)) startTutorial();
-      else if (pointInRect(p.x, p.y, 384, 454, 244, 44)) {
+      const m = UI_LAYOUT.menu;
+      if (pointInRect(p.x, p.y, m.x + 60, m.primaryY, m.w - 120, 56)) resetGame("endless");
+      else if (pointInRect(p.x, p.y, m.x + 60, m.tutorialY, m.w - 120, 46)) startTutorial();
+      else if (pointInRect(p.x, p.y, m.x + 60, m.utilityY, 198, 44)) {
         state.settingsOpen = true;
         playSfx("hold");
       }
-      else if (pointInRect(p.x, p.y, 650, 454, 244, 44)) {
+      else if (pointInRect(p.x, p.y, m.x + m.w - 258, m.utilityY, 198, 44)) {
         state.mode = "guide";
         playSfx("hold");
       }
