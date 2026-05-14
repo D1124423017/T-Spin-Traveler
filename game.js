@@ -307,30 +307,41 @@ const DEFAULT_CONTROLS = {
 };
 
 const UI_LAYOUT = {
-  playerPanel: { x: 32, y: 92, w: 248, h: 154 },
-  enemyPanel: { x: 946, y: 92, w: 302, h: 178 },
-  playerStage: { x: 4, y: 230, w: 312, h: 398 },
-  enemyStage: { x: 884, y: 266, w: 384, h: 350 },
+  playerPanel: { x: 40, y: 94, w: 284, h: 176 },
+  enemyPanel: { x: 936, y: 94, w: 304, h: 244 },
+  playerStage: { x: 18, y: 254, w: 380, h: 392 },
+  enemyStage: { x: 860, y: 326, w: 410, h: 320 },
   boardFrame: { x: BOARD_X - 18, y: BOARD_Y - 18, w: COLS * TILE + 36, h: ROWS * TILE + 36 },
   menu: {
-    x: 800,
-    y: 196,
-    w: 350,
-    h: 352,
+    x: 792,
+    y: 104,
+    w: 414,
+    h: 544,
     titleY: 104,
     subtitleY: 154,
-    primaryY: 306,
-    tutorialY: 374,
-    utilityY: 438,
+    primaryY: 224,
+    tutorialY: 316,
+    utilityY: 408,
   },
   pauseButton: { x: 1192, y: 24, w: 50, h: 38 },
-  pauseMenu: { x: 422, y: 136, w: 436, h: 430 },
-  settings: { x: 168, y: 68, w: 944, h: 584, tabX: 206, contentX: 438, contentY: 164 },
+  pauseMenu: { x: 414, y: 122, w: 452, h: 462 },
+  settings: { x: 142, y: 58, w: 996, h: 604, tabX: 184, contentX: 388, contentY: 166 },
   ultimateMeter: { x: 0, y: ROWS * TILE + 10, w: COLS * TILE, h: 30 },
   compactHints: ["screenMove", "screenSoftDrop", "screenHardDrop", "screenRotate"],
 };
 
-const SETTINGS_TABS = ["audio", "controls", "language"];
+const SETTINGS_TABS = ["general", "controls", "audio", "language"];
+
+const MENU_IDLE_SEQUENCE = [
+  { id: "idleA", duration: 2800 },
+  { id: "idleB", duration: 3400 },
+  { id: "idleA", duration: 2400 },
+  { id: "idleC", duration: 3200 },
+  { id: "idleA", duration: 2600 },
+  { id: "idleD", duration: 3600 },
+];
+
+const MENU_IDLE_TRANSITION_MS = 520;
 
 const CONTROL_ACTIONS = [
   { id: "left", labelKey: "control.left" },
@@ -362,9 +373,15 @@ const translations = {
     pauseMenuHint: "戰鬥已停止。調整設定或回到主選單。",
     settingsBack: "返回暫停",
     settingsBackMenu: "返回主選單",
-    settingsTabAudio: "音訊",
+    settingsTabGeneral: "一般",
     settingsTabControls: "操作",
+    settingsTabAudio: "音訊",
     settingsTabLanguage: "語言",
+    generalSettingsTitle: "一般設定",
+    generalSettingsHelp: "主畫面維持 Minimal HUD：只保留棋盤、HP、Guard、Intent、Hold、Next 與 Wave。詳細公式與教學放在暫停或招式圖鑑。",
+    hudLayerTitle: "HUD 資訊層級",
+    hudMinimal: "Minimal HUD",
+    hudFloatingText: "Combo / B2B / T-Spin / Perfect Clear 以棋盤旁魔法浮字呈現，不常駐佔版面。",
     audioSettingsTitle: "音樂與音效",
     controlsSettingsTitle: "操作設定",
     languageSettingsTitle: "語言設定",
@@ -714,9 +731,15 @@ const translations = {
     pauseMenuHint: "Battle is stopped. Adjust settings or return to the main menu.",
     settingsBack: "Back to Pause",
     settingsBackMenu: "Back to Menu",
-    settingsTabAudio: "Audio",
+    settingsTabGeneral: "General",
     settingsTabControls: "Controls",
+    settingsTabAudio: "Audio",
     settingsTabLanguage: "Language",
+    generalSettingsTitle: "General Settings",
+    generalSettingsHelp: "The main screen uses Minimal HUD: board, HP, Guard, Intent, Hold, Next, and Wave stay visible. Full formulas and teaching text live in Pause or Move Guide.",
+    hudLayerTitle: "HUD Information Layers",
+    hudMinimal: "Minimal HUD",
+    hudFloatingText: "Combo / B2B / T-Spin / Perfect Clear appear as short magical popups near the board instead of permanent side text.",
     audioSettingsTitle: "Music & Sound",
     controlsSettingsTitle: "Control Settings",
     languageSettingsTitle: "Language",
@@ -1728,7 +1751,7 @@ const state = {
   messageKey: "",
   messageVars: {},
   settingsOpen: false,
-  settingsTab: "audio",
+  settingsTab: "general",
   pauseView: "menu",
   bindingAction: null,
   language: "zh",
@@ -4212,7 +4235,7 @@ function resetCanvasTransform() {
 function drawBackground() {
   if (forestBg.complete && forestBg.naturalWidth > 0) {
     ctx.drawImage(forestBg, 0, 0, W, H);
-    ctx.fillStyle = "rgba(4, 7, 12, 0.66)";
+    ctx.fillStyle = "rgba(4, 7, 12, 0.72)";
     ctx.fillRect(0, 0, W, H);
     drawVignette();
     return;
@@ -4512,20 +4535,21 @@ function drawPlayer() {
   const playerAttack = state.attacks.find((attack) => attack.type === "player");
   const panel = UI_LAYOUT.playerPanel;
   const stage = UI_LAYOUT.playerStage;
-  const left = panel.x + 20;
-  drawHpBar(left, panel.y + 78, panel.w - 40, 18, state.playerHp, state.playerMaxHp, hit ? "#ff7782" : "#76d4ff", t("hp"));
-  drawGuardMeter(left, panel.y + 109, panel.w - 40);
-  drawBuildChip(left, panel.y + 134, panel.w - 40);
+  const left = panel.x + 26;
+  drawHpBar(left, panel.y + 82, panel.w - 52, 18, state.playerHp, state.playerMaxHp, hit ? "#ff7782" : "#76d4ff", t("hp"));
+  drawGuardMeter(left, panel.y + 116, panel.w - 52);
+  drawBuildChip(left, panel.y + 148, panel.w - 52);
   ctx.save();
-  drawStageGlow(stage.x + stage.w / 2, stage.y + 312, 122, "#6de8ff");
-  ctx.translate(stage.x + stage.w / 2, stage.y + 252);
+  drawStageGlow(stage.x + stage.w / 2, stage.y + 322, 164, "#6de8ff");
+  drawPresentationSigil(stage.x + stage.w / 2, stage.y + 318, 128, "#6de8ff");
+  ctx.translate(stage.x + stage.w / 2, stage.y + 236);
   if (hit) ctx.translate(-10, 0);
   const bob = Math.sin(performance.now() * 0.0025) * 4;
   const attackMotion = playerAttack ? Math.sin((playerAttack.life / playerAttack.duration) * Math.PI) * 10 : 0;
   ctx.translate(attackMotion, bob);
   if (hit) ctx.scale(1.08, 0.92);
-  ctx.scale(1.1, 1.1);
-  drawCharacterShadow(0, 170, 108, "#6de8ff");
+  ctx.scale(1.28, 1.28);
+  drawCharacterShadow(0, 170, 128, "#6de8ff");
   drawHeroSprite(hit);
   if (playerAttack) drawNoaAttackPose(playerAttack);
   ctx.restore();
@@ -4553,6 +4577,29 @@ function drawStageGlow(x, y, r, color) {
   ctx.beginPath();
   ctx.ellipse(x, y, r * 1.05, r * 0.28, 0, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
+}
+
+function drawPresentationSigil(x, y, r, color) {
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.translate(x, y);
+  ctx.strokeStyle = hexToRgba(color, 0.18);
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 10;
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r, r * 0.24, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.strokeStyle = hexToRgba("#fff0a6", 0.16);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 0.72, r * 0.14, 0, Math.PI * 0.08, Math.PI * 1.92);
+  ctx.stroke();
+  for (let i = 0; i < 6; i += 1) {
+    const a = (Math.PI * 2 * i) / 6 + performance.now() * 0.0004;
+    ctx.fillStyle = i % 2 ? hexToRgba(color, 0.34) : "rgba(255, 240, 166, 0.26)";
+    ctx.fillRect(Math.cos(a) * r * 0.82 - 2, Math.sin(a) * r * 0.18 - 2, 4, 4);
+  }
   ctx.restore();
 }
 
@@ -5141,19 +5188,19 @@ function drawEnemy() {
   const enemy = state.enemyType;
   const panel = UI_LAYOUT.enemyPanel;
   const stage = UI_LAYOUT.enemyStage;
-  const left = panel.x + 24;
-  drawHpBar(left, panel.y + 78, panel.w - 48, 18, state.enemyHp, state.enemyMaxHp, hit ? "#fff2ad" : "#75e298", t("hp"));
-  if (enemy.id === "king") drawBossPhaseBar(left, panel.y + 100);
-  drawCountdownBadgeCompact(left, panel.y + 108, state.enemyCountdown);
-  drawEnemyIntentCompact(left + 100, panel.y + 108, getEnemyIntent(enemy));
-  drawEnemyBehaviorChips(left, panel.y + 148, enemy);
+  const left = panel.x + 26;
+  drawHpBar(left, panel.y + 78, panel.w - 52, 18, state.enemyHp, state.enemyMaxHp, hit ? "#fff2ad" : "#75e298", t("hp"));
+  if (enemy.id === "king") drawBossPhaseBar(left, panel.y + 101);
+  drawEnemyIntent(left, panel.y + 112, getEnemyIntent(enemy));
+  drawEnemyBehaviorChips(left, panel.y + 176, enemy);
   ctx.save();
-  drawStageGlow(stage.x + stage.w / 2, stage.y + 286, 150, enemy.color);
+  drawStageGlow(stage.x + stage.w / 2, stage.y + 288, 184, enemy.color);
+  drawPresentationSigil(stage.x + stage.w / 2, stage.y + 292, 150, enemy.color);
   ctx.translate(stage.x + stage.w / 2, stage.y + 238);
   if (hit) ctx.scale(1.08, 0.92);
   const pulse = 1 + Math.sin(performance.now() * 0.006) * 0.018;
-  ctx.scale(pulse * 1.14, pulse * 1.14);
-  drawCharacterShadow(0, 116, 118, enemy.color);
+  ctx.scale(pulse * 1.32, pulse * 1.32);
+  drawCharacterShadow(0, 116, 140, enemy.color);
   if (drawEnemyAttackAnimationFrame(enemy, hit)) {
     // Attack animations use the enemy concept sheet attack vignettes.
   } else if (drawEnemyConceptArt(enemy, hit)) {
@@ -5197,14 +5244,14 @@ function drawEnemyBehaviorChips(x, y, enemy) {
   ctx.save();
   for (let i = 0; i < chips.length; i += 1) {
     const chip = chips[i];
-    const cy = y;
-    const cx = x + i * 122;
+    const cy = y + i * 31;
+    const cx = x;
     ctx.fillStyle = "rgba(7, 10, 16, 0.5)";
-    roundedRect(cx, cy, 116, 29, 7, true, false);
+    roundedRect(cx, cy, 238, 25, 7, true, false);
     ctx.strokeStyle = hexToRgba(chip.color.startsWith("#") ? chip.color : "#8fe8dc", 0.22);
-    roundedRect(cx, cy, 116, 29, 7, false, true);
+    roundedRect(cx, cy, 238, 25, 7, false, true);
     label(String(chip.label).toUpperCase(), cx + 8, cy + 12, 9, "rgba(238,244,252,0.48)");
-    label(String(chip.value), cx + 8, cy + 25, 11, chip.color);
+    fitLabel(String(chip.value), cx + 70, cy + 17, 156, 11, chip.color, 9, "800");
   }
   ctx.restore();
 }
@@ -5497,10 +5544,15 @@ function drawEnemyIntent(x, y, intent) {
   ctx.textAlign = "left";
   ctx.font = "800 12px Trebuchet MS";
   ctx.fillStyle = intent.color;
-  ctx.fillText(intent.title.toUpperCase(), x + 50, y + 18);
+  fitLabel(intent.title.toUpperCase(), x + 50, y + 18, 116, 12, intent.color, 9, "900");
+  ctx.textAlign = "right";
+  ctx.font = "900 24px Trebuchet MS";
+  ctx.fillStyle = state.enemyCountdown <= 1 ? "#ff7782" : "#98f07e";
+  ctx.fillText(String(state.enemyCountdown), x + 218, y + 37);
+  ctx.textAlign = "left";
   drawIntentMiniChip(x + 50, y + 28, "DMG", state.enemyAttackDamage, "#ffb7bd");
   drawIntentMiniChip(x + 103, y + 28, "GARB", garbage, garbage > 0 ? "#c9d4da" : "rgba(238,244,252,0.36)");
-  drawIntentMiniChip(x + 158, y + 28, "WEAK", enemyWeaknessToken(enemy), "#fff0a6", 68);
+  drawIntentMiniChip(x + 158, y + 28, "CD", state.enemyCountdown, state.enemyCountdown <= 1 ? "#ff7782" : "#98f07e", 48);
   ctx.restore();
 }
 
@@ -6002,21 +6054,21 @@ function drawDamageFormulaPanel(x, y) {
 
 function drawCombatReadout() {
   ctx.save();
-  const panel = UI_LAYOUT.enemyPanel;
-  const x = panel.x + 24;
-  const y = panel.y + panel.h - 56;
+  const board = UI_LAYOUT.boardFrame;
+  const x = board.x + 22;
+  const y = board.y + board.h + 20;
   const nextBoss = state.wave % 10 === 0
     ? `P${getBossPhase()}`
     : state.miniBoss
       ? t("miniBoss")
       : `${10 - (state.wave % 10)}`;
-  ctx.fillStyle = "rgba(5, 8, 12, 0.24)";
-  roundedRect(x - 4, y - 20, 250, 48, 8, true, false);
-  ctx.strokeStyle = "rgba(152, 228, 235, 0.1)";
-  roundedRect(x - 4, y - 20, 250, 48, 8, false, true);
-  drawMetricChip(x, y - 4, t("waveLabel"), state.wave, "#98f07e");
-  drawMetricChip(x + 84, y - 4, t("nextBossLabel"), nextBoss, state.enemyType.id === "king" ? "#fff0a6" : "#d7c2ff");
-  drawMetricChip(x + 168, y - 4, t("incomingShort"), state.pendingGarbage, state.pendingGarbage > 0 ? "#ffb7bd" : "#7b8791");
+  ctx.fillStyle = "rgba(4, 7, 14, 0.56)";
+  roundedRect(x - 14, y - 14, board.w - 16, 44, 14, true, false);
+  ctx.strokeStyle = "rgba(183, 146, 255, 0.18)";
+  roundedRect(x - 14, y - 14, board.w - 16, 44, 14, false, true);
+  drawMetricChip(x, y - 2, t("waveLabel"), state.wave, "#98f07e", 84);
+  drawMetricChip(x + 94, y - 2, t("nextBossLabel"), nextBoss, state.enemyType.id === "king" ? "#fff0a6" : "#d7c2ff", 94);
+  drawMetricChip(x + 198, y - 2, t("incomingShort"), state.pendingGarbage, state.pendingGarbage > 0 ? "#ffb7bd" : "#7b8791", 78);
   if (state.challenge) {
     const config = CHALLENGES.find((challenge) => challenge.id === state.challenge.id);
     if (config) label(`${config.title}: ${state.challenge.progress}/${config.target}`, x, y + 42, 11, state.challenge.complete ? "#fff0a6" : "#9df7da");
@@ -6655,29 +6707,40 @@ function drawStartMenuOverlay() {
   drawMainMenuScene();
   ctx.save();
   ctx.textAlign = "left";
-  ctx.shadowColor = "rgba(190, 140, 255, 0.56)";
-  ctx.shadowBlur = 22;
-  ctx.font = "900 62px Georgia, Trebuchet MS, serif";
-  const titleGradient = ctx.createLinearGradient(72, 64, 570, 126);
+  ctx.shadowColor = "rgba(190, 140, 255, 0.72)";
+  ctx.shadowBlur = 30;
+  ctx.font = "900 82px Georgia, Trebuchet MS, serif";
+  const titleGradient = ctx.createLinearGradient(72, 50, 550, 172);
   titleGradient.addColorStop(0, "#fff8dc");
   titleGradient.addColorStop(0.52, "#ffe0a3");
   titleGradient.addColorStop(1, "#d7c2ff");
   ctx.fillStyle = titleGradient;
-  ctx.fillText(t("startTitle"), 72, 104);
+  const titleParts = t("startTitle").split(" ");
+  ctx.fillText(titleParts[0] || t("startTitle"), 72, 96);
+  ctx.fillText(titleParts.slice(1).join(" ") || "", 72, 166);
   ctx.shadowBlur = 0;
-  label(t("startTagline").toUpperCase(), 76, 136, 16, "#8fe8dc");
-  wrapText(t("startWorldHint"), 78, 174, 430, 24, "rgba(238,244,252,0.72)", 17);
+  ctx.strokeStyle = "rgba(215, 194, 255, 0.38)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(92, 190);
+  ctx.lineTo(430, 190);
+  ctx.stroke();
+  label(t("startTagline").toUpperCase(), 112, 226, 17, "#d7c2ff");
+  wrapText(t("startWorldHint"), 112, 260, 430, 25, "rgba(238,244,252,0.72)", 17);
   drawMenuHeroShowcase();
 
-  drawCard(m.x - 34, m.y - 28, m.w + 68, m.h + 70);
-  label(t("startGame").toUpperCase(), m.x, m.y + 8, 17, "#fff0a6");
-  drawMenuButton(m.x, m.primaryY, m.w, 58, t("endless"), "Enter", "primary");
-  drawMenuButton(m.x, m.tutorialY, m.w, 48, t("tutorialStart"), "3 min");
-  const smallW = (m.w - 14) / 2;
-  drawMenuButton(m.x, m.utilityY, smallW, 44, t("settings"), "Esc");
-  drawMenuButton(m.x + smallW + 14, m.utilityY, smallW, 44, t("moveGuide"), "spins");
-  label(t("startHint"), m.x, m.y + m.h + 34, 14, "#9fb4ff");
-  if (!state.save.tutorialCompleted) label(t("firstRunHint"), m.x, m.y + m.h + 58, 12, "rgba(255, 240, 166, 0.72)");
+  drawCard(m.x, m.y, m.w, m.h);
+  drawCornerGlyph(m.x + m.w / 2, m.y - 2, "#9fb4ff");
+  label(t("startGame").toUpperCase(), m.x + 44, m.y + 58, 16, "#fff0a6");
+  wrapText(t("startSubtitle"), m.x + 44, m.y + 90, m.w - 88, 21, "rgba(238,244,252,0.58)", 14);
+  const bx = m.x + 42;
+  const bw = m.w - 84;
+  drawMenuButton(bx, m.primaryY, bw, 72, t("startGame"), t("endless"), "primary");
+  drawMenuButton(bx, m.tutorialY, bw, 62, t("tutorialStart"), "3 min");
+  drawMenuButton(bx, m.utilityY, bw, 62, t("settings"), "");
+  drawMenuButton(bx, m.utilityY + 82, bw, 62, t("moveGuide"), "Spin");
+  label(t("startHint"), bx, m.y + m.h - 58, 14, "#9fb4ff");
+  if (!state.save.tutorialCompleted) label(t("firstRunHint"), bx, m.y + m.h - 30, 12, "rgba(255, 240, 166, 0.72)");
   ctx.restore();
 }
 
@@ -6685,34 +6748,235 @@ function drawMainMenuScene() {
   ctx.save();
   if (forestBg.complete && forestBg.naturalWidth > 0) ctx.drawImage(forestBg, 0, 0, W, H);
   const g = ctx.createLinearGradient(0, 0, W, H);
-  g.addColorStop(0, "rgba(3, 6, 14, 0.72)");
-  g.addColorStop(0.48, "rgba(4, 7, 14, 0.48)");
-  g.addColorStop(1, "rgba(1, 2, 6, 0.86)");
+  g.addColorStop(0, "rgba(3, 6, 14, 0.62)");
+  g.addColorStop(0.46, "rgba(4, 7, 14, 0.38)");
+  g.addColorStop(1, "rgba(1, 2, 6, 0.9)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
-  const rift = ctx.createRadialGradient(620, 342, 20, 620, 342, 330);
-  rift.addColorStop(0, "rgba(201, 167, 255, 0.28)");
-  rift.addColorStop(0.32, "rgba(126, 231, 255, 0.1)");
+  const rift = ctx.createRadialGradient(646, 320, 18, 646, 320, 360);
+  rift.addColorStop(0, "rgba(201, 167, 255, 0.36)");
+  rift.addColorStop(0.32, "rgba(126, 231, 255, 0.13)");
   rift.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = rift;
   ctx.fillRect(260, 40, 720, 620);
-  ctx.strokeStyle = "rgba(199, 167, 255, 0.22)";
+  ctx.strokeStyle = "rgba(199, 167, 255, 0.28)";
   ctx.lineWidth = 2;
   for (let i = 0; i < 5; i += 1) {
     ctx.beginPath();
-    ctx.ellipse(615, 350, 72 + i * 46, 168 + i * 34, -0.28, Math.PI * 0.12, Math.PI * 1.86);
+    ctx.ellipse(646, 330, 78 + i * 48, 168 + i * 38, -0.28, Math.PI * 0.12, Math.PI * 1.86);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(255, 240, 166, 0.18)";
+  ctx.beginPath();
+  ctx.moveTo(86, 642);
+  ctx.bezierCurveTo(262, 602, 462, 674, 700, 614);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawMenuHeroShowcase() {
+  const now = performance.now();
+  const pose = getMenuIdlePose(now);
+  const motion = getMenuIdleMotion(pose, now);
+  const anchorX = 398;
+  const anchorY = 516;
+  drawMenuIdleParticles(anchorX, anchorY, pose, motion, now);
+  ctx.save();
+  ctx.translate(anchorX + motion.x, anchorY + motion.y);
+  ctx.rotate(motion.rotate);
+  ctx.scale(1.3 * motion.scaleX, 1.3 * motion.scaleY);
+  drawCharacterShadow(0, 174, 146 + motion.shadow, "#6de8ff");
+  if (motion.afterimage > 0.02) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = motion.afterimage;
+    ctx.translate(-motion.x * 0.55 - 3, 2);
+    ctx.scale(1.01, 1);
+    drawHeroIdleBase();
+    ctx.restore();
+  }
+  drawHeroIdleBase();
+  drawMenuCloakSway(motion, now);
+  drawMenuWeaponPulse(motion, now);
+  drawMenuEyeGlow(motion, now);
+  drawMenuIdleAura(motion, now);
+  ctx.restore();
+}
+
+function getMenuIdlePose(now = performance.now()) {
+  const total = MENU_IDLE_SEQUENCE.reduce((sum, segment) => sum + segment.duration, 0);
+  let cursor = now % total;
+  for (const segment of MENU_IDLE_SEQUENCE) {
+    if (cursor <= segment.duration) {
+      const progress = clamp(cursor / segment.duration, 0, 1);
+      const transition = Math.min(MENU_IDLE_TRANSITION_MS / segment.duration, 0.28);
+      const easeIn = smoothstep(0, transition, progress);
+      const easeOut = 1 - smoothstep(1 - transition, 1, progress);
+      return {
+        id: segment.id,
+        duration: segment.duration,
+        progress,
+        intensity: segment.id === "idleA" ? 1 : Math.min(easeIn, easeOut),
+      };
+    }
+    cursor -= segment.duration;
+  }
+  return { id: "idleA", duration: 2800, progress: 0, intensity: 1 };
+}
+
+function getMenuIdleMotion(pose, now) {
+  const time = now * 0.001;
+  const breath = Math.sin(time * 2.15);
+  const slowBreath = Math.sin(time * 1.1);
+  const focus = pose.intensity * Math.sin(pose.progress * Math.PI);
+  const motion = {
+    x: slowBreath * 0.8,
+    y: breath * 3.2,
+    rotate: slowBreath * 0.006,
+    scaleX: 1 - breath * 0.004,
+    scaleY: 1 + breath * 0.01,
+    weapon: 0.48 + (Math.sin(time * 3.4) + 1) * 0.12,
+    eye: 0.18,
+    cloak: 0.34 + (Math.sin(time * 1.55) + 1) * 0.18,
+    shadow: breath * 4,
+    afterimage: 0,
+    particles: 0.34,
+  };
+
+  if (pose.id === "idleB") {
+    motion.x -= focus * 4.5;
+    motion.y += focus * 5;
+    motion.rotate += focus * 0.04;
+    motion.scaleY -= focus * 0.012;
+    motion.weapon += focus * 0.52;
+    motion.eye += focus * 0.1;
+    motion.cloak += focus * 0.24;
+    motion.particles += focus * 0.38;
+  } else if (pose.id === "idleC") {
+    motion.y -= focus * 6;
+    motion.rotate -= focus * 0.018;
+    motion.scaleY += focus * 0.014;
+    motion.weapon += focus * 0.18;
+    motion.eye += focus * 0.74;
+    motion.cloak += focus * 0.18;
+    motion.particles += focus * 0.28;
+  } else if (pose.id === "idleD") {
+    const shift = Math.sin(pose.progress * Math.PI * 2);
+    const settle = Math.sin(pose.progress * Math.PI);
+    motion.x += shift * 8 * pose.intensity;
+    motion.y += settle * 2.5;
+    motion.rotate += shift * 0.035 * pose.intensity;
+    motion.scaleX += Math.abs(shift) * 0.016;
+    motion.scaleY -= Math.abs(shift) * 0.008;
+    motion.weapon += settle * 0.22;
+    motion.eye += settle * 0.18;
+    motion.cloak += Math.abs(shift) * 0.46;
+    motion.afterimage = Math.abs(shift) * 0.1;
+    motion.particles += settle * 0.22;
+  }
+
+  return motion;
+}
+
+function drawMenuCloakSway(motion, now) {
+  const time = now * 0.001;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.lineCap = "round";
+  for (let i = 0; i < 4; i += 1) {
+    const sway = Math.sin(time * 1.7 + i * 0.8) * 7 * motion.cloak;
+    ctx.globalAlpha = 0.06 + motion.cloak * 0.045;
+    ctx.strokeStyle = i % 2 ? "rgba(121, 230, 255, 0.52)" : "rgba(190, 126, 255, 0.55)";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(-74 + i * 42, 22);
+    ctx.quadraticCurveTo(-88 + i * 44 + sway, 86, -68 + i * 40 - sway * 0.45, 164);
     ctx.stroke();
   }
   ctx.restore();
 }
 
-function drawMenuHeroShowcase() {
+function drawMenuWeaponPulse(motion, now) {
+  const time = now * 0.001;
+  const pulse = clamp(motion.weapon, 0, 1.35);
   ctx.save();
-  ctx.translate(328, 492);
-  ctx.scale(1.18, 1.18);
-  drawCharacterShadow(0, 174, 128, "#6de8ff");
-  drawHeroIdleBase();
-  drawHeroIdleEnergy();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.shadowColor = "#b579ff";
+  ctx.shadowBlur = 16 + pulse * 18;
+  ctx.lineCap = "round";
+  const swing = Math.sin(time * 2.4) * 3;
+  const startX = -108 + swing;
+  const startY = 126;
+  const endX = -34 + swing * 0.25;
+  const endY = 46 - pulse * 5;
+  ctx.globalAlpha = 0.2 + pulse * 0.42;
+  ctx.strokeStyle = "rgba(244, 232, 255, 0.86)";
+  ctx.lineWidth = 2.2 + pulse * 0.8;
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(154, 84, 255, 0.82)";
+  ctx.lineWidth = 8 + pulse * 4;
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+  for (let i = 0; i < 7; i += 1) {
+    const p = ((time * 0.72 + i * 0.19) % 1);
+    const x = lerp(startX, endX, p) + Math.sin(time * 2 + i) * 6;
+    const y = lerp(startY, endY, p) + Math.cos(time * 1.7 + i) * 4;
+    ctx.globalAlpha = (0.18 + pulse * 0.32) * (1 - p * 0.5);
+    ctx.fillStyle = i % 2 ? "#d7b8ff" : "#8d5cff";
+    ctx.fillRect(x, y, 3.5, 3.5);
+  }
+  ctx.restore();
+}
+
+function drawMenuEyeGlow(motion, now) {
+  const time = now * 0.001;
+  const alpha = clamp(0.1 + motion.eye * 0.42 + Math.sin(time * 4) * 0.025, 0.08, 0.55);
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.shadowColor = "#d7ccff";
+  ctx.shadowBlur = 14 + motion.eye * 16;
+  ctx.fillStyle = `rgba(224, 238, 255, ${alpha})`;
+  ctx.beginPath();
+  ctx.ellipse(-30, -78, 12 + motion.eye * 2, 4.4, -0.12, 0, Math.PI * 2);
+  ctx.ellipse(24, -79, 12 + motion.eye * 2, 4.4, 0.12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawMenuIdleAura(motion, now) {
+  const time = now * 0.001;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.strokeStyle = `rgba(174, 123, 255, ${0.2 + motion.particles * 0.12})`;
+  ctx.shadowColor = "#9b78ff";
+  ctx.shadowBlur = 16;
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.ellipse(0, 132, 66 + Math.sin(time * 1.4) * 4, 18, 0, Math.PI * 0.05, Math.PI * 1.86);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawMenuIdleParticles(anchorX, anchorY, pose, motion, now) {
+  const time = now * 0.001;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const count = 9 + Math.floor(motion.particles * 8);
+  for (let i = 0; i < count; i += 1) {
+    const drift = (time * (0.18 + i * 0.012) + i * 0.173) % 1;
+    const angle = i * 1.78 + time * 0.32;
+    const radius = 78 + (i % 4) * 22 + pose.intensity * 10;
+    const x = anchorX - 18 + Math.cos(angle) * radius * 0.78;
+    const y = anchorY + 108 - drift * 236 + Math.sin(angle * 1.3) * 18;
+    ctx.globalAlpha = (0.12 + motion.particles * 0.16) * (1 - Math.abs(drift - 0.5));
+    ctx.fillStyle = i % 3 === 0 ? "#7ff2ff" : i % 3 === 1 ? "#b889ff" : "#fff0a6";
+    ctx.fillRect(x, y, 3 + (i % 2), 3 + (i % 2));
+  }
   ctx.restore();
 }
 
@@ -6837,6 +7101,14 @@ function drawSettingsTabs(x, y) {
 }
 
 function drawSettingsContent(x, y) {
+  if (state.settingsTab === "general") {
+    label(t("generalSettingsTitle"), x, y, 26, "#8fe8dc");
+    drawSettingsInfoCard(x, y + 46, 420, 112, t("hudLayerTitle"), t("generalSettingsHelp"), "#7ef7ff");
+    drawSettingsInfoCard(x, y + 184, 420, 98, t("hudMinimal"), t("hudFloatingText"), "#d7c2ff");
+    drawSettingsInfoCard(x + 450, y + 46, 260, 98, t("startTitle"), t("startTagline"), "#fff0a6");
+    drawSettingsInfoCard(x + 450, y + 166, 260, 116, t("moveGuide"), t("practiceHint"), "#9df7da");
+    return;
+  }
   if (state.settingsTab === "audio") {
     label(t("audioSettingsTitle"), x, y, 26, "#8fe8dc");
     drawSlider(t("master"), "masterVolume", x, y + 64, audio.masterVolume);
@@ -6860,6 +7132,17 @@ function drawSettingsContent(x, y) {
   label(t("languageSettingsTitle"), x, y, 26, "#8fe8dc");
   drawLanguageToggle(x, y + 72);
   wrapText(t("languageHelp"), x, y + 142, 480, 22, "rgba(238,244,252,0.62)", 15);
+}
+
+function drawSettingsInfoCard(x, y, w, h, title, body, color) {
+  ctx.save();
+  ctx.fillStyle = "rgba(8, 13, 20, 0.52)";
+  roundedRect(x, y, w, h, 12, true, false);
+  ctx.strokeStyle = hexToRgba(color, 0.24);
+  roundedRect(x, y, w, h, 12, false, true);
+  label(String(title).toUpperCase(), x + 18, y + 30, 14, color);
+  wrapText(body, x + 18, y + 58, w - 36, 20, "rgba(238,244,252,0.62)", 13);
+  ctx.restore();
 }
 
 function drawPauseStat(x, y, name, value) {
@@ -7565,7 +7848,10 @@ window.addEventListener("keydown", (event) => {
       state.pauseView = "menu";
       state.settingsOpen = false;
     }
-    else if (state.mode === "start") state.settingsOpen = !state.settingsOpen;
+    else if (state.mode === "start") {
+      state.settingsOpen = !state.settingsOpen;
+      if (state.settingsOpen) state.settingsTab = "general";
+    }
     else if (state.mode === "paused") {
       state.mode = "playing";
       state.pauseView = "menu";
@@ -7678,15 +7964,16 @@ canvas.addEventListener("mousedown", (event) => {
     }
     if (state.mode === "start") {
       const m = UI_LAYOUT.menu;
-      const smallW = (m.w - 14) / 2;
-      if (pointInRect(p.x, p.y, m.x, m.primaryY, m.w, 58)) resetGame("endless");
-      else if (pointInRect(p.x, p.y, m.x, m.tutorialY, m.w, 48)) startTutorial();
-      else if (pointInRect(p.x, p.y, m.x, m.utilityY, smallW, 44)) {
+      const bx = m.x + 42;
+      const bw = m.w - 84;
+      if (pointInRect(p.x, p.y, bx, m.primaryY, bw, 72)) resetGame("endless");
+      else if (pointInRect(p.x, p.y, bx, m.tutorialY, bw, 62)) startTutorial();
+      else if (pointInRect(p.x, p.y, bx, m.utilityY, bw, 62)) {
         state.settingsOpen = true;
-        state.settingsTab = "audio";
+        state.settingsTab = "general";
         playSfx("hold");
       }
-      else if (pointInRect(p.x, p.y, m.x + smallW + 14, m.utilityY, smallW, 44)) {
+      else if (pointInRect(p.x, p.y, bx, m.utilityY + 82, bw, 62)) {
         state.mode = "guide";
         playSfx("hold");
       }
@@ -7746,7 +8033,7 @@ function handlePausePointerDown(x, y) {
   }
   if (pointInRect(x, y, m.x + 56, m.y + 270, m.w - 112, 44)) {
     state.pauseView = "settings";
-    state.settingsTab = "audio";
+    state.settingsTab = "general";
     playSfx("hold");
     return;
   }
