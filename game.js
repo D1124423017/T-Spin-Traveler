@@ -154,12 +154,12 @@ const H = canvas.height;
 const COLS = 10;
 const ROWS = 20;
 const HIDDEN = 2;
-const TILE = 28;
-const BOARD_X = 462;
-const BOARD_Y = 82;
-const HOLD_PANEL_X = BOARD_X - 150;
+const TILE = 29;
+const BOARD_X = 476;
+const BOARD_Y = 72;
+const HOLD_PANEL_X = BOARD_X - 124;
 const HOLD_PANEL_Y = BOARD_Y;
-const NEXT_PANEL_X = BOARD_X + COLS * TILE + 38;
+const NEXT_PANEL_X = BOARD_X + COLS * TILE + 26;
 const NEXT_PANEL_Y = BOARD_Y;
 const DROP_MS = 760;
 const SOFT_DROP_MS = 4;
@@ -176,6 +176,9 @@ const ENEMY_ATTACK_FRAME_MS = ENEMY_ATTACK_DURATION_MS / 8;
 const SAVE_KEY = "tspin-traveler-save-v1";
 const ULTIMATE_REQUIRED_LINES = 40;
 const ULTIMATE_DURATION_MS = 15000;
+const ULTIMATE_COMBO_EXTEND_MS = 300;
+const ULTIMATE_COMBO_EXTEND_MAX_MS = 850;
+const ULTIMATE_TIMER_CAP_MS = 30000;
 const ULTIMATE_WELL_START = 3;
 const ULTIMATE_WELL_WIDTH = 4;
 const ULTIMATE_WALL = "U";
@@ -302,8 +305,8 @@ const DEFAULT_CONTROLS = {
 };
 
 const UI_LAYOUT = {
-  playerPanel: { x: 32, y: 72, w: 260, h: 560 },
-  enemyPanel: { x: 900, y: 72, w: 340, h: 560 },
+  playerPanel: { x: 34, y: 86, w: 230, h: 506 },
+  enemyPanel: { x: 916, y: 86, w: 330, h: 506 },
   boardFrame: { x: BOARD_X - 18, y: BOARD_Y - 18, w: COLS * TILE + 36, h: ROWS * TILE + 36 },
   menu: {
     x: 370,
@@ -316,6 +319,7 @@ const UI_LAYOUT = {
     tutorialY: 390,
     utilityY: 462,
   },
+  ultimateMeter: { x: 0, y: ROWS * TILE + 10, w: COLS * TILE, h: 30 },
   compactHints: ["screenMove", "screenSoftDrop", "screenHardDrop", "screenRotate"],
 };
 
@@ -392,6 +396,7 @@ const translations = {
     ultimate4Wide: "4-WIDE 爆發",
     ultimateEnd: "4-WIDE 結束",
     ultimateBurstTimed: "4-WIDE 爆發 {seconds}s",
+    ultimateComboExtend: "Combo 延長 +{seconds}s",
     incomingShort: "垃圾",
     enemyStrike: "敵人攻擊",
     enemyIntent: "意圖",
@@ -726,6 +731,7 @@ const translations = {
     ultimate4Wide: "4-WIDE Burst",
     ultimateEnd: "4-WIDE End",
     ultimateBurstTimed: "4-WIDE Burst {seconds}s",
+    ultimateComboExtend: "Combo Extend +{seconds}s",
     incomingShort: "INC",
     enemyStrike: "Enemy Strike",
     enemyIntent: "Intent",
@@ -1618,6 +1624,7 @@ const state = {
   pendingHits: [],
   perfectClearFx: null,
   operationReadouts: [],
+  combatPopups: [],
   lastDamageBreakdown: null,
   shake: 0,
   enemyHit: 0,
@@ -1641,6 +1648,7 @@ const state = {
   ultimateCharge: 0,
   ultimateActive: false,
   ultimateTimer: 0,
+  ultimateTimerMax: ULTIMATE_DURATION_MS,
   ultimateSavedBoard: null,
   upgradeMeter: 0,
   nextUpgradeAt: 8,
@@ -1870,6 +1878,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.pendingHits = [];
   state.perfectClearFx = null;
   state.operationReadouts = [];
+  state.combatPopups = [];
   state.lastDamageBreakdown = null;
   state.shake = 0;
   state.enemyHit = 0;
@@ -1893,6 +1902,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.ultimateCharge = 0;
   state.ultimateActive = false;
   state.ultimateTimer = 0;
+  state.ultimateTimerMax = ULTIMATE_DURATION_MS;
   state.ultimateSavedBoard = null;
   state.upgradeMeter = 0;
   state.nextUpgradeAt = BALANCE.firstUpgradeAt;
@@ -2560,6 +2570,7 @@ function applyBattle(lines, pieceType, spinType) {
     startPerfectClearFx(damage);
     extendUltimateOnPerfectClear();
   }
+  extendUltimateOnCombo(lines);
 
   const canceled = cancelIncomingGarbage(lines);
   const comboDelay = lines > 0 && state.combo >= 3
@@ -2639,23 +2650,11 @@ function applyBattle(lines, pieceType, spinType) {
   const special = state.lastPerfectClear ? "perfect" : comboAttackStyle ? "combo" : spinType ? "spin" : b2bBonus > 0 ? "b2b" : lines >= 4 ? "tetris" : "clear";
   const floaters = [
     { x: 930, y: 246, text: `-${damage}`, color: pieceType === "T" && lines > 0 ? "#c7a7ff" : "#f8f3cf", life: 900 },
-    { x: NEXT_PANEL_X + 96, y: BOARD_Y + 74, text: getMoveRating(lines, spinType, state.lastPerfectClear), color: state.lastPerfectClear ? "#fff0a6" : spinType ? "#d7c2ff" : lines >= 4 ? "#9df7da" : "#b9c2ff", life: 850 },
   ];
-  if (pieceType === "T" && lines > 0) floaters.push({ x: 935, y: 284, text: t("floaterTBonus"), color: "#9b72ff", life: 900 });
-  if (isTSpin) floaters.push({ x: 930, y: 322, text: "T-SPIN", color: "#f2d36b", life: 1050 });
-  if (isTSpinMini) floaters.push({ x: 930, y: 322, text: "T-SPIN MINI", color: "#d7c2ff", life: 1050 });
-  if (isAllSpinMini) floaters.push({ x: 930, y: 322, text: `${pieceType}-SPIN MINI`, color: "#9df7da", life: 1050 });
   if (rotationBonus.label) floaters.push({ x: 930, y: 398, text: rotationBonus.label, color: rotationBonus.color, life: 980 });
   if (weaknessBonus.label) floaters.push({ x: 904, y: 438, text: weaknessBonus.label, color: "#ffdf8a", life: 1100 });
-  if (b2bBonus > 0) floaters.push({ x: 930, y: 360, text: fmt("floaterB2BRow", { rows: b2bAttackRows }), color: "#fff0a6", life: 1050 });
-  if (comboAttackRows > 0) floaters.push({ x: NEXT_PANEL_X + 96, y: BOARD_Y + 202, text: fmt("floaterComboRow", { rows: comboAttackRows }), color: "#7ef7ff", life: 950 });
-  if (comboMilestoneBonus > 0) floaters.push({ x: NEXT_PANEL_X + 96, y: BOARD_Y + 244, text: fmt("floaterComboBurst", { damage: comboMilestoneBonus }), color: "#ffbe5f", life: 1100 });
   if (state.lastPerfectClear) {
-    floaters.push({ x: NEXT_PANEL_X + 96, y: BOARD_Y + 118, text: t("floaterPerfectClear"), color: "#fff0a6", life: 1250 });
     floaters.push({ x: 930, y: 476, text: t("floaterFullRecovery"), color: "#8ff7ff", life: 1250 });
-  }
-  if (state.combo >= 2) {
-    floaters.push({ x: NEXT_PANEL_X + 96, y: BOARD_Y + 160, text: fmt("floaterCombo", { combo: state.combo }), color: state.combo >= 3 ? "#7ef7ff" : "#b9c2ff", life: 1000 });
   }
 
   startHeroAttackAnimation(attackStyle);
@@ -2752,6 +2751,7 @@ function activateUltimateMode() {
   if (state.ultimateActive) return;
   state.ultimateActive = true;
   state.ultimateTimer = ULTIMATE_DURATION_MS;
+  state.ultimateTimerMax = ULTIMATE_DURATION_MS;
   state.ultimateSavedBoard = cloneMatrix(state.board);
   state.board = makeUltimateBoard();
   state.lineFlash = [];
@@ -2784,6 +2784,7 @@ function endUltimateMode() {
   state.ultimateActive = false;
   state.ultimateCharge = 0;
   state.ultimateTimer = 0;
+  state.ultimateTimerMax = ULTIMATE_DURATION_MS;
   state.board = state.ultimateSavedBoard ? cloneMatrix(state.ultimateSavedBoard) : makeBoard();
   state.ultimateSavedBoard = null;
   state.active = null;
@@ -2844,7 +2845,8 @@ function startPerfectClearFx(damage) {
 function extendUltimateOnPerfectClear() {
   if (!state.ultimateActive) return;
   const extendMs = BALANCE.perfectClear4WideExtendMs || 3000;
-  state.ultimateTimer += extendMs;
+  state.ultimateTimer = Math.min(ULTIMATE_TIMER_CAP_MS, state.ultimateTimer + extendMs);
+  state.ultimateTimerMax = Math.max(state.ultimateTimerMax || ULTIMATE_DURATION_MS, state.ultimateTimer);
   state.floaters.push({
     x: BOARD_X + (COLS * TILE) / 2,
     y: BOARD_Y + 78,
@@ -2860,6 +2862,26 @@ function extendUltimateOnPerfectClear() {
     life: 560,
     duration: 560,
     intensity: 1.75,
+  });
+}
+
+function extendUltimateOnCombo(lines) {
+  if (!state.ultimateActive || lines <= 0 || state.combo < 2) return;
+  const extendMs = Math.min(
+    ULTIMATE_COMBO_EXTEND_MAX_MS,
+    ULTIMATE_COMBO_EXTEND_MS + Math.max(0, state.combo - 2) * 150
+  );
+  const before = state.ultimateTimer;
+  state.ultimateTimer = Math.min(ULTIMATE_TIMER_CAP_MS, state.ultimateTimer + extendMs);
+  const actualExtend = state.ultimateTimer - before;
+  if (actualExtend <= 0) return;
+  state.ultimateTimerMax = Math.max(state.ultimateTimerMax || ULTIMATE_DURATION_MS, state.ultimateTimer);
+  state.floaters.push({
+    x: BOARD_X + (COLS * TILE) / 2,
+    y: BOARD_Y + ROWS * TILE + 38,
+    text: fmt("ultimateComboExtend", { seconds: (actualExtend / 1000).toFixed(1) }).toUpperCase(),
+    color: "#7ef7ff",
+    life: 900,
   });
 }
 
@@ -2953,6 +2975,114 @@ function pushOperationReadout(lines, pieceType, spinType, meta = {}) {
     duration: 1650,
   });
   state.operationReadouts = state.operationReadouts.slice(0, 4);
+  pushCombatPopup(lines, pieceType, spinType, {
+    ...meta,
+    title,
+    color,
+  });
+}
+
+function pushCombatPopup(lines, pieceType, spinType, meta = {}) {
+  const combo = meta.combo || 0;
+  const hasCombo = combo >= 2;
+  const b2b = Boolean(meta.b2b);
+  const perfect = Boolean(meta.perfect);
+  const popupBase = {
+    x: BOARD_X - 190,
+    y: BOARD_Y + 350,
+    life: 1040,
+    maxLife: 1040,
+    seed: Math.random() * 1000,
+  };
+
+  if (perfect) {
+    addCombatPopup({
+      ...popupBase,
+      text: "Perfect Clear!",
+      subText: meta.damage ? `-${meta.damage} ${t("dmgShort")}` : "",
+      x: BOARD_X + (COLS * TILE) / 2,
+      y: BOARD_Y + 126,
+      color: "#fff0a6",
+      accent: "#8ff7ff",
+      scale: 1.25,
+      type: "perfect",
+      life: 1180,
+      maxLife: 1180,
+    });
+    return;
+  }
+
+  if (spinType) {
+    const spinText = spinType === "full"
+      ? "T-Spin!"
+      : spinType === "mini"
+        ? "T-Spin Mini!"
+        : `${pieceType}-Spin!`;
+    addCombatPopup({
+      ...popupBase,
+      text: spinText,
+      subText: hasCombo ? `Combo x${combo}` : "",
+      color: spinType === "full" ? "#ffb7ff" : "#d7c2ff",
+      accent: "#8ff7ff",
+      scale: spinType === "full" ? 1.08 : 0.96,
+      type: spinType === "full" ? "tspin" : "spin",
+      life: 1080,
+      maxLife: 1080,
+    });
+  } else if (hasCombo) {
+    addCombatPopup({
+      ...popupBase,
+      text: `Combo x${combo}`,
+      subText: lines >= 4 ? "Tetris" : getLineClearPopupText(lines),
+      color: combo >= 4 ? "#7ef7ff" : "#d7c2ff",
+      accent: "#ffb7ff",
+      scale: 0.9 + Math.min(0.22, combo * 0.025),
+      type: "combo",
+      life: 940,
+      maxLife: 940,
+    });
+  } else {
+    addCombatPopup({
+      ...popupBase,
+      text: getLineClearPopupText(lines),
+      subText: "",
+      color: lines >= 4 ? "#9df7da" : "#b9c2ff",
+      accent: "#8ff7ff",
+      scale: lines >= 4 ? 0.86 : 0.7,
+      type: lines >= 4 ? "tetris" : "lineClear",
+      life: lines >= 4 ? 860 : 760,
+      maxLife: lines >= 4 ? 860 : 760,
+    });
+  }
+
+  if (b2b) {
+    addCombatPopup({
+      ...popupBase,
+      text: "B2B",
+      subText: "Back-to-Back!",
+      y: BOARD_Y + 284,
+      color: "#fff0a6",
+      accent: "#d7c2ff",
+      scale: 0.92,
+      type: "b2b",
+      life: 960,
+      maxLife: 960,
+    });
+  }
+}
+
+function addCombatPopup(popup) {
+  state.combatPopups.unshift(popup);
+  state.combatPopups = state.combatPopups.slice(0, 5);
+}
+
+function getLineClearPopupText(lines) {
+  return {
+    1: "Single",
+    2: "Double",
+    3: "Triple",
+    4: "Tetris",
+  }[lines] || `${lines} Lines`;
 }
 
 function buildDamageEquation(breakdown, compact = false) {
@@ -3134,8 +3264,8 @@ function resolveEnemyAttack() {
   const garbageAdded = getEnemyAttackGarbage(enemy);
   const damageTaken = Math.max(1, state.enemyAttackDamage - state.upgrades.defense);
   state.enemyCountdown = getEnemyCountdownForWave();
-  if (enemy.id === "king" && getBossPhase() >= 3) state.enemyCountdown = Math.max(3, state.enemyCountdown - 1);
-  if (enemy.id === "king" && getBossPhase() >= 4) state.enemyCountdown = Math.max(2, state.enemyCountdown - 1);
+  if (enemy.id === "king" && getBossPhase() >= 3) state.enemyCountdown = Math.max(4, state.enemyCountdown - 1);
+  if (enemy.id === "king" && getBossPhase() >= 4) state.enemyCountdown = Math.max(3, state.enemyCountdown - 1);
   startEnemyAttackAnimation(enemy.id);
   const enemyAttackDuration = getEnemyAnimationDuration(enemy.id);
   state.attacks.push({
@@ -3395,7 +3525,7 @@ function getRunRating(outcome) {
 }
 
 function getEnemyCountdownForWave() {
-  return Math.max(3, state.enemyType.countdown - Math.floor((state.wave - 1) / 7));
+  return Math.max(4, state.enemyType.countdown - Math.floor((state.wave - 1) / 10));
 }
 
 function getEnemyForWave(wave) {
@@ -3916,6 +4046,9 @@ function tickEffects(dt) {
   state.operationReadouts = state.operationReadouts
     .map((readout) => ({ ...readout, life: readout.life - dt }))
     .filter((readout) => readout.life > 0);
+  state.combatPopups = state.combatPopups
+    .map((popup) => ({ ...popup, life: popup.life - dt }))
+    .filter((popup) => popup.life > 0);
   state.attacks = state.attacks
     .map((a) => ({ ...a, life: a.life - dt }))
     .filter((a) => a.life > 0);
@@ -3937,30 +4070,56 @@ function tickEffects(dt) {
 }
 
 function draw() {
+  resetCanvasFrame();
   ctx.save();
-  const jitter = state.shake ? Math.sin(performance.now() * 0.06) * state.shake : 0;
-  ctx.translate(jitter, 0);
-  drawBackground();
-  drawPanels();
-  drawPlayer();
-  drawEnemy();
-  drawBoard();
-  drawSidePieces();
-  drawAttackEffects();
-  drawBursts();
-  drawParticles();
-  drawFloaters();
-  drawTutorialPrompt();
-  drawOverlay();
-  drawSettings();
-  drawPerfectClearFx();
-  ctx.restore();
+  try {
+    const jitter = state.shake ? Math.sin(performance.now() * 0.06) * state.shake : 0;
+    ctx.translate(jitter, 0);
+    drawBackground();
+    drawPanels();
+    drawPlayer();
+    drawEnemy();
+    drawBoard();
+    drawSidePieces();
+    drawAttackEffects();
+    drawBursts();
+    drawParticles();
+    drawFloaters();
+    drawCombatPopups();
+    drawTutorialPrompt();
+    drawOverlay();
+    if (!["start", "guide", "upgrade", "victory", "defeat"].includes(state.mode)) drawSettings();
+    drawPerfectClearFx();
+  } finally {
+    ctx.restore();
+    resetCanvasTransform();
+  }
+}
+
+function resetCanvasFrame() {
+  // Recover from any leaked canvas state after a draw error, then clear the frame.
+  for (let i = 0; i < 24; i += 1) ctx.restore();
+  resetCanvasTransform();
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "source-over";
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = "transparent";
+  ctx.lineWidth = 1;
+  ctx.clearRect(0, 0, W, H);
+}
+
+function resetCanvasTransform() {
+  if (typeof ctx.setTransform === "function") {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  } else if (typeof ctx.resetTransform === "function") {
+    ctx.resetTransform();
+  }
 }
 
 function drawBackground() {
   if (forestBg.complete && forestBg.naturalWidth > 0) {
     ctx.drawImage(forestBg, 0, 0, W, H);
-    ctx.fillStyle = "rgba(4, 7, 12, 0.4)";
+    ctx.fillStyle = "rgba(4, 7, 12, 0.58)";
     ctx.fillRect(0, 0, W, H);
     drawVignette();
     return;
@@ -4057,7 +4216,7 @@ function drawRunes() {
 function drawVignette() {
   const g = ctx.createRadialGradient(W / 2, H / 2, 180, W / 2, H / 2, 720);
   g.addColorStop(0, "rgba(0, 0, 0, 0)");
-  g.addColorStop(1, "rgba(0, 0, 0, 0.58)");
+  g.addColorStop(1, "rgba(0, 0, 0, 0.68)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 }
@@ -4094,21 +4253,21 @@ function drawTitle() {
 function drawCard(x, y, w, h) {
   ctx.save();
   const g = ctx.createLinearGradient(x, y, x + w, y + h);
-  g.addColorStop(0, "rgba(6, 11, 20, 0.76)");
-  g.addColorStop(0.52, "rgba(4, 7, 13, 0.68)");
-  g.addColorStop(1, "rgba(20, 13, 31, 0.66)");
+  g.addColorStop(0, "rgba(6, 11, 20, 0.66)");
+  g.addColorStop(0.52, "rgba(4, 7, 13, 0.58)");
+  g.addColorStop(1, "rgba(20, 13, 31, 0.54)");
   ctx.fillStyle = g;
-  ctx.shadowColor = "rgba(126, 231, 255, 0.1)";
-  ctx.shadowBlur = 18;
-  ctx.strokeStyle = "rgba(214, 159, 86, 0.34)";
-  ctx.lineWidth = 2;
+  ctx.shadowColor = "rgba(126, 231, 255, 0.06)";
+  ctx.shadowBlur = 10;
+  ctx.strokeStyle = "rgba(214, 159, 86, 0.22)";
+  ctx.lineWidth = 1.5;
   roundedRect(x, y, w, h, 8, true, true);
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = "rgba(139, 102, 255, 0.18)";
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = "rgba(139, 102, 255, 0.1)";
+  ctx.lineWidth = 1.5;
   roundedRect(x + 5, y + 5, w - 10, h - 10, 5, false, true);
-  ctx.strokeStyle = "rgba(255, 210, 128, 0.34)";
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = "rgba(255, 210, 128, 0.2)";
+  ctx.lineWidth = 1.5;
   for (const [sx, sy, dx, dy] of [
     [x + 18, y + 18, 24, 0],
     [x + 18, y + 18, 0, 24],
@@ -4126,11 +4285,11 @@ function drawCard(x, y, w, h) {
   }
   const scan = ctx.createLinearGradient(x, y, x + w, y);
   scan.addColorStop(0, "rgba(255,255,255,0)");
-  scan.addColorStop(0.5, "rgba(255,255,255,0.055)");
+  scan.addColorStop(0.5, "rgba(255,255,255,0.035)");
   scan.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = scan;
   ctx.fillRect(x + 10, y + 10, w - 20, 1);
-  ctx.fillStyle = "rgba(126, 231, 255, 0.035)";
+  ctx.fillStyle = "rgba(126, 231, 255, 0.02)";
   for (let yy = y + 22; yy < y + h - 16; yy += 26) ctx.fillRect(x + 12, yy, w - 24, 1);
   ctx.restore();
 }
@@ -4164,15 +4323,15 @@ function drawBoardFrame(x, y, w, h) {
   g.addColorStop(0.52, "rgba(3, 5, 10, 0.94)");
   g.addColorStop(1, "rgba(23, 13, 33, 0.88)");
   ctx.fillStyle = g;
-  ctx.shadowColor = "rgba(126, 101, 255, 0.28)";
-  ctx.shadowBlur = 18;
+  ctx.shadowColor = "rgba(126, 101, 255, 0.4)";
+  ctx.shadowBlur = 26;
   roundedRect(x, y, w, h, 10, true, false);
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = "rgba(245, 232, 184, 0.58)";
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = "rgba(245, 232, 184, 0.68)";
+  ctx.lineWidth = 2.4;
   roundedRect(x, y, w, h, 10, false, true);
-  ctx.strokeStyle = "rgba(138, 108, 255, 0.32)";
-  ctx.lineWidth = 5;
+  ctx.strokeStyle = "rgba(138, 108, 255, 0.38)";
+  ctx.lineWidth = 6;
   roundedRect(x + 5, y + 5, w - 10, h - 10, 6, false, true);
   ctx.strokeStyle = "rgba(126, 231, 255, 0.2)";
   ctx.lineWidth = 1;
@@ -4218,23 +4377,23 @@ function drawPlayer() {
   const hit = state.playerHit > 0;
   const playerAttack = state.attacks.find((attack) => attack.type === "player");
   const panel = UI_LAYOUT.playerPanel;
-  const left = panel.x + 22;
-  drawHpBar(left, panel.y + 74, 190, 20, state.playerHp, state.playerMaxHp, hit ? "#ff7782" : "#76d4ff", t("hp"));
-  drawGuardMeter(left, panel.y + 110);
+  const left = panel.x + 20;
+  drawHpBar(left, panel.y + 74, panel.w - 64, 18, state.playerHp, state.playerMaxHp, hit ? "#ff7782" : "#76d4ff", t("hp"));
+  drawGuardMeter(left, panel.y + 106, panel.w - 64);
   ctx.save();
-  ctx.translate(panel.x + panel.w / 2, panel.y + 286);
+  ctx.translate(panel.x + panel.w / 2, panel.y + 294);
   if (hit) ctx.translate(-10, 0);
   const bob = Math.sin(performance.now() * 0.0025) * 4;
   ctx.translate(0, bob);
+  ctx.scale(0.72, 0.72);
   drawCharacterShadow(0, 170, 108, "#6de8ff");
   drawHeroSprite(hit);
   if (playerAttack) drawNoaAttackPose(playerAttack);
   ctx.restore();
-  drawBuildPanel(panel.x + 22, panel.y + 438, panel.w - 44);
+  drawBuildPanel(panel.x + 20, panel.y + 410, panel.w - 40);
 }
 
-function drawGuardMeter(x, y) {
-  const w = 190;
+function drawGuardMeter(x, y, w = 190) {
   const ratio = state.maxGuard ? state.guard / state.maxGuard : 0;
   ctx.save();
   ctx.fillStyle = "rgba(7, 10, 16, 0.5)";
@@ -4811,17 +4970,18 @@ function drawNoaFallback(hit) {
 function drawEnemy() {
   const hit = state.enemyHit > 0;
   const enemy = state.enemyType;
-  drawHpBar(914, 146, 220, 20, state.enemyHp, state.enemyMaxHp, hit ? "#fff2ad" : "#75e298", t("hp"));
-  if (enemy.id === "king") drawBossPhaseBar(914, 172);
-  drawCountdownBadge(914, 181, state.enemyCountdown);
-  drawStatChip(914, 224, enemyTrait(enemy), enemy.color);
-  drawEnemyIntent(914, 260, getEnemyIntent(enemy));
-  drawEnemyBehaviorChips(914, 322, enemy);
+  const panel = UI_LAYOUT.enemyPanel;
+  const left = panel.x + 24;
+  drawHpBar(left, panel.y + 74, panel.w - 82, 18, state.enemyHp, state.enemyMaxHp, hit ? "#fff2ad" : "#75e298", t("hp"));
+  if (enemy.id === "king") drawBossPhaseBar(left, panel.y + 100);
+  drawCountdownBadge(left, panel.y + 110, state.enemyCountdown);
+  drawEnemyIntent(left, panel.y + 154, getEnemyIntent(enemy));
+  drawEnemyBehaviorChips(left, panel.y + 224, enemy);
   ctx.save();
-  ctx.translate(1016, 380);
+  ctx.translate(panel.x + panel.w / 2, panel.y + 382);
   if (hit) ctx.scale(1.08, 0.92);
   const pulse = 1 + Math.sin(performance.now() * 0.006) * 0.018;
-  ctx.scale(pulse, pulse);
+  ctx.scale(pulse * 0.78, pulse * 0.78);
   drawCharacterShadow(0, 116, 118, enemy.color);
   if (drawEnemyAttackAnimationFrame(enemy, hit)) {
     // Attack animations use the enemy concept sheet attack vignettes.
@@ -4859,10 +5019,9 @@ function drawEnemy() {
 }
 
 function drawEnemyBehaviorChips(x, y, enemy) {
-  const expectedGarbage = getEnemyAttackGarbagePreview(enemy);
   const chips = [
-    { label: t("threatShort"), value: `${state.enemyAttackDamage} / +${expectedGarbage}`, color: expectedGarbage > 0 ? "#ffb7bd" : "rgba(238,244,252,0.54)" },
     { label: t("boardEffectShort"), value: t(`special.${enemy.id}`), color: enemy.color },
+    { label: "WEAK", value: enemyWeaknessToken(enemy), color: "#fff0a6" },
   ];
   ctx.save();
   for (let i = 0; i < chips.length; i += 1) {
@@ -5411,15 +5570,54 @@ function drawUltimateWellMask() {
   ctx.stroke();
   ctx.fillStyle = "rgba(255, 190, 95, 0.12)";
   ctx.fillRect(wellX, 0, wellW, ROWS * TILE);
-  ctx.font = "900 14px Trebuchet MS";
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#ffbe5f";
-  ctx.shadowColor = "#ffbe5f";
-  ctx.shadowBlur = 14;
-  ctx.fillText(t("ultimate4Wide").toUpperCase(), wellX + wellW / 2, -14);
-  ctx.font = "800 12px Trebuchet MS";
-  ctx.fillStyle = "rgba(238,244,252,0.8)";
-  ctx.fillText(`${Math.ceil(state.ultimateTimer / 1000)}s`, wellX + wellW / 2, ROWS * TILE + 20);
+  drawUltimateCountdownBar();
+  ctx.restore();
+}
+
+function drawUltimateCountdownBar() {
+  const meter = UI_LAYOUT.ultimateMeter;
+  const total = Math.max(1, state.ultimateTimerMax || ULTIMATE_DURATION_MS);
+  const remaining = Math.max(0, state.ultimateTimer);
+  const ratio = clamp(remaining / total, 0, 1);
+  const secondsText = `${Math.max(0, Math.ceil(remaining / 1000))}s`;
+  const danger = remaining <= 5000;
+  const barX = meter.x + 90;
+  const barY = meter.y + 8;
+  const barW = meter.w - 140;
+  const barH = 9;
+  const pulse = danger ? 0.7 + Math.sin(performance.now() * 0.018) * 0.3 : 1;
+
+  ctx.save();
+  ctx.fillStyle = "rgba(4, 7, 12, 0.72)";
+  roundedRect(meter.x, meter.y, meter.w, meter.h, 8, true, false);
+  ctx.strokeStyle = danger ? `rgba(255, 119, 130, ${0.45 * pulse})` : "rgba(255, 190, 95, 0.34)";
+  ctx.lineWidth = 1.5;
+  roundedRect(meter.x, meter.y, meter.w, meter.h, 8, false, true);
+
+  ctx.font = "900 12px Trebuchet MS";
+  ctx.textAlign = "left";
+  ctx.fillStyle = danger ? "#ff9aa2" : "#ffbe5f";
+  ctx.shadowColor = danger ? "#ff7782" : "#ffbe5f";
+  ctx.shadowBlur = danger ? 12 : 8;
+  ctx.fillText("4-WIDE", meter.x + 12, meter.y + 17);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+  roundedRect(barX, barY, barW, barH, 8, true, false);
+  const fillW = Math.max(4, barW * ratio);
+  const g = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+  g.addColorStop(0, danger ? "#ff7782" : "#d7c2ff");
+  g.addColorStop(0.58, danger ? "#ffbe5f" : "#ffbe5f");
+  g.addColorStop(1, "#8fe8dc");
+  ctx.fillStyle = g;
+  roundedRect(barX, barY, fillW, barH, 8, true, false);
+  ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
+  ctx.fillRect(barX + 2, barY + 2, Math.max(0, fillW - 4), 1);
+
+  ctx.font = "900 13px Trebuchet MS";
+  ctx.textAlign = "right";
+  ctx.fillStyle = danger ? "#ffb7bd" : "#f5f1e6";
+  ctx.fillText(secondsText, meter.x + meter.w - 12, meter.y + 18);
   ctx.restore();
 }
 
@@ -5504,90 +5702,76 @@ function drawBlock(x, y, color, ghost = false, size = TILE) {
 function drawSidePieces() {
   drawHoldPanel();
   drawNextQueuePanel();
-  drawOperationReadouts();
   drawCombatReadout();
 }
 
 function drawHoldPanel() {
   ctx.save();
   ctx.fillStyle = "rgba(3, 5, 10, 0.72)";
-  roundedRect(HOLD_PANEL_X, HOLD_PANEL_Y, 118, 118, 8, true, false);
-  ctx.strokeStyle = state.canHold ? "rgba(255, 224, 162, 0.72)" : "rgba(223, 243, 255, 0.22)";
-  ctx.lineWidth = 2;
-  roundedRect(HOLD_PANEL_X, HOLD_PANEL_Y, 118, 118, 8, false, true);
-  label(t("hold").toUpperCase(), HOLD_PANEL_X + 12, HOLD_PANEL_Y + 24, 18, state.canHold ? "#ffe0a3" : "rgba(245,241,230,0.42)");
-  label(formatControlKey(state.controls.hold), HOLD_PANEL_X + 12, HOLD_PANEL_Y + 106, 12, "rgba(238,244,252,0.48)");
-  drawMiniPiece(state.hold, HOLD_PANEL_X + 19, HOLD_PANEL_Y + 42, 13, 82, 52);
+  roundedRect(HOLD_PANEL_X, HOLD_PANEL_Y, 96, 96, 8, true, false);
+  ctx.strokeStyle = state.canHold ? "rgba(255, 224, 162, 0.48)" : "rgba(223, 243, 255, 0.16)";
+  ctx.lineWidth = 1.5;
+  roundedRect(HOLD_PANEL_X, HOLD_PANEL_Y, 96, 96, 8, false, true);
+  label(t("hold").toUpperCase(), HOLD_PANEL_X + 10, HOLD_PANEL_Y + 22, 15, state.canHold ? "#ffe0a3" : "rgba(245,241,230,0.42)");
+  drawMiniPiece(state.hold, HOLD_PANEL_X + 13, HOLD_PANEL_Y + 39, 12, 70, 42);
   ctx.restore();
 }
 
 function drawNextQueuePanel() {
   ctx.save();
   ctx.fillStyle = "rgba(3, 5, 10, 0.72)";
-  roundedRect(NEXT_PANEL_X, NEXT_PANEL_Y, 82, 430, 8, true, false);
-  ctx.strokeStyle = "rgba(255, 224, 162, 0.72)";
-  ctx.lineWidth = 2;
-  roundedRect(NEXT_PANEL_X, NEXT_PANEL_Y, 82, 430, 8, false, true);
-  label(t("next").toUpperCase(), NEXT_PANEL_X + 13, NEXT_PANEL_Y + 24, 18, "#ffe0a3");
-  for (let i = 0; i < 5; i += 1) {
-    drawMiniPiece(state.queue[i], NEXT_PANEL_X + 13, NEXT_PANEL_Y + 48 + i * 72, 12, 58, 48);
+  roundedRect(NEXT_PANEL_X, NEXT_PANEL_Y, 72, 264, 8, true, false);
+  ctx.strokeStyle = "rgba(255, 224, 162, 0.48)";
+  ctx.lineWidth = 1.5;
+  roundedRect(NEXT_PANEL_X, NEXT_PANEL_Y, 72, 264, 8, false, true);
+  label(t("next").toUpperCase(), NEXT_PANEL_X + 10, NEXT_PANEL_Y + 22, 15, "#ffe0a3");
+  for (let i = 0; i < 3; i += 1) {
+    drawMiniPiece(state.queue[i], NEXT_PANEL_X + 10, NEXT_PANEL_Y + 48 + i * 68, 11, 52, 42);
   }
   if (state.queueHex > 0) {
     ctx.fillStyle = "rgba(119, 232, 255, 0.11)";
-    roundedRect(NEXT_PANEL_X + 6, NEXT_PANEL_Y + 36, 70, 370, 8, true, false);
-    label(`${t("hex").toUpperCase()} ${state.queueHex}`, NEXT_PANEL_X + 14, NEXT_PANEL_Y + 418, 12, "#77e8ff");
+    roundedRect(NEXT_PANEL_X + 5, NEXT_PANEL_Y + 36, 62, 218, 8, true, false);
+    label(`${t("hex").toUpperCase()} ${state.queueHex}`, NEXT_PANEL_X + 9, NEXT_PANEL_Y + 255, 10, "#77e8ff");
   }
   ctx.restore();
 }
 
 function drawOperationReadouts() {
-  const x = HOLD_PANEL_X - 12;
-  const y = HOLD_PANEL_Y + 148;
+  if (!state.operationReadouts.length) return;
+  const x = BOARD_X - 160;
+  const y = BOARD_Y + 176;
   ctx.save();
-  ctx.fillStyle = "rgba(3, 5, 10, 0.28)";
-  roundedRect(x, y, 142, 196, 10, true, false);
-  ctx.strokeStyle = "rgba(255, 224, 162, 0.2)";
-  ctx.lineWidth = 1.5;
-  roundedRect(x, y, 142, 196, 10, false, true);
-  label(t("attackPanel").toUpperCase(), x + 14, y + 24, 14, "#ffe0a3");
-  const upgradeText = state.upgradeReady
-    ? t("upgradeReadyShort").toUpperCase()
-    : `${t("upgradeMeterShort")} ${state.upgradeMeter}/${state.nextUpgradeAt}`;
-  label(upgradeText, x + 72, y + 24, 12, state.upgradeReady ? "#fff0a6" : "#9df7da");
-  const ultimateText = state.ultimateActive
-    ? `4-WIDE ${Math.ceil(state.ultimateTimer / 1000)}s`
-    : `${t("ultimateShort")} ${state.ultimateCharge}/${ULTIMATE_REQUIRED_LINES}`;
-  label(ultimateText, x + 14, y + 44, 12, state.ultimateActive ? "#ffbe5f" : "#caa2ff");
-  const visibleReadouts = Math.min(3, state.operationReadouts.length);
+  const visibleReadouts = Math.min(2, state.operationReadouts.length);
   for (let i = 0; i < visibleReadouts; i += 1) {
     const readout = state.operationReadouts[i];
     const progress = 1 - readout.life / readout.duration;
     const alpha = Math.max(0, Math.min(1, readout.life / 260));
-    const yy = y + 74 + i * 39;
-    ctx.globalAlpha = alpha * (i === 0 ? 1 : 0.58);
+    const yy = y + i * 44 - progress * 12;
+    ctx.globalAlpha = alpha * (i === 0 ? 1 : 0.5);
     ctx.save();
-    ctx.translate(i === 0 ? Math.sin(progress * Math.PI) * 4 : 0, 0);
+    ctx.translate(i === 0 ? Math.sin(progress * Math.PI) * 5 : 0, 0);
     ctx.shadowColor = readout.color;
-    ctx.shadowBlur = i === 0 ? 18 : 6;
-    ctx.fillStyle = hexToRgba(readout.color, i === 0 ? 0.18 : 0.08);
-    roundedRect(x + 10, yy - 25, 122, 36, 7, true, false);
+    ctx.shadowBlur = i === 0 ? 22 : 8;
+    ctx.fillStyle = hexToRgba(readout.color, i === 0 ? 0.22 : 0.08);
+    roundedRect(x, yy - 29, 146, 42, 9, true, false);
+    ctx.strokeStyle = hexToRgba(readout.color, i === 0 ? 0.44 : 0.16);
+    roundedRect(x, yy - 29, 146, 42, 9, false, true);
     ctx.fillStyle = readout.color;
     const titleSize = i === 0 ? (readout.title.length > 14 ? 16 : readout.title.length > 9 ? 20 : 24) : 15;
     ctx.font = `${i === 0 ? "900" : "800"} ${titleSize}px Trebuchet MS`;
     ctx.textAlign = "left";
-    ctx.fillText(readout.title, x + 15, yy - 3);
+    ctx.fillText(readout.title, x + 10, yy - 7);
     ctx.font = "800 12px Trebuchet MS";
     ctx.fillStyle = readout.b2b ? "#fff0a6" : "rgba(238,244,252,0.64)";
     const comboText = readout.combo >= 2 ? fmt("floaterCombo", { combo: readout.combo }) : "";
     const b2bText = readout.b2b ? "B2B" : "";
     const effectiveText = `E${readout.effectiveLines}`;
     const damageText = readout.damage ? `= ${readout.damage} ${t("dmgShort")}` : "";
-    ctx.fillText([comboText, b2bText, effectiveText, damageText].filter(Boolean).join("  "), x + 16, yy + 13);
+    ctx.fillText([comboText, b2bText, effectiveText, damageText].filter(Boolean).join("  "), x + 10, yy + 9);
     ctx.restore();
   }
   ctx.globalAlpha = 1;
   ctx.restore();
-  drawDamageFormulaPanel(x, y + 208);
 }
 
 function drawDamageFormulaPanel(x, y) {
@@ -5612,34 +5796,34 @@ function drawDamageFormulaPanel(x, y) {
 
 function drawCombatReadout() {
   ctx.save();
-  const x = 904;
-  const y = 518;
-  ctx.fillStyle = "rgba(5, 8, 12, 0.3)";
-  roundedRect(x - 4, y - 22, 246, 112, 8, true, false);
-  ctx.strokeStyle = "rgba(152, 228, 235, 0.12)";
-  roundedRect(x - 4, y - 22, 246, 112, 8, false, true);
+  const panel = UI_LAYOUT.enemyPanel;
+  const x = panel.x + 24;
+  const y = panel.y + panel.h - 56;
+  const nextBoss = state.wave % 10 === 0
+    ? `P${getBossPhase()}`
+    : state.miniBoss
+      ? t("miniBoss")
+      : `${10 - (state.wave % 10)}`;
+  ctx.fillStyle = "rgba(5, 8, 12, 0.24)";
+  roundedRect(x - 4, y - 20, 250, 48, 8, true, false);
+  ctx.strokeStyle = "rgba(152, 228, 235, 0.1)";
+  roundedRect(x - 4, y - 20, 250, 48, 8, false, true);
   drawMetricChip(x, y - 4, t("waveLabel"), state.wave, "#98f07e");
-  drawMetricChip(x + 82, y - 4, t("kos"), state.defeated, "#9df7da");
-  drawMetricChip(x + 164, y - 4, t("comboLabel"), state.combo, state.combo >= 3 ? "#7ef7ff" : "#d7c2ff");
-  drawB2BStatusLight(x, y + 42);
-  const nextBoss = state.wave % 10 === 0 ? fmt("bossPhase", { phase: getBossPhase() }).toUpperCase() : state.miniBoss ? t("miniBoss").toUpperCase() : `${t("nextBossLabel")} ${10 - (state.wave % 10)}`;
-  label(nextBoss, x + 154, y + 46, 11, state.enemyType.id === "king" ? "#fff0a6" : "#d7c2ff");
-  label(`${t("guardLabel")} ${state.guard}/${state.maxGuard}`, x, y + 70, 12, state.guard > 0 ? "#9df7da" : "rgba(238,244,252,0.46)");
-  label(`${t("incomingLabel")} ${state.pendingGarbage}`, x + 104, y + 70, 12, state.pendingGarbage > 0 ? "#ffb7bd" : "rgba(238,244,252,0.42)");
-  label(`${t("pcShort")} ${state.perfectClears}`, x + 190, y + 70, 12, "#fff0a6");
+  drawMetricChip(x + 84, y - 4, t("nextBossLabel"), nextBoss, state.enemyType.id === "king" ? "#fff0a6" : "#d7c2ff");
+  drawMetricChip(x + 168, y - 4, t("incomingShort"), state.pendingGarbage, state.pendingGarbage > 0 ? "#ffb7bd" : "#7b8791");
   if (state.challenge) {
     const config = CHALLENGES.find((challenge) => challenge.id === state.challenge.id);
-    if (config) label(`${config.title}: ${state.challenge.progress}/${config.target}`, x, y + 88, 11, state.challenge.complete ? "#fff0a6" : "#9df7da");
+    if (config) label(`${config.title}: ${state.challenge.progress}/${config.target}`, x, y + 42, 11, state.challenge.complete ? "#fff0a6" : "#9df7da");
   }
   ctx.restore();
 }
 
-function drawMetricChip(x, y, labelText, value, color) {
+function drawMetricChip(x, y, labelText, value, color, w = 78) {
   ctx.save();
   ctx.fillStyle = hexToRgba(color, 0.09);
-  roundedRect(x, y, 72, 32, 8, true, false);
+  roundedRect(x, y, w, 32, 8, true, false);
   ctx.strokeStyle = hexToRgba(color, 0.22);
-  roundedRect(x, y, 72, 32, 8, false, true);
+  roundedRect(x, y, w, 32, 8, false, true);
   label(String(labelText).toUpperCase(), x + 8, y + 12, 9, "rgba(238,244,252,0.48)");
   label(String(value), x + 8, y + 27, 15, color);
   ctx.restore();
@@ -6067,6 +6251,117 @@ function drawFloaters() {
   }
 }
 
+function drawCombatPopups() {
+  if (!state.combatPopups.length) return;
+  ctx.save();
+  ctx.textAlign = "left";
+  for (const popup of state.combatPopups) {
+    drawCombatPopup(popup);
+  }
+  ctx.restore();
+}
+
+function drawCombatPopup(popup) {
+  const progress = clamp(1 - popup.life / popup.maxLife, 0, 1);
+  const appear = clamp(progress / 0.12, 0, 1);
+  const hold = progress < 0.62 ? 1 : clamp(1 - (progress - 0.62) / 0.38, 0, 1);
+  const alpha = Math.min(1, appear) * hold;
+  if (alpha <= 0) return;
+
+  const baseScale = popup.scale || 1;
+  const scale = baseScale * easeOutBack(appear);
+  const drift = progress > 0.45 ? (progress - 0.45) * 54 : 0;
+  const wobble = Math.sin((progress + popup.seed) * Math.PI * 5) * 3 * (1 - progress);
+  const x = popup.x + wobble;
+  const y = popup.y - drift;
+  const primary = popup.color || "#d7c2ff";
+  const accent = popup.accent || "#8ff7ff";
+  const perfect = popup.type === "perfect";
+  const big = popup.type === "tspin" || popup.type === "perfect";
+  const titleSize = perfect ? 42 : big ? 34 : popup.type === "b2b" ? 28 : 24;
+  const subSize = perfect ? 18 : 20;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x, y);
+  ctx.rotate(perfect ? 0 : -0.08);
+  ctx.scale(scale, scale);
+  ctx.globalCompositeOperation = "lighter";
+
+  drawCombatPopupGlyphs(popup, progress, primary, accent);
+  drawCombatPopupTrail(popup, primary, accent, progress);
+
+  ctx.shadowColor = primary;
+  ctx.shadowBlur = perfect ? 28 : big ? 24 : 16;
+  ctx.lineWidth = perfect ? 5 : big ? 4 : 3;
+  ctx.strokeStyle = hexToRgba(accent, 0.68);
+  ctx.font = `900 ${titleSize}px Georgia, Trebuchet MS, serif`;
+  ctx.strokeText(popup.text, 0, 0);
+
+  const gradient = ctx.createLinearGradient(0, -titleSize, 220, 8);
+  gradient.addColorStop(0, "#ffffff");
+  gradient.addColorStop(0.5, primary);
+  gradient.addColorStop(1, accent);
+  ctx.fillStyle = gradient;
+  ctx.fillText(popup.text, 0, 0);
+
+  if (popup.subText) {
+    ctx.shadowBlur = 16;
+    ctx.font = `900 ${subSize}px Georgia, Trebuchet MS, serif`;
+    ctx.strokeStyle = "rgba(10, 8, 24, 0.64)";
+    ctx.lineWidth = 3;
+    ctx.strokeText(popup.subText, 4, subSize + 14);
+    ctx.fillStyle = popup.type === "b2b" ? "#fff0a6" : "#f5d6ff";
+    ctx.fillText(popup.subText, 4, subSize + 14);
+  }
+  ctx.restore();
+}
+
+function drawCombatPopupTrail(popup, primary, accent, progress) {
+  const lineCount = popup.type === "perfect" ? 5 : popup.type === "lineClear" ? 2 : 4;
+  for (let i = 0; i < lineCount; i += 1) {
+    const offset = i * 12;
+    ctx.strokeStyle = hexToRgba(i % 2 ? accent : primary, 0.42 * (1 - progress));
+    ctx.lineWidth = popup.type === "perfect" ? 2.4 : 1.8;
+    ctx.beginPath();
+    ctx.moveTo(-72 - offset, 10 + i * 8);
+    ctx.quadraticCurveTo(-30 - offset * 0.4, -8 - i * 4, 142 + offset * 0.2, -28 + i * 10);
+    ctx.stroke();
+  }
+}
+
+function drawCombatPopupGlyphs(popup, progress, primary, accent) {
+  const sparkCount = popup.type === "perfect" ? 16 : popup.type === "lineClear" ? 6 : 10;
+  const orbit = popup.type === "perfect" ? 86 : 58;
+  for (let i = 0; i < sparkCount; i += 1) {
+    const angle = popup.seed + i * 2.399 + progress * 1.6;
+    const radius = orbit + Math.sin(progress * Math.PI + i) * 12;
+    const sx = Math.cos(angle) * radius + 64;
+    const sy = Math.sin(angle) * radius * 0.44 - 18;
+    const size = (popup.type === "perfect" ? 4.2 : 3.2) * (0.35 + (1 - progress) * 0.65);
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(angle);
+    ctx.fillStyle = i % 3 === 0 ? accent : primary;
+    ctx.shadowColor = ctx.fillStyle;
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.moveTo(0, -size);
+    ctx.lineTo(size, 0);
+    ctx.lineTo(0, size);
+    ctx.lineTo(-size, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function easeOutBack(t) {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+
 function drawTutorialPrompt() {
   if (!state.tutorial || state.mode !== "playing") return;
   const step = TUTORIAL_STEPS[state.tutorial.step];
@@ -6147,10 +6442,13 @@ function drawOverlay() {
     drawStartMenuOverlay();
     return;
   }
+  if (state.mode === "victory" || state.mode === "defeat") {
+    drawResultOverlay();
+    return;
+  }
   ctx.save();
   drawDimOverlay(0.74);
-  const isResult = state.mode === "victory" || state.mode === "defeat";
-  drawCard(318, isResult ? 82 : 126, 644, state.mode === "start" || isResult ? 456 : 324);
+  drawCard(318, 126, 644, 324);
   const title =
     state.mode === "start"
       ? t("startTitle")
@@ -6159,12 +6457,12 @@ function drawOverlay() {
         : state.mode === "victory"
           ? t("victory")
           : t("defeat");
-  label(title, 382, isResult ? 154 : 206, 48, "#f5f1e6");
+  label(title, 382, 206, 48, "#f5f1e6");
   const sub =
     state.mode === "start"
       ? t("startSubtitle")
       : getMessage();
-  wrapText(sub, 384, isResult ? 206 : 260, 504, 28, "rgba(238,244,252,0.76)", 19);
+  wrapText(sub, 384, 260, 504, 28, "rgba(238,244,252,0.76)", 19);
   if (state.mode === "start") {
     drawMenuButton(384, 318, 510, 54, t("endless"), "Enter");
     drawMenuButton(384, 386, 510, 44, t("tutorialStart"), "3 min");
@@ -6173,10 +6471,26 @@ function drawOverlay() {
     label(t("startHint"), 384, 534, 18, "#9fb4ff");
     if (!state.save.tutorialCompleted) label(t("firstRunHint"), 384, 562, 14, "#fff0a6");
   } else {
-    drawRunSummary();
-    drawMenuButton(384, 468, 248, 44, t("retry"), "Enter");
-    drawMenuButton(646, 468, 248, 44, t("menu"), "Esc");
+    drawMenuButton(384, 318, 248, 44, t("retry"), "Enter");
+    drawMenuButton(646, 318, 248, 44, t("menu"), "Esc");
   }
+  ctx.restore();
+}
+
+function drawResultOverlay() {
+  const victory = state.mode === "victory";
+  const accent = victory ? "#fff0a6" : "#ff8f98";
+  ctx.save();
+  drawDimOverlay(0.82);
+  drawCard(318, 82, 644, 456);
+  ctx.textAlign = "left";
+  label(victory ? t("victory") : t("defeat"), 382, 154, 48, "#f5f1e6");
+  ctx.fillStyle = accent;
+  roundedRect(384, 176, 210, 4, 8, true, false);
+  wrapText(getMessage(), 384, 206, 504, 28, "rgba(238,244,252,0.76)", 19);
+  drawRunSummary();
+  drawMenuButton(384, 468, 248, 44, t("retry"), "Enter", "primary");
+  drawMenuButton(646, 468, 248, 44, t("menu"), "Esc");
   ctx.restore();
 }
 
