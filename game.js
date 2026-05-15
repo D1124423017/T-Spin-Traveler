@@ -307,22 +307,29 @@ const DEFAULT_CONTROLS = {
 };
 
 const UI_LAYOUT = {
-  playerPanel: { x: 40, y: 94, w: 284, h: 176 },
-  enemyPanel: { x: 936, y: 94, w: 304, h: 244 },
-  playerStage: { x: 18, y: 254, w: 380, h: 392 },
-  enemyStage: { x: 860, y: 326, w: 410, h: 320 },
+  panelPadding: 24,
+  playerPanel: { x: 38, y: 84, w: 312, h: 190 },
+  enemyPanel: { x: 884, y: 84, w: 356, h: 254 },
+  playerStage: { x: 18, y: 188, w: 380, h: 392 },
+  enemyStage: { x: 858, y: 246, w: 410, h: 320 },
   boardFrame: { x: BOARD_X - 18, y: BOARD_Y - 18, w: COLS * TILE + 36, h: ROWS * TILE + 36 },
+  menuHero: { x: 386, y: 464, scale: 1.04 },
   menu: {
-    x: 792,
-    y: 104,
-    w: 414,
-    h: 544,
+    x: 804,
+    y: 96,
+    w: 390,
+    h: 548,
+    padding: 34,
     titleY: 104,
     subtitleY: 154,
-    primaryY: 224,
-    tutorialY: 316,
-    utilityY: 408,
+    primaryY: 250,
+    tutorialY: 344,
+    utilityY: 426,
+    primaryH: 72,
+    buttonH: 56,
+    buttonGap: 18,
   },
+  countdown: { cardW: 236, cardH: 108, yOffset: -18, barGap: 16 },
   pauseButton: { x: 1192, y: 24, w: 50, h: 38 },
   pauseMenu: { x: 414, y: 122, w: 452, h: 462 },
   settings: { x: 142, y: 58, w: 996, h: 604, tabX: 184, contentX: 388, contentY: 166 },
@@ -359,11 +366,13 @@ const CONTROL_ACTIONS = [
 const translations = {
   zh: {
     startTitle: "T-Spin Traveler",
-    startSubtitle: "暗黑童話 × 外星導航儀。無盡模式中用 Spin、B2B、Combo 與 Perfect Clear 打穿魔法森林。",
+    startSubtitle: "用消行、Spin 與 Combo 把方塊轉化成符文攻擊。",
     startTagline: "方塊消除 × 奇幻戰鬥",
-    startWorldHint: "魔法森林邊境的導航裂隙正在擴張。Noa 需要用 Tetr 能量重組戰場。",
+    startWorldHint: "Noa 穿過魔法裂隙，把每一次消行變成戰鬥指令。",
+    startPanelHint: "先進無盡模式。教學可選，不會強制。",
     endless: "無盡模式",
     startGame: "開始遊戲",
+    tutorialHintShort: "建議",
     settings: "設定",
     moveGuide: "招式圖鑑",
     moreOptions: "更多",
@@ -442,6 +451,10 @@ const translations = {
     incomingShort: "垃圾",
     enemyStrike: "敵人攻擊",
     enemyIntent: "意圖",
+    intentAttackLabel: "攻擊",
+    intentGarbageLabel: "垃圾",
+    intentCountdownLabel: "倒數",
+    turnsLater: "{count} 回合後",
     kos: "擊破",
     bossPhase: "Boss 階段 {phase}",
     miniBoss: "小 Boss",
@@ -473,6 +486,7 @@ const translations = {
     buildDetailPause: "詳細 Build 在暫停",
     threatShort: "威脅",
     boardEffectShort: "盤面",
+    weakShort: "弱點",
     relicDraft: "遺物選擇",
     safeNodeDraft: "安全節點，不打斷操作",
     damageRuleLine: "Single 10 / Double 25 / Triple 45 / Tetris 70 / Spin 30-140 / B2B +15 / Weak x1.35",
@@ -717,11 +731,13 @@ const translations = {
   },
   en: {
     startTitle: "T-Spin Traveler",
-    startSubtitle: "Dark fairytale alien navigation. Survive Endless with Spins, B2B, Combo, and Perfect Clears.",
+    startSubtitle: "Turn clears, Spins, and Combos into rune attacks.",
     startTagline: "Falling Blocks x Fantasy Combat",
-    startWorldHint: "The navigation rift at the forest border is widening. Noa reshapes the battlefield with Tetr energy.",
+    startWorldHint: "Noa crosses the magic rift and turns every line clear into a battle command.",
+    startPanelHint: "Start Endless first. Tutorial is optional.",
     endless: "Endless",
     startGame: "Start Game",
+    tutorialHintShort: "Optional",
     settings: "Settings",
     moveGuide: "Move Guide",
     moreOptions: "More",
@@ -800,6 +816,10 @@ const translations = {
     incomingShort: "INC",
     enemyStrike: "Enemy Strike",
     enemyIntent: "Intent",
+    intentAttackLabel: "Attack",
+    intentGarbageLabel: "Garbage",
+    intentCountdownLabel: "Countdown",
+    turnsLater: "in {count} turns",
     kos: "KOs",
     bossPhase: "Boss Phase {phase}",
     miniBoss: "Mini Boss",
@@ -831,6 +851,7 @@ const translations = {
     buildDetailPause: "Build details in pause",
     threatShort: "Threat",
     boardEffectShort: "Board",
+    weakShort: "Weak",
     relicDraft: "Relic Draft",
     safeNodeDraft: "Safe node, never interrupts play",
     damageRuleLine: "Single 10 / Double 25 / Triple 45 / Tetris 70 / Spin 30-140 / B2B +15 / Weak x1.35",
@@ -3067,8 +3088,8 @@ function pushCombatPopup(lines, pieceType, spinType, meta = {}) {
   const b2b = Boolean(meta.b2b);
   const perfect = Boolean(meta.perfect);
   const popupBase = {
-    x: BOARD_X - 190,
-    y: BOARD_Y + 350,
+    x: BOARD_X - 54,
+    y: BOARD_Y + 318,
     life: 1040,
     maxLife: 1040,
     seed: Math.random() * 1000,
@@ -3079,11 +3100,11 @@ function pushCombatPopup(lines, pieceType, spinType, meta = {}) {
       ...popupBase,
       text: "Perfect Clear!",
       subText: meta.damage ? `-${meta.damage} ${t("dmgShort")}` : "",
-      x: BOARD_X + (COLS * TILE) / 2,
-      y: BOARD_Y + 126,
+      x: BOARD_X + 54,
+      y: BOARD_Y + 118,
       color: "#fff0a6",
       accent: "#8ff7ff",
-      scale: 1.25,
+      scale: 1.08,
       type: "perfect",
       life: 1180,
       maxLife: 1180,
@@ -3139,7 +3160,7 @@ function pushCombatPopup(lines, pieceType, spinType, meta = {}) {
       ...popupBase,
       text: "B2B",
       subText: "Back-to-Back!",
-      y: BOARD_Y + 284,
+      y: BOARD_Y + 252,
       color: "#fff0a6",
       accent: "#d7c2ff",
       scale: 0.92,
@@ -4123,21 +4144,24 @@ function syncControlHints() {
   const note = document.querySelector(".screen-note");
   if (!note) return;
   const hints = UI_LAYOUT.compactHints.map((key) => t(key));
-  note.replaceChildren(
-    ...hints.map((hint, index) => {
-      const span = document.createElement("span");
-      span.id = `hint-${index}`;
-      span.textContent = hint;
-      return span;
-    }),
-  );
+  const makeHint = (text, className, id = "") => {
+    const span = document.createElement("span");
+    if (id) span.id = id;
+    span.className = className;
+    span.textContent = text;
+    return span;
+  };
+  note.replaceChildren(...hints.map((hint, index) => makeHint(hint, "play-hint", `hint-${index}`)));
   updateScreenNoteMode();
 }
 
 function updateScreenNoteMode() {
   const note = document.querySelector(".screen-note");
   if (!note) return;
-  note.classList.toggle("compact", state.mode === "playing" && state.placed > 0);
+  const showPlayHints = state.mode === "playing";
+  note.classList.toggle("menu", !showPlayHints);
+  note.classList.toggle("compact", showPlayHints);
+  note.classList.toggle("countdown", isBattleCountdownActive());
 }
 
 function previewSfx() {
@@ -4535,10 +4559,12 @@ function drawPlayer() {
   const playerAttack = state.attacks.find((attack) => attack.type === "player");
   const panel = UI_LAYOUT.playerPanel;
   const stage = UI_LAYOUT.playerStage;
-  const left = panel.x + 26;
-  drawHpBar(left, panel.y + 82, panel.w - 52, 18, state.playerHp, state.playerMaxHp, hit ? "#ff7782" : "#76d4ff", t("hp"));
-  drawGuardMeter(left, panel.y + 116, panel.w - 52);
-  drawBuildChip(left, panel.y + 148, panel.w - 52);
+  const pad = UI_LAYOUT.panelPadding;
+  const left = panel.x + pad;
+  const innerW = panel.w - pad * 2;
+  drawHpBar(left, panel.y + 84, innerW, 20, state.playerHp, state.playerMaxHp, hit ? "#ff7782" : "#76d4ff", t("hp"));
+  drawGuardMeter(left, panel.y + 122, innerW);
+  drawBuildChip(left, panel.y + 156, innerW);
   ctx.save();
   drawStageGlow(stage.x + stage.w / 2, stage.y + 322, 164, "#6de8ff");
   drawPresentationSigil(stage.x + stage.w / 2, stage.y + 318, 128, "#6de8ff");
@@ -4559,11 +4585,11 @@ function drawBuildChip(x, y, w) {
   const items = getBuildSummary();
   ctx.save();
   ctx.fillStyle = "rgba(7, 10, 16, 0.44)";
-  roundedRect(x, y, w, 20, 8, true, false);
+  roundedRect(x, y, w, 26, 8, true, false);
   ctx.strokeStyle = "rgba(183, 146, 255, 0.2)";
-  roundedRect(x, y, w, 20, 8, false, true);
-  label(t("buildCompact"), x + 10, y + 14, 10, "#c7a7ff");
-  fitLabel(items[0], x + 58, y + 14, w - 70, 11, "rgba(238,244,252,0.68)", 8, "800");
+  roundedRect(x, y, w, 26, 8, false, true);
+  label(t("buildCompact"), x + 12, y + 17, 11, "#c7a7ff");
+  fitLabel(items[0], x + 76, y + 17, w - 90, 12, "rgba(238,244,252,0.68)", 9, "800");
   ctx.restore();
 }
 
@@ -4607,12 +4633,12 @@ function drawGuardMeter(x, y, w = 190) {
   const ratio = state.maxGuard ? state.guard / state.maxGuard : 0;
   ctx.save();
   ctx.fillStyle = "rgba(7, 10, 16, 0.5)";
-  roundedRect(x, y, w, 18, 6, true, false);
+  roundedRect(x, y, w, 20, 6, true, false);
   ctx.fillStyle = "rgba(157, 247, 218, 0.22)";
-  roundedRect(x, y, w * ratio, 18, 6, true, false);
+  roundedRect(x, y, w * ratio, 20, 6, true, false);
   ctx.strokeStyle = "rgba(157, 247, 218, 0.3)";
-  roundedRect(x, y, w, 18, 6, false, true);
-  label(`${t("guardLabel")} ${state.guard}/${state.maxGuard}`, x + 10, y + 13, 11, state.guard > 0 ? "#9df7da" : "rgba(238,244,252,0.46)");
+  roundedRect(x, y, w, 20, 6, false, true);
+  label(`${t("guardLabel")} ${state.guard}/${state.maxGuard}`, x + 10, y + 14, 11, state.guard > 0 ? "#9df7da" : "rgba(238,244,252,0.46)");
   ctx.restore();
 }
 
@@ -5188,11 +5214,14 @@ function drawEnemy() {
   const enemy = state.enemyType;
   const panel = UI_LAYOUT.enemyPanel;
   const stage = UI_LAYOUT.enemyStage;
-  const left = panel.x + 26;
-  drawHpBar(left, panel.y + 78, panel.w - 52, 18, state.enemyHp, state.enemyMaxHp, hit ? "#fff2ad" : "#75e298", t("hp"));
-  if (enemy.id === "king") drawBossPhaseBar(left, panel.y + 101);
-  drawEnemyIntent(left, panel.y + 112, getEnemyIntent(enemy));
-  drawEnemyBehaviorChips(left, panel.y + 176, enemy);
+  const pad = UI_LAYOUT.panelPadding;
+  const left = panel.x + pad;
+  const innerW = panel.w - pad * 2;
+  drawHpBar(left, panel.y + 84, innerW, 20, state.enemyHp, state.enemyMaxHp, hit ? "#fff2ad" : "#75e298", t("hp"));
+  if (enemy.id === "king") drawBossPhaseBar(left, panel.y + 112);
+  const intentY = panel.y + (enemy.id === "king" ? 130 : 118);
+  drawEnemyIntent(left, intentY, getEnemyIntent(enemy), innerW);
+  drawEnemyBehaviorChips(left, intentY + 96, enemy, innerW);
   ctx.save();
   drawStageGlow(stage.x + stage.w / 2, stage.y + 288, 184, enemy.color);
   drawPresentationSigil(stage.x + stage.w / 2, stage.y + 292, 150, enemy.color);
@@ -5236,22 +5265,24 @@ function drawEnemy() {
   ctx.restore();
 }
 
-function drawEnemyBehaviorChips(x, y, enemy) {
+function drawEnemyBehaviorChips(x, y, enemy, w = 294) {
   const chips = [
     { label: t("boardEffectShort"), value: t(`special.${enemy.id}`), color: enemy.color },
-    { label: "WEAK", value: enemyWeaknessToken(enemy), color: "#fff0a6" },
+    { label: t("weakShort"), value: enemyWeaknessToken(enemy), color: "#fff0a6" },
   ];
   ctx.save();
+  const gap = 8;
+  const chipW = (w - gap) / 2;
   for (let i = 0; i < chips.length; i += 1) {
     const chip = chips[i];
-    const cy = y + i * 31;
-    const cx = x;
+    const cy = y;
+    const cx = x + i * (chipW + gap);
     ctx.fillStyle = "rgba(7, 10, 16, 0.5)";
-    roundedRect(cx, cy, 238, 25, 7, true, false);
+    roundedRect(cx, cy, chipW, 27, 7, true, false);
     ctx.strokeStyle = hexToRgba(chip.color.startsWith("#") ? chip.color : "#8fe8dc", 0.22);
-    roundedRect(cx, cy, 238, 25, 7, false, true);
-    label(String(chip.label).toUpperCase(), cx + 8, cy + 12, 9, "rgba(238,244,252,0.48)");
-    fitLabel(String(chip.value), cx + 70, cy + 17, 156, 11, chip.color, 9, "800");
+    roundedRect(cx, cy, chipW, 27, 7, false, true);
+    label(String(chip.label).toUpperCase(), cx + 9, cy + 11, 8, "rgba(238,244,252,0.48)");
+    fitLabel(String(chip.value), cx + 9, cy + 22, chipW - 18, 11, chip.color, 9, "800");
   }
   ctx.restore();
 }
@@ -5524,35 +5555,61 @@ function getEnemyIntent(enemy) {
   return { icon, title: t("intentStrike"), detail: fmt("intentStrikeDetail", { damage: state.enemyAttackDamage }), color: "#98f07e" };
 }
 
-function drawEnemyIntent(x, y, intent) {
+function drawEnemyIntent(x, y, intent, w = 294) {
   const enemy = state.enemyType;
   const garbage = getEnemyAttackGarbagePreview(enemy);
+  const h = 92;
+  const danger = state.enemyCountdown <= 1;
   ctx.save();
   ctx.fillStyle = "rgba(7, 10, 16, 0.44)";
-  roundedRect(x, y, 238, 58, 7, true, false);
+  roundedRect(x, y, w, h, 8, true, false);
   ctx.strokeStyle = hexToRgba(intent.color, 0.36);
   ctx.lineWidth = 1.5;
-  roundedRect(x, y, 238, 58, 7, false, true);
+  roundedRect(x, y, w, h, 8, false, true);
   ctx.fillStyle = hexToRgba(intent.color, 0.22);
-  roundedRect(x + 10, y + 10, 30, 36, 7, true, false);
+  roundedRect(x + 12, y + 14, 34, 38, 7, true, false);
   ctx.strokeStyle = hexToRgba(intent.color, 0.48);
-  roundedRect(x + 10, y + 10, 30, 36, 7, false, true);
+  roundedRect(x + 12, y + 14, 34, 38, 7, false, true);
   ctx.font = "900 18px Trebuchet MS";
   ctx.fillStyle = intent.color;
   ctx.textAlign = "center";
-  ctx.fillText(intent.icon || "!", x + 25, y + 33);
+  ctx.fillText(intent.icon || "!", x + 29, y + 39);
   ctx.textAlign = "left";
-  ctx.font = "800 12px Trebuchet MS";
-  ctx.fillStyle = intent.color;
-  fitLabel(intent.title.toUpperCase(), x + 50, y + 18, 116, 12, intent.color, 9, "900");
+  label(t("enemyIntent").toUpperCase(), x + 58, y + 25, 10, "rgba(238,244,252,0.48)");
+  fitLabel(intent.title, x + 58, y + 45, w - 74, 15, intent.color, 11, "900");
+
+  const gap = 6;
+  const pillW = (w - 24 - gap * 2) / 3;
+  const pillY = y + 60;
+  drawIntentPill(x + 12, pillY, pillW, `${t("intentAttackLabel")} ${state.enemyAttackDamage}`, "#ffb7bd", true);
+  drawIntentPill(x + 12 + pillW + gap, pillY, pillW, fmt("turnsLater", { count: state.enemyCountdown }), danger ? "#ff7782" : "#98f07e", danger);
+  drawIntentPill(x + 12 + (pillW + gap) * 2, pillY, pillW, `${t("intentGarbageLabel")} +${garbage}`, garbage > 0 ? "#c9d4da" : "rgba(238,244,252,0.56)");
+  ctx.restore();
+}
+
+function drawIntentPill(x, y, w, text, color, emphasis = false) {
+  const accent = color.startsWith("#") ? color : "#dce8ee";
+  ctx.save();
+  ctx.fillStyle = hexToRgba(accent, emphasis ? 0.16 : 0.09);
+  roundedRect(x, y, w, 22, 6, true, false);
+  ctx.strokeStyle = hexToRgba(accent, emphasis ? 0.32 : 0.16);
+  roundedRect(x, y, w, 22, 6, false, true);
+  ctx.textBaseline = "middle";
+  fitLabel(String(text), x + 8, y + 12, w - 16, 12, color, 9, "800");
+  ctx.textBaseline = "alphabetic";
+  ctx.restore();
+}
+
+function drawIntentMetricRow(x, y, w, labelText, value, color) {
+  ctx.save();
+  const accent = color.startsWith("#") ? color : "#dce8ee";
+  ctx.fillStyle = hexToRgba(accent, 0.08);
+  roundedRect(x, y, w, 18, 5, true, false);
+  ctx.strokeStyle = hexToRgba(accent, 0.14);
+  roundedRect(x, y, w, 18, 5, false, true);
+  label(labelText, x + 8, y + 12, 10, "rgba(238,244,252,0.56)");
   ctx.textAlign = "right";
-  ctx.font = "900 24px Trebuchet MS";
-  ctx.fillStyle = state.enemyCountdown <= 1 ? "#ff7782" : "#98f07e";
-  ctx.fillText(String(state.enemyCountdown), x + 218, y + 37);
-  ctx.textAlign = "left";
-  drawIntentMiniChip(x + 50, y + 28, "DMG", state.enemyAttackDamage, "#ffb7bd");
-  drawIntentMiniChip(x + 103, y + 28, "GARB", garbage, garbage > 0 ? "#c9d4da" : "rgba(238,244,252,0.36)");
-  drawIntentMiniChip(x + 158, y + 28, "CD", state.enemyCountdown, state.enemyCountdown <= 1 ? "#ff7782" : "#98f07e", 48);
+  label(String(value), x + w - 8, y + 13, 12, color);
   ctx.restore();
 }
 
@@ -5703,21 +5760,32 @@ function drawCharacterShadow(x, y, w, color) {
 }
 
 function drawHpBar(x, y, w, h, value, max, color, caption) {
+  const ratio = max ? clamp(value / max, 0, 1) : 0;
+  const valueText = `${value}/${max}`;
   ctx.save();
   ctx.fillStyle = "rgba(255,255,255,0.08)";
   roundedRect(x, y, w, h, 7, true, false);
   const g = ctx.createLinearGradient(x, y, x + w, y);
   g.addColorStop(0, color);
-  g.addColorStop(1, value / max < 0.35 ? "#ff7782" : "#8ff1d2");
+  g.addColorStop(1, ratio < 0.35 ? "#ff7782" : "#8ff1d2");
   ctx.fillStyle = g;
-  roundedRect(x, y, Math.max(0, w * (value / max)), h, 7, true, false);
+  roundedRect(x, y, Math.max(0, w * ratio), h, 7, true, false);
   ctx.strokeStyle = "rgba(241,244,250,0.34)";
   ctx.lineWidth = 2;
   roundedRect(x, y, w, h, 7, false, true);
-  ctx.font = "800 12px Trebuchet MS";
+  ctx.textBaseline = "middle";
+  ctx.font = "800 11px Trebuchet MS";
   ctx.fillStyle = "rgba(8, 11, 18, 0.78)";
-  ctx.fillText(caption, x + 10, y + 14);
-  label(`${value}/${max}`, x + w + 12, y + 16, 15, "#dce8ee");
+  ctx.fillText(caption, x + 10, y + h / 2 + 1);
+  ctx.font = "800 12px Trebuchet MS";
+  const textW = Math.max(56, Math.min(w - 58, Math.ceil(ctx.measureText(valueText).width + 18)));
+  ctx.fillStyle = "rgba(2, 5, 10, 0.58)";
+  roundedRect(x + w - textW - 4, y + 3, textW, h - 6, 5, true, false);
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#f3f2ea";
+  ctx.fillText(valueText, x + w - 12, y + h / 2 + 1);
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
   ctx.restore();
 }
 
@@ -5952,7 +6020,6 @@ function drawBlock(x, y, color, ghost = false, size = TILE) {
 function drawSidePieces() {
   drawHoldPanel();
   drawNextQueuePanel();
-  drawCombatReadout();
 }
 
 function drawHoldPanel() {
@@ -6056,19 +6123,19 @@ function drawCombatReadout() {
   ctx.save();
   const board = UI_LAYOUT.boardFrame;
   const x = board.x + 22;
-  const y = board.y + board.h + 20;
+  const y = H - 32;
   const nextBoss = state.wave % 10 === 0
     ? `P${getBossPhase()}`
     : state.miniBoss
       ? t("miniBoss")
       : `${10 - (state.wave % 10)}`;
   ctx.fillStyle = "rgba(4, 7, 14, 0.56)";
-  roundedRect(x - 14, y - 14, board.w - 16, 44, 14, true, false);
+  roundedRect(x - 14, y - 14, board.w - 16, 40, 12, true, false);
   ctx.strokeStyle = "rgba(183, 146, 255, 0.18)";
-  roundedRect(x - 14, y - 14, board.w - 16, 44, 14, false, true);
-  drawMetricChip(x, y - 2, t("waveLabel"), state.wave, "#98f07e", 84);
-  drawMetricChip(x + 94, y - 2, t("nextBossLabel"), nextBoss, state.enemyType.id === "king" ? "#fff0a6" : "#d7c2ff", 94);
-  drawMetricChip(x + 198, y - 2, t("incomingShort"), state.pendingGarbage, state.pendingGarbage > 0 ? "#ffb7bd" : "#7b8791", 78);
+  roundedRect(x - 14, y - 14, board.w - 16, 40, 12, false, true);
+  drawMetricChip(x, y - 6, t("waveLabel"), state.wave, "#98f07e", 84);
+  drawMetricChip(x + 94, y - 6, t("nextBossLabel"), nextBoss, state.enemyType.id === "king" ? "#fff0a6" : "#d7c2ff", 94);
+  drawMetricChip(x + 198, y - 6, t("incomingShort"), state.pendingGarbage, state.pendingGarbage > 0 ? "#ffb7bd" : "#7b8791", 78);
   if (state.challenge) {
     const config = CHALLENGES.find((challenge) => challenge.id === state.challenge.id);
     if (config) label(`${config.title}: ${state.challenge.progress}/${config.target}`, x, y + 42, 11, state.challenge.complete ? "#fff0a6" : "#9df7da");
@@ -6536,8 +6603,8 @@ function drawCombatPopup(popup) {
   const accent = popup.accent || "#8ff7ff";
   const perfect = popup.type === "perfect";
   const big = popup.type === "tspin" || popup.type === "perfect";
-  const titleSize = perfect ? 42 : big ? 34 : popup.type === "b2b" ? 28 : 24;
-  const subSize = perfect ? 18 : 20;
+  const titleSize = perfect ? 36 : big ? 34 : popup.type === "b2b" ? 28 : 24;
+  const subSize = perfect ? 17 : 20;
 
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -6660,35 +6727,48 @@ function drawBattleCountdown() {
   const shown = cue === "START" ? t("countdownStart") : cue;
   const progress = 1 - state.countdownMs / BATTLE_COUNTDOWN_MS;
   const board = UI_LAYOUT.boardFrame;
+  const layout = UI_LAYOUT.countdown;
   const cx = board.x + board.w / 2;
-  const cy = board.y + board.h / 2;
+  const cy = board.y + board.h / 2 + layout.yOffset;
   const numeric = cue !== "START";
   const pulse = Math.sin(progress * Math.PI * 8) * 0.035;
-  const scale = numeric ? 1.06 + pulse : 1.0 + Math.sin(progress * Math.PI) * 0.08;
+  const scale = numeric ? 1 + pulse : 1 + Math.sin(progress * Math.PI) * 0.08;
+  const cardX = cx - layout.cardW / 2;
+  const cardY = cy - layout.cardH / 2;
   ctx.save();
-  ctx.fillStyle = "rgba(1, 4, 10, 0.34)";
-  roundedRect(board.x + 18, board.y + 170, board.w - 36, 166, 18, true, false);
+  ctx.fillStyle = "rgba(1, 4, 10, 0.38)";
+  roundedRect(board.x + 8, board.y + 10, board.w - 16, board.h - 20, 14, true, false);
+  ctx.fillStyle = "rgba(1, 4, 10, 0.46)";
+  roundedRect(cardX, cardY, layout.cardW, layout.cardH, 16, true, false);
   ctx.strokeStyle = cue === "START" ? "rgba(255, 240, 166, 0.62)" : "rgba(183, 146, 255, 0.48)";
   ctx.lineWidth = 2;
-  roundedRect(board.x + 18, board.y + 170, board.w - 36, 166, 18, false, true);
-  ctx.translate(cx, cy - 12);
+  roundedRect(cardX, cardY, layout.cardW, layout.cardH, 16, false, true);
+  if (cue === "START") {
+    const glow = ctx.createRadialGradient(cx, cy, 8, cx, cy, 138);
+    glow.addColorStop(0, "rgba(255, 240, 166, 0.18)");
+    glow.addColorStop(0.46, "rgba(255, 185, 95, 0.08)");
+    glow.addColorStop(1, "rgba(255, 185, 95, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(cardX - 38, cardY - 38, layout.cardW + 76, layout.cardH + 76);
+  }
+  ctx.translate(cx, cy - 2);
   ctx.scale(scale, scale);
   ctx.textAlign = "center";
   ctx.shadowColor = cue === "START" ? "#fff0a6" : "#c7a7ff";
-  ctx.shadowBlur = cue === "START" ? 34 : 28;
-  ctx.font = numeric ? "900 94px Georgia, Trebuchet MS, serif" : "900 56px Georgia, Trebuchet MS, serif";
+  ctx.shadowBlur = cue === "START" ? 38 : 24;
+  ctx.font = numeric ? "900 76px Georgia, Trebuchet MS, serif" : "900 42px Georgia, Trebuchet MS, serif";
   const g = ctx.createLinearGradient(-120, -60, 120, 50);
   g.addColorStop(0, "#ffffff");
   g.addColorStop(0.5, cue === "START" ? "#fff0a6" : "#e2ccff");
   g.addColorStop(1, cue === "START" ? "#ffb95f" : "#b88cff");
   ctx.fillStyle = g;
-  ctx.fillText(shown, 0, numeric ? 26 : 16);
+  ctx.fillText(shown, 0, numeric ? 22 : 14);
   ctx.restore();
 
   ctx.save();
-  const barW = board.w - 74;
-  const barX = board.x + 37;
-  const barY = board.y + 322;
+  const barW = layout.cardW - 24;
+  const barX = cx - barW / 2;
+  const barY = cardY + layout.cardH + layout.barGap;
   ctx.fillStyle = "rgba(255,255,255,0.08)";
   roundedRect(barX, barY, barW, 8, 5, true, false);
   const fill = ctx.createLinearGradient(barX, barY, barX + barW, barY);
@@ -6704,43 +6784,43 @@ function drawBattleCountdown() {
 
 function drawStartMenuOverlay() {
   const m = UI_LAYOUT.menu;
+  const pad = m.padding || 36;
+  const bx = m.x + pad;
+  const bw = m.w - pad * 2;
   drawMainMenuScene();
+  drawMenuHeroShowcase();
   ctx.save();
   ctx.textAlign = "left";
-  ctx.shadowColor = "rgba(190, 140, 255, 0.72)";
-  ctx.shadowBlur = 30;
-  ctx.font = "900 82px Georgia, Trebuchet MS, serif";
-  const titleGradient = ctx.createLinearGradient(72, 50, 550, 172);
+  ctx.shadowColor = "rgba(190, 140, 255, 0.58)";
+  ctx.shadowBlur = 24;
+  ctx.font = "900 70px Georgia, Trebuchet MS, serif";
+  const titleGradient = ctx.createLinearGradient(72, 48, 540, 166);
   titleGradient.addColorStop(0, "#fff8dc");
   titleGradient.addColorStop(0.52, "#ffe0a3");
   titleGradient.addColorStop(1, "#d7c2ff");
   ctx.fillStyle = titleGradient;
   const titleParts = t("startTitle").split(" ");
-  ctx.fillText(titleParts[0] || t("startTitle"), 72, 96);
-  ctx.fillText(titleParts.slice(1).join(" ") || "", 72, 166);
+  ctx.fillText(titleParts[0] || t("startTitle"), 72, 92);
+  ctx.fillText(titleParts.slice(1).join(" ") || "", 72, 152);
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = "rgba(215, 194, 255, 0.38)";
+  ctx.strokeStyle = "rgba(215, 194, 255, 0.28)";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(92, 190);
-  ctx.lineTo(430, 190);
+  ctx.moveTo(92, 178);
+  ctx.lineTo(410, 178);
   ctx.stroke();
-  label(t("startTagline").toUpperCase(), 112, 226, 17, "#d7c2ff");
-  wrapText(t("startWorldHint"), 112, 260, 430, 25, "rgba(238,244,252,0.72)", 17);
-  drawMenuHeroShowcase();
+  label(t("startTagline").toUpperCase(), 106, 210, 17, "#d7c2ff");
+  wrapText(t("startWorldHint"), 106, 246, 360, 22, "rgba(238,244,252,0.7)", 15);
 
   drawCard(m.x, m.y, m.w, m.h);
   drawCornerGlyph(m.x + m.w / 2, m.y - 2, "#9fb4ff");
-  label(t("startGame").toUpperCase(), m.x + 44, m.y + 58, 16, "#fff0a6");
-  wrapText(t("startSubtitle"), m.x + 44, m.y + 90, m.w - 88, 21, "rgba(238,244,252,0.58)", 14);
-  const bx = m.x + 42;
-  const bw = m.w - 84;
-  drawMenuButton(bx, m.primaryY, bw, 72, t("startGame"), t("endless"), "primary");
-  drawMenuButton(bx, m.tutorialY, bw, 62, t("tutorialStart"), "3 min");
-  drawMenuButton(bx, m.utilityY, bw, 62, t("settings"), "");
-  drawMenuButton(bx, m.utilityY + 82, bw, 62, t("moveGuide"), "Spin");
-  label(t("startHint"), bx, m.y + m.h - 58, 14, "#9fb4ff");
-  if (!state.save.tutorialCompleted) label(t("firstRunHint"), bx, m.y + m.h - 30, 12, "rgba(255, 240, 166, 0.72)");
+  label(t("menuActions").toUpperCase(), bx, m.y + 58, 15, "#fff0a6");
+  wrapText(t("startPanelHint"), bx, m.y + 92, bw, 21, "rgba(238,244,252,0.58)", 13);
+  drawMenuButton(bx, m.primaryY, bw, m.primaryH, t("startGame"), "Enter", "primary");
+  drawMenuButton(bx, m.tutorialY, bw, m.buttonH, t("tutorialStart"), t("tutorialHintShort"));
+  drawMenuButton(bx, m.utilityY, bw, m.buttonH, t("settings"), "");
+  drawMenuButton(bx, m.utilityY + m.buttonH + m.buttonGap, bw, m.buttonH, t("moveGuide"), "Spin");
+  label(t("startHint"), bx, m.y + m.h - 42, 13, "#9fb4ff");
   ctx.restore();
 }
 
@@ -6748,24 +6828,12 @@ function drawMainMenuScene() {
   ctx.save();
   if (forestBg.complete && forestBg.naturalWidth > 0) ctx.drawImage(forestBg, 0, 0, W, H);
   const g = ctx.createLinearGradient(0, 0, W, H);
-  g.addColorStop(0, "rgba(3, 6, 14, 0.62)");
-  g.addColorStop(0.46, "rgba(4, 7, 14, 0.38)");
-  g.addColorStop(1, "rgba(1, 2, 6, 0.9)");
+  g.addColorStop(0, "rgba(3, 6, 14, 0.74)");
+  g.addColorStop(0.46, "rgba(4, 7, 14, 0.48)");
+  g.addColorStop(1, "rgba(1, 2, 6, 0.92)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
-  const rift = ctx.createRadialGradient(646, 320, 18, 646, 320, 360);
-  rift.addColorStop(0, "rgba(201, 167, 255, 0.36)");
-  rift.addColorStop(0.32, "rgba(126, 231, 255, 0.13)");
-  rift.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = rift;
-  ctx.fillRect(260, 40, 720, 620);
-  ctx.strokeStyle = "rgba(199, 167, 255, 0.28)";
-  ctx.lineWidth = 2;
-  for (let i = 0; i < 5; i += 1) {
-    ctx.beginPath();
-    ctx.ellipse(646, 330, 78 + i * 48, 168 + i * 38, -0.28, Math.PI * 0.12, Math.PI * 1.86);
-    ctx.stroke();
-  }
+  drawMenuAmbientRift();
   ctx.strokeStyle = "rgba(255, 240, 166, 0.18)";
   ctx.beginPath();
   ctx.moveTo(86, 642);
@@ -6774,17 +6842,52 @@ function drawMainMenuScene() {
   ctx.restore();
 }
 
+function drawMenuAmbientRift() {
+  const now = performance.now() * 0.001;
+  const cx = 632;
+  const cy = 318;
+  const rift = ctx.createRadialGradient(cx, cy, 12, cx, cy, 270);
+  rift.addColorStop(0, "rgba(185, 140, 255, 0.065)");
+  rift.addColorStop(0.36, "rgba(105, 216, 255, 0.024)");
+  rift.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = rift;
+  ctx.fillRect(300, 70, 560, 510);
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  for (let i = 0; i < 24; i += 1) {
+    const drift = (now * 0.055 + i * 0.137) % 1;
+    const x = cx - 208 + (i * 47) % 406 + Math.sin(now * 0.9 + i) * 8;
+    const y = cy - 128 + drift * 260;
+    ctx.globalAlpha = 0.03 + (1 - Math.abs(drift - 0.5) * 2) * 0.06;
+    ctx.fillStyle = i % 3 ? "#8fe8dc" : "#d7c2ff";
+    ctx.fillRect(x, y, 2, 2);
+  }
+  ctx.globalAlpha = 0.08;
+  ctx.strokeStyle = "rgba(190, 146, 255, 0.18)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx - 18, cy - 88);
+  ctx.lineTo(cx, cy - 108);
+  ctx.lineTo(cx + 18, cy - 88);
+  ctx.lineTo(cx, cy - 68);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawMenuHeroShowcase() {
   const now = performance.now();
   const pose = getMenuIdlePose(now);
   const motion = getMenuIdleMotion(pose, now);
-  const anchorX = 398;
-  const anchorY = 516;
+  const hero = UI_LAYOUT.menuHero;
+  const anchorX = hero.x;
+  const anchorY = hero.y;
   drawMenuIdleParticles(anchorX, anchorY, pose, motion, now);
   ctx.save();
   ctx.translate(anchorX + motion.x, anchorY + motion.y);
   ctx.rotate(motion.rotate);
-  ctx.scale(1.3 * motion.scaleX, 1.3 * motion.scaleY);
+  ctx.scale(hero.scale * motion.scaleX, hero.scale * motion.scaleY);
   drawCharacterShadow(0, 174, 146 + motion.shadow, "#6de8ff");
   if (motion.afterimage > 0.02) {
     ctx.save();
@@ -6902,33 +7005,30 @@ function drawMenuWeaponPulse(motion, now) {
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   ctx.shadowColor = "#b579ff";
-  ctx.shadowBlur = 16 + pulse * 18;
-  ctx.lineCap = "round";
-  const swing = Math.sin(time * 2.4) * 3;
-  const startX = -108 + swing;
-  const startY = 126;
-  const endX = -34 + swing * 0.25;
-  const endY = 46 - pulse * 5;
-  ctx.globalAlpha = 0.2 + pulse * 0.42;
-  ctx.strokeStyle = "rgba(244, 232, 255, 0.86)";
-  ctx.lineWidth = 2.2 + pulse * 0.8;
+  ctx.shadowBlur = 10 + pulse * 10;
+  const coreX = -52 + Math.sin(time * 2.2) * 1.6;
+  const coreY = 76 + Math.cos(time * 1.8) * 1.2;
+  const aura = 18 + pulse * 8;
+  const glow = ctx.createRadialGradient(coreX, coreY, 3, coreX, coreY, aura);
+  glow.addColorStop(0, `rgba(244, 232, 255, ${0.34 + pulse * 0.18})`);
+  glow.addColorStop(0.42, `rgba(154, 84, 255, ${0.16 + pulse * 0.12})`);
+  glow.addColorStop(1, "rgba(154, 84, 255, 0)");
+  ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.moveTo(startX, startY);
-  ctx.lineTo(endX, endY);
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(154, 84, 255, 0.82)";
-  ctx.lineWidth = 8 + pulse * 4;
-  ctx.beginPath();
-  ctx.moveTo(startX, startY);
-  ctx.lineTo(endX, endY);
-  ctx.stroke();
-  for (let i = 0; i < 7; i += 1) {
-    const p = ((time * 0.72 + i * 0.19) % 1);
-    const x = lerp(startX, endX, p) + Math.sin(time * 2 + i) * 6;
-    const y = lerp(startY, endY, p) + Math.cos(time * 1.7 + i) * 4;
-    ctx.globalAlpha = (0.18 + pulse * 0.32) * (1 - p * 0.5);
-    ctx.fillStyle = i % 2 ? "#d7b8ff" : "#8d5cff";
-    ctx.fillRect(x, y, 3.5, 3.5);
+  ctx.arc(coreX, coreY, aura, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 0.18 + pulse * 0.14;
+  ctx.fillStyle = "#d7b8ff";
+  ctx.fillRect(coreX - 4, coreY - 4, 8, 8);
+  for (let i = 0; i < 6; i += 1) {
+    const p = (time * 0.34 + i * 0.21) % 1;
+    const angle = i * 1.48 + time * 0.42;
+    const radius = 10 + p * 30;
+    const x = coreX + Math.cos(angle) * radius * 0.8;
+    const y = coreY + Math.sin(angle) * radius * 0.5 - p * 10;
+    ctx.globalAlpha = (0.12 + pulse * 0.12) * (1 - p);
+    ctx.fillStyle = i % 2 ? "#b889ff" : "#7ff2ff";
+    ctx.fillRect(x, y, 2.4, 2.4);
   }
   ctx.restore();
 }
@@ -7369,24 +7469,32 @@ function drawMenuButton(x, y, w, h, text, hint, variant = "secondary") {
   const hovered = pointInRect(state.pointer.x, state.pointer.y, x, y, w, h);
   ctx.save();
   const primary = variant === "primary";
-  const fill = primary
-    ? (hovered ? "rgba(255, 224, 162, 0.26)" : "rgba(255, 224, 162, 0.13)")
-    : (hovered ? "rgba(109, 232, 255, 0.24)" : "rgba(10, 16, 25, 0.68)");
-  ctx.fillStyle = fill;
+  if (primary) {
+    const fill = ctx.createLinearGradient(x, y, x + w, y + h);
+    fill.addColorStop(0, hovered ? "rgba(255, 236, 180, 0.34)" : "rgba(255, 224, 162, 0.22)");
+    fill.addColorStop(0.48, hovered ? "rgba(184, 141, 255, 0.28)" : "rgba(184, 141, 255, 0.18)");
+    fill.addColorStop(1, hovered ? "rgba(119, 237, 255, 0.2)" : "rgba(119, 237, 255, 0.12)");
+    ctx.fillStyle = fill;
+    ctx.shadowColor = "rgba(255, 224, 162, 0.26)";
+    ctx.shadowBlur = hovered ? 18 : 12;
+  } else {
+    ctx.fillStyle = hovered ? "rgba(109, 232, 255, 0.2)" : "rgba(10, 16, 25, 0.62)";
+  }
   roundedRect(x, y, w, h, 8, true, false);
+  ctx.shadowBlur = 0;
   ctx.strokeStyle = primary
     ? (hovered ? "rgba(255, 244, 168, 0.84)" : "rgba(255, 224, 162, 0.52)")
     : (hovered ? "rgba(255, 244, 168, 0.5)" : "rgba(145, 232, 222, 0.26)");
   ctx.lineWidth = primary ? 2.5 : 2;
   roundedRect(x, y, w, h, 8, false, true);
   if (primary) {
-    ctx.shadowColor = "rgba(255, 224, 162, 0.32)";
-    ctx.shadowBlur = hovered ? 16 : 9;
+    ctx.fillStyle = hovered ? "rgba(255, 240, 166, 0.78)" : "rgba(255, 240, 166, 0.58)";
+    roundedRect(x + 14, y + 14, 5, h - 28, 4, true, false);
   }
   ctx.font = `800 ${primary ? 21 : 17}px Trebuchet MS`;
   ctx.fillStyle = primary ? "#fff7d2" : "#f3f2ea";
   ctx.textBaseline = "middle";
-  ctx.fillText(text, x + 20, y + h / 2 + 1);
+  fitLabel(text, x + 22, y + h / 2 + 1, w - (hint ? 126 : 44), primary ? 21 : 17, primary ? "#fff7d2" : "#f3f2ea", primary ? 16 : 14, "800");
   if (hint) {
     ctx.font = "800 12px Trebuchet MS";
     ctx.fillStyle = "rgba(238,244,252,0.56)";
@@ -7964,16 +8072,17 @@ canvas.addEventListener("mousedown", (event) => {
     }
     if (state.mode === "start") {
       const m = UI_LAYOUT.menu;
-      const bx = m.x + 42;
-      const bw = m.w - 84;
-      if (pointInRect(p.x, p.y, bx, m.primaryY, bw, 72)) resetGame("endless");
-      else if (pointInRect(p.x, p.y, bx, m.tutorialY, bw, 62)) startTutorial();
-      else if (pointInRect(p.x, p.y, bx, m.utilityY, bw, 62)) {
+      const pad = m.padding || 36;
+      const bx = m.x + pad;
+      const bw = m.w - pad * 2;
+      if (pointInRect(p.x, p.y, bx, m.primaryY, bw, m.primaryH)) resetGame("endless");
+      else if (pointInRect(p.x, p.y, bx, m.tutorialY, bw, m.buttonH)) startTutorial();
+      else if (pointInRect(p.x, p.y, bx, m.utilityY, bw, m.buttonH)) {
         state.settingsOpen = true;
         state.settingsTab = "general";
         playSfx("hold");
       }
-      else if (pointInRect(p.x, p.y, bx, m.utilityY + 82, bw, 62)) {
+      else if (pointInRect(p.x, p.y, bx, m.utilityY + m.buttonH + m.buttonGap, bw, m.buttonH)) {
         state.mode = "guide";
         playSfx("hold");
       }
