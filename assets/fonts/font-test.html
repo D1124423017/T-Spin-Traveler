@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TSpin Traveler Display Font Test</title>
+    <style>
+      @font-face {
+        font-family: "TSpin Traveler Display";
+        src: url("./TSpinTravelerDisplay.woff2") format("woff2"),
+             url("./TSpinTravelerDisplay.ttf") format("truetype");
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      :root {
+        color-scheme: dark;
+        background: #05070d;
+        color: #f5f1e6;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(circle at 20% 10%, rgba(126, 231, 255, 0.18), transparent 32%),
+          radial-gradient(circle at 78% 68%, rgba(183, 146, 255, 0.16), transparent 36%),
+          #05070d;
+        font-family: "Noto Sans TC", system-ui, sans-serif;
+      }
+
+      main {
+        width: min(920px, calc(100vw - 32px));
+        padding: 32px;
+        border: 1px solid rgba(183, 146, 255, 0.42);
+        border-radius: 12px;
+        background: rgba(5, 8, 14, 0.82);
+        box-shadow: 0 0 38px rgba(126, 231, 255, 0.12);
+      }
+
+      h1,
+      .sample {
+        font-family: "TSpin Traveler Display", "Noto Sans TC", system-ui, sans-serif;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        margin: 0 0 24px;
+        font-size: clamp(36px, 8vw, 76px);
+        line-height: 1;
+        color: #fff0a6;
+        text-shadow: 0 0 18px rgba(183, 146, 255, 0.72);
+      }
+
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .sample {
+        padding: 12px 14px;
+        border: 1px solid rgba(126, 231, 255, 0.18);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.04);
+        color: #f5f1e6;
+        font-size: clamp(22px, 4.4vw, 42px);
+        line-height: 1.18;
+      }
+
+      .fallback {
+        margin-top: 22px;
+        color: rgba(238, 244, 252, 0.68);
+        font-size: 16px;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>T-Spin Traveler</h1>
+      <section class="grid" aria-label="Font sample text">
+        <div class="sample">START</div>
+        <div class="sample">SETTINGS</div>
+        <div class="sample">MOVE GUIDE</div>
+        <div class="sample">COMBO x3</div>
+        <div class="sample">T-SPIN</div>
+        <div class="sample">PERFECT CLEAR</div>
+        <div class="sample">B2B</div>
+        <div class="sample">HP 120/120</div>
+        <div class="sample">WAVE 3</div>
+        <div class="sample">ATTACK 8</div>
+        <div class="sample">0123456789</div>
+      </section>
+      <p class="fallback">中文 fallback check: 主選單 / 設定 / 招式圖鑑 should render with Noto Sans TC or system fallback.</p>
+    </main>
+  </body>
+</html>

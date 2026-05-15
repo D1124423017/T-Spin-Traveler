@@ -7,6 +7,15 @@
   --forest: #15241e;
 }
 
+@font-face {
+  font-family: "TSpin Traveler Display";
+  src: url("assets/fonts/TSpinTravelerDisplay.woff2") format("woff2"),
+       url("assets/fonts/TSpinTravelerDisplay.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 * {
   box-sizing: border-box;
 }

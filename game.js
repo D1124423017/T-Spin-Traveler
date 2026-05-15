@@ -7,6 +7,19 @@ function assetPath(path) {
   return isFilePreview ? path : `${path}?v=${ASSET_VERSION}`;
 }
 
+const DISPLAY_FONT_STACK = "'TSpin Traveler Display', 'Noto Sans TC', system-ui, sans-serif";
+const UI_FONT_STACK = "'Trebuchet MS', 'Noto Sans TC', system-ui, sans-serif";
+const DISPLAY_FONT_PATTERN = /^[A-Za-z0-9 .,!?:;()[\]+\-/%<>×]+$/;
+
+function shouldUseDisplayFont(text) {
+  const content = String(text ?? "").trim();
+  return content.length > 0 && content.length <= 30 && DISPLAY_FONT_PATTERN.test(content);
+}
+
+function canvasFont(weight, size, text = "", forceDisplay = false) {
+  return `${weight} ${size}px ${forceDisplay || shouldUseDisplayFont(text) ? DISPLAY_FONT_STACK : UI_FONT_STACK}`;
+}
+
 const forestBg = new Image();
 forestBg.src = assetPath("assets/magic-forest-bg-v2.png");
 const noaArt = new Image();
@@ -4398,7 +4411,7 @@ function drawPanels() {
 
 function drawTitle() {
   ctx.save();
-  ctx.font = "900 28px Georgia, Trebuchet MS, serif";
+  ctx.font = canvasFont("900", 28, t("startTitle"), true);
   ctx.shadowColor = "rgba(175, 112, 255, 0.38)";
   ctx.shadowBlur = 14;
   const g = ctx.createLinearGradient(48, 20, 318, 48);
@@ -4407,7 +4420,7 @@ function drawTitle() {
   g.addColorStop(1, "#c7a7ff");
   ctx.fillStyle = g;
   ctx.fillText(t("startTitle"), 48, 40);
-  ctx.font = "700 13px Trebuchet MS";
+  ctx.font = canvasFont("700", 13, t("navigationCore"));
   ctx.shadowBlur = 0;
   ctx.fillStyle = "rgba(230, 244, 255, 0.5)";
   ctx.fillText(t("navigationCore"), 50, 58);
@@ -4500,7 +4513,7 @@ function drawHudPanel(x, y, w, h, tag, name) {
   roundedRect(x + 18, y + 18, w - 36, 54, 12, true, false);
   ctx.strokeStyle = hexToRgba(accent, 0.26);
   roundedRect(x + 18, y + 18, w - 36, 54, 12, false, true);
-  ctx.font = "800 12px Trebuchet MS";
+  ctx.font = canvasFont("800", 12, tag, true);
   ctx.fillStyle = hexToRgba(accent, 0.76);
   ctx.fillText(tag, x + 34, y + 39);
   ctx.shadowColor = hexToRgba(accent, 0.26);
@@ -4546,11 +4559,12 @@ function drawTopQuestBar() {
   ctx.strokeStyle = "rgba(255, 210, 128, 0.28)";
   ctx.lineWidth = 1.5;
   roundedRect(438, 15, 404, 30, 10, false, true);
-  ctx.font = "800 15px Trebuchet MS";
+  ctx.font = canvasFont("800", 15, t("topQuest").toUpperCase(), true);
   ctx.fillStyle = "#d7c2ff";
   ctx.fillText(t("topQuest").toUpperCase(), 484, 36);
   ctx.textAlign = "right";
   ctx.fillStyle = "rgba(238,244,252,0.58)";
+  ctx.font = canvasFont("800", 15, `${t("waveLabel")} ${state.wave}`);
   ctx.fillText(`${t("waveLabel")} ${state.wave}`, 818, 36);
   ctx.fillStyle = "#ffb95f";
   ctx.beginPath();
@@ -5592,7 +5606,7 @@ function drawEnemyIntent(x, y, intent, w = 294) {
   roundedRect(x + 12, y + 14, 34, 38, 7, true, false);
   ctx.strokeStyle = hexToRgba(intent.color, 0.48);
   roundedRect(x + 12, y + 14, 34, 38, 7, false, true);
-  ctx.font = "900 18px Trebuchet MS";
+  ctx.font = canvasFont("900", 18, intent.icon || "!");
   ctx.fillStyle = intent.color;
   ctx.textAlign = "center";
   ctx.fillText(intent.icon || "!", x + 29, y + 39);
@@ -5796,10 +5810,10 @@ function drawHpBar(x, y, w, h, value, max, color, caption) {
   ctx.lineWidth = 2;
   roundedRect(x, y, w, h, 7, false, true);
   ctx.textBaseline = "middle";
-  ctx.font = "800 11px Trebuchet MS";
+  ctx.font = canvasFont("800", 11, caption, true);
   ctx.fillStyle = "rgba(8, 11, 18, 0.78)";
   ctx.fillText(caption, x + 10, y + h / 2 + 1);
-  ctx.font = "800 12px Trebuchet MS";
+  ctx.font = canvasFont("800", 12, valueText, true);
   const textW = Math.max(56, Math.min(w - 58, Math.ceil(ctx.measureText(valueText).width + 18)));
   ctx.fillStyle = "rgba(2, 5, 10, 0.58)";
   roundedRect(x + w - textW - 4, y + 3, textW, h - 6, 5, true, false);
@@ -5820,7 +5834,7 @@ function drawStatChip(x, y, text, color) {
   ctx.lineWidth = 1;
   roundedRect(x, y, width, 24, 6, false, true);
   ctx.fillStyle = color;
-  ctx.font = "800 12px Trebuchet MS";
+  ctx.font = canvasFont("800", 12, text);
   ctx.fillText(text, x + 12, y + 16);
   ctx.restore();
 }
@@ -5833,10 +5847,10 @@ function drawCountdownBadge(x, y, count) {
   ctx.strokeStyle = danger ? "rgba(255, 119, 130, 0.72)" : "rgba(139, 238, 184, 0.28)";
   ctx.lineWidth = 2;
   roundedRect(x, y, 160, 34, 8, false, true);
-  ctx.font = "800 12px Trebuchet MS";
+  ctx.font = canvasFont("800", 12, t("enemyStrike").toUpperCase(), true);
   ctx.fillStyle = danger ? "#ffb7bd" : "rgba(216, 238, 229, 0.72)";
   ctx.fillText(t("enemyStrike").toUpperCase(), x + 12, y + 14);
-  ctx.font = "900 22px Trebuchet MS";
+  ctx.font = canvasFont("900", 22, String(count), true);
   ctx.fillStyle = danger ? "#ff7782" : "#98f07e";
   ctx.fillText(String(count), x + 128, y + 25);
   ctx.restore();
@@ -5934,7 +5948,7 @@ function drawUltimateCountdownBar() {
   ctx.lineWidth = 1.5;
   roundedRect(meter.x, meter.y, meter.w, meter.h, 8, false, true);
 
-  ctx.font = "900 12px Trebuchet MS";
+  ctx.font = canvasFont("900", 12, "4-WIDE", true);
   ctx.textAlign = "left";
   ctx.fillStyle = danger ? "#ff9aa2" : "#ffbe5f";
   ctx.shadowColor = danger ? "#ff7782" : "#ffbe5f";
@@ -5954,7 +5968,7 @@ function drawUltimateCountdownBar() {
   ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
   ctx.fillRect(barX + 2, barY + 2, Math.max(0, fillW - 4), 1);
 
-  ctx.font = "900 13px Trebuchet MS";
+  ctx.font = canvasFont("900", 13, secondsText, true);
   ctx.textAlign = "right";
   ctx.fillStyle = danger ? "#ffb7bd" : "#f5f1e6";
   ctx.fillText(secondsText, meter.x + meter.w - 12, meter.y + 18);
@@ -6105,10 +6119,10 @@ function drawOperationReadouts() {
     roundedRect(x, yy - 29, 146, 42, 9, false, true);
     ctx.fillStyle = readout.color;
     const titleSize = i === 0 ? (readout.title.length > 14 ? 16 : readout.title.length > 9 ? 20 : 24) : 15;
-    ctx.font = `${i === 0 ? "900" : "800"} ${titleSize}px Trebuchet MS`;
+    ctx.font = canvasFont(i === 0 ? "900" : "800", titleSize, readout.title, true);
     ctx.textAlign = "left";
     ctx.fillText(readout.title, x + 10, yy - 7);
-    ctx.font = "800 12px Trebuchet MS";
+    ctx.font = canvasFont("800", 12, readout.title, true);
     ctx.fillStyle = readout.b2b ? "#fff0a6" : "rgba(238,244,252,0.64)";
     const comboText = readout.combo >= 2 ? fmt("floaterCombo", { combo: readout.combo }) : "";
     const b2bText = readout.b2b ? "B2B" : "";
@@ -6515,7 +6529,7 @@ function drawPerfectClearFx() {
   ctx.textAlign = "center";
   ctx.shadowColor = "rgba(255, 240, 166, 0.9)";
   ctx.shadowBlur = 26 + burst * 24;
-  ctx.font = "900 64px Georgia, Trebuchet MS, serif";
+  ctx.font = canvasFont("900", 64, t("perfectClearTitle"), true);
   const titleY = 132 + Math.sin(progress * Math.PI) * -8;
   const titleGradient = ctx.createLinearGradient(380, titleY - 54, 900, titleY + 18);
   titleGradient.addColorStop(0, "#ffffff");
@@ -6524,10 +6538,10 @@ function drawPerfectClearFx() {
   ctx.fillStyle = titleGradient;
   ctx.globalAlpha = alpha;
   ctx.fillText(t("perfectClearTitle"), W / 2, titleY);
-  ctx.font = "900 22px Trebuchet MS";
+  ctx.font = canvasFont("900", 22, t("perfectClearSubtitle").toUpperCase());
   ctx.fillStyle = "#d7c2ff";
   ctx.fillText(t("perfectClearSubtitle").toUpperCase(), W / 2, titleY + 34);
-  ctx.font = "900 28px Trebuchet MS";
+  ctx.font = canvasFont("900", 28, fmt("perfectClearDamage", { damage: fx.damage }).toUpperCase());
   ctx.fillStyle = "#fff0a6";
   ctx.fillText(fmt("perfectClearDamage", { damage: fx.damage }).toUpperCase(), W / 2, titleY + 70);
   ctx.globalAlpha = 1;
@@ -6642,7 +6656,7 @@ function drawCombatPopup(popup) {
   ctx.shadowBlur = perfect ? 28 : big ? 24 : 16;
   ctx.lineWidth = perfect ? 5 : big ? 4 : 3;
   ctx.strokeStyle = hexToRgba(accent, 0.68);
-  ctx.font = `900 ${titleSize}px Georgia, Trebuchet MS, serif`;
+  ctx.font = canvasFont("900", titleSize, popup.text, true);
   ctx.strokeText(popup.text, 0, 0);
 
   const gradient = ctx.createLinearGradient(0, -titleSize, 220, 8);
@@ -6654,7 +6668,7 @@ function drawCombatPopup(popup) {
 
   if (popup.subText) {
     ctx.shadowBlur = 16;
-    ctx.font = `900 ${subSize}px Georgia, Trebuchet MS, serif`;
+    ctx.font = canvasFont("900", subSize, popup.subText, true);
     ctx.strokeStyle = "rgba(10, 8, 24, 0.64)";
     ctx.lineWidth = 3;
     ctx.strokeText(popup.subText, 4, subSize + 14);
@@ -6778,7 +6792,7 @@ function drawBattleCountdown() {
   ctx.textAlign = "center";
   ctx.shadowColor = cue === "START" ? "#fff0a6" : "#c7a7ff";
   ctx.shadowBlur = cue === "START" ? 38 : 24;
-  ctx.font = numeric ? "900 76px Georgia, Trebuchet MS, serif" : "900 42px Georgia, Trebuchet MS, serif";
+  ctx.font = canvasFont("900", numeric ? 76 : 42, shown, true);
   const g = ctx.createLinearGradient(-120, -60, 120, 50);
   g.addColorStop(0, "#ffffff");
   g.addColorStop(0.5, cue === "START" ? "#fff0a6" : "#e2ccff");
@@ -6804,6 +6818,14 @@ function drawBattleCountdown() {
   ctx.restore();
 }
 
+function menuActionText(key) {
+  if (state.language !== "en") return t(key);
+  if (key === "startGame") return "START";
+  if (key === "settings") return "SETTINGS";
+  if (key === "moveGuide") return "MOVE GUIDE";
+  return t(key).toUpperCase();
+}
+
 function drawStartMenuOverlay() {
   const m = UI_LAYOUT.menu;
   const pad = m.padding || 36;
@@ -6815,7 +6837,7 @@ function drawStartMenuOverlay() {
   ctx.textAlign = "left";
   ctx.shadowColor = "rgba(190, 140, 255, 0.86)";
   ctx.shadowBlur = 34;
-  ctx.font = "900 70px Georgia, Trebuchet MS, serif";
+  ctx.font = canvasFont("900", 70, t("startTitle"), true);
   const titleGradient = ctx.createLinearGradient(72, 48, 540, 166);
   titleGradient.addColorStop(0, "#fff8dc");
   titleGradient.addColorStop(0.52, "#ffe0a3");
@@ -6862,10 +6884,10 @@ function drawStartMenuOverlay() {
   drawCornerGlyph(m.x + m.w / 2, m.y - 2, "#9fb4ff");
   label(t("menuActions").toUpperCase(), bx, m.y + 58, 15, "#fff0a6");
   wrapText(t("startPanelHint"), bx, m.y + 92, bw, 21, "rgba(238,244,252,0.58)", 13);
-  drawMenuButton(bx, m.primaryY, bw, m.primaryH, t("startGame"), "Enter", "primary");
+  drawMenuButton(bx, m.primaryY, bw, m.primaryH, menuActionText("startGame"), "Enter", "primary");
   drawMenuButton(bx, m.tutorialY, bw, m.buttonH, t("tutorialStart"), t("tutorialHintShort"));
-  drawMenuButton(bx, m.utilityY, bw, m.buttonH, t("settings"), "");
-  drawMenuButton(bx, m.utilityY + m.buttonH + m.buttonGap, bw, m.buttonH, t("moveGuide"), "Spin");
+  drawMenuButton(bx, m.utilityY, bw, m.buttonH, menuActionText("settings"), "");
+  drawMenuButton(bx, m.utilityY + m.buttonH + m.buttonGap, bw, m.buttonH, menuActionText("moveGuide"), "Spin");
   label(t("startHint"), bx, m.y + m.h - 42, 13, "#9fb4ff");
   ctx.restore();
 }
@@ -7540,12 +7562,12 @@ function drawMenuButton(x, y, w, h, text, hint, variant = "secondary") {
     ctx.fillStyle = sheen;
     roundedRect(x + 4, y + 4, w - 8, h - 8, 7, true, false);
   }
-  ctx.font = `800 ${primary ? 21 : 17}px Trebuchet MS`;
+  ctx.font = canvasFont("800", primary ? 21 : 17, text, true);
   ctx.fillStyle = primary ? "#fff7d2" : "#f3f2ea";
   ctx.textBaseline = "middle";
-  fitLabel(text, x + 22, y + h / 2 + 1, w - (hint ? 126 : 44), primary ? 21 : 17, primary ? "#fff7d2" : "#f3f2ea", primary ? 16 : 14, "800");
+  fitLabel(text, x + 22, y + h / 2 + 1, w - (hint ? 126 : 44), primary ? 21 : 17, primary ? "#fff7d2" : "#f3f2ea", primary ? 16 : 14, "800", true);
   if (hint) {
-    ctx.font = "800 12px Trebuchet MS";
+    ctx.font = canvasFont("800", 12, hint);
     ctx.fillStyle = "rgba(238,244,252,0.56)";
     ctx.textAlign = "right";
     ctx.fillText(hint, x + w - 18, y + h / 2 + 1);
@@ -7700,7 +7722,7 @@ function drawSlider(labelText, key, x, y, value) {
   const knobX = x + value * trackW;
   ctx.save();
   label(labelText, x, y - 10, 17, "#f3f2ea");
-  ctx.font = "800 14px Trebuchet MS";
+  ctx.font = canvasFont("800", 14, `${Math.round(value * 100)}%`, true);
   ctx.fillStyle = "rgba(238,244,252,0.62)";
   ctx.fillText(`${Math.round(value * 100)}%`, x + trackW + 28, y - 10);
   ctx.fillStyle = "rgba(255,255,255,0.08)";
@@ -7729,11 +7751,11 @@ function drawTuningSlider(labelText, key, x, y) {
   const ratio = (value - spec.min) / (spec.max - spec.min);
   const trackW = 270;
   const knobX = x + ratio * trackW;
+  const shown = key === "arr" && value === 0 ? "0 ms" : `${Math.round(value)} ${spec.unit}`;
   ctx.save();
   label(labelText, x, y - 10, 17, "#f3f2ea");
-  ctx.font = "800 14px Trebuchet MS";
+  ctx.font = canvasFont("800", 14, shown, true);
   ctx.fillStyle = "rgba(238,244,252,0.62)";
-  const shown = key === "arr" && value === 0 ? "0 ms" : `${Math.round(value)} ${spec.unit}`;
   ctx.fillText(shown, x + trackW + 28, y - 10);
   ctx.fillStyle = "rgba(255,255,255,0.08)";
   roundedRect(x, y, trackW, 12, 6, true, false);
@@ -7784,7 +7806,7 @@ function drawKeyBindRow(x, y, text, value, binding, w = UI_LAYOUT.controlsGrid.r
   ctx.strokeStyle = binding ? "rgba(255, 244, 168, 0.62)" : "rgba(145, 232, 222, 0.32)";
   ctx.lineWidth = 2;
   roundedRect(keyX, y + 3, keyW, keyH, 7, false, true);
-  ctx.font = "800 15px Trebuchet MS";
+  ctx.font = canvasFont("800", 15, binding ? t("settingPressKey") : formatControlKey(value));
   ctx.fillStyle = "#f3f2ea";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -7874,17 +7896,17 @@ function hexToRgba(hex, alpha) {
 }
 
 function label(text, x, y, size, color) {
-  ctx.font = `700 ${size}px Trebuchet MS`;
+  ctx.font = canvasFont("700", size, text);
   ctx.fillStyle = color;
   ctx.fillText(text, x, y);
 }
 
-function fitLabel(text, x, y, maxWidth, size, color, minSize = 12, weight = "700") {
+function fitLabel(text, x, y, maxWidth, size, color, minSize = 12, weight = "700", forceDisplay = false) {
   const content = String(text);
   let fontSize = size;
   ctx.fillStyle = color;
   while (fontSize > minSize) {
-    ctx.font = `${weight} ${fontSize}px Trebuchet MS`;
+    ctx.font = canvasFont(weight, fontSize, content, forceDisplay);
     if (ctx.measureText(content).width <= maxWidth) break;
     fontSize -= 1;
   }
@@ -7892,7 +7914,7 @@ function fitLabel(text, x, y, maxWidth, size, color, minSize = 12, weight = "700
 }
 
 function wrapText(text, x, y, maxWidth, lineHeight, color, size) {
-  ctx.font = `700 ${size}px Trebuchet MS`;
+  ctx.font = `700 ${size}px ${UI_FONT_STACK}`;
   ctx.fillStyle = color;
   const tokens = tokenizeForWrap(String(text));
   let line = "";
