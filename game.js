@@ -313,7 +313,7 @@ const UI_LAYOUT = {
   playerStage: { x: 18, y: 188, w: 380, h: 392 },
   enemyStage: { x: 858, y: 246, w: 410, h: 320 },
   boardFrame: { x: BOARD_X - 18, y: BOARD_Y - 18, w: COLS * TILE + 36, h: ROWS * TILE + 36 },
-  menuHero: { x: 386, y: 464, scale: 1.04 },
+  menuHero: { x: 392, y: 462, scale: 1.1 },
   menu: {
     x: 804,
     y: 96,
@@ -333,22 +333,34 @@ const UI_LAYOUT = {
   pauseButton: { x: 1192, y: 24, w: 50, h: 38 },
   pauseMenu: { x: 414, y: 122, w: 452, h: 462 },
   settings: { x: 142, y: 58, w: 996, h: 604, tabX: 184, contentX: 388, contentY: 166 },
+  controlsGrid: { columns: 2, gapX: 360, rowH: 52, rowW: 332, keyW: 132, keyH: 36 },
   ultimateMeter: { x: 0, y: ROWS * TILE + 10, w: COLS * TILE, h: 30 },
-  compactHints: ["screenMove", "screenSoftDrop", "screenHardDrop", "screenRotate"],
+  compactHints: [
+    "screenLeft",
+    "screenRight",
+    "screenSoftDrop",
+    "screenHardDrop",
+    "screenRotate",
+    "screenRotateCCW",
+    "screenRotate180",
+    "screenHold",
+    "screenPause",
+    "screenMute",
+  ],
 };
 
 const SETTINGS_TABS = ["general", "controls", "audio", "language"];
 
 const MENU_IDLE_SEQUENCE = [
-  { id: "idleA", duration: 2800 },
-  { id: "idleB", duration: 3400 },
-  { id: "idleA", duration: 2400 },
-  { id: "idleC", duration: 3200 },
-  { id: "idleA", duration: 2600 },
-  { id: "idleD", duration: 3600 },
+  { id: "idleA", duration: 2200 },
+  { id: "idleB", duration: 2700 },
+  { id: "idleA", duration: 1900 },
+  { id: "idleC", duration: 2500 },
+  { id: "idleA", duration: 2100 },
+  { id: "idleD", duration: 2800 },
 ];
 
-const MENU_IDLE_TRANSITION_MS = 520;
+const MENU_IDLE_TRANSITION_MS = 420;
 
 const CONTROL_ACTIONS = [
   { id: "left", labelKey: "control.left" },
@@ -393,6 +405,7 @@ const translations = {
     hudFloatingText: "Combo / B2B / T-Spin / Perfect Clear 以棋盤旁魔法浮字呈現，不常駐佔版面。",
     audioSettingsTitle: "音樂與音效",
     controlsSettingsTitle: "操作設定",
+    controlListTitle: "完整操作鍵位",
     languageSettingsTitle: "語言設定",
     languageHelp: "切換後會立即刷新遊戲介面文字。B2B、T-Spin 等招式名稱保留英文。",
     countdownStart: "START",
@@ -586,13 +599,17 @@ const translations = {
     settingPressKey: "按新鍵",
     languageZhShort: "中文",
     languageEnShort: "EN",
+    screenLeft: "← 左移",
+    screenRight: "→ 右移",
     screenMove: "← → 移動",
     screenSoftDrop: "↓ 軟降",
-    screenHardDrop: "Space 硬降",
-    screenRotate: "↑ / X 旋轉",
+    screenHardDrop: "Space 瞬落",
+    screenRotate: "↑ / X 順轉",
     screenRotateCCW: "Z 逆轉",
     screenRotate180: "A 180°",
     screenHold: "Shift / C 保留",
+    screenPause: "P 暫停",
+    screenMute: "M 靜音",
     screenMusic: "M 音樂",
     ariaPrototype: "T-Spin Traveler 可玩原型",
     "control.left": "左移",
@@ -758,6 +775,7 @@ const translations = {
     hudFloatingText: "Combo / B2B / T-Spin / Perfect Clear appear as short magical popups near the board instead of permanent side text.",
     audioSettingsTitle: "Music & Sound",
     controlsSettingsTitle: "Control Settings",
+    controlListTitle: "Full Controls",
     languageSettingsTitle: "Language",
     languageHelp: "Text updates immediately. B2B, T-Spin, and move names stay in English.",
     countdownStart: "START",
@@ -951,13 +969,17 @@ const translations = {
     settingPressKey: "PRESS KEY",
     languageZhShort: "ZH",
     languageEnShort: "EN",
+    screenLeft: "← Left",
+    screenRight: "→ Right",
     screenMove: "← → Move",
     screenSoftDrop: "↓ Soft Drop",
     screenHardDrop: "Space Hard Drop",
-    screenRotate: "↑ / X Rotate",
+    screenRotate: "↑ / X Rotate CW",
     screenRotateCCW: "Z Rotate CCW",
     screenRotate180: "A 180°",
     screenHold: "Shift / C Hold",
+    screenPause: "P Pause",
+    screenMute: "M Mute",
     screenMusic: "M Music",
     ariaPrototype: "T-Spin Traveler playable prototype",
     "control.left": "Move Left",
@@ -6024,8 +6046,8 @@ function drawSidePieces() {
 
 function drawHoldPanel() {
   ctx.save();
-  const w = 88;
-  const h = 90;
+  const w = 98;
+  const h = 102;
   ctx.fillStyle = "rgba(3, 5, 10, 0.62)";
   roundedRect(HOLD_PANEL_X, HOLD_PANEL_Y, w, h, 14, true, false);
   ctx.strokeStyle = state.canHold ? "rgba(255, 224, 162, 0.38)" : "rgba(223, 243, 255, 0.12)";
@@ -6033,15 +6055,15 @@ function drawHoldPanel() {
   roundedRect(HOLD_PANEL_X, HOLD_PANEL_Y, w, h, 14, false, true);
   label(t("hold").toUpperCase(), HOLD_PANEL_X + 11, HOLD_PANEL_Y + 22, 13, state.canHold ? "#ffe0a3" : "rgba(245,241,230,0.42)");
   ctx.fillStyle = "rgba(126, 231, 255, 0.035)";
-  roundedRect(HOLD_PANEL_X + 10, HOLD_PANEL_Y + 33, w - 20, 44, 10, true, false);
-  drawMiniPiece(state.hold, HOLD_PANEL_X + 14, HOLD_PANEL_Y + 44, 10, 60, 34);
+  roundedRect(HOLD_PANEL_X + 10, HOLD_PANEL_Y + 34, w - 20, 56, 10, true, false);
+  drawMiniPiece(state.hold, HOLD_PANEL_X + 13, HOLD_PANEL_Y + 45, 13, 72, 54);
   ctx.restore();
 }
 
 function drawNextQueuePanel() {
   ctx.save();
-  const w = 78;
-  const h = 292;
+  const w = 88;
+  const h = 306;
   ctx.fillStyle = "rgba(3, 5, 10, 0.62)";
   roundedRect(NEXT_PANEL_X, NEXT_PANEL_Y, w, h, 14, true, false);
   ctx.strokeStyle = "rgba(255, 224, 162, 0.38)";
@@ -6050,8 +6072,8 @@ function drawNextQueuePanel() {
   label(t("next").toUpperCase(), NEXT_PANEL_X + 11, NEXT_PANEL_Y + 22, 13, "#ffe0a3");
   for (let i = 0; i < 4; i += 1) {
     ctx.fillStyle = "rgba(126, 231, 255, 0.03)";
-    roundedRect(NEXT_PANEL_X + 9, NEXT_PANEL_Y + 34 + i * 58, w - 18, 46, 9, true, false);
-    drawMiniPiece(state.queue[i], NEXT_PANEL_X + 13, NEXT_PANEL_Y + 46 + i * 58, 9.5, 52, 32);
+    roundedRect(NEXT_PANEL_X + 9, NEXT_PANEL_Y + 34 + i * 61, w - 18, 52, 9, true, false);
+    drawMiniPiece(state.queue[i], NEXT_PANEL_X + 12, NEXT_PANEL_Y + 45 + i * 61, 11.5, 66, 48);
   }
   if (state.queueHex > 0) {
     ctx.fillStyle = "rgba(119, 232, 255, 0.11)";
@@ -6791,26 +6813,50 @@ function drawStartMenuOverlay() {
   drawMenuHeroShowcase();
   ctx.save();
   ctx.textAlign = "left";
-  ctx.shadowColor = "rgba(190, 140, 255, 0.58)";
-  ctx.shadowBlur = 24;
+  ctx.shadowColor = "rgba(190, 140, 255, 0.86)";
+  ctx.shadowBlur = 34;
   ctx.font = "900 70px Georgia, Trebuchet MS, serif";
   const titleGradient = ctx.createLinearGradient(72, 48, 540, 166);
   titleGradient.addColorStop(0, "#fff8dc");
   titleGradient.addColorStop(0.52, "#ffe0a3");
   titleGradient.addColorStop(1, "#d7c2ff");
-  ctx.fillStyle = titleGradient;
   const titleParts = t("startTitle").split(" ");
-  ctx.fillText(titleParts[0] || t("startTitle"), 72, 92);
-  ctx.fillText(titleParts.slice(1).join(" ") || "", 72, 152);
+  const titleA = titleParts[0] || t("startTitle");
+  const titleB = titleParts.slice(1).join(" ") || "";
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = "rgba(22, 14, 42, 0.72)";
+  ctx.strokeText(titleA, 72, 92);
+  ctx.strokeText(titleB, 72, 152);
+  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = "rgba(227, 206, 255, 0.54)";
+  ctx.strokeText(titleA, 72, 92);
+  ctx.strokeText(titleB, 72, 152);
+  ctx.fillStyle = titleGradient;
+  ctx.fillText(titleA, 72, 92);
+  ctx.fillText(titleB, 72, 152);
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.globalAlpha = 0.34;
+  ctx.fillStyle = "rgba(255, 250, 220, 0.55)";
+  ctx.fillText(titleA, 74, 89);
+  ctx.fillText(titleB, 74, 149);
+  ctx.restore();
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = "rgba(215, 194, 255, 0.28)";
-  ctx.lineWidth = 1.5;
+  const underline = ctx.createLinearGradient(92, 178, 422, 178);
+  underline.addColorStop(0, "rgba(255, 240, 166, 0)");
+  underline.addColorStop(0.35, "rgba(255, 240, 166, 0.48)");
+  underline.addColorStop(1, "rgba(126, 238, 255, 0)");
+  ctx.strokeStyle = underline;
+  ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(92, 178);
-  ctx.lineTo(410, 178);
+  ctx.lineTo(422, 178);
   ctx.stroke();
-  label(t("startTagline").toUpperCase(), 106, 210, 17, "#d7c2ff");
-  wrapText(t("startWorldHint"), 106, 246, 360, 22, "rgba(238,244,252,0.7)", 15);
+  ctx.shadowColor = "rgba(126, 238, 255, 0.34)";
+  ctx.shadowBlur = 10;
+  label(t("startTagline").toUpperCase(), 106, 210, 17, "#e0d2ff");
+  ctx.shadowBlur = 0;
+  wrapText(t("startWorldHint"), 106, 248, 372, 25, "rgba(245,248,255,0.78)", 15);
 
   drawCard(m.x, m.y, m.w, m.h);
   drawCornerGlyph(m.x + m.w / 2, m.y - 2, "#9fb4ff");
@@ -6929,53 +6975,53 @@ function getMenuIdlePose(now = performance.now()) {
 
 function getMenuIdleMotion(pose, now) {
   const time = now * 0.001;
-  const breath = Math.sin(time * 2.15);
-  const slowBreath = Math.sin(time * 1.1);
+  const breath = Math.sin(time * 2.72);
+  const slowBreath = Math.sin(time * 1.38);
   const focus = pose.intensity * Math.sin(pose.progress * Math.PI);
   const motion = {
-    x: slowBreath * 0.8,
-    y: breath * 3.2,
-    rotate: slowBreath * 0.006,
-    scaleX: 1 - breath * 0.004,
-    scaleY: 1 + breath * 0.01,
-    weapon: 0.48 + (Math.sin(time * 3.4) + 1) * 0.12,
-    eye: 0.18,
-    cloak: 0.34 + (Math.sin(time * 1.55) + 1) * 0.18,
-    shadow: breath * 4,
+    x: slowBreath * 1.15,
+    y: breath * 4.8,
+    rotate: slowBreath * 0.008,
+    scaleX: 1 - breath * 0.006,
+    scaleY: 1 + breath * 0.015,
+    weapon: 0.58 + (Math.sin(time * 4.2) + 1) * 0.18,
+    eye: 0.22,
+    cloak: 0.46 + (Math.sin(time * 1.95) + 1) * 0.24,
+    shadow: breath * 6,
     afterimage: 0,
-    particles: 0.34,
+    particles: 0.5,
   };
 
   if (pose.id === "idleB") {
-    motion.x -= focus * 4.5;
-    motion.y += focus * 5;
-    motion.rotate += focus * 0.04;
-    motion.scaleY -= focus * 0.012;
-    motion.weapon += focus * 0.52;
+    motion.x -= focus * 5.4;
+    motion.y += focus * 6.4;
+    motion.rotate += focus * 0.05;
+    motion.scaleY -= focus * 0.016;
+    motion.weapon += focus * 0.66;
     motion.eye += focus * 0.1;
-    motion.cloak += focus * 0.24;
-    motion.particles += focus * 0.38;
+    motion.cloak += focus * 0.34;
+    motion.particles += focus * 0.5;
   } else if (pose.id === "idleC") {
-    motion.y -= focus * 6;
-    motion.rotate -= focus * 0.018;
-    motion.scaleY += focus * 0.014;
-    motion.weapon += focus * 0.18;
-    motion.eye += focus * 0.74;
-    motion.cloak += focus * 0.18;
-    motion.particles += focus * 0.28;
+    motion.y -= focus * 7.6;
+    motion.rotate -= focus * 0.024;
+    motion.scaleY += focus * 0.018;
+    motion.weapon += focus * 0.28;
+    motion.eye += focus * 0.82;
+    motion.cloak += focus * 0.26;
+    motion.particles += focus * 0.36;
   } else if (pose.id === "idleD") {
     const shift = Math.sin(pose.progress * Math.PI * 2);
     const settle = Math.sin(pose.progress * Math.PI);
-    motion.x += shift * 8 * pose.intensity;
-    motion.y += settle * 2.5;
-    motion.rotate += shift * 0.035 * pose.intensity;
-    motion.scaleX += Math.abs(shift) * 0.016;
-    motion.scaleY -= Math.abs(shift) * 0.008;
-    motion.weapon += settle * 0.22;
-    motion.eye += settle * 0.18;
-    motion.cloak += Math.abs(shift) * 0.46;
-    motion.afterimage = Math.abs(shift) * 0.1;
-    motion.particles += settle * 0.22;
+    motion.x += shift * 9.8 * pose.intensity;
+    motion.y += settle * 3.4;
+    motion.rotate += shift * 0.044 * pose.intensity;
+    motion.scaleX += Math.abs(shift) * 0.02;
+    motion.scaleY -= Math.abs(shift) * 0.01;
+    motion.weapon += settle * 0.32;
+    motion.eye += settle * 0.24;
+    motion.cloak += Math.abs(shift) * 0.58;
+    motion.afterimage = Math.abs(shift) * 0.14;
+    motion.particles += settle * 0.32;
   }
 
   return motion;
@@ -6986,14 +7032,14 @@ function drawMenuCloakSway(motion, now) {
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   ctx.lineCap = "round";
-  for (let i = 0; i < 4; i += 1) {
-    const sway = Math.sin(time * 1.7 + i * 0.8) * 7 * motion.cloak;
-    ctx.globalAlpha = 0.06 + motion.cloak * 0.045;
+  for (let i = 0; i < 5; i += 1) {
+    const sway = Math.sin(time * 2.05 + i * 0.8) * 9.5 * motion.cloak;
+    ctx.globalAlpha = 0.07 + motion.cloak * 0.055;
     ctx.strokeStyle = i % 2 ? "rgba(121, 230, 255, 0.52)" : "rgba(190, 126, 255, 0.55)";
-    ctx.lineWidth = 1.2;
+    ctx.lineWidth = i === 4 ? 1 : 1.35;
     ctx.beginPath();
-    ctx.moveTo(-74 + i * 42, 22);
-    ctx.quadraticCurveTo(-88 + i * 44 + sway, 86, -68 + i * 40 - sway * 0.45, 164);
+    ctx.moveTo(-78 + i * 37, 20);
+    ctx.quadraticCurveTo(-92 + i * 40 + sway, 86, -72 + i * 38 - sway * 0.52, 166);
     ctx.stroke();
   }
   ctx.restore();
@@ -7005,10 +7051,10 @@ function drawMenuWeaponPulse(motion, now) {
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   ctx.shadowColor = "#b579ff";
-  ctx.shadowBlur = 10 + pulse * 10;
-  const coreX = -52 + Math.sin(time * 2.2) * 1.6;
-  const coreY = 76 + Math.cos(time * 1.8) * 1.2;
-  const aura = 18 + pulse * 8;
+  ctx.shadowBlur = 14 + pulse * 16;
+  const coreX = -52 + Math.sin(time * 2.8) * 2.2;
+  const coreY = 76 + Math.cos(time * 2.2) * 1.6;
+  const aura = 22 + pulse * 11;
   const glow = ctx.createRadialGradient(coreX, coreY, 3, coreX, coreY, aura);
   glow.addColorStop(0, `rgba(244, 232, 255, ${0.34 + pulse * 0.18})`);
   glow.addColorStop(0.42, `rgba(154, 84, 255, ${0.16 + pulse * 0.12})`);
@@ -7017,16 +7063,16 @@ function drawMenuWeaponPulse(motion, now) {
   ctx.beginPath();
   ctx.arc(coreX, coreY, aura, 0, Math.PI * 2);
   ctx.fill();
-  ctx.globalAlpha = 0.18 + pulse * 0.14;
+  ctx.globalAlpha = 0.24 + pulse * 0.18;
   ctx.fillStyle = "#d7b8ff";
   ctx.fillRect(coreX - 4, coreY - 4, 8, 8);
-  for (let i = 0; i < 6; i += 1) {
-    const p = (time * 0.34 + i * 0.21) % 1;
-    const angle = i * 1.48 + time * 0.42;
-    const radius = 10 + p * 30;
+  for (let i = 0; i < 8; i += 1) {
+    const p = (time * 0.42 + i * 0.18) % 1;
+    const angle = i * 1.34 + time * 0.58;
+    const radius = 12 + p * 36;
     const x = coreX + Math.cos(angle) * radius * 0.8;
     const y = coreY + Math.sin(angle) * radius * 0.5 - p * 10;
-    ctx.globalAlpha = (0.12 + pulse * 0.12) * (1 - p);
+    ctx.globalAlpha = (0.15 + pulse * 0.14) * (1 - p);
     ctx.fillStyle = i % 2 ? "#b889ff" : "#7ff2ff";
     ctx.fillRect(x, y, 2.4, 2.4);
   }
@@ -7052,12 +7098,12 @@ function drawMenuIdleAura(motion, now) {
   const time = now * 0.001;
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
-  ctx.strokeStyle = `rgba(174, 123, 255, ${0.2 + motion.particles * 0.12})`;
+  ctx.strokeStyle = `rgba(174, 123, 255, ${0.24 + motion.particles * 0.14})`;
   ctx.shadowColor = "#9b78ff";
-  ctx.shadowBlur = 16;
-  ctx.lineWidth = 1.6;
+  ctx.shadowBlur = 20;
+  ctx.lineWidth = 1.9;
   ctx.beginPath();
-  ctx.ellipse(0, 132, 66 + Math.sin(time * 1.4) * 4, 18, 0, Math.PI * 0.05, Math.PI * 1.86);
+  ctx.ellipse(0, 132, 72 + Math.sin(time * 1.8) * 6, 20, 0, Math.PI * 0.05, Math.PI * 1.86);
   ctx.stroke();
   ctx.restore();
 }
@@ -7066,14 +7112,14 @@ function drawMenuIdleParticles(anchorX, anchorY, pose, motion, now) {
   const time = now * 0.001;
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
-  const count = 9 + Math.floor(motion.particles * 8);
+  const count = 12 + Math.floor(motion.particles * 11);
   for (let i = 0; i < count; i += 1) {
-    const drift = (time * (0.18 + i * 0.012) + i * 0.173) % 1;
-    const angle = i * 1.78 + time * 0.32;
-    const radius = 78 + (i % 4) * 22 + pose.intensity * 10;
+    const drift = (time * (0.24 + i * 0.014) + i * 0.173) % 1;
+    const angle = i * 1.78 + time * 0.42;
+    const radius = 82 + (i % 4) * 24 + pose.intensity * 14;
     const x = anchorX - 18 + Math.cos(angle) * radius * 0.78;
-    const y = anchorY + 108 - drift * 236 + Math.sin(angle * 1.3) * 18;
-    ctx.globalAlpha = (0.12 + motion.particles * 0.16) * (1 - Math.abs(drift - 0.5));
+    const y = anchorY + 112 - drift * 252 + Math.sin(angle * 1.3) * 20;
+    ctx.globalAlpha = (0.14 + motion.particles * 0.18) * (1 - Math.abs(drift - 0.5));
     ctx.fillStyle = i % 3 === 0 ? "#7ff2ff" : i % 3 === 1 ? "#b889ff" : "#fff0a6";
     ctx.fillRect(x, y, 3 + (i % 2), 3 + (i % 2));
   }
@@ -7220,13 +7266,9 @@ function drawSettingsContent(x, y) {
   }
   if (state.settingsTab === "controls") {
     label(t("controlsSettingsTitle"), x, y, 26, "#8fe8dc");
-    label(t("feel"), x, y + 46, 16, "#fff0a6");
-    drawTuningSlider(t("das"), "das", x, y + 84);
-    drawTuningSlider(t("arr"), "arr", x, y + 140);
-    drawTuningSlider(t("softDropMs"), "softDrop", x, y + 196);
-    drawTuningSlider(t("lockDelayMs"), "lockDelay", x, y + 252);
-    wrapText(state.bindingAction ? t("binding") : t("bindHelp"), x + 412, y + 42, 370, 16, "rgba(238,244,252,0.56)", 12);
-    drawControlGrid(x + 412, y + 72, 1, 304);
+    label(t("controlListTitle").toUpperCase(), x, y + 46, 14, "#fff0a6");
+    wrapText(state.bindingAction ? t("binding") : t("bindHelp"), x, y + 74, 660, 18, "rgba(238,244,252,0.6)", 13);
+    drawControlGrid(x, y + 112);
     return;
   }
   label(t("languageSettingsTitle"), x, y, 26, "#8fe8dc");
@@ -7471,12 +7513,12 @@ function drawMenuButton(x, y, w, h, text, hint, variant = "secondary") {
   const primary = variant === "primary";
   if (primary) {
     const fill = ctx.createLinearGradient(x, y, x + w, y + h);
-    fill.addColorStop(0, hovered ? "rgba(255, 236, 180, 0.34)" : "rgba(255, 224, 162, 0.22)");
-    fill.addColorStop(0.48, hovered ? "rgba(184, 141, 255, 0.28)" : "rgba(184, 141, 255, 0.18)");
-    fill.addColorStop(1, hovered ? "rgba(119, 237, 255, 0.2)" : "rgba(119, 237, 255, 0.12)");
+    fill.addColorStop(0, hovered ? "rgba(255, 236, 180, 0.42)" : "rgba(255, 224, 162, 0.28)");
+    fill.addColorStop(0.48, hovered ? "rgba(184, 141, 255, 0.34)" : "rgba(184, 141, 255, 0.22)");
+    fill.addColorStop(1, hovered ? "rgba(119, 237, 255, 0.24)" : "rgba(119, 237, 255, 0.16)");
     ctx.fillStyle = fill;
-    ctx.shadowColor = "rgba(255, 224, 162, 0.26)";
-    ctx.shadowBlur = hovered ? 18 : 12;
+    ctx.shadowColor = "rgba(255, 224, 162, 0.38)";
+    ctx.shadowBlur = hovered ? 24 : 16;
   } else {
     ctx.fillStyle = hovered ? "rgba(109, 232, 255, 0.2)" : "rgba(10, 16, 25, 0.62)";
   }
@@ -7490,6 +7532,13 @@ function drawMenuButton(x, y, w, h, text, hint, variant = "secondary") {
   if (primary) {
     ctx.fillStyle = hovered ? "rgba(255, 240, 166, 0.78)" : "rgba(255, 240, 166, 0.58)";
     roundedRect(x + 14, y + 14, 5, h - 28, 4, true, false);
+    const shimmer = ((performance.now() * 0.00022) % 1) * (w + 130) - 110;
+    const sheen = ctx.createLinearGradient(x + shimmer, y, x + shimmer + 90, y + h);
+    sheen.addColorStop(0, "rgba(255,255,255,0)");
+    sheen.addColorStop(0.5, "rgba(255,255,255,0.18)");
+    sheen.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = sheen;
+    roundedRect(x + 4, y + 4, w - 8, h - 8, 7, true, false);
   }
   ctx.font = `800 ${primary ? 21 : 17}px Trebuchet MS`;
   ctx.fillStyle = primary ? "#fff7d2" : "#f3f2ea";
@@ -7614,13 +7663,14 @@ function drawLanguagePill(x, y, w, h, text, active) {
   ctx.restore();
 }
 
-function drawControlGrid(x, y, columns = 2, gapX = 304) {
+function drawControlGrid(x, y, columns = UI_LAYOUT.controlsGrid.columns, gapX = UI_LAYOUT.controlsGrid.gapX) {
+  const layout = UI_LAYOUT.controlsGrid;
   for (let i = 0; i < CONTROL_ACTIONS.length; i += 1) {
     const col = i % columns;
     const row = Math.floor(i / columns);
     const rx = x + col * gapX;
-    const ry = y + row * 34;
-    drawKeyBindRow(rx, ry, controlLabel(CONTROL_ACTIONS[i].id), state.controls[CONTROL_ACTIONS[i].id], state.bindingAction === CONTROL_ACTIONS[i].id);
+    const ry = y + row * layout.rowH;
+    drawKeyBindRow(rx, ry, controlLabel(CONTROL_ACTIONS[i].id), state.controls[CONTROL_ACTIONS[i].id], state.bindingAction === CONTROL_ACTIONS[i].id, layout.rowW);
   }
 }
 
@@ -7717,17 +7767,30 @@ function drawToggle(x, y, text, enabled) {
   ctx.restore();
 }
 
-function drawKeyBindRow(x, y, text, value, binding) {
+function drawKeyBindRow(x, y, text, value, binding, w = UI_LAYOUT.controlsGrid.rowW) {
+  const keyW = UI_LAYOUT.controlsGrid.keyW;
+  const keyH = UI_LAYOUT.controlsGrid.keyH;
+  const keyX = x + w - keyW;
+  const labelW = keyX - x - 22;
   ctx.save();
-  label(text, x, y + 22, 17, "#f3f2ea");
+  ctx.fillStyle = binding ? "rgba(241, 211, 107, 0.16)" : "rgba(8, 13, 20, 0.38)";
+  roundedRect(x, y, w, 42, 8, true, false);
+  ctx.strokeStyle = binding ? "rgba(255, 244, 168, 0.44)" : "rgba(145, 232, 222, 0.14)";
+  ctx.lineWidth = 1.4;
+  roundedRect(x, y, w, 42, 8, false, true);
+  fitLabel(text, x + 14, y + 26, labelW, 15, "#f3f2ea", 12, "800");
   ctx.fillStyle = binding ? "rgba(241, 211, 107, 0.34)" : "rgba(109, 232, 255, 0.18)";
-  roundedRect(x + 116, y, 132, 34, 7, true, false);
+  roundedRect(keyX, y + 3, keyW, keyH, 7, true, false);
   ctx.strokeStyle = binding ? "rgba(255, 244, 168, 0.62)" : "rgba(145, 232, 222, 0.32)";
   ctx.lineWidth = 2;
-  roundedRect(x + 116, y, 132, 34, 7, false, true);
+  roundedRect(keyX, y + 3, keyW, keyH, 7, false, true);
   ctx.font = "800 15px Trebuchet MS";
   ctx.fillStyle = "#f3f2ea";
-  ctx.fillText(binding ? t("settingPressKey") : formatControlKey(value), x + 134, y + 22);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  fitLabel(binding ? t("settingPressKey") : formatControlKey(value), keyX + keyW / 2, y + 21, keyW - 16, 15, "#f3f2ea", 11, "800");
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
   ctx.restore();
 }
 
@@ -8235,14 +8298,7 @@ function hitSlider(x, y) {
         ["audio:musicVolume", origin.x, origin.y + 128],
         ["audio:sfxVolume", origin.x, origin.y + 192],
       ]
-    : state.settingsTab === "controls"
-      ? [
-          ["tuning:das", origin.x, origin.y + 84],
-          ["tuning:arr", origin.x, origin.y + 140],
-          ["tuning:softDrop", origin.x, origin.y + 196],
-          ["tuning:lockDelay", origin.x, origin.y + 252],
-        ]
-      : [];
+    : [];
   for (const [key, sx, sy] of sliders) {
     if (pointInRect(x, y, sx - 14, sy - 16, 298, 44)) return key;
   }
@@ -8266,16 +8322,16 @@ function updateSliderFromPointer(key, x) {
 function hitControlBind(x, y) {
   if (state.settingsTab !== "controls") return null;
   const origin = getSettingsContentOrigin();
-  const baseX = origin.x + 412;
-  const baseY = origin.y + 72;
-  const columns = 1;
-  const gapX = 304;
+  const layout = UI_LAYOUT.controlsGrid;
+  const baseX = origin.x;
+  const baseY = origin.y + 112;
   for (let i = 0; i < CONTROL_ACTIONS.length; i += 1) {
-    const col = i % columns;
-    const row = Math.floor(i / columns);
-    const rx = baseX + col * gapX + 116;
-    const ry = baseY + row * 34;
-    if (pointInRect(x, y, rx, ry, 132, 34)) return CONTROL_ACTIONS[i].id;
+    const col = i % layout.columns;
+    const row = Math.floor(i / layout.columns);
+    const rowX = baseX + col * layout.gapX;
+    const rowY = baseY + row * layout.rowH;
+    const keyX = rowX + layout.rowW - layout.keyW;
+    if (pointInRect(x, y, keyX, rowY + 3, layout.keyW, layout.keyH)) return CONTROL_ACTIONS[i].id;
   }
   return null;
 }
