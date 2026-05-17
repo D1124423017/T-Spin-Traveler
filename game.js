@@ -4,7 +4,89 @@ const ASSET_VERSION = "2026-05-13-133e4ee";
 
 function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
-  return isFilePreview ? path : `${path}?v=${ASSET_VERSION}`;
+  const overrides = typeof window !== "undefined" ? window.TST_ASSET_OVERRIDES || {} : {};
+  const resolvedPath = overrides[path] || path;
+  const externalPath = /^(data:|blob:|https?:|file:)/.test(resolvedPath);
+  return isFilePreview || externalPath ? resolvedPath : `${resolvedPath}?v=${ASSET_VERSION}`;
+}
+
+const ASSET_REGISTRY = {
+  images: [],
+  byImage: new WeakMap(),
+  warned: new Set(),
+  fonts: [
+    { id: "display-font-woff2", type: "font", path: "assets/fonts/TSpinTravelerDisplay.woff2", status: "css-managed" },
+    { id: "display-font-ttf", type: "font", path: "assets/fonts/TSpinTravelerDisplay.ttf", status: "css-managed" },
+  ],
+  audio: [
+    { id: "web-audio-synth", type: "audio", path: "", status: "generated" },
+  ],
+};
+
+function registerImageAsset(id, path) {
+  const image = new Image();
+  const record = {
+    id,
+    type: "image",
+    path,
+    url: assetPath(path),
+    status: "loading",
+    error: "",
+    image,
+  };
+  ASSET_REGISTRY.images.push(record);
+  ASSET_REGISTRY.byImage.set(image, record);
+  image.decoding = "async";
+  image.addEventListener("load", () => {
+    record.status = image.naturalWidth > 0 ? "loaded" : "error";
+    if (record.status === "error") {
+      record.error = "Image loaded with empty dimensions.";
+      warnAssetOnce(record, record.error);
+    }
+  });
+  image.addEventListener("error", () => {
+    record.status = "error";
+    record.error = `Failed to load image: ${record.path}`;
+    warnAssetOnce(record, record.error);
+  });
+  image.src = record.url;
+  return image;
+}
+
+function warnAssetOnce(record, message) {
+  if (ASSET_REGISTRY.warned.has(record.id)) return;
+  ASSET_REGISTRY.warned.add(record.id);
+  console.warn(`[T-Spin Traveler] ${message}`, record.url);
+}
+
+function isImageReady(image) {
+  return Boolean(image && image.complete && image.naturalWidth > 0 && image.naturalHeight > 0);
+}
+
+function getImageAssetRecord(image) {
+  return image ? ASSET_REGISTRY.byImage.get(image) : null;
+}
+
+function getAssetSummary() {
+  const counts = ASSET_REGISTRY.images.reduce((result, record) => {
+    result[record.status] = (result[record.status] || 0) + 1;
+    return result;
+  }, {});
+  return {
+    counts,
+    images: ASSET_REGISTRY.images.map(({ id, path, url, status, error }) => ({ id, path, url, status, error })),
+    fonts: ASSET_REGISTRY.fonts,
+    audio: ASSET_REGISTRY.audio,
+  };
+}
+
+if (typeof window !== "undefined") {
+  window.TST_ASSETS = {
+    images: ASSET_REGISTRY.images,
+    fonts: ASSET_REGISTRY.fonts,
+    audio: ASSET_REGISTRY.audio,
+    getSummary: getAssetSummary,
+  };
 }
 
 const DISPLAY_FONT_STACK = "'TSpin Traveler Display', 'Noto Sans TC', system-ui, sans-serif";
@@ -20,46 +102,27 @@ function canvasFont(weight, size, text = "", forceDisplay = false) {
   return `${weight} ${size}px ${forceDisplay || shouldUseDisplayFont(text) ? DISPLAY_FONT_STACK : UI_FONT_STACK}`;
 }
 
-const forestBg = new Image();
-forestBg.src = assetPath("assets/magic-forest-bg-v2.png");
-const noaArt = new Image();
-noaArt.src = assetPath("assets/noa.png");
-const slimeArt = new Image();
-slimeArt.src = assetPath("assets/forest-slime.png");
-const rosterArt = new Image();
-rosterArt.src = assetPath("assets/character-roster-v4-alpha.png");
-const heroIdleArt = new Image();
-heroIdleArt.src = assetPath("assets/images/clean/ET_Character_alpha.png");
-const heroMeleeSheet = new Image();
-heroMeleeSheet.src = assetPath("assets/images/clean/Knife_alpha.png");
-const heroRangedSheet = new Image();
-heroRangedSheet.src = assetPath("assets/images/clean/Gun_alpha.png");
-const heroCombo1Sheet = new Image();
-heroCombo1Sheet.src = assetPath("assets/images/clean/hero_combo_01_spritesheet_alpha.png");
-const heroCombo2Sheet = new Image();
-heroCombo2Sheet.src = assetPath("assets/images/clean/hero_combo_02_spritesheet_alpha.png");
-const heroCombo3Sheet = new Image();
-heroCombo3Sheet.src = assetPath("assets/images/clean/hero_combo_03_spritesheet_alpha.png");
-const heroUltimateSheet = new Image();
-heroUltimateSheet.src = assetPath("assets/images/clean/hero_perfect_clear_ultimate_alpha.png");
-const enemyConceptSheetA = new Image();
-enemyConceptSheetA.src = assetPath("assets/images/clean/Enemy01_alpha.png");
-const enemyConceptSheetB = new Image();
-enemyConceptSheetB.src = assetPath("assets/images/clean/Enemy02_alpha.png");
+const forestBg = registerImageAsset("forest-background", "assets/magic-forest-bg-v2.png");
+const noaArt = registerImageAsset("noa-portrait", "assets/noa.png");
+const slimeArt = registerImageAsset("forest-slime", "assets/forest-slime.png");
+const rosterArt = registerImageAsset("character-roster", "assets/character-roster-v4-alpha.png");
+const heroIdleArt = registerImageAsset("hero-idle-concept", "assets/images/clean/ET_Character_alpha.png");
+const heroMeleeSheet = registerImageAsset("hero-melee-sheet", "assets/images/clean/Knife_alpha.png");
+const heroRangedSheet = registerImageAsset("hero-ranged-sheet", "assets/images/clean/Gun_alpha.png");
+const heroCombo1Sheet = registerImageAsset("hero-combo-1-sheet", "assets/images/clean/hero_combo_01_spritesheet_alpha.png");
+const heroCombo2Sheet = registerImageAsset("hero-combo-2-sheet", "assets/images/clean/hero_combo_02_spritesheet_alpha.png");
+const heroCombo3Sheet = registerImageAsset("hero-combo-3-sheet", "assets/images/clean/hero_combo_03_spritesheet_alpha.png");
+const heroUltimateSheet = registerImageAsset("hero-ultimate-sheet", "assets/images/clean/hero_perfect_clear_ultimate_alpha.png");
+const enemyConceptSheetA = registerImageAsset("enemy-concept-sheet-a", "assets/images/clean/Enemy01_alpha.png");
+const enemyConceptSheetB = registerImageAsset("enemy-concept-sheet-b", "assets/images/clean/Enemy02_alpha.png");
 const enemyAttackSheets = {
-  slime: new Image(),
-  vine: new Image(),
-  mushroom: new Image(),
-  beetle: new Image(),
-  mist: new Image(),
-  king: new Image(),
+  slime: registerImageAsset("enemy-attack-slime", "assets/images/clean/enemy_attack_slime_redesign.png"),
+  vine: registerImageAsset("enemy-attack-vine", "assets/images/clean/enemy_attack_vine_redesign.png"),
+  mushroom: registerImageAsset("enemy-attack-mushroom", "assets/images/clean/enemy_attack_mushroom_redesign.png"),
+  beetle: registerImageAsset("enemy-attack-beetle", "assets/images/clean/enemy_attack_beetle_redesign.png"),
+  mist: registerImageAsset("enemy-attack-mist", "assets/images/clean/enemy_attack_mist_redesign.png"),
+  king: registerImageAsset("enemy-attack-king", "assets/images/clean/enemy_attack_king_redesign.png"),
 };
-enemyAttackSheets.slime.src = assetPath("assets/images/clean/enemy_attack_slime_redesign.png");
-enemyAttackSheets.vine.src = assetPath("assets/images/clean/enemy_attack_vine_redesign.png");
-enemyAttackSheets.mushroom.src = assetPath("assets/images/clean/enemy_attack_mushroom_redesign.png");
-enemyAttackSheets.beetle.src = assetPath("assets/images/clean/enemy_attack_beetle_redesign.png");
-enemyAttackSheets.mist.src = assetPath("assets/images/clean/enemy_attack_mist_redesign.png");
-enemyAttackSheets.king.src = assetPath("assets/images/clean/enemy_attack_king_redesign.png");
 
 const HERO_FRAME_RECTS = [
   { x: 0, y: 58, w: 362, h: 386 },
@@ -4297,7 +4360,7 @@ function resetCanvasTransform() {
 }
 
 function drawBackground() {
-  if (forestBg.complete && forestBg.naturalWidth > 0) {
+  if (isImageReady(forestBg)) {
     ctx.drawImage(forestBg, 0, 0, W, H);
     ctx.fillStyle = "rgba(4, 7, 12, 0.72)";
     ctx.fillRect(0, 0, W, H);
@@ -4703,14 +4766,14 @@ function drawHeroSprite(hit) {
 }
 
 function drawHeroIdleBase() {
-  if (heroMeleeSheet.complete && heroMeleeSheet.naturalWidth > 0) {
+  if (isImageReady(heroMeleeSheet)) {
     drawSpriteSheetFrame(HERO_ANIMATIONS.melee, 0, -132, -222, 264, 410);
-  } else if (heroIdleArt.complete && heroIdleArt.naturalWidth > 0) {
+  } else if (isImageReady(heroIdleArt)) {
     // Concept sheet fallback: crop the clearest full-body pose from the lower stance strip.
     drawKeyedImageCropContain(heroIdleArt, 820, 1198, 178, 312, -114, -206, 228, 390, "idle-concept");
-  } else if (rosterArt.complete && rosterArt.naturalWidth > 0) {
+  } else if (isImageReady(rosterArt)) {
     drawRosterSprite("noa", -118, -214, 236, 402);
-  } else if (noaArt.complete && noaArt.naturalWidth > 0) {
+  } else if (isImageReady(noaArt)) {
     drawImageContain(noaArt, -112, -210, 224, 392);
   } else {
     drawNoaFallback(false);
@@ -4728,7 +4791,7 @@ function drawHeroAnimationFrame() {
     return false;
   }
   const frameIndex = Math.min(config.frames.length - 1, Math.floor(elapsed / config.frameMs));
-  if (config.image.complete && config.image.naturalWidth > 0) {
+  if (isImageReady(config.image)) {
     const draw = config.draw || { x: -132, y: -222, w: 264, h: 410 };
     drawSpriteAnimationFrame(config, elapsed, draw.x, draw.y, draw.w, draw.h);
   } else {
@@ -5275,7 +5338,7 @@ function drawEnemy() {
     // Attack animations use the enemy concept sheet attack vignettes.
   } else if (drawEnemyConceptArt(enemy, hit)) {
     // Project-local concept sheets are now the primary enemy source.
-  } else if (rosterArt.complete && rosterArt.naturalWidth > 0) {
+  } else if (isImageReady(rosterArt)) {
     ctx.save();
     ctx.shadowColor = hexToRgba(enemy.color, 0.55);
     ctx.shadowBlur = hit ? 34 : 22;
@@ -5288,7 +5351,7 @@ function drawEnemy() {
     ctx.restore();
   } else if (enemy.id !== "slime") {
     drawEnemySilhouette(enemy, hit);
-  } else if (slimeArt.complete && slimeArt.naturalWidth > 0) {
+  } else if (isImageReady(slimeArt)) {
     ctx.save();
     ctx.shadowColor = hexToRgba(enemy.color, 0.55);
     ctx.shadowBlur = hit ? 34 : 22;
@@ -5352,7 +5415,7 @@ function drawBossPhaseBar(x, y) {
 
 function drawEnemyConceptArt(enemy, hit) {
   const sheet = enemy.artSheet === "enemy02" ? enemyConceptSheetB : enemyConceptSheetA;
-  if (!sheet.complete || sheet.naturalWidth <= 0 || !enemy.artRect) return false;
+  if (!isImageReady(sheet) || !enemy.artRect) return false;
   const rect = enemy.artRect;
   const draw = enemy.artDraw || { x: -130, y: -150, w: 260, h: 240 };
   ctx.save();
@@ -5389,7 +5452,7 @@ function drawEnemyAttackAnimationFrame(enemy, hit) {
     ctx.globalAlpha = 0.9;
   }
   if (config.image) {
-    if (!config.image.complete || config.image.naturalWidth <= 0) {
+    if (!isImageReady(config.image)) {
       ctx.restore();
       return false;
     }
@@ -5399,7 +5462,7 @@ function drawEnemyAttackAnimationFrame(enemy, hit) {
   }
 
   const sheet = config.sheet === "enemy02" ? enemyConceptSheetB : enemyConceptSheetA;
-  if (!sheet.complete || sheet.naturalWidth <= 0) {
+  if (!isImageReady(sheet)) {
     ctx.restore();
     return false;
   }
@@ -6519,7 +6582,7 @@ function drawPerfectClearFx() {
     ctx.stroke();
   }
 
-  if (heroUltimateSheet.complete && heroUltimateSheet.naturalWidth > 0) {
+  if (isImageReady(heroUltimateSheet)) {
     ctx.save();
     ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = 0.96 * alpha;
@@ -6900,7 +6963,7 @@ function drawStartMenuOverlay() {
 
 function drawMainMenuScene() {
   ctx.save();
-  if (forestBg.complete && forestBg.naturalWidth > 0) ctx.drawImage(forestBg, 0, 0, W, H);
+  if (isImageReady(forestBg)) ctx.drawImage(forestBg, 0, 0, W, H);
   const g = ctx.createLinearGradient(0, 0, W, H);
   g.addColorStop(0, "rgba(3, 6, 14, 0.74)");
   g.addColorStop(0.46, "rgba(4, 7, 14, 0.48)");
@@ -7867,6 +7930,10 @@ function smoothstep(edge0, edge1, value) {
 }
 
 function drawImageContain(img, x, y, w, h) {
+  if (!isImageReady(img)) {
+    drawImageFallbackBox(x, y, w, h, getMissingImageLabel(img, "IMAGE"));
+    return;
+  }
   const scale = Math.min(w / img.naturalWidth, h / img.naturalHeight);
   const dw = img.naturalWidth * scale;
   const dh = img.naturalHeight * scale;
@@ -7874,6 +7941,10 @@ function drawImageContain(img, x, y, w, h) {
 }
 
 function drawImageCropContain(img, sx, sy, sw, sh, x, y, w, h) {
+  if (!isImageReady(img) || sw <= 0 || sh <= 0) {
+    drawImageFallbackBox(x, y, w, h, getMissingImageLabel(img, "CROP"));
+    return;
+  }
   const scale = Math.min(w / sw, h / sh);
   const dw = sw * scale;
   const dh = sh * scale;
@@ -7881,6 +7952,10 @@ function drawImageCropContain(img, sx, sy, sw, sh, x, y, w, h) {
 }
 
 function drawRosterSprite(id, x, y, w, h) {
+  if (!isImageReady(rosterArt)) {
+    drawImageFallbackBox(x, y, w, h, "ROSTER");
+    return;
+  }
   const cell = ROSTER_CELLS[id] || ROSTER_CELLS.slime;
   const cw = rosterArt.naturalWidth / 4;
   const ch = rosterArt.naturalHeight / 2;
@@ -7890,6 +7965,28 @@ function drawRosterSprite(id, x, y, w, h) {
   const dw = cw * scale;
   const dh = ch * scale;
   ctx.drawImage(rosterArt, sx, sy, cw, ch, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+}
+
+function getMissingImageLabel(img, fallback) {
+  const record = getImageAssetRecord(img);
+  return record ? record.id.replace(/-/g, " ").toUpperCase() : fallback;
+}
+
+function drawImageFallbackBox(x, y, w, h, text = "MISSING IMAGE") {
+  ctx.save();
+  ctx.fillStyle = "rgba(7, 10, 16, 0.46)";
+  roundedRect(x, y, w, h, 10, true, false);
+  ctx.strokeStyle = "rgba(126, 231, 255, 0.2)";
+  ctx.setLineDash([7, 5]);
+  roundedRect(x, y, w, h, 10, false, true);
+  ctx.setLineDash([]);
+  ctx.fillStyle = "rgba(238, 244, 252, 0.58)";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = canvasFont("800", Math.max(10, Math.min(14, w / 14)), text, true);
+  ctx.fillText(text, x + w / 2, y + h / 2);
+  ctx.textBaseline = "alphabetic";
+  ctx.restore();
 }
 
 function hexToRgba(hex, alpha) {
