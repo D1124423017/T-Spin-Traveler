@@ -265,6 +265,8 @@ const ULTIMATE_WELL_WIDTH = 4;
 const ULTIMATE_WALL = "U";
 const BATTLE_COUNTDOWN_MS = 3000;
 const BATTLE_COUNTDOWN_START_WINDOW_MS = 420;
+const FIRST_WAVE_HINT_MS = 4200;
+const FIRST_WAVE_HINT_FADE_MS = 520;
 
 const BALANCE = {
   enemyWaveHp: 10,
@@ -569,6 +571,7 @@ const translations = {
     enemyCancelable: "可抵銷",
     enemyUncancelable: "不可抵銷",
     bossPhaseBar: "階段壓力",
+    firstWaveCombatHint: "消行會攻擊敵人，T-Spin 會造成重擊。",
     firstRunHint: "首次遊玩建議先完成 3 分鐘教學。",
     nextRunHook: "下一局目標：撐到第 20 波並擊破 Boss。",
     nextRunHookDynamic: "下一局目標：撐到第 {wave} 波並擊破 Boss。",
@@ -939,6 +942,7 @@ const translations = {
     enemyCancelable: "Cancelable",
     enemyUncancelable: "Uncancelable",
     bossPhaseBar: "Phase Pressure",
+    firstWaveCombatHint: "Clear lines to attack. T-Spins deal heavy damage.",
     firstRunHint: "Suggested first run: try the 3-minute tutorial.",
     nextRunHook: "Next run goal: reach Wave 20 and defeat the Boss.",
     nextRunHookDynamic: "Next run goal: reach Wave {wave} and defeat the Boss.",
@@ -1884,6 +1888,7 @@ const state = {
   pointer: { x: 0, y: 0, down: false, dragging: null },
   countdownMs: 0,
   countdownCue: "",
+  firstWaveHintMs: 0,
   lastMoveWasRotate: false,
   lastRotationKind: null,
   input: {
@@ -2140,6 +2145,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.input.right = false;
   state.input.softDrop = false;
   state.input.softDropTimer = 0;
+  state.firstWaveHintMs = 0;
   resetInputRepeat();
   refillQueue();
   spawnPiece();
@@ -3804,6 +3810,7 @@ function update(time) {
       if (isBattleCountdownActive()) {
         updateBattleCountdown(dt);
       } else {
+        if (state.firstWaveHintMs > 0) state.firstWaveHintMs = Math.max(0, state.firstWaveHintMs - dt);
         if (state.ultimateActive) {
           state.ultimateTimer = Math.max(0, state.ultimateTimer - dt);
           if (state.ultimateTimer <= 0) endUltimateMode();
@@ -3850,6 +3857,7 @@ function updateBattleCountdown(dt) {
   if (state.countdownMs <= 0) {
     state.countdownCue = "";
     state.dropTimer = 0;
+    state.firstWaveHintMs = FIRST_WAVE_HINT_MS;
     resetInputRepeat();
   }
 }
@@ -4329,6 +4337,7 @@ function draw() {
     drawFloaters();
     drawCombatPopups();
     drawBattleCountdown();
+    drawFirstWaveCombatHint();
     drawTutorialPrompt();
     drawOverlay();
     if (!["start", "guide", "upgrade", "victory", "defeat"].includes(state.mode)) drawSettings();
@@ -6884,6 +6893,44 @@ function drawBattleCountdown() {
   roundedRect(barX, barY, barW * progress, 8, 5, true, false);
   ctx.strokeStyle = "rgba(255,255,255,0.2)";
   roundedRect(barX, barY, barW, 8, 5, false, true);
+  ctx.restore();
+}
+
+function drawFirstWaveCombatHint() {
+  if (state.mode !== "playing" || isBattleCountdownActive() || state.firstWaveHintMs <= 0) return;
+  const progress = 1 - state.firstWaveHintMs / FIRST_WAVE_HINT_MS;
+  const fadeIn = clamp(progress / (FIRST_WAVE_HINT_FADE_MS / FIRST_WAVE_HINT_MS), 0, 1);
+  const fadeOut = clamp(state.firstWaveHintMs / FIRST_WAVE_HINT_FADE_MS, 0, 1);
+  const alpha = Math.min(fadeIn, fadeOut);
+  if (alpha <= 0) return;
+
+  const board = UI_LAYOUT.boardFrame;
+  const w = 462;
+  const h = 40;
+  const x = board.x + board.w / 2 - w / 2;
+  const y = 14;
+  const text = t("firstWaveCombatHint");
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.shadowColor = "rgba(126, 231, 255, 0.24)";
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = "rgba(3, 5, 10, 0.68)";
+  roundedRect(x, y, w, h, 11, true, false);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = "rgba(183, 146, 255, 0.34)";
+  ctx.lineWidth = 1.4;
+  roundedRect(x, y, w, h, 11, false, true);
+  ctx.fillStyle = "rgba(126, 231, 255, 0.12)";
+  roundedRect(x + 10, y + 10, 20, 20, 6, true, false);
+  ctx.strokeStyle = "rgba(126, 231, 255, 0.34)";
+  roundedRect(x + 10, y + 10, 20, 20, 6, false, true);
+  ctx.fillStyle = "#8fe8dc";
+  ctx.textAlign = "center";
+  ctx.font = canvasFont("900", 13, "!", true);
+  ctx.fillText("!", x + 20, y + 25);
+  ctx.textAlign = "left";
+  fitLabel(text, x + 42, y + 25, w - 58, 15, "#f5f1e6", 12, "800");
   ctx.restore();
 }
 
