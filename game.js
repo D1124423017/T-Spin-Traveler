@@ -268,6 +268,8 @@ const BATTLE_COUNTDOWN_START_WINDOW_MS = 420;
 const FIRST_WAVE_HINT_MS = 4200;
 const FIRST_WAVE_HINT_FADE_MS = 520;
 const PERFECT_HIT_STOP_MS = 150;
+const GITHUB_REPORT_BUG_URL = "https://github.com/D1124423017/T-Spin-Traveler/issues/new";
+const GITHUB_SUGGESTION_URL = "https://github.com/D1124423017/T-Spin-Traveler/discussions";
 
 const BALANCE = {
   enemyWaveHp: 10,
@@ -492,6 +494,10 @@ const translations = {
     controlListTitle: "完整操作鍵位",
     languageSettingsTitle: "語言設定",
     languageHelp: "切換後會立即刷新遊戲介面文字。B2B、T-Spin 等招式名稱保留英文。",
+    feedbackTitle: "回饋與建議",
+    feedbackHelp: "遇到問題或有想法？歡迎到 GitHub 留下回報。",
+    feedbackReportBug: "回報 Bug",
+    feedbackSuggestImprovement: "改進建議",
     countdownStart: "START",
     resume: "繼續",
     restart: "重新開始",
@@ -643,6 +649,12 @@ const translations = {
     "family.garbage": "垃圾控制",
     "family.burst": "爆發流派",
     "family.perfect": "Perfect 流派",
+    "familyShort.spin": "Spin",
+    "familyShort.combo": "Combo",
+    "familyShort.defense": "防禦",
+    "familyShort.garbage": "垃圾",
+    "familyShort.burst": "爆發",
+    "familyShort.perfect": "Perfect",
     "tutorial": "新手教學",
     "tutorialTitle": "3 分鐘戰鬥教學",
     "tutorialSubtitle": "用最短流程理解消行、HOLD、Combo、Spin 與垃圾抵銷。",
@@ -873,6 +885,10 @@ const translations = {
     controlListTitle: "Full Controls",
     languageSettingsTitle: "Language",
     languageHelp: "Text updates immediately. B2B, T-Spin, and move names stay in English.",
+    feedbackTitle: "Feedback",
+    feedbackHelp: "Found a bug or have an idea? Leave feedback on GitHub.",
+    feedbackReportBug: "Report Bug",
+    feedbackSuggestImprovement: "Suggest Improvement",
     countdownStart: "START",
     resume: "Resume",
     restart: "Restart",
@@ -1024,6 +1040,12 @@ const translations = {
     "family.garbage": "Garbage Control",
     "family.burst": "Burst Flow",
     "family.perfect": "Perfect Flow",
+    "familyShort.spin": "Spin",
+    "familyShort.combo": "Combo",
+    "familyShort.defense": "Defense",
+    "familyShort.garbage": "Garbage",
+    "familyShort.burst": "Burst",
+    "familyShort.perfect": "Perfect",
     "tutorial": "Tutorial",
     "tutorialTitle": "3-Minute Combat Tutorial",
     "tutorialSubtitle": "Learn line clears, HOLD, Combo, Spin, and garbage canceling in one short run.",
@@ -7540,6 +7562,7 @@ function drawSettingsContent(x, y) {
     drawSettingsInfoCard(x, y + 184, 420, 98, t("hudMinimal"), t("hudFloatingText"), "#d7c2ff");
     drawSettingsInfoCard(x + 450, y + 46, 260, 98, t("startTitle"), t("startTagline"), "#fff0a6");
     drawSettingsInfoCard(x + 450, y + 166, 260, 116, t("moveGuide"), t("practiceHint"), "#9df7da");
+    drawSettingsFeedbackCard(x, y + 318, 710, 108);
     return;
   }
   if (state.settingsTab === "audio") {
@@ -7572,6 +7595,47 @@ function drawSettingsInfoCard(x, y, w, h, title, body, color) {
   label(String(title).toUpperCase(), x + 18, y + 30, 14, color);
   wrapText(body, x + 18, y + 58, w - 36, 20, "rgba(238,244,252,0.62)", 13);
   ctx.restore();
+}
+
+function drawSettingsFeedbackCard(x, y, w, h) {
+  const bugRect = getSettingsFeedbackButtonRect("bug", x, y, w);
+  const suggestionRect = getSettingsFeedbackButtonRect("suggestion", x, y, w);
+  ctx.save();
+  ctx.fillStyle = "rgba(8, 13, 20, 0.56)";
+  roundedRect(x, y, w, h, 12, true, false);
+  ctx.strokeStyle = "rgba(126, 231, 255, 0.22)";
+  ctx.lineWidth = 1.5;
+  roundedRect(x, y, w, h, 12, false, true);
+  label(t("feedbackTitle").toUpperCase(), x + 18, y + 30, 14, "#8fe8dc");
+  wrapText(t("feedbackHelp"), x + 18, y + 58, 390, 18, "rgba(238,244,252,0.62)", 13);
+  drawSettingsFeedbackButton(bugRect, t("feedbackReportBug"), "#ffb7bd");
+  drawSettingsFeedbackButton(suggestionRect, t("feedbackSuggestImprovement"), "#fff0a6");
+  ctx.restore();
+}
+
+function drawSettingsFeedbackButton(rect, text, color) {
+  const hovered = pointInRect(state.pointer.x, state.pointer.y, rect.x, rect.y, rect.w, rect.h);
+  ctx.save();
+  ctx.fillStyle = hovered ? hexToRgba(color, 0.24) : "rgba(10, 16, 25, 0.66)";
+  roundedRect(rect.x, rect.y, rect.w, rect.h, 8, true, false);
+  ctx.strokeStyle = hovered ? hexToRgba(color, 0.68) : hexToRgba(color, 0.34);
+  ctx.lineWidth = hovered ? 2 : 1.4;
+  roundedRect(rect.x, rect.y, rect.w, rect.h, 8, false, true);
+  ctx.fillStyle = hovered ? color : "rgba(245,241,230,0.82)";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  fitLabel(text, rect.x + 14, rect.y + rect.h / 2 + 1, rect.w - 28, 14, ctx.fillStyle, 11, "800");
+  ctx.textBaseline = "alphabetic";
+  ctx.restore();
+}
+
+function getSettingsFeedbackButtonRect(kind, cardX, cardY, cardW) {
+  const gap = 12;
+  const buttonW = 132;
+  const buttonH = 38;
+  const firstX = cardX + cardW - 18 - buttonW * 2 - gap;
+  const x = kind === "bug" ? firstX : firstX + buttonW + gap;
+  return { x, y: cardY + 50, w: buttonW, h: buttonH };
 }
 
 function drawPauseStat(x, y, name, value) {
@@ -7688,19 +7752,35 @@ function drawUpgradeOverlay() {
     ctx.strokeStyle = hovered ? rarity.color : hexToRgba(rarity.color, 0.42);
     ctx.lineWidth = hovered ? 3 : 2;
     roundedRect(x, y, 180, 186, 12, false, true);
-    drawUpgradeSigil(x + 90, y + 42, family.color, i + 1);
-    label(rarityLabel(upgrade.rarity).toUpperCase(), x + 18, y + 28, 11, rarity.color);
-    label(t(family.labelKey).toUpperCase(), x + 18, y + 48, 11, family.color);
-    wrapText(upgradeName(upgrade), x + 18, y + 89, 142, 23, "#f5f1e6", 18);
+    drawUpgradeSigil(x + 144, y + 42, family.color, i + 1, 0.78, 0.78);
+    drawUpgradePill(x + 16, y + 16, 70, 20, rarityLabel(upgrade.rarity).toUpperCase(), rarity.color, 0.18);
+    drawUpgradePill(x + 16, y + 43, 92, 22, upgradeFamilyShortLabel(family).toUpperCase(), family.color, 0.12);
+    wrapText(upgradeName(upgrade), x + 18, y + 94, 142, 22, "#f5f1e6", 17);
     wrapText(upgradeText(upgrade), x + 18, y + 134, 142, 18, "rgba(238,244,252,0.64)", 12);
   }
   label(t("upgradeHelp"), 350, 522, 17, "#9fb4ff");
   ctx.restore();
 }
 
-function drawUpgradeSigil(x, y, color, number) {
+function drawUpgradePill(x, y, w, h, text, color, fillAlpha = 0.14) {
+  ctx.save();
+  ctx.fillStyle = hexToRgba(color, fillAlpha);
+  roundedRect(x, y, w, h, 7, true, false);
+  ctx.strokeStyle = hexToRgba(color, 0.34);
+  ctx.lineWidth = 1.2;
+  roundedRect(x, y, w, h, 7, false, true);
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  fitLabel(text, x + 9, y + h / 2 + 0.5, w - 18, 10, color, 8, "900", true);
+  ctx.textBaseline = "alphabetic";
+  ctx.restore();
+}
+
+function drawUpgradeSigil(x, y, color, number, scale = 1, alpha = 1) {
   ctx.save();
   ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  ctx.globalAlpha = alpha;
   ctx.shadowColor = color;
   ctx.shadowBlur = 16;
   ctx.strokeStyle = hexToRgba(color, 0.72);
@@ -7727,6 +7807,12 @@ function getUpgradeFamily(upgrade) {
   if (["b2b_blade", "bossbreaker_relic", "blade_polish", "stellar_caliber", "grey_star_reactor"].includes(upgrade.id)) return BUILD_FAMILY.burst;
   if (["star_mender", "aegis_shell", "vital_core", "recovery_glyph", "void_carapace", "arcane_suture", "spin_vamp"].includes(upgrade.id)) return BUILD_FAMILY.defense;
   return BUILD_FAMILY.burst;
+}
+
+function upgradeFamilyShortLabel(family) {
+  const shortKey = family.labelKey.replace("family.", "familyShort.");
+  const shortLabel = t(shortKey);
+  return shortLabel === shortKey ? t(family.labelKey) : shortLabel;
 }
 
 function drawMoveGuideOverlay() {
@@ -8554,6 +8640,12 @@ function handleSettingsPointerDown(x, y, source) {
     playSfx("hold");
     return;
   }
+  const feedbackUrl = hitSettingsFeedbackLink(x, y);
+  if (feedbackUrl) {
+    openFeedbackLink(feedbackUrl);
+    playSfx("hold");
+    return;
+  }
   const slider = hitSlider(x, y);
   if (slider) {
     state.pointer.dragging = slider;
@@ -8596,6 +8688,22 @@ function hitSettingsTab(x, y) {
 
 function getSettingsContentOrigin() {
   return { x: UI_LAYOUT.settings.contentX, y: UI_LAYOUT.settings.contentY };
+}
+
+function hitSettingsFeedbackLink(x, y) {
+  if (state.settingsTab !== "general") return "";
+  const origin = getSettingsContentOrigin();
+  const card = { x: origin.x, y: origin.y + 318, w: 710 };
+  const bugRect = getSettingsFeedbackButtonRect("bug", card.x, card.y, card.w);
+  const suggestionRect = getSettingsFeedbackButtonRect("suggestion", card.x, card.y, card.w);
+  if (pointInRect(x, y, bugRect.x, bugRect.y, bugRect.w, bugRect.h)) return GITHUB_REPORT_BUG_URL;
+  if (pointInRect(x, y, suggestionRect.x, suggestionRect.y, suggestionRect.w, suggestionRect.h)) return GITHUB_SUGGESTION_URL;
+  return "";
+}
+
+function openFeedbackLink(url) {
+  const opened = window.open(url, "_blank");
+  if (opened) opened.opener = null;
 }
 
 window.addEventListener("mouseup", () => {
