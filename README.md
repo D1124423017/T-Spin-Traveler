@@ -2,6 +2,8 @@
 
 [▶ Play Online｜線上遊玩](https://d1124423017.github.io/T-Spin-Traveler/)
 
+Project docs: [Testing checklist](TESTING.md)｜[Changelog](CHANGELOG.md)
+
 ---
 
 ## English Introduction
