@@ -174,6 +174,11 @@ const HOLD_PANEL_X = BOARD_X - 108;
 const HOLD_PANEL_Y = BOARD_Y + 42;
 const NEXT_PANEL_X = BOARD_X + COLS * TILE + 22;
 const NEXT_PANEL_Y = BOARD_Y + 42;
+const NEXT_PREVIEW_COUNT = 5;
+const NEXT_PANEL_W = 88;
+const NEXT_SLOT_H = 50;
+const NEXT_SLOT_GAP = 8;
+const NEXT_SLOT_STEP = NEXT_SLOT_H + NEXT_SLOT_GAP;
 const DROP_MS = 760;
 const SOFT_DROP_MS = 4;
 const LOCK_DELAY_MS = 500;
@@ -6076,18 +6081,19 @@ function drawHoldPanel() {
 
 function drawNextQueuePanel() {
   ctx.save();
-  const w = 88;
-  const h = 306;
+  const w = NEXT_PANEL_W;
+  const h = 34 + NEXT_PREVIEW_COUNT * NEXT_SLOT_H + (NEXT_PREVIEW_COUNT - 1) * NEXT_SLOT_GAP + 42;
   ctx.fillStyle = "rgba(3, 5, 10, 0.62)";
   roundedRect(NEXT_PANEL_X, NEXT_PANEL_Y, w, h, 14, true, false);
   ctx.strokeStyle = "rgba(255, 224, 162, 0.38)";
   ctx.lineWidth = 1.3;
   roundedRect(NEXT_PANEL_X, NEXT_PANEL_Y, w, h, 14, false, true);
   label(t("next").toUpperCase(), NEXT_PANEL_X + 11, NEXT_PANEL_Y + 22, 13, "#ffe0a3");
-  for (let i = 0; i < 4; i += 1) {
+  for (let i = 0; i < NEXT_PREVIEW_COUNT; i += 1) {
+    const slotY = NEXT_PANEL_Y + 34 + i * NEXT_SLOT_STEP;
     ctx.fillStyle = "rgba(126, 231, 255, 0.03)";
-    roundedRect(NEXT_PANEL_X + 9, NEXT_PANEL_Y + 34 + i * 61, w - 18, 52, 9, true, false);
-    drawMiniPiece(state.queue[i], NEXT_PANEL_X + 12, NEXT_PANEL_Y + 45 + i * 61, 11.5, 66, 48);
+    roundedRect(NEXT_PANEL_X + 9, slotY, w - 18, NEXT_SLOT_H, 9, true, false);
+    drawMiniPiece(state.queue[i], NEXT_PANEL_X + 12, slotY + 10, 10.8, 66, 46);
   }
   if (state.queueHex > 0) {
     ctx.fillStyle = "rgba(119, 232, 255, 0.11)";
