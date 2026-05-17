@@ -267,6 +267,7 @@ const BATTLE_COUNTDOWN_MS = 3000;
 const BATTLE_COUNTDOWN_START_WINDOW_MS = 420;
 const FIRST_WAVE_HINT_MS = 4200;
 const FIRST_WAVE_HINT_FADE_MS = 520;
+const PERFECT_HIT_STOP_MS = 150;
 
 const BALANCE = {
   enemyWaveHp: 10,
@@ -577,6 +578,16 @@ const translations = {
     nextRunHookDynamic: "下一局目標：撐到第 {wave} 波並擊破 Boss。",
     damageEquationHint: "消行 + 技術 + Combo + 弱點 + 升級 = 總傷害",
     damageDetailHint: "暫停可看完整來源",
+    hitSingle: "消 1 行",
+    hitDouble: "消 2 行",
+    hitTriple: "消 3 行",
+    hitTetris: "TETRIS",
+    hitCombo: "COMBO",
+    hitB2B: "B2B",
+    hitTSpin: "T-SPIN",
+    hitTSpinMini: "T-SPIN MINI",
+    hitPerfect: "PERFECT CLEAR",
+    linesShort: "行",
     lastHit: "最後命中",
     detailPauseHint: "P 暫停看完整公式",
     buildCompact: "流派",
@@ -948,6 +959,16 @@ const translations = {
     nextRunHookDynamic: "Next run goal: reach Wave {wave} and defeat the Boss.",
     damageEquationHint: "Clear + Technique + Combo + Weakness + Upgrade = Total Damage",
     damageDetailHint: "Pause for full source details",
+    hitSingle: "SINGLE",
+    hitDouble: "DOUBLE",
+    hitTriple: "TRIPLE",
+    hitTetris: "TETRIS",
+    hitCombo: "COMBO",
+    hitB2B: "B2B",
+    hitTSpin: "T-SPIN",
+    hitTSpinMini: "T-SPIN MINI",
+    hitPerfect: "PERFECT CLEAR",
+    linesShort: "LINES",
     lastHit: "Last Hit",
     detailPauseHint: "Press P for full formula",
     buildCompact: "Build",
@@ -1802,6 +1823,8 @@ const state = {
   runMode: "endless",
   enemyHp: 120,
   enemyMaxHp: 120,
+  enemyHpDisplay: 120,
+  enemyHpTrail: 120,
   enemyAttackDamage: 8,
   enemyCountdown: 7,
   enemyType: ENEMIES[0],
@@ -1822,6 +1845,7 @@ const state = {
   lastDamageBreakdown: null,
   shake: 0,
   enemyHit: 0,
+  enemyHitIntensity: 0,
   playerHit: 0,
   heroAnimation: null,
   enemyAnimation: null,
@@ -1889,6 +1913,7 @@ const state = {
   countdownMs: 0,
   countdownCue: "",
   firstWaveHintMs: 0,
+  hitStopMs: 0,
   lastMoveWasRotate: false,
   lastRotationKind: null,
   input: {
@@ -2084,6 +2109,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.lastDamageBreakdown = null;
   state.shake = 0;
   state.enemyHit = 0;
+  state.enemyHitIntensity = 0;
   state.playerHit = 0;
   state.heroAnimation = null;
   state.enemyAnimation = null;
@@ -2146,6 +2172,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.input.softDrop = false;
   state.input.softDropTimer = 0;
   state.firstWaveHintMs = 0;
+  state.hitStopMs = 0;
   resetInputRepeat();
   refillQueue();
   spawnPiece();
@@ -2612,8 +2639,14 @@ function applyPlayerHit(hit) {
   if (context.spinType === "all-mini") state.stats.allSpins += 1;
   recordDamageBreakdown(hit.breakdown);
 
+  const beforeEnemyHp = state.enemyHp;
+  state.enemyHpDisplay = Math.max(state.enemyHpDisplay || beforeEnemyHp, beforeEnemyHp);
+  state.enemyHpTrail = Math.max(state.enemyHpTrail || beforeEnemyHp, beforeEnemyHp);
   state.enemyHp = Math.max(0, state.enemyHp - damage);
-  state.enemyHit = 260;
+  const impact = getHitFeedbackIntensity(hit);
+  state.enemyHit = Math.max(state.enemyHit, 230 + impact * 110);
+  state.enemyHitIntensity = Math.max(state.enemyHitIntensity, impact);
+  if (context.perfect) state.hitStopMs = Math.max(state.hitStopMs, PERFECT_HIT_STOP_MS);
   state.shake = Math.max(state.shake, hit.shake);
   state.floaters.push(...hit.floaters);
   if (hit.burst) state.bursts.push(hit.burst);
@@ -2644,6 +2677,18 @@ function reinforceHitAudioLayer(hit) {
     const pitch = Math.min(1.8, 1 + comboHeat * 0.045);
     tone(520 * pitch, 0.045, "triangle", 0.055, audio.sfxGain, t + 0.015);
   }
+}
+
+function getHitFeedbackIntensity(hit) {
+  const damageTier = Math.min(1.8, Math.max(0.35, hit.damage / 72));
+  const specialTier =
+    hit.context?.perfect ? 2.4 :
+    hit.context?.spinType ? 1.65 :
+    hit.b2bHit ? 1.35 :
+    hit.comboBurst ? 1.22 :
+    hit.context?.lines >= 4 ? 1.18 :
+    0.82;
+  return Math.min(2.6, Math.max(damageTier, specialTier));
 }
 
 function finishPlayerTurnAfterHit(context) {
@@ -3196,93 +3241,127 @@ function pushCombatPopup(lines, pieceType, spinType, meta = {}) {
   const hasCombo = combo >= 2;
   const b2b = Boolean(meta.b2b);
   const perfect = Boolean(meta.perfect);
+  const type =
+    perfect ? "perfect" :
+    spinType === "full" ? "tspin" :
+    spinType ? "spin" :
+    b2b ? "b2b" :
+    hasCombo ? "combo" :
+    lines >= 4 ? "tetris" :
+    "lineClear";
   const popupBase = {
-    x: BOARD_X - 54,
-    y: BOARD_Y + 318,
-    life: 1040,
-    maxLife: 1040,
+    x: BOARD_X + COLS * TILE + 86,
+    y: BOARD_Y + 336,
+    life: 980,
+    maxLife: 980,
     seed: Math.random() * 1000,
   };
+  const damageText = meta.damage ? `${meta.damage} ${t("dmgShort")}` : "";
+  const title = getHitBreakdownTitle(lines, pieceType, spinType, { combo, b2b, perfect });
 
   if (perfect) {
     addCombatPopup({
       ...popupBase,
-      text: "Perfect Clear!",
-      subText: meta.damage ? `-${meta.damage} ${t("dmgShort")}` : "",
-      x: BOARD_X + 54,
-      y: BOARD_Y + 118,
+      text: title,
+      subText: damageText,
+      x: BOARD_X + COLS * TILE + 52,
+      y: BOARD_Y + 210,
       color: "#fff0a6",
       accent: "#8ff7ff",
-      scale: 1.08,
+      scale: 1.18,
       type: "perfect",
-      life: 1180,
-      maxLife: 1180,
+      life: 1240,
+      maxLife: 1240,
     });
     return;
   }
 
-  if (spinType) {
-    const spinText = spinType === "full"
-      ? "T-Spin!"
-      : spinType === "mini"
-        ? "T-Spin Mini!"
-        : `${pieceType}-Spin!`;
-    addCombatPopup({
-      ...popupBase,
-      text: spinText,
-      subText: hasCombo ? `Combo x${combo}` : "",
-      color: spinType === "full" ? "#ffb7ff" : "#d7c2ff",
-      accent: "#8ff7ff",
-      scale: spinType === "full" ? 1.08 : 0.96,
-      type: spinType === "full" ? "tspin" : "spin",
-      life: 1080,
-      maxLife: 1080,
-    });
-  } else if (hasCombo) {
-    addCombatPopup({
-      ...popupBase,
-      text: `Combo x${combo}`,
-      subText: lines >= 4 ? "Tetris" : getLineClearPopupText(lines),
-      color: combo >= 4 ? "#7ef7ff" : "#d7c2ff",
-      accent: "#ffb7ff",
-      scale: 0.9 + Math.min(0.22, combo * 0.025),
-      type: "combo",
-      life: 940,
-      maxLife: 940,
-    });
-  } else {
-    addCombatPopup({
-      ...popupBase,
-      text: getLineClearPopupText(lines),
-      subText: "",
-      color: lines >= 4 ? "#9df7da" : "#b9c2ff",
-      accent: "#8ff7ff",
-      scale: lines >= 4 ? 0.86 : 0.7,
-      type: lines >= 4 ? "tetris" : "lineClear",
-      life: lines >= 4 ? 860 : 760,
-      maxLife: lines >= 4 ? 860 : 760,
-    });
-  }
-
-  if (b2b) {
-    addCombatPopup({
-      ...popupBase,
-      text: "B2B",
-      subText: "Back-to-Back!",
-      y: BOARD_Y + 252,
-      color: "#fff0a6",
-      accent: "#d7c2ff",
-      scale: 0.92,
-      type: "b2b",
-      life: 960,
-      maxLife: 960,
-    });
-  }
+  addCombatPopup({
+    ...popupBase,
+    text: title,
+    subText: damageText,
+    color: getHitPopupColor(type, lines, combo),
+    accent: getHitPopupAccent(type),
+    scale: getHitPopupScale(type, combo),
+    type,
+    life: getHitPopupLife(type),
+    maxLife: getHitPopupLife(type),
+  });
 }
 
 function addCombatPopup(popup) {
   state.combatPopups.unshift(popup);
   state.combatPopups = state.combatPopups.slice(0, 5);
+}
+
+function getHitBreakdownTitle(lines, pieceType, spinType, meta = {}) {
+  if (meta.perfect) return t("hitPerfect");
+  const parts = [];
+  if (spinType) {
+    if (spinType === "full") parts.push(t("hitTSpin"));
+    else if (spinType === "mini") parts.push(t("hitTSpinMini"));
+    else parts.push(`${pieceType}-SPIN`);
+  } else {
+    parts.push(getLineHitLabel(lines));
+  }
+  if (meta.combo >= 2) parts.push(t("hitCombo"));
+  if (meta.b2b) parts.push(t("hitB2B"));
+  return parts.filter(Boolean).slice(0, 3).join(" + ");
+}
+
+function getLineHitLabel(lines) {
+  return {
+    1: t("hitSingle"),
+    2: t("hitDouble"),
+    3: t("hitTriple"),
+    4: t("hitTetris"),
+  }[lines] || `${lines} ${t("linesShort")}`;
+}
+
+function getHitPopupColor(type, lines, combo) {
+  return {
+    perfect: "#fff0a6",
+    tspin: "#ffb7ff",
+    spin: "#d7c2ff",
+    b2b: "#fff0a6",
+    combo: combo >= 4 ? "#7ef7ff" : "#d7c2ff",
+    tetris: "#9df7da",
+    lineClear: lines >= 2 ? "#f5f1e6" : "#b9c2ff",
+  }[type] || "#f5f1e6";
+}
+
+function getHitPopupAccent(type) {
+  return {
+    perfect: "#8ff7ff",
+    tspin: "#8ff7ff",
+    spin: "#8ff7ff",
+    b2b: "#d7c2ff",
+    combo: "#ffb7ff",
+    tetris: "#fff0a6",
+    lineClear: "#8ff7ff",
+  }[type] || "#8ff7ff";
+}
+
+function getHitPopupScale(type, combo = 0) {
+  if (type === "perfect") return 1.18;
+  if (type === "tspin") return 1.06;
+  if (type === "spin") return 0.96;
+  if (type === "b2b") return 0.98;
+  if (type === "combo") return 0.88 + Math.min(0.2, combo * 0.026);
+  if (type === "tetris") return 0.9;
+  return 0.72;
+}
+
+function getHitPopupLife(type) {
+  return {
+    perfect: 1240,
+    tspin: 1120,
+    spin: 1020,
+    b2b: 1040,
+    combo: 980,
+    tetris: 920,
+    lineClear: 820,
+  }[type] || 900;
 }
 
 function getLineClearPopupText(lines) {
@@ -3751,6 +3830,9 @@ function configureEnemyForWave() {
   const bossMultiplier = enemy.id === "king" ? BALANCE.bossMultiplier : state.miniBoss ? BALANCE.miniBossMultiplier : 1;
   state.enemyMaxHp = Math.floor((enemy.hp + tier * enemy.hpScale + Math.floor((state.wave - 1) * BALANCE.enemyWaveHp)) * bossMultiplier);
   state.enemyHp = state.enemyMaxHp;
+  state.enemyHpDisplay = state.enemyHp;
+  state.enemyHpTrail = state.enemyHp;
+  state.enemyHitIntensity = 0;
   state.enemyAttackDamage = enemy.damage + Math.floor((state.wave - 1) / BALANCE.enemyDamageEveryWaves) * BALANCE.enemyDamageStep + (state.miniBoss ? BALANCE.miniBossDamageBonus : 0);
   state.enemyCountdown = getEnemyCountdownForWave();
 }
@@ -3811,24 +3893,28 @@ function update(time) {
         updateBattleCountdown(dt);
       } else {
         if (state.firstWaveHintMs > 0) state.firstWaveHintMs = Math.max(0, state.firstWaveHintMs - dt);
-        if (state.ultimateActive) {
-          state.ultimateTimer = Math.max(0, state.ultimateTimer - dt);
-          if (state.ultimateTimer <= 0) endUltimateMode();
-        }
-        updateHorizontalInput(dt);
-        if (state.input.softDrop) updateSoftDrop(dt);
-        state.dropTimer += dt;
-        if (state.dropTimer >= getGravityMsForWave()) {
-          state.dropTimer = 0;
-          if (!move(0, 1) && state.lockTimer === null) {
-            state.lockTimer = time;
-          }
-        }
-        if (touchingGround()) {
-          if (state.lockTimer === null) state.lockTimer = time;
-          if (time - state.lockTimer >= state.tuning.lockDelay) lockPiece();
+        if (state.hitStopMs > 0) {
+          state.hitStopMs = Math.max(0, state.hitStopMs - dt);
         } else {
-          state.lockTimer = null;
+          if (state.ultimateActive) {
+            state.ultimateTimer = Math.max(0, state.ultimateTimer - dt);
+            if (state.ultimateTimer <= 0) endUltimateMode();
+          }
+          updateHorizontalInput(dt);
+          if (state.input.softDrop) updateSoftDrop(dt);
+          state.dropTimer += dt;
+          if (state.dropTimer >= getGravityMsForWave()) {
+            state.dropTimer = 0;
+            if (!move(0, 1) && state.lockTimer === null) {
+              state.lockTimer = time;
+            }
+          }
+          if (touchingGround()) {
+            if (state.lockTimer === null) state.lockTimer = time;
+            if (time - state.lockTimer >= state.tuning.lockDelay) lockPiece();
+          } else {
+            state.lockTimer = null;
+          }
         }
       }
     }
@@ -4102,8 +4188,8 @@ function playSfx(name) {
   } else if (name === "hold") {
     arpeggio([330, 247, 392], 0.032, "sine", 0.11);
   } else if (name === "clear") {
-    arpeggio([440, 554.37, 659.25], 0.045, "triangle", 0.14);
-    noise(0.032, 0.045, out, t + 0.02);
+    arpeggio([520, 659.25, 783.99], 0.032, "triangle", 0.12);
+    filteredNoise(0.026, 0.036, "highpass", 1800, 2.4, out, t + 0.018);
   } else if (name === "bigClear") {
     arpeggio([392, 493.88, 659.25, 880], 0.04, "triangle", 0.18);
     sweep(920, 1320, 0.16, "square", 0.11, t + 0.03);
@@ -4113,21 +4199,23 @@ function playSfx(name) {
     tone(196, 0.16, "sawtooth", 0.08, out, t);
   } else if (name === "combo") {
     arpeggio([659.25, 783.99, 987.77, 1174.66], 0.032, "square", 0.13);
+    sweep(620, 1440, 0.12, "triangle", 0.07, t + 0.028, out);
     noise(0.045, 0.08, out, t + 0.06);
   } else if (name === "cancel") {
     arpeggio([392, 523.25, 659.25, 783.99], 0.034, "sine", 0.13);
     sweep(720, 260, 0.11, "triangle", 0.08, t + 0.02);
   } else if (name === "perfect") {
-    arpeggio([523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98], 0.042, "triangle", 0.18);
-    tone(261.63, 0.45, "sine", 0.12, out, t);
-    noise(0.11, 0.1, out, t + 0.09);
+    arpeggio([392, 523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98], 0.038, "triangle", 0.2);
+    tone(130.81, 0.42, "sine", 0.14, out, t);
+    sweep(420, 1680, 0.28, "sawtooth", 0.1, t + 0.05, out);
+    noise(0.13, 0.12, out, t + 0.08);
   } else if (name === "hitLight") {
-    tone(620, 0.045, "triangle", 0.075, out, t);
-    noise(0.025, 0.035, out, t + 0.012);
+    tone(680, 0.038, "triangle", 0.078, out, t);
+    filteredNoise(0.026, 0.042, "bandpass", 1100, 3.2, out, t + 0.008);
   } else if (name === "hitHeavy") {
-    tone(130, 0.11, "sawtooth", 0.12, out, t);
-    sweep(480, 1080, 0.12, "triangle", 0.095, t + 0.014);
-    noise(0.055, 0.075, out, t + 0.026);
+    tone(110, 0.12, "sawtooth", 0.13, out, t);
+    sweep(420, 1180, 0.13, "triangle", 0.105, t + 0.014, out);
+    filteredNoise(0.064, 0.084, "bandpass", 740, 2.8, out, t + 0.02);
   } else if (name === "hitArcane") {
     arpeggio([392, 523.25, 783.99, 1046.5], 0.034, "triangle", 0.16);
     tone(98, 0.32, "sine", 0.13, out, t);
@@ -4138,8 +4226,9 @@ function playSfx(name) {
     arpeggio([369.99, 440, 587.33], 0.042, "triangle", 0.11);
   } else if (name === "tspin") {
     arpeggio([493.88, 659.25, 987.77, 1318.51], 0.038, "square", 0.19);
-    sweep(260, 980, 0.18, "sawtooth", 0.11, t + 0.04);
-    noise(0.1, 0.09, out, t + 0.08);
+    tone(164.81, 0.22, "sine", 0.095, out, t);
+    sweep(260, 1180, 0.2, "sawtooth", 0.12, t + 0.04, out);
+    filteredNoise(0.11, 0.095, "bandpass", 1500, 4.2, out, t + 0.08);
   } else if (name === "enemy") {
     sweep(220, 70, 0.26, "sawtooth", 0.22);
     noise(0.09, 0.12, out, t + 0.02);
@@ -4285,6 +4374,9 @@ function tickEffects(dt) {
   processPendingHits();
   state.shake = Math.max(0, state.shake - dt * 0.04);
   state.enemyHit = Math.max(0, state.enemyHit - dt);
+  state.enemyHitIntensity = Math.max(0, state.enemyHitIntensity - dt * 0.0032);
+  state.enemyHpDisplay = animateNumber(state.enemyHpDisplay, state.enemyHp, dt, 125);
+  state.enemyHpTrail = animateNumber(state.enemyHpTrail, state.enemyHp, dt, 520);
   state.playerHit = Math.max(0, state.playerHit - dt);
   state.b2bBrokenFlash = Math.max(0, state.b2bBrokenFlash - dt);
   state.lineFlash = state.lineFlash
@@ -5324,13 +5416,18 @@ function drawNoaFallback(hit) {
 
 function drawEnemy() {
   const hit = state.enemyHit > 0;
+  const hitIntensity = state.enemyHitIntensity || (hit ? 0.8 : 0);
   const enemy = state.enemyType;
   const panel = UI_LAYOUT.enemyPanel;
   const stage = UI_LAYOUT.enemyStage;
   const pad = UI_LAYOUT.panelPadding;
   const left = panel.x + pad;
   const innerW = panel.w - pad * 2;
-  drawHpBar(left, panel.y + 84, innerW, 20, state.enemyHp, state.enemyMaxHp, hit ? "#fff2ad" : "#75e298", t("hp"));
+  drawHpBar(left, panel.y + 84, innerW, 20, Math.round(state.enemyHpDisplay), state.enemyMaxHp, hit ? "#fff2ad" : "#75e298", t("hp"), {
+    textValue: state.enemyHp,
+    trailValue: state.enemyHpTrail,
+    trailColor: "rgba(255, 119, 130, 0.38)",
+  });
   if (enemy.id === "king") drawBossPhaseBar(left, panel.y + 112);
   const intentY = panel.y + (enemy.id === "king" ? 130 : 118);
   drawEnemyIntent(left, intentY, getEnemyIntent(enemy), innerW);
@@ -5339,6 +5436,11 @@ function drawEnemy() {
   drawStageGlow(stage.x + stage.w / 2, stage.y + 288, 184, enemy.color);
   drawPresentationSigil(stage.x + stage.w / 2, stage.y + 292, 150, enemy.color);
   ctx.translate(stage.x + stage.w / 2, stage.y + 238);
+  if (hit) {
+    const tremor = Math.sin(performance.now() * 0.085) * 4.2 * hitIntensity;
+    const recoil = Math.cos(performance.now() * 0.052) * 2.4 * hitIntensity;
+    ctx.translate(tremor, recoil);
+  }
   if (hit) ctx.scale(1.08, 0.92);
   const pulse = 1 + Math.sin(performance.now() * 0.006) * 0.018;
   ctx.scale(pulse * 1.32, pulse * 1.32);
@@ -5375,6 +5477,7 @@ function drawEnemy() {
   } else {
     drawSlimeFallback(hit);
   }
+  if (hit) drawEnemyHitFlash(enemy, hitIntensity);
   ctx.restore();
 }
 
@@ -5397,6 +5500,25 @@ function drawEnemyBehaviorChips(x, y, enemy, w = 294) {
     label(String(chip.label).toUpperCase(), cx + 9, cy + 11, 8, "rgba(238,244,252,0.48)");
     fitLabel(String(chip.value), cx + 9, cy + 22, chipW - 18, 11, chip.color, 9, "800");
   }
+  ctx.restore();
+}
+
+function drawEnemyHitFlash(enemy, intensity = 1) {
+  const alpha = clamp(state.enemyHit / 300, 0, 1);
+  const strength = Math.min(1, alpha * (0.32 + intensity * 0.18));
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.shadowColor = "#ffffff";
+  ctx.shadowBlur = 22 + intensity * 16;
+  ctx.fillStyle = `rgba(255, 255, 255, ${0.18 * strength})`;
+  ctx.beginPath();
+  ctx.ellipse(0, -8, 118 + intensity * 16, 138 + intensity * 18, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = hexToRgba(enemy.color || "#d7c2ff", 0.42 * strength);
+  ctx.lineWidth = 3 + intensity;
+  ctx.beginPath();
+  ctx.ellipse(0, 14, 136 + intensity * 24, 54 + intensity * 12, -0.18, 0, Math.PI * 2);
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -5872,12 +5994,18 @@ function drawCharacterShadow(x, y, w, color) {
   ctx.restore();
 }
 
-function drawHpBar(x, y, w, h, value, max, color, caption) {
+function drawHpBar(x, y, w, h, value, max, color, caption, options = {}) {
   const ratio = max ? clamp(value / max, 0, 1) : 0;
-  const valueText = `${value}/${max}`;
+  const textValue = options.textValue ?? value;
+  const valueText = `${Math.max(0, Math.round(textValue))}/${max}`;
   ctx.save();
   ctx.fillStyle = "rgba(255,255,255,0.08)";
   roundedRect(x, y, w, h, 7, true, false);
+  if (typeof options.trailValue === "number" && options.trailValue > value) {
+    const trailRatio = max ? clamp(options.trailValue / max, 0, 1) : 0;
+    ctx.fillStyle = options.trailColor || "rgba(255, 119, 130, 0.3)";
+    roundedRect(x, y, Math.max(0, w * trailRatio), h, 7, true, false);
+  }
   const g = ctx.createLinearGradient(x, y, x + w, y);
   g.addColorStop(0, color);
   g.addColorStop(1, ratio < 0.35 ? "#ff7782" : "#8ff1d2");
@@ -6526,7 +6654,7 @@ function drawPerfectClearFx() {
   const now = performance.now();
 
   ctx.save();
-  ctx.fillStyle = `rgba(2, 3, 10, ${0.58 * alpha})`;
+  ctx.fillStyle = `rgba(2, 3, 10, ${0.66 * alpha})`;
   ctx.fillRect(0, 0, W, H);
   ctx.globalCompositeOperation = "lighter";
 
@@ -6607,7 +6735,7 @@ function drawPerfectClearFx() {
   ctx.textAlign = "center";
   ctx.shadowColor = "rgba(255, 240, 166, 0.9)";
   ctx.shadowBlur = 26 + burst * 24;
-  ctx.font = canvasFont("900", 64, t("perfectClearTitle"), true);
+  ctx.font = canvasFont("900", 72, t("perfectClearTitle"), true);
   const titleY = 132 + Math.sin(progress * Math.PI) * -8;
   const titleGradient = ctx.createLinearGradient(380, titleY - 54, 900, titleY + 18);
   titleGradient.addColorStop(0, "#ffffff");
@@ -6619,7 +6747,7 @@ function drawPerfectClearFx() {
   ctx.font = canvasFont("900", 22, t("perfectClearSubtitle").toUpperCase());
   ctx.fillStyle = "#d7c2ff";
   ctx.fillText(t("perfectClearSubtitle").toUpperCase(), W / 2, titleY + 34);
-  ctx.font = canvasFont("900", 28, fmt("perfectClearDamage", { damage: fx.damage }).toUpperCase());
+  ctx.font = canvasFont("900", 34, fmt("perfectClearDamage", { damage: fx.damage }).toUpperCase());
   ctx.fillStyle = "#fff0a6";
   ctx.fillText(fmt("perfectClearDamage", { damage: fx.damage }).toUpperCase(), W / 2, titleY + 70);
   ctx.globalAlpha = 1;
@@ -6772,6 +6900,7 @@ function drawCombatPopupTrail(popup, primary, accent, progress) {
 function drawCombatPopupGlyphs(popup, progress, primary, accent) {
   const sparkCount = popup.type === "perfect" ? 16 : popup.type === "lineClear" ? 6 : 10;
   const orbit = popup.type === "perfect" ? 86 : 58;
+  if (popup.type === "tspin" || popup.type === "spin") drawSpinPopupSigil(progress, primary, accent);
   for (let i = 0; i < sparkCount; i += 1) {
     const angle = popup.seed + i * 2.399 + progress * 1.6;
     const radius = orbit + Math.sin(progress * Math.PI + i) * 12;
@@ -6793,6 +6922,26 @@ function drawCombatPopupGlyphs(popup, progress, primary, accent) {
     ctx.fill();
     ctx.restore();
   }
+}
+
+function drawSpinPopupSigil(progress, primary, accent) {
+  const rotation = progress * Math.PI * 2.4;
+  ctx.save();
+  ctx.translate(88, -30);
+  ctx.rotate(rotation);
+  ctx.strokeStyle = hexToRgba(accent, 0.46 * (1 - progress * 0.35));
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.arc(0, 0, 32, -0.85, Math.PI * 1.45);
+  ctx.stroke();
+  for (let i = 0; i < 4; i += 1) {
+    const a = i * Math.PI * 0.5;
+    ctx.fillStyle = i % 2 ? accent : primary;
+    ctx.shadowColor = ctx.fillStyle;
+    ctx.shadowBlur = 10;
+    ctx.fillRect(Math.cos(a) * 32 - 4, Math.sin(a) * 32 - 4, 8, 8);
+  }
+  ctx.restore();
 }
 
 function easeOutBack(t) {
@@ -8510,6 +8659,12 @@ function hitControlBind(x, y) {
 
 function pointInRect(px, py, x, y, w, h) {
   return px >= x && px <= x + w && py >= y && py <= y + h;
+}
+
+function animateNumber(current, target, dt, duration) {
+  if (typeof current !== "number") return target;
+  const next = lerp(current, target, clamp(dt / duration, 0, 1));
+  return Math.abs(next - target) < 0.08 ? target : next;
 }
 
 function clamp(value, min, max) {
