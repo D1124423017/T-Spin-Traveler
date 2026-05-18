@@ -854,6 +854,8 @@ const translations = {
     hex: "干擾",
     attackPanel: "攻擊",
     upgradeMeterShort: "升級",
+    relicProgress: "升級進度",
+    relicDraftReady: "即將獲得遺物",
     ultimateShort: "大招",
     ultimate4Wide: "4-WIDE 爆發",
     ultimateEnd: "4-WIDE 結束",
@@ -1255,6 +1257,8 @@ const translations = {
     hex: "Hex",
     attackPanel: "Attack",
     upgradeMeterShort: "UP",
+    relicProgress: "Relic Progress",
+    relicDraftReady: "Relic Draft Ready",
     ultimateShort: "ULT",
     ultimate4Wide: "4-WIDE Burst",
     ultimateEnd: "4-WIDE End",
@@ -5450,23 +5454,67 @@ function drawBoardFrame(x, y, w, h) {
 }
 
 function drawTopQuestBar() {
+  const progress = getRelicProgressInfo();
   ctx.save();
   ctx.fillStyle = "rgba(4, 7, 14, 0.8)";
-  roundedRect(438, 15, 404, 30, 10, true, false);
+  roundedRect(404, 10, 472, 38, 10, true, false);
   ctx.strokeStyle = "rgba(255, 210, 128, 0.28)";
   ctx.lineWidth = 1.5;
-  roundedRect(438, 15, 404, 30, 10, false, true);
+  roundedRect(404, 10, 472, 38, 10, false, true);
   ctx.font = canvasFont("800", 15, t("topQuest").toUpperCase(), true);
   ctx.fillStyle = "#d7c2ff";
-  ctx.fillText(t("topQuest").toUpperCase(), 484, 36);
+  ctx.fillText(t("topQuest").toUpperCase(), 450, 30);
   ctx.textAlign = "right";
   ctx.fillStyle = "rgba(238,244,252,0.58)";
   ctx.font = canvasFont("800", 15, `${t("waveLabel")} ${state.wave}`);
-  ctx.fillText(`${t("waveLabel")} ${state.wave}`, 818, 36);
+  ctx.fillText(`${t("waveLabel")} ${state.wave}`, 850, 30);
   ctx.fillStyle = "#ffb95f";
   ctx.beginPath();
-  ctx.arc(461, 30, 7, 0, Math.PI * 2);
+  ctx.arc(427, 29, 7, 0, Math.PI * 2);
   ctx.fill();
+  drawRelicProgressBar(450, 34, 386, 6, progress);
+  ctx.restore();
+}
+
+function getRelicProgressInfo() {
+  const tierStep = state.upgradeTier > 0
+    ? BALANCE.upgradeGrowthPerTier * state.upgradeTier
+    : state.nextUpgradeAt;
+  const previousTarget = Math.max(0, state.nextUpgradeAt - tierStep);
+  const target = Math.max(1, state.nextUpgradeAt - previousTarget);
+  const current = clamp(state.upgradeMeter - previousTarget, 0, target);
+  const ready = state.upgradeReady || state.upgradeMeter >= state.nextUpgradeAt;
+  return {
+    current,
+    target,
+    ready,
+    ratio: ready ? 1 : clamp(current / target, 0, 1),
+  };
+}
+
+function drawRelicProgressBar(x, y, w, h, progress) {
+  const glow = progress.ready || progress.ratio >= 0.75;
+  const text = progress.ready
+    ? t("relicDraftReady")
+    : `${t("relicProgress")} ${Math.floor(progress.current)} / ${progress.target}`;
+  ctx.save();
+  ctx.fillStyle = "rgba(4, 9, 18, 0.72)";
+  roundedRect(x, y, w, h, h / 2, true, false);
+  const fill = ctx.createLinearGradient(x, y, x + w, y);
+  fill.addColorStop(0, "#7ef7ff");
+  fill.addColorStop(0.55, "#b690ff");
+  fill.addColorStop(1, glow ? "#fff0a6" : "#d7c2ff");
+  ctx.fillStyle = fill;
+  if (glow) {
+    ctx.shadowColor = progress.ready ? "#fff0a6" : "#b690ff";
+    ctx.shadowBlur = progress.ready ? 16 : 9;
+  }
+  roundedRect(x, y, Math.max(h, w * progress.ratio), h, h / 2, true, false);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = glow ? "rgba(255, 240, 166, 0.54)" : "rgba(126, 231, 255, 0.28)";
+  roundedRect(x, y, w, h, h / 2, false, true);
+  ctx.textAlign = "left";
+  fitLabel(text, x, y + 14, w, 11, glow ? "#fff0a6" : "rgba(238,244,252,0.7)", 9, "800");
   ctx.restore();
 }
 
