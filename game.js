@@ -420,7 +420,7 @@ const GITHUB_SUGGESTION_URL = "https://github.com/D1124423017/T-Spin-Traveler/di
 const BALANCE = {
   enemyWaveHp: 10,
   miniBossMultiplier: 1.18,
-  bossMultiplier: 1.3,
+  bossMultiplier: 1.2,
   enemyDamageEveryWaves: 3,
   enemyDamageStep: 2,
   miniBossDamageBonus: 2,

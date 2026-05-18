@@ -1,7 +1,7 @@
 window.TST_BALANCE = {
   enemyWaveHp: 10,
   miniBossMultiplier: 1.18,
-  bossMultiplier: 1.3,
+  bossMultiplier: 1.2,
   enemyDamageEveryWaves: 3,
   enemyDamageStep: 2,
   miniBossDamageBonus: 2,
