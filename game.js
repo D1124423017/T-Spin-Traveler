@@ -1,6 +1,6 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const ASSET_VERSION = "2026-05-13-133e4ee";
+const ASSET_VERSION = "2026-05-19-release";
 
 function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
