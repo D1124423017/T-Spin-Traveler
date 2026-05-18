@@ -1,29 +1,53 @@
 # T-Spin Traveler Testing Checklist
 
-Use this checklist after every gameplay, UI, asset, or deployment change. For visual checks, test both Traditional Chinese and English when the changed surface contains text.
+Use this checklist after every gameplay, UI, asset, audio, or deployment change. Test Traditional Chinese and English for every screen that contains text.
 
 ## Basic Boot
 
 - [ ] GitHub Pages opens: https://d1124423017.github.io/T-Spin-Traveler/
+- [ ] Local build opens from `index.html` or a local server.
 - [ ] Main menu renders in Traditional Chinese.
 - [ ] Main menu renders in English.
-- [ ] Display font loads correctly for English title, HUD text, numbers, and combat popups.
+- [ ] Display font loads for English title, HUD text, numbers, and combat popups.
 - [ ] Chinese text falls back to Noto Sans TC / system-ui and does not show missing glyph boxes.
-- [ ] Image assets load correctly: background, NOA, enemies, attack sprites, and UI art.
+- [ ] Background progression assets load correctly.
+- [ ] Image assets load correctly: NOA, enemies, enemy attack sprites, backgrounds, and UI art.
 - [ ] `window.TST_ASSETS.getSummary()` is available in the browser console.
 - [ ] `window.TST_ASSETS.getSummary().counts.error` is absent or `0` during normal loading.
+
+## Settings
+
+- [ ] Left tabs show only Controls / Audio / Language / Feedback.
+- [ ] General tab is not shown.
+- [ ] Controls list is readable in Traditional Chinese.
+- [ ] Controls list is readable in English.
+- [ ] Controls key rebinding enters a visible waiting state.
+- [ ] Rebind Move Left, Hard Drop, and Hold; the new keys work in gameplay.
+- [ ] Rebound controls are saved to localStorage and remain after refresh.
+- [ ] Esc cancels key rebinding instead of binding Esc, except existing Pause behavior remains valid.
+- [ ] Audio sliders update Master / Music / SFX volume.
+- [ ] M mute works and persists after refresh.
+- [ ] Language can switch between Traditional Chinese and English.
+- [ ] Feedback page shows Report Bug / Suggest Idea links.
+- [ ] Report Bug opens GitHub Issues new.
+- [ ] Suggest Idea opens GitHub Discussions or a valid fallback.
+- [ ] Back to Pause / Back to Menu does not overlap with Esc in Traditional Chinese or English.
+- [ ] Back to Pause / Back to Menu works from menu Settings and pause Settings.
 
 ## Game Flow
 
 - [ ] Start Endless from the main menu.
 - [ ] Start Tutorial from the main menu.
 - [ ] Battle starts with the 3-second countdown.
+- [ ] First-wave combat hint appears after battle start and fades out.
 - [ ] Pause menu opens and closes.
-- [ ] Return to main menu from pause.
 - [ ] Settings opens from menu and pause.
-- [ ] Settings tabs work: General, Controls, Audio, Language.
+- [ ] Return to main menu works from pause and result screens.
+- [ ] Defeat enters the result screen without freezing.
+- [ ] Pressing R restarts from the pause menu.
+- [ ] Pressing R restarts from defeat / victory result screens.
+- [ ] Retry button still works by mouse.
 - [ ] Move Guide / 招式圖鑑 opens and returns correctly.
-- [ ] Restart / retry flow works after defeat or victory.
 
 ## Piece Controls
 
@@ -43,15 +67,20 @@ Use this checklist after every gameplay, UI, asset, or deployment change. For vi
 ## Combat Feedback
 
 - [ ] Single line clear produces damage and feedback.
-- [ ] Combo produces visible combo feedback.
-- [ ] B2B produces visible B2B feedback.
-- [ ] T-Spin produces visible T-Spin feedback.
-- [ ] Perfect Clear produces special feedback and damage.
+- [ ] Double line clear produces stronger feedback than Single.
+- [ ] Triple line clear produces stronger feedback than Double.
+- [ ] Tetris produces large clear feedback.
+- [ ] Combo produces visible combo feedback and audio.
+- [ ] B2B produces visible B2B feedback and audio.
+- [ ] T-Spin produces distinct visual and audio feedback.
+- [ ] Perfect Clear produces special feedback, hit-stop, and audio.
 - [ ] Enemy HP changes after player attacks.
 - [ ] Enemy hit reaction is visible.
-- [ ] Enemy intent counts down and enemy attack resolves.
-- [ ] Player HP / Guard changes after enemy attack.
-- [ ] Low player HP state is noticeable and readable.
+- [ ] Hit breakdown popup shows move type and total damage.
+- [ ] Enemy attack warning cue triggers before an enemy attack.
+- [ ] Enemy attack resolves and updates player HP / Guard.
+- [ ] Guard / shield blocked sound is distinct from player damage.
+- [ ] Low player HP warning appears and audio pulse is not too frequent.
 
 ## Layout Checks
 
@@ -65,6 +94,42 @@ Use this checklist after every gameplay, UI, asset, or deployment change. For vi
 - [ ] Bottom control hints do not cover the board or character.
 - [ ] Pause menu text remains inside its panels.
 - [ ] Settings / Controls rows stay aligned.
+- [ ] Relic Draft English rarity and type labels do not overlap the emblem.
+- [ ] Relic Draft Traditional Chinese layout remains readable.
+- [ ] Move Guide uses the single-column list and does not show the old challenge panel.
+
+## Visual Assets
+
+- [ ] NOA main-menu idle breathing, glow, cloak, and particles are visible.
+- [ ] NOA cube idle sprite sheet plays on the menu.
+- [ ] NOA meditate idle sprite sheet plays on the menu.
+- [ ] Thorn Prowler attack sprite sheet plays for Thorn Prowler.
+- [ ] Wisp Moth attack sprite sheet plays for Wisp Moth.
+- [ ] Ruin Sentinel attack sprite sheet plays for Ruin Sentinel.
+- [ ] Enemy attack effects remain readable and do not cover the board.
+
+## Background Progression
+
+- [ ] Wave 1 uses the bright forest ruins background.
+- [ ] Wave 5 uses the night forest gate background.
+- [ ] Wave 10 uses the rift boss background.
+- [ ] Wave 11 returns to the arcane ruins background.
+- [ ] Wave 15 uses the corrupted forest background.
+- [ ] Boss waves 10 / 20 / 30 override the normal background with the rift boss background.
+- [ ] Backgrounds are dimmed enough to keep the board, HUD, and text readable.
+
+## Audio
+
+- [ ] Menu music starts after browser audio unlock.
+- [ ] Wave 1 uses the early music layer.
+- [ ] Wave 5 transitions to the mid music layer.
+- [ ] Wave 10 triggers the boss stinger and boss music layer once.
+- [ ] Wave 11 returns to the mid music layer.
+- [ ] Wave 15 transitions to the late music layer.
+- [ ] HP below 30% or high pending garbage triggers the danger layer without becoming annoying.
+- [ ] Perfect Clear music ducking does not conflict with boss or danger layers.
+- [ ] Master / Music / SFX sliders work.
+- [ ] M mute silences audio and can be toggled back on.
 
 ## Asset Fallback
 
@@ -72,15 +137,24 @@ Use this checklist after every gameplay, UI, asset, or deployment change. For vi
 - [ ] Game does not crash when the image fails to load.
 - [ ] Browser console shows one clear warning for the missing image.
 - [ ] `window.TST_ASSETS.getSummary()` reports the missing image as `error`.
-- [ ] Fallback drawing appears instead of an empty missing character, enemy, or crop.
+- [ ] Fallback drawing appears instead of an empty missing character, enemy, or background.
 - [ ] Restore the image path before committing.
+
+## Release / File Hygiene
+
+- [ ] `git status --short` does not show accidental source changes.
+- [ ] `renders/` is ignored and not committed.
+- [ ] `.codex/` is ignored for future files; already tracked files should be reviewed separately.
+- [ ] `dist/`, `tmp/`, and large render output folders are ignored.
+- [ ] Confirm whether tracked `trailer.mp4` should remain in the repository before release.
+- [ ] Confirm asset cache version before publishing GitHub Pages.
 
 ## Suggested Local Smoke Commands
 
 ```powershell
 node --check game.js
 git diff --check
-git status --short
+git status --short --ignored
 ```
 
 Optional asset summary check in browser console:

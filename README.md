@@ -4,6 +4,8 @@
 
 Project docs: [Testing checklist](TESTING.md)｜[Changelog](CHANGELOG.md)
 
+Promo trailer assets: [trailer.html](trailer.html) and `trailer.mp4` are included for demo promotion and later editing.
+
 ---
 
 ## English Introduction

@@ -1,6 +1,13 @@
 .vs/
+.codex/
 node_modules/
 .DS_Store
 Thumbs.db
 *.log
+*.tmp
+dist/
+renders/
+exports/
+tmp/
+trailer_assets/
 codex-backups/

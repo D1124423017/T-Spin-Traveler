@@ -6,8 +6,8 @@ Notable project updates for T-Spin Traveler are recorded here.
 
 ### Added
 
-- Testing checklist for release and smoke-test passes.
-- Changelog for tracking player-facing and production-quality improvements.
+- Release-oriented testing checklist updates for Settings, controls rebinding, background progression, audio layers, defeat retry, and file hygiene.
+- Git ignore rules for generated render outputs, temporary folders, and local Codex workspace files.
 
 ### Changed
 
@@ -17,7 +17,7 @@ Notable project updates for T-Spin Traveler are recorded here.
 
 - No fixes are pending in this section.
 
-## [Current Prototype] - 2026-05-17
+## [Current Prototype] - 2026-05-19
 
 ### Added
 
@@ -27,16 +27,39 @@ Notable project updates for T-Spin Traveler are recorded here.
 - Font test page for display-font readability checks.
 - Asset loading registry with `window.TST_ASSETS.getSummary()`.
 - Image loading fallback behavior with console warnings for failed images.
+- First-wave combat hint explaining that line clears attack enemies and T-Spins deal heavy damage.
+- Hit breakdown combat popups for line clears, Combo, B2B, T-Spin, and Perfect Clear damage.
+- Feedback links in Settings for GitHub bug reports and improvement suggestions.
+- Controls key rebinding with localStorage persistence.
+- Wave-based background progression using forest, ruins, corrupted forest, and rift boss scenes.
+- Audio v0.3 SFX layering pass for soft drop, lock, Combo, B2B, T-Spin, Perfect Clear, guard block, enemy warning, and low HP cues.
+- Audio v0.4 music layers for menu, early, mid, late, boss, and danger states.
+- NOA main-menu idle sprite sheets for cube and meditate idles.
+- Enemy-specific attack sprite sheets for Thorn Prowler, Wisp Moth, and Ruin Sentinel.
+- Promotional trailer template, render script, and tracked `trailer.mp4`.
 
 ### Changed
 
 - Main menu hierarchy and visual polish improved for a more game-like first screen.
 - Battle HUD readability improved around player, enemy, Hold, Next, and combat feedback.
+- Settings menu reworked to four tabs: Controls, Audio, Language, Feedback.
 - Settings and Pause Menu readability polished.
 - Display font readability improved through multiple passes, prioritizing readable English letters and HUD numbers.
 - Next preview changed from 4 pieces to 5 pieces.
+- Move Guide changed to a cleaner single-column list without the old challenge panel.
+- Relic Draft card layout improved for English rarity and type labels.
+- Boss HP scaling lowered from `1.3` to `1.2` so ordinary players spend less time on boss waves.
 
 ### Fixed
 
 - Image loading failures now fail gracefully instead of leaving important visuals empty without diagnostics.
 - Ambiguous display-font glyphs were adjusted for better readability in title, HUD, and combat text.
+- Defeat state cleanup clears active pieces, pending hits, countdown, hit-stop, and input repeat before showing the result screen.
+- Result and pause retry flow now uses `R` for restart / retry.
+
+## [Documentation Baseline] - 2026-05-17
+
+### Added
+
+- Testing checklist for release and smoke-test passes.
+- Changelog for tracking player-facing and production-quality improvements.
