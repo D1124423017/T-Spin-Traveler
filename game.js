@@ -672,12 +672,10 @@ const UI_LAYOUT = {
   controlsGrid: { columns: 2, gapX: 360, rowH: 52, rowW: 332, keyW: 132, keyH: 36 },
   ultimateMeter: { x: 0, y: ROWS * TILE + 10, w: COLS * TILE, h: 30 },
   compactHints: [
-    "screenLeft",
-    "screenRight",
+    "screenMove",
     "screenSoftDrop",
     "screenHardDrop",
     "screenRotate",
-    "screenRotateCCW",
     "screenRotate180",
     "screenHold",
     "screenPause",
@@ -1023,12 +1021,12 @@ const translations = {
     screenRight: "→ 右移",
     screenMove: "← → 移動",
     screenSoftDrop: "↓ 軟降",
-    screenHardDrop: "Space 瞬落",
-    screenRotate: "↑ / X 順轉",
+    screenHardDrop: "Space 硬降",
+    screenRotate: "↑/X/Z 旋轉",
     screenRotateCCW: "Z 逆轉",
     screenRotate180: "A 180°",
-    screenHold: "Shift / C 保留",
-    screenPause: "P 暫停",
+    screenHold: "Shift/C 保留",
+    screenPause: "P/Esc 暫停",
     screenMute: "M 靜音",
     screenMusic: "M 音樂",
     ariaPrototype: "T-Spin Traveler 可玩原型",
@@ -1425,13 +1423,13 @@ const translations = {
     screenLeft: "← Left",
     screenRight: "→ Right",
     screenMove: "← → Move",
-    screenSoftDrop: "↓ Soft Drop",
-    screenHardDrop: "Space Hard Drop",
-    screenRotate: "↑ / X Rotate CW",
+    screenSoftDrop: "↓ Soft",
+    screenHardDrop: "Space Drop",
+    screenRotate: "↑/X/Z Rotate",
     screenRotateCCW: "Z Rotate CCW",
     screenRotate180: "A 180°",
-    screenHold: "Shift / C Hold",
-    screenPause: "P Pause",
+    screenHold: "Shift/C Hold",
+    screenPause: "P/Esc Pause",
     screenMute: "M Mute",
     screenMusic: "M Music",
     ariaPrototype: "T-Spin Traveler playable prototype",
@@ -5042,7 +5040,12 @@ function syncControlHints() {
     span.textContent = text;
     return span;
   };
-  note.replaceChildren(...hints.map((hint, index) => makeHint(hint, "play-hint", `hint-${index}`)));
+  note.replaceChildren(
+    ...hints.map((hint, index) => {
+      const hintType = index >= hints.length - 2 ? "utility-hint" : "play-hint";
+      return makeHint(hint, hintType, `hint-${index}`);
+    }),
+  );
   updateScreenNoteMode();
 }
 
