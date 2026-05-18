@@ -435,7 +435,7 @@ const UI_LAYOUT = {
   ],
 };
 
-const SETTINGS_TABS = ["general", "controls", "audio", "language"];
+const SETTINGS_TABS = ["controls", "audio", "language", "feedback"];
 
 const MENU_IDLE_SEQUENCE = [
   { id: "idleA", duration: 2200 },
@@ -480,22 +480,17 @@ const translations = {
     pauseMenuHint: "戰鬥已停止。調整設定或回到主選單。",
     settingsBack: "返回暫停",
     settingsBackMenu: "返回主選單",
-    settingsTabGeneral: "一般",
     settingsTabControls: "操作",
     settingsTabAudio: "音訊",
     settingsTabLanguage: "語言",
-    generalSettingsTitle: "一般設定",
-    generalSettingsHelp: "主畫面維持 Minimal HUD：只保留棋盤、HP、Guard、Intent、Hold、Next 與 Wave。詳細公式與教學放在暫停或招式圖鑑。",
-    hudLayerTitle: "HUD 資訊層級",
-    hudMinimal: "Minimal HUD",
-    hudFloatingText: "Combo / B2B / T-Spin / Perfect Clear 以棋盤旁魔法浮字呈現，不常駐佔版面。",
+    settingsTabFeedback: "回饋",
     audioSettingsTitle: "音樂與音效",
     controlsSettingsTitle: "操作設定",
     controlListTitle: "完整操作鍵位",
     languageSettingsTitle: "語言設定",
     languageHelp: "切換後會立即刷新遊戲介面文字。B2B、T-Spin 等招式名稱保留英文。",
     feedbackTitle: "回饋與建議",
-    feedbackHelp: "遇到問題或有想法？歡迎到 GitHub 留下回報。",
+    feedbackHelp: "遇到 Bug 或有改進想法，歡迎到 GitHub 留言回報。",
     feedbackReportBug: "回報 Bug",
     feedbackSuggestImprovement: "改進建議",
     countdownStart: "START",
@@ -721,14 +716,14 @@ const translations = {
     ariaPrototype: "T-Spin Traveler 可玩原型",
     "control.left": "左移",
     "control.right": "右移",
-    "control.softDrop": "加速下降",
-    "control.hardDrop": "瞬間落下",
+    "control.softDrop": "軟降",
+    "control.hardDrop": "硬降",
     "control.rotateCW": "順時針旋轉",
     "control.rotateCCW": "逆時針旋轉",
     "control.rotate180": "180 度旋轉",
     "control.hold": "保留方塊",
     "control.pause": "暫停",
-    "control.mute": "靜音",
+    "control.mute": "靜音／音樂",
     messageSpawnTop: "方塊堆到盤面頂端",
     messageHoldBlocked: "保留方塊交換後無法生成",
     messageLockAbove: "方塊鎖定在盤面上方",
@@ -871,15 +866,10 @@ const translations = {
     pauseMenuHint: "Battle is stopped. Adjust settings or return to the main menu.",
     settingsBack: "Back to Pause",
     settingsBackMenu: "Back to Menu",
-    settingsTabGeneral: "General",
     settingsTabControls: "Controls",
     settingsTabAudio: "Audio",
     settingsTabLanguage: "Language",
-    generalSettingsTitle: "General Settings",
-    generalSettingsHelp: "The main screen uses Minimal HUD: board, HP, Guard, Intent, Hold, Next, and Wave stay visible. Full formulas and teaching text live in Pause or Move Guide.",
-    hudLayerTitle: "HUD Information Layers",
-    hudMinimal: "Minimal HUD",
-    hudFloatingText: "Combo / B2B / T-Spin / Perfect Clear appear as short magical popups near the board instead of permanent side text.",
+    settingsTabFeedback: "Feedback",
     audioSettingsTitle: "Music & Sound",
     controlsSettingsTitle: "Control Settings",
     controlListTitle: "Full Controls",
@@ -888,7 +878,7 @@ const translations = {
     feedbackTitle: "Feedback",
     feedbackHelp: "Found a bug or have an idea? Leave feedback on GitHub.",
     feedbackReportBug: "Report Bug",
-    feedbackSuggestImprovement: "Suggest Improvement",
+    feedbackSuggestImprovement: "Suggest Idea",
     countdownStart: "START",
     resume: "Resume",
     restart: "Restart",
@@ -1119,7 +1109,7 @@ const translations = {
     "control.rotate180": "Rotate 180",
     "control.hold": "Hold Piece",
     "control.pause": "Pause",
-    "control.mute": "Mute",
+    "control.mute": "Mute / Music",
     messageSpawnTop: "Blocks reached the top of the board.",
     messageHoldBlocked: "Hold swap could not spawn a valid piece.",
     messageLockAbove: "A piece locked above the playfield.",
@@ -1925,7 +1915,7 @@ const state = {
   messageKey: "",
   messageVars: {},
   settingsOpen: false,
-  settingsTab: "general",
+  settingsTab: "controls",
   pauseView: "menu",
   bindingAction: null,
   language: "zh",
@@ -7556,15 +7546,6 @@ function drawSettingsTabs(x, y) {
 }
 
 function drawSettingsContent(x, y) {
-  if (state.settingsTab === "general") {
-    label(t("generalSettingsTitle"), x, y, 26, "#8fe8dc");
-    drawSettingsInfoCard(x, y + 46, 420, 112, t("hudLayerTitle"), t("generalSettingsHelp"), "#7ef7ff");
-    drawSettingsInfoCard(x, y + 184, 420, 98, t("hudMinimal"), t("hudFloatingText"), "#d7c2ff");
-    drawSettingsInfoCard(x + 450, y + 46, 260, 98, t("startTitle"), t("startTagline"), "#fff0a6");
-    drawSettingsInfoCard(x + 450, y + 166, 260, 116, t("moveGuide"), t("practiceHint"), "#9df7da");
-    drawSettingsFeedbackCard(x, y + 318, 710, 108);
-    return;
-  }
   if (state.settingsTab === "audio") {
     label(t("audioSettingsTitle"), x, y, 26, "#8fe8dc");
     drawSlider(t("master"), "masterVolume", x, y + 64, audio.masterVolume);
@@ -7581,33 +7562,27 @@ function drawSettingsContent(x, y) {
     drawControlGrid(x, y + 112);
     return;
   }
-  label(t("languageSettingsTitle"), x, y, 26, "#8fe8dc");
-  drawLanguageToggle(x, y + 72);
-  wrapText(t("languageHelp"), x, y + 142, 480, 22, "rgba(238,244,252,0.62)", 15);
-}
-
-function drawSettingsInfoCard(x, y, w, h, title, body, color) {
-  ctx.save();
-  ctx.fillStyle = "rgba(8, 13, 20, 0.52)";
-  roundedRect(x, y, w, h, 12, true, false);
-  ctx.strokeStyle = hexToRgba(color, 0.24);
-  roundedRect(x, y, w, h, 12, false, true);
-  label(String(title).toUpperCase(), x + 18, y + 30, 14, color);
-  wrapText(body, x + 18, y + 58, w - 36, 20, "rgba(238,244,252,0.62)", 13);
-  ctx.restore();
+  if (state.settingsTab === "language") {
+    label(t("languageSettingsTitle"), x, y, 26, "#8fe8dc");
+    drawLanguageToggle(x, y + 72);
+    wrapText(t("languageHelp"), x, y + 142, 480, 22, "rgba(238,244,252,0.62)", 15);
+    return;
+  }
+  label(t("feedbackTitle"), x, y, 26, "#8fe8dc");
+  const feedbackCard = getSettingsFeedbackCardRect();
+  drawSettingsFeedbackCard(feedbackCard.x, feedbackCard.y, feedbackCard.w, feedbackCard.h);
 }
 
 function drawSettingsFeedbackCard(x, y, w, h) {
-  const bugRect = getSettingsFeedbackButtonRect("bug", x, y, w);
-  const suggestionRect = getSettingsFeedbackButtonRect("suggestion", x, y, w);
+  const bugRect = getSettingsFeedbackButtonRect("bug", x, y, w, h);
+  const suggestionRect = getSettingsFeedbackButtonRect("suggestion", x, y, w, h);
   ctx.save();
   ctx.fillStyle = "rgba(8, 13, 20, 0.56)";
   roundedRect(x, y, w, h, 12, true, false);
   ctx.strokeStyle = "rgba(126, 231, 255, 0.22)";
   ctx.lineWidth = 1.5;
   roundedRect(x, y, w, h, 12, false, true);
-  label(t("feedbackTitle").toUpperCase(), x + 18, y + 30, 14, "#8fe8dc");
-  wrapText(t("feedbackHelp"), x + 18, y + 58, 390, 18, "rgba(238,244,252,0.62)", 13);
+  wrapText(t("feedbackHelp"), x + 24, y + 42, w - 48, 22, "rgba(238,244,252,0.72)", 15);
   drawSettingsFeedbackButton(bugRect, t("feedbackReportBug"), "#ffb7bd");
   drawSettingsFeedbackButton(suggestionRect, t("feedbackSuggestImprovement"), "#fff0a6");
   ctx.restore();
@@ -7629,13 +7604,18 @@ function drawSettingsFeedbackButton(rect, text, color) {
   ctx.restore();
 }
 
-function getSettingsFeedbackButtonRect(kind, cardX, cardY, cardW) {
-  const gap = 12;
-  const buttonW = 132;
+function getSettingsFeedbackCardRect() {
+  const origin = getSettingsContentOrigin();
+  return { x: origin.x, y: origin.y + 58, w: 590, h: 164 };
+}
+
+function getSettingsFeedbackButtonRect(kind, cardX, cardY, cardW, cardH = 164) {
+  const gap = 18;
+  const buttonW = 154;
   const buttonH = 38;
-  const firstX = cardX + cardW - 18 - buttonW * 2 - gap;
+  const firstX = cardX + cardW - 24 - buttonW * 2 - gap;
   const x = kind === "bug" ? firstX : firstX + buttonW + gap;
-  return { x, y: cardY + 50, w: buttonW, h: buttonH };
+  return { x, y: cardY + cardH - 54, w: buttonW, h: buttonH };
 }
 
 function drawPauseStat(x, y, name, value) {
@@ -7822,7 +7802,6 @@ function drawMoveGuideOverlay() {
   drawCard(176, 70, 928, 580);
   label(t("moveGuide"), 232, 136, 44, "#f5f1e6");
   label(t("moveGuideSubtitle"), 236, 174, 16, "#9fb4ff");
-  label(t("practiceHint"), 820, 190, 12, "rgba(255,240,166,0.62)");
   const rows = [
     ["T-Spin", t("guideTSpinText"), "#f2d36b"],
     ["T-Spin Mini", t("guideTSpinMiniText"), "#d7c2ff"],
@@ -7831,10 +7810,9 @@ function drawMoveGuideOverlay() {
     ["Perfect Clear", t("guidePerfectClearText"), "#fff0a6"],
     ["Incoming Cancel", t("guideIncomingCancelText"), "#ffb7bd"],
   ];
-  rows.forEach((row, i) => drawGuideRow(232, 216 + i * 52, row[0], row[1], row[2], 558));
-  drawDamageRulesBox(232, 528, 558, 56);
-  drawChallengePanel(820, 216);
-  drawMenuButton(232, 596, 180, 40, t("back"), "Esc");
+  rows.forEach((row, i) => drawGuideRow(232, 206 + i * 54, row[0], row[1], row[2], 816));
+  drawDamageRulesBox(232, 538, 816, 56);
+  drawMenuButton(232, 606, 180, 40, t("back"), "Esc");
   ctx.restore();
 }
 
@@ -7853,30 +7831,13 @@ function drawDamageRulesBox(x, y, w, h) {
 function drawGuideRow(x, y, title, text, color, width = 620) {
   ctx.save();
   ctx.fillStyle = "rgba(8, 13, 20, 0.6)";
-  roundedRect(x, y, width, 42, 8, true, false);
+  roundedRect(x, y, width, 48, 8, true, false);
+  ctx.fillStyle = hexToRgba(color, 0.28);
+  roundedRect(x, y, 5, 48, 5, true, false);
   ctx.strokeStyle = hexToRgba(color, 0.25);
-  roundedRect(x, y, width, 42, 8, false, true);
-  label(title, x + 16, y + 27, 17, color);
-  label(text, x + 146, y + 27, 13, "rgba(238,244,252,0.68)");
-  ctx.restore();
-}
-
-function drawChallengePanel(x, y) {
-  ctx.save();
-  label(t("challengePanel"), x, y - 18, 20, "#fff0a6");
-  for (let i = 0; i < CHALLENGES.length; i += 1) {
-    const challenge = CHALLENGES[i];
-    const cy = y + i * 94;
-    const hovered = pointInRect(state.pointer.x, state.pointer.y, x, cy, 230, 78);
-    ctx.fillStyle = hovered ? "rgba(241, 211, 107, 0.22)" : "rgba(8, 13, 20, 0.62)";
-    roundedRect(x, cy, 230, 78, 9, true, false);
-    ctx.strokeStyle = hovered ? "rgba(255, 244, 168, 0.58)" : "rgba(255, 244, 168, 0.2)";
-    ctx.lineWidth = 2;
-    roundedRect(x, cy, 230, 78, 9, false, true);
-    label(challenge.title, x + 16, cy + 25, 18, "#f5f1e6");
-    wrapText(t(challenge.descKey), x + 16, cy + 48, 196, 18, "rgba(238,244,252,0.64)", 13);
-  }
-  label(t("clickToStart"), x, y + 292, 14, "rgba(238,244,252,0.52)");
+  roundedRect(x, y, width, 48, 8, false, true);
+  fitLabel(title, x + 18, y + 30, 176, 17, color, 13, "800", true);
+  wrapText(text, x + 218, y + 20, width - 242, 16, "rgba(238,244,252,0.72)", 12);
   ctx.restore();
 }
 
@@ -8039,12 +8000,28 @@ function drawLanguagePill(x, y, w, h, text, active) {
 function drawControlGrid(x, y, columns = UI_LAYOUT.controlsGrid.columns, gapX = UI_LAYOUT.controlsGrid.gapX) {
   const layout = UI_LAYOUT.controlsGrid;
   for (let i = 0; i < CONTROL_ACTIONS.length; i += 1) {
+    const action = CONTROL_ACTIONS[i].id;
     const col = i % columns;
     const row = Math.floor(i / columns);
     const rx = x + col * gapX;
     const ry = y + row * layout.rowH;
-    drawKeyBindRow(rx, ry, controlLabel(CONTROL_ACTIONS[i].id), state.controls[CONTROL_ACTIONS[i].id], state.bindingAction === CONTROL_ACTIONS[i].id, layout.rowW);
+    drawKeyBindRow(rx, ry, controlLabel(action), controlDisplayValue(action), state.bindingAction === action, layout.rowW);
   }
+}
+
+function controlDisplayValue(action) {
+  return {
+    left: "←",
+    right: "→",
+    softDrop: "↓",
+    hardDrop: "Space",
+    rotateCW: "↑ / X",
+    rotateCCW: "Z",
+    rotate180: "A",
+    hold: "Shift / C",
+    pause: "P / Esc",
+    mute: "M",
+  }[action] || formatControlKey(state.controls[action] || "");
 }
 
 function drawPauseButton() {
@@ -8157,11 +8134,12 @@ function drawKeyBindRow(x, y, text, value, binding, w = UI_LAYOUT.controlsGrid.r
   ctx.strokeStyle = binding ? "rgba(255, 244, 168, 0.62)" : "rgba(145, 232, 222, 0.32)";
   ctx.lineWidth = 2;
   roundedRect(keyX, y + 3, keyW, keyH, 7, false, true);
-  ctx.font = canvasFont("800", 15, binding ? t("settingPressKey") : formatControlKey(value));
+  const shownKey = binding ? t("settingPressKey") : value;
+  ctx.font = canvasFont("800", 15, shownKey);
   ctx.fillStyle = "#f3f2ea";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  fitLabel(binding ? t("settingPressKey") : formatControlKey(value), keyX + keyW / 2, y + 21, keyW - 16, 15, "#f3f2ea", 11, "800");
+  fitLabel(shownKey, keyX + keyW / 2, y + 21, keyW - 16, 15, "#f3f2ea", 11, "800");
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
   ctx.restore();
@@ -8428,7 +8406,7 @@ window.addEventListener("keydown", (event) => {
     }
     else if (state.mode === "start") {
       state.settingsOpen = !state.settingsOpen;
-      if (state.settingsOpen) state.settingsTab = "general";
+      if (state.settingsOpen) state.settingsTab = "controls";
     }
     else if (state.mode === "paused") {
       state.mode = "playing";
@@ -8549,7 +8527,7 @@ canvas.addEventListener("mousedown", (event) => {
       else if (pointInRect(p.x, p.y, bx, m.tutorialY, bw, m.buttonH)) startTutorial();
       else if (pointInRect(p.x, p.y, bx, m.utilityY, bw, m.buttonH)) {
         state.settingsOpen = true;
-        state.settingsTab = "general";
+        state.settingsTab = "controls";
         playSfx("hold");
       }
       else if (pointInRect(p.x, p.y, bx, m.utilityY + m.buttonH + m.buttonGap, bw, m.buttonH)) {
@@ -8558,15 +8536,7 @@ canvas.addEventListener("mousedown", (event) => {
       }
       return;
     }
-    if (state.mode === "guide") {
-      for (let i = 0; i < CHALLENGES.length; i += 1) {
-        if (pointInRect(p.x, p.y, 820, 216 + i * 94, 230, 78)) {
-          startChallenge(CHALLENGES[i].id);
-          return;
-        }
-      }
-    }
-    if (state.mode === "guide" && pointInRect(p.x, p.y, 232, 596, 180, 40)) {
+    if (state.mode === "guide" && pointInRect(p.x, p.y, 232, 606, 180, 40)) {
       state.mode = "start";
       playSfx("hold");
       return;
@@ -8612,7 +8582,7 @@ function handlePausePointerDown(x, y) {
   }
   if (pointInRect(x, y, m.x + 56, m.y + 270, m.w - 112, 44)) {
     state.pauseView = "settings";
-    state.settingsTab = "general";
+    state.settingsTab = "controls";
     playSfx("hold");
     return;
   }
@@ -8691,11 +8661,10 @@ function getSettingsContentOrigin() {
 }
 
 function hitSettingsFeedbackLink(x, y) {
-  if (state.settingsTab !== "general") return "";
-  const origin = getSettingsContentOrigin();
-  const card = { x: origin.x, y: origin.y + 318, w: 710 };
-  const bugRect = getSettingsFeedbackButtonRect("bug", card.x, card.y, card.w);
-  const suggestionRect = getSettingsFeedbackButtonRect("suggestion", card.x, card.y, card.w);
+  if (state.settingsTab !== "feedback") return "";
+  const card = getSettingsFeedbackCardRect();
+  const bugRect = getSettingsFeedbackButtonRect("bug", card.x, card.y, card.w, card.h);
+  const suggestionRect = getSettingsFeedbackButtonRect("suggestion", card.x, card.y, card.w, card.h);
   if (pointInRect(x, y, bugRect.x, bugRect.y, bugRect.w, bugRect.h)) return GITHUB_REPORT_BUG_URL;
   if (pointInRect(x, y, suggestionRect.x, suggestionRect.y, suggestionRect.w, suggestionRect.h)) return GITHUB_SUGGESTION_URL;
   return "";
