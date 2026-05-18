@@ -103,10 +103,17 @@ function canvasFont(weight, size, text = "", forceDisplay = false) {
 }
 
 const forestBg = registerImageAsset("forest-background", "assets/magic-forest-bg-v2.png");
+const stageForestRuinsDayBg = registerImageAsset("stage-forest-ruins-day", "assets/backgrounds/stage_forest_ruins_day.png");
+const stageForestGateNightBg = registerImageAsset("stage-forest-gate-night", "assets/backgrounds/stage_forest_gate_night.png");
+const stageArcaneRuinsMidBg = registerImageAsset("stage-arcane-ruins-mid", "assets/backgrounds/stage_arcane_ruins_mid.png");
+const stageCorruptedForestLateBg = registerImageAsset("stage-corrupted-forest-late", "assets/backgrounds/stage_corrupted_forest_late.png");
+const stageRiftBossBg = registerImageAsset("stage-rift-boss", "assets/backgrounds/stage_rift_boss.png");
 const noaArt = registerImageAsset("noa-portrait", "assets/noa.png");
 const slimeArt = registerImageAsset("forest-slime", "assets/forest-slime.png");
 const rosterArt = registerImageAsset("character-roster", "assets/character-roster-v4-alpha.png");
 const heroIdleArt = registerImageAsset("hero-idle-concept", "assets/images/clean/ET_Character_alpha.png");
+const menuIdleCubeSheet = registerImageAsset("menu-idle-cube-sheet", "assets/images/clean/noa_menu_idle_cube.png");
+const menuIdleMeditateSheet = registerImageAsset("menu-idle-meditate-sheet", "assets/images/clean/noa_menu_idle_meditate.png");
 const heroMeleeSheet = registerImageAsset("hero-melee-sheet", "assets/images/clean/Knife_alpha.png");
 const heroRangedSheet = registerImageAsset("hero-ranged-sheet", "assets/images/clean/Gun_alpha.png");
 const heroCombo1Sheet = registerImageAsset("hero-combo-1-sheet", "assets/images/clean/hero_combo_01_spritesheet_alpha.png");
@@ -121,7 +128,61 @@ const enemyAttackSheets = {
   mushroom: registerImageAsset("enemy-attack-mushroom", "assets/images/clean/enemy_attack_mushroom_redesign.png"),
   beetle: registerImageAsset("enemy-attack-beetle", "assets/images/clean/enemy_attack_beetle_redesign.png"),
   mist: registerImageAsset("enemy-attack-mist", "assets/images/clean/enemy_attack_mist_redesign.png"),
+  thorn: registerImageAsset("enemy-attack-thorn-prowler", "assets/images/clean/enemy_attack_thorn_prowler.png"),
+  wisp: registerImageAsset("enemy-attack-wisp-moth", "assets/images/clean/enemy_attack_wisp_moth.png"),
+  sentinel: registerImageAsset("enemy-attack-ruin-sentinel", "assets/images/clean/enemy_attack_ruin_sentinel.png"),
   king: registerImageAsset("enemy-attack-king", "assets/images/clean/enemy_attack_king_redesign.png"),
+};
+
+const BACKGROUND_STAGES = [
+  {
+    id: "forest-ruins-day",
+    startWave: 1,
+    image: stageForestRuinsDayBg,
+    fallback: forestBg,
+    dim: 0.22,
+    vignette: 0.48,
+    tint: "rgba(52, 124, 148, 0.05)",
+  },
+  {
+    id: "forest-gate-night",
+    startWave: 5,
+    image: stageForestGateNightBg,
+    fallback: forestBg,
+    dim: 0.25,
+    vignette: 0.54,
+    tint: "rgba(38, 96, 145, 0.09)",
+  },
+  {
+    id: "arcane-ruins-mid",
+    startWave: 10,
+    image: stageArcaneRuinsMidBg,
+    fallback: forestBg,
+    dim: 0.34,
+    vignette: 0.6,
+    centerDim: 0.12,
+    tint: "rgba(72, 86, 188, 0.08)",
+  },
+  {
+    id: "corrupted-forest-late",
+    startWave: 15,
+    image: stageCorruptedForestLateBg,
+    fallback: forestBg,
+    dim: 0.46,
+    vignette: 0.68,
+    tint: "rgba(100, 52, 184, 0.14)",
+  },
+];
+
+const BOSS_BACKGROUND_STAGE = {
+  id: "rift-boss",
+  bossOnly: true,
+  image: stageRiftBossBg,
+  fallback: forestBg,
+  dim: 0.5,
+  vignette: 0.74,
+  centerDim: 0.24,
+  tint: "rgba(88, 54, 190, 0.16)",
 };
 
 const HERO_FRAME_RECTS = [
@@ -218,12 +279,97 @@ const audio = {
   masterVolume: 1,
   musicVolume: 0.92,
   sfxVolume: 0.78,
-  outputBoost: 4.4,
+  outputBoost: 3.2,
+  sfxCooldowns: new Map(),
+  activeSfx: [],
+  maxSfxVoices: 18,
+  lastLowHpPulseAt: 0,
+  lastEnemyWarningAt: 0,
+  lastEnemyWarningKey: "",
+  musicStage: "menu",
+  musicLayers: { menu: 1, early: 0, mid: 0, late: 0, boss: 0, danger: 0 },
+  lastBossStingerWave: 0,
 };
 
 const MUSIC_BPM = 105;
 const MUSIC_STEP_MS = 60000 / (MUSIC_BPM * 4);
 const MUSIC_ROOT = 146.83; // D minor, stable fantasy battle color.
+const MUSIC_STAGE_KEYS = ["menu", "early", "mid", "late", "boss"];
+const MUSIC_LAYER_KEYS = [...MUSIC_STAGE_KEYS, "danger"];
+const MUSIC_LAYER_SMOOTHING = 0.1;
+const MUSIC_DANGER_SMOOTHING = 0.08;
+const MUSIC_STAGES = {
+  menu: {
+    energy: 0.22,
+    drone: 0.62,
+    bass: 0.12,
+    drums: 0.04,
+    hand: 0,
+    click: 0.12,
+    shaker: 0,
+    bell: 1.16,
+    pluck: 0.42,
+    noise: 0.02,
+    rootOffset: 0,
+    motif: "menu",
+  },
+  early: {
+    energy: 0.42,
+    drone: 0.74,
+    bass: 0.38,
+    drums: 0.24,
+    hand: 0.12,
+    click: 0.26,
+    shaker: 0.04,
+    bell: 1,
+    pluck: 0.82,
+    noise: 0.04,
+    rootOffset: 0,
+    motif: "early",
+  },
+  mid: {
+    energy: 0.58,
+    drone: 1.04,
+    bass: 0.66,
+    drums: 0.48,
+    hand: 0.42,
+    click: 0.5,
+    shaker: 0.16,
+    bell: 0.84,
+    pluck: 0.72,
+    noise: 0.12,
+    rootOffset: -2,
+    motif: "mid",
+  },
+  late: {
+    energy: 0.72,
+    drone: 1.26,
+    bass: 0.86,
+    drums: 0.66,
+    hand: 0.54,
+    click: 0.42,
+    shaker: 0.28,
+    bell: 0.64,
+    pluck: 0.54,
+    noise: 0.24,
+    rootOffset: -5,
+    motif: "late",
+  },
+  boss: {
+    energy: 0.86,
+    drone: 1.42,
+    bass: 1.04,
+    drums: 0.9,
+    hand: 0.66,
+    click: 0.34,
+    shaker: 0.34,
+    bell: 0.58,
+    pluck: 0.48,
+    noise: 0.32,
+    rootOffset: -7,
+    motif: "boss",
+  },
+};
 
 const W = canvas.width;
 const H = canvas.height;
@@ -295,30 +441,134 @@ const BALANCE = {
 };
 
 const SFX_MIX = {
-  move: 0.42,
-  rotate: 0.52,
-  rotateT: 0.72,
-  drop: 0.72,
-  hold: 0.55,
-  clear: 0.82,
-  bigClear: 1,
-  combo: 1.08,
-  b2b: 1.08,
-  tspin: 1.12,
-  perfect: 1.18,
-  hitLight: 0.76,
-  hitHeavy: 1.08,
-  hitArcane: 1.22,
-  weakness: 1.05,
-  cancel: 0.86,
-  enemy: 0.95,
-  wave: 0.84,
-  upgrade: 0.82,
-  upgradeReady: 0.66,
-  start: 0.78,
-  defeat: 0.9,
+  move: 0.3,
+  softDrop: 0.2,
+  rotate: 0.4,
+  rotateT: 0.56,
+  drop: 0.7,
+  lock: 0.38,
+  hold: 0.5,
+  clear: 0.64,
+  doubleClear: 0.74,
+  tripleClear: 0.82,
+  bigClear: 0.94,
+  combo: 0.92,
+  b2b: 0.98,
+  tspin: 1.06,
+  perfect: 1.12,
+  hitLight: 0.58,
+  hitHeavy: 0.86,
+  hitArcane: 0.96,
+  weakness: 0.88,
+  cancel: 0.72,
+  shield: 0.78,
+  enemyWarn: 0.58,
+  enemyWarnStrong: 0.82,
+  enemy: 0.82,
+  lowHp: 0.52,
+  wave: 0.78,
+  upgrade: 0.78,
+  upgradeReady: 0.62,
+  start: 0.72,
+  defeat: 0.82,
   ...(window.TST_SFX_MIX || {}),
 };
+
+const SFX_COOLDOWNS = {
+  move: 34,
+  softDrop: 105,
+  rotate: 58,
+  rotateT: 82,
+  drop: 120,
+  lock: 90,
+  hold: 95,
+  clear: 60,
+  doubleClear: 70,
+  tripleClear: 82,
+  bigClear: 115,
+  combo: 150,
+  b2b: 180,
+  tspin: 220,
+  perfect: 420,
+  hitLight: 72,
+  hitHeavy: 130,
+  hitArcane: 190,
+  weakness: 160,
+  cancel: 140,
+  shield: 190,
+  enemyWarn: 850,
+  enemyWarnStrong: 950,
+  enemy: 300,
+  lowHp: 2500,
+  wave: 360,
+  upgrade: 220,
+  upgradeReady: 240,
+  countdown: 180,
+  countdownStart: 360,
+  start: 360,
+  defeat: 900,
+};
+
+const SFX_DURATIONS = {
+  move: 60,
+  softDrop: 48,
+  rotate: 90,
+  rotateT: 140,
+  drop: 150,
+  lock: 110,
+  hold: 150,
+  clear: 170,
+  doubleClear: 210,
+  tripleClear: 250,
+  bigClear: 330,
+  combo: 360,
+  b2b: 380,
+  tspin: 520,
+  perfect: 920,
+  hitLight: 110,
+  hitHeavy: 240,
+  hitArcane: 420,
+  weakness: 240,
+  cancel: 210,
+  shield: 220,
+  enemyWarn: 230,
+  enemyWarnStrong: 330,
+  enemy: 360,
+  lowHp: 420,
+  wave: 520,
+  upgrade: 420,
+  upgradeReady: 260,
+  countdown: 160,
+  countdownStart: 360,
+  start: 360,
+  defeat: 760,
+};
+
+const SFX_PRIORITY = {
+  move: 1,
+  softDrop: 1,
+  rotate: 1,
+  rotateT: 2,
+  lock: 2,
+  clear: 3,
+  doubleClear: 3,
+  tripleClear: 3,
+  bigClear: 4,
+  combo: 4,
+  b2b: 4,
+  tspin: 5,
+  perfect: 6,
+  hitHeavy: 4,
+  hitArcane: 5,
+  enemyWarnStrong: 5,
+  enemy: 5,
+  lowHp: 3,
+  defeat: 6,
+};
+
+const LOW_HP_WARNING_RATIO = 0.3;
+const LOW_HP_WARNING_COOLDOWN_MS = 3000;
+const ENEMY_WARNING_COOLDOWN_MS = 1200;
 
 const TUTORIAL_STEPS = [
   { id: "line", promptKey: "tutorialPrompt.line", detailKey: "tutorialStep.line" },
@@ -380,16 +630,16 @@ const RUN_MODES = {
 };
 
 const DEFAULT_CONTROLS = {
-  left: "arrowleft",
-  right: "arrowright",
-  softDrop: "arrowdown",
-  hardDrop: " ",
-  rotateCW: "arrowup",
-  rotateCCW: "z",
-  rotate180: "a",
-  hold: "shift",
-  pause: "p",
-  mute: "m",
+  left: ["arrowleft"],
+  right: ["arrowright"],
+  softDrop: ["arrowdown"],
+  hardDrop: [" "],
+  rotateCW: ["arrowup", "x"],
+  rotateCCW: ["z"],
+  rotate180: ["a"],
+  hold: ["shift", "c"],
+  pause: ["p", "escape"],
+  mute: ["m"],
 };
 
 const UI_LAYOUT = {
@@ -447,6 +697,31 @@ const MENU_IDLE_SEQUENCE = [
 ];
 
 const MENU_IDLE_TRANSITION_MS = 420;
+const MENU_SPECIAL_IDLE_INTERVAL_MS = 10000;
+const MENU_SPECIAL_IDLE_FADE_MS = 180;
+
+const MENU_HERO_SPECIAL_ANIMATIONS = {
+  cube: {
+    id: "menu-idle-cube",
+    image: menuIdleCubeSheet,
+    columns: 4,
+    rows: 3,
+    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    frameMs: 150,
+    draw: { x: -158, y: -252, w: 316, h: 438 },
+    noKeying: true,
+  },
+  meditate: {
+    id: "menu-idle-meditate",
+    image: menuIdleMeditateSheet,
+    columns: 4,
+    rows: 3,
+    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    frameMs: 170,
+    draw: { x: -166, y: -252, w: 332, h: 438 },
+    noKeying: true,
+  },
+};
 
 const CONTROL_ACTIONS = [
   { id: "left", labelKey: "control.left" },
@@ -460,6 +735,44 @@ const CONTROL_ACTIONS = [
   { id: "pause", labelKey: "control.pause" },
   { id: "mute", labelKey: "control.mute" },
 ];
+
+function normalizeControlKeys(value) {
+  const source = Array.isArray(value) ? value : (typeof value === "string" ? [value] : []);
+  const keys = [];
+  for (const key of source) {
+    if (typeof key !== "string") continue;
+    const normalized = normalizeControlKey(key);
+    if (!normalized || keys.includes(normalized)) continue;
+    keys.push(normalized);
+  }
+  return keys;
+}
+
+function normalizeControlsMap(source = {}) {
+  const controls = {};
+  for (const { id } of CONTROL_ACTIONS) {
+    const hasSavedValue = Object.prototype.hasOwnProperty.call(source, id);
+    const fallback = DEFAULT_CONTROLS[id] || [];
+    const keys = normalizeControlKeys(hasSavedValue ? source[id] : fallback);
+    controls[id] = keys.length || hasSavedValue ? keys : normalizeControlKeys(fallback);
+  }
+  return controls;
+}
+
+function serializeControls(controls) {
+  const normalized = normalizeControlsMap(controls || {});
+  return Object.fromEntries(Object.entries(normalized).map(([id, keys]) => [id, keys.slice()]));
+}
+
+function getControlKeys(action) {
+  const controls = state && state.controls ? state.controls : DEFAULT_CONTROLS;
+  const hasValue = Object.prototype.hasOwnProperty.call(controls, action);
+  return normalizeControlKeys(hasValue ? controls[action] : DEFAULT_CONTROLS[action]);
+}
+
+function allControlKeys() {
+  return CONTROL_ACTIONS.flatMap(({ id }) => getControlKeys(id));
+}
 
 const translations = {
   zh: {
@@ -512,7 +825,7 @@ const translations = {
     arr: "ARR 連移",
     softDropMs: "軟降速度",
     lockDelayMs: "鎖定延遲",
-    bindHelp: "點擊任一按鍵欄位後按下新按鍵，Esc 取消。",
+    bindHelp: "點擊任一按鍵欄位後按下新按鍵，會取代該動作目前鍵位。Esc 取消。",
     binding: "請按下新按鍵，Esc 取消",
     closeHint: "Esc / 齒輪關閉設定",
     back: "返回",
@@ -692,6 +1005,9 @@ const translations = {
     "special.mushroom": "干擾 Next",
     "special.beetle": "單行傷害減半",
     "special.mist": "垃圾洞漂移",
+    "special.thorn": "突襲斬擊",
+    "special.wisp": "追蹤光彈",
+    "special.sentinel": "地裂重擊",
     "special.king": "分階段壓迫",
     "summaryDamage": "總傷害",
     "summaryBestHit": "最高單擊",
@@ -759,6 +1075,12 @@ const translations = {
     intentSporeHexDetail: "{damage} 傷害 / 28% +1 垃圾",
     intentArmorCrush: "甲殼重擊",
     intentArmorCrushDetail: "{damage} 傷害 / +{garbage} 垃圾",
+    intentDashSlash: "突襲斬擊",
+    intentDashSlashDetail: "{damage} 傷害 / +{garbage} 垃圾",
+    intentHomingBolt: "追蹤光彈",
+    intentHomingBoltDetail: "{damage} 傷害",
+    intentGroundSlam: "地裂重擊",
+    intentGroundSlamDetail: "{damage} 傷害 / +{garbage} 垃圾",
     intentBossPhase: "階段 {phase}",
     intentBossPhaseDetail: "{damage} 傷害 / Next 干擾 + 垃圾",
     intentGarbageSurge: "垃圾湧升",
@@ -845,6 +1167,12 @@ const translations = {
     "enemy.beetle.trait": "甲殼衝撞",
     "enemy.mist.name": "迷霧燈靈",
     "enemy.mist.trait": "幽光護盾",
+    "enemy.thorn.name": "荊刺潛獵獸",
+    "enemy.thorn.trait": "突襲斬擊",
+    "enemy.wisp.name": "幽光蛾",
+    "enemy.wisp.trait": "追蹤光彈",
+    "enemy.sentinel.name": "遺跡守衛",
+    "enemy.sentinel.trait": "菁英：地裂重擊",
     "enemy.king.name": "古樹巨像",
     "enemy.king.trait": "Boss：大地重擊",
   },
@@ -898,7 +1226,7 @@ const translations = {
     arr: "ARR Repeat",
     softDropMs: "Soft Drop",
     lockDelayMs: "Lock Delay",
-    bindHelp: "Click a key field, then press a new key. Esc cancels.",
+    bindHelp: "Click a key field, then press a new key to replace that action. Esc cancels.",
     binding: "Press a new key. Esc cancels",
     closeHint: "Esc / gear closes settings",
     back: "Back",
@@ -1078,6 +1406,9 @@ const translations = {
     "special.mushroom": "Scrambles Next",
     "special.beetle": "Halves Single damage",
     "special.mist": "Garbage hole drift",
+    "special.thorn": "Dash slash",
+    "special.wisp": "Homing bolt",
+    "special.sentinel": "Ground slam",
     "special.king": "Phase pressure",
     "summaryDamage": "Total Damage",
     "summaryBestHit": "Best Hit",
@@ -1145,6 +1476,12 @@ const translations = {
     intentSporeHexDetail: "{damage} dmg / 28% +1 incoming",
     intentArmorCrush: "Armor Crush",
     intentArmorCrushDetail: "{damage} dmg / +{garbage} incoming",
+    intentDashSlash: "Dash Slash",
+    intentDashSlashDetail: "{damage} dmg / +{garbage} incoming",
+    intentHomingBolt: "Homing Bolt",
+    intentHomingBoltDetail: "{damage} damage",
+    intentGroundSlam: "Ground Slam",
+    intentGroundSlamDetail: "{damage} dmg / +{garbage} incoming",
     intentBossPhase: "Phase {phase}",
     intentBossPhaseDetail: "{damage} dmg / queue + incoming",
     intentGarbageSurge: "Garbage Surge",
@@ -1231,6 +1568,12 @@ const translations = {
     "enemy.beetle.trait": "ARMORED CHARGE",
     "enemy.mist.name": "MIST LANTERN SPRITE",
     "enemy.mist.trait": "WISP SHIELD",
+    "enemy.thorn.name": "THORN PROWLER",
+    "enemy.thorn.trait": "DASH SLASH",
+    "enemy.wisp.name": "WISP MOTH",
+    "enemy.wisp.trait": "HOMING BOLT",
+    "enemy.sentinel.name": "RUIN SENTINEL",
+    "enemy.sentinel.trait": "ELITE: GROUND SLAM",
     "enemy.king.name": "ANCIENT BARK COLOSSUS",
     "enemy.king.trait": "BOSS: EARTH SLAM",
   },
@@ -1245,7 +1588,10 @@ const ROSTER_CELLS = {
   mushroom: [3, 0],
   beetle: [0, 1],
   mist: [1, 1],
+  thorn: [2, 0],
+  wisp: [1, 1],
   stalker: [2, 1],
+  sentinel: [3, 1],
   king: [3, 1],
 };
 
@@ -1583,6 +1929,58 @@ const ENEMIES = [
     artKey: "mist-lantern-sprite",
   },
   {
+    id: "thorn",
+    name: "THORN PROWLER",
+    trait: "DASH SLASH",
+    hp: 165,
+    hpScale: 32,
+    damage: 9,
+    countdown: 6,
+    garbage: 1,
+    color: "#b174ff",
+    weakness: "combo",
+    filter: "hue-rotate(248deg) saturate(1.12) brightness(0.96)",
+    artSheet: "enemy01",
+    artRect: { x: 895, y: 126, w: 360, h: 246 },
+    artDraw: { x: -154, y: -154, w: 308, h: 232 },
+    artKey: "thorn-prowler",
+  },
+  {
+    id: "wisp",
+    name: "WISP MOTH",
+    trait: "HOMING BOLT",
+    hp: 130,
+    hpScale: 26,
+    damage: 8,
+    countdown: 5,
+    garbage: 0,
+    color: "#c7a7ff",
+    weakness: "b2b",
+    filter: "hue-rotate(214deg) saturate(1.08) brightness(1.1)",
+    artSheet: "enemy01",
+    artRect: { x: 205, y: 498, w: 365, h: 240 },
+    artDraw: { x: -148, y: -180, w: 296, h: 266 },
+    artKey: "wisp-moth",
+  },
+  {
+    id: "sentinel",
+    name: "RUIN SENTINEL",
+    trait: "ELITE: GROUND SLAM",
+    hp: 245,
+    hpScale: 48,
+    damage: 11,
+    countdown: 8,
+    garbage: 1,
+    color: "#d7c28f",
+    weakness: "spin",
+    filter: "grayscale(0.22) sepia(0.22) saturate(0.95) brightness(0.9)",
+    armorSingle: 0.65,
+    artSheet: "enemy01",
+    artRect: { x: 892, y: 508, w: 385, h: 284 },
+    artDraw: { x: -160, y: -184, w: 320, h: 292 },
+    artKey: "ruin-sentinel",
+  },
+  {
     id: "king",
     name: "ANCIENT BARK COLOSSUS",
     trait: "BOSS: EARTH SLAM",
@@ -1650,6 +2048,36 @@ const ENEMY_ATTACK_ANIMATIONS = {
     frames: [0, 1, 2, 3, 4, 5, 6, 7],
     frameMs: ENEMY_ATTACK_FRAME_MS,
     draw: { x: -202, y: -176, w: 400, h: 324 },
+    noKeying: true,
+  },
+  thorn: {
+    id: "enemy-attack-thorn",
+    image: enemyAttackSheets.thorn,
+    columns: 4,
+    rows: 2,
+    frames: [0, 1, 2, 3, 4, 5, 6, 7],
+    frameMs: ENEMY_ATTACK_FRAME_MS,
+    draw: { x: -214, y: -158, w: 420, h: 306 },
+    noKeying: true,
+  },
+  wisp: {
+    id: "enemy-attack-wisp",
+    image: enemyAttackSheets.wisp,
+    columns: 4,
+    rows: 2,
+    frames: [0, 1, 2, 3, 4, 5, 6, 7],
+    frameMs: ENEMY_ATTACK_FRAME_MS,
+    draw: { x: -204, y: -180, w: 402, h: 326 },
+    noKeying: true,
+  },
+  sentinel: {
+    id: "enemy-attack-sentinel",
+    image: enemyAttackSheets.sentinel,
+    columns: 4,
+    rows: 2,
+    frames: [0, 1, 2, 3, 4, 5, 6, 7],
+    frameMs: ENEMY_ATTACK_FRAME_MS,
+    draw: { x: -218, y: -174, w: 428, h: 322 },
     noKeying: true,
   },
   king: {
@@ -1918,8 +2346,9 @@ const state = {
   settingsTab: "controls",
   pauseView: "menu",
   bindingAction: null,
+  menuSpecialIdleStartedAt: performance.now(),
   language: "zh",
-  controls: { ...DEFAULT_CONTROLS },
+  controls: normalizeControlsMap(DEFAULT_CONTROLS),
   tuning: { ...DEFAULT_TUNING },
   pointer: { x: 0, y: 0, down: false, dragging: null },
   countdownMs: 0,
@@ -2006,7 +2435,7 @@ function loadSave() {
             sfxVolume: audio.sfxVolume,
             muted: audio.muted,
             language: "zh",
-            controls: { ...DEFAULT_CONTROLS },
+            controls: serializeControls(DEFAULT_CONTROLS),
             tuning: { ...DEFAULT_TUNING },
           },
         };
@@ -2024,7 +2453,7 @@ function saveGame() {
       muted: audio.muted,
       audioRevision: 3,
       language: state.language,
-      controls: { ...state.controls },
+      controls: serializeControls(state.controls),
       tuning: { ...state.tuning },
     };
     window.localStorage.setItem(SAVE_KEY, JSON.stringify(state.save));
@@ -2040,10 +2469,10 @@ function applySavedSettings() {
   if (typeof settings.sfxVolume === "number") audio.sfxVolume = settings.sfxVolume;
   if (typeof settings.muted === "boolean") audio.muted = settings.muted;
   if (settings.language === "en" || settings.language === "zh") state.language = settings.language;
-  state.controls = { ...DEFAULT_CONTROLS, ...(settings.controls || {}) };
+  state.controls = normalizeControlsMap(settings.controls || DEFAULT_CONTROLS);
   state.tuning = { ...DEFAULT_TUNING, ...(settings.tuning || {}) };
   if ((settings.audioRevision || 0) < 3) state.tuning.softDrop = DEFAULT_TUNING.softDrop;
-  if (typeof settings.pause === "string") state.controls.pause = settings.pause;
+  if (typeof settings.pause === "string") state.controls.pause = normalizeControlKeys(settings.pause);
   applyAudioSettings();
   syncControlHints();
 }
@@ -2082,10 +2511,22 @@ function spawnPiece() {
   state.lastMoveWasRotate = false;
   state.lastRotationKind = null;
   if (collides(state.active, state.active.x, state.active.y, state.active.shape)) {
-    state.mode = "defeat";
-    setMessage("messageSpawnTop");
-    finishRun("defeat");
+    triggerDefeat("messageSpawnTop");
   }
+}
+
+function triggerDefeat(messageKey) {
+  if (state.mode === "defeat") return;
+  state.mode = "defeat";
+  setMessage(messageKey);
+  state.active = null;
+  state.lockTimer = null;
+  state.countdownMs = 0;
+  state.hitStopMs = 0;
+  state.pendingHits = [];
+  resetInputRepeat();
+  finishRun("defeat");
+  playSfx("defeat");
 }
 
 function resetGame(runMode = state.runMode || "endless", challengeId = null) {
@@ -2185,6 +2626,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.input.softDropTimer = 0;
   state.firstWaveHintMs = 0;
   state.hitStopMs = 0;
+  audio.lastBossStingerWave = 0;
   resetInputRepeat();
   refillQueue();
   spawnPiece();
@@ -2398,7 +2840,7 @@ function hardDrop() {
   state.lastMoveWasRotate = wasRotate;
   state.lastRotationKind = rotationKind;
   playSfx("drop");
-  lockPiece();
+  lockPiece(true);
 }
 
 function holdPiece() {
@@ -2412,9 +2854,7 @@ function holdPiece() {
     state.hold = current;
     state.active = newPiece(next);
     if (collides(state.active, state.active.x, state.active.y, state.active.shape)) {
-      state.mode = "defeat";
-      setMessage("messageHoldBlocked");
-      finishRun("defeat");
+      triggerDefeat("messageHoldBlocked");
     }
   }
   state.canHold = false;
@@ -2432,7 +2872,7 @@ function resetInputRepeat() {
   state.input.arr = 0;
 }
 
-function lockPiece() {
+function lockPiece(fromHardDrop = false) {
   const piece = state.active;
   if (!piece) return;
   const spinType = detectSpin(piece);
@@ -2441,16 +2881,15 @@ function lockPiece() {
       if (!piece.shape[r][c]) continue;
       const y = piece.y + r;
       const x = piece.x + c;
-      if (y < 0) {
-        state.mode = "defeat";
-        setMessage("messageLockAbove");
-        finishRun("defeat");
+      if (y < HIDDEN) {
+        triggerDefeat("messageLockAbove");
         return;
       }
       state.board[y][x] = piece.type;
     }
   }
 
+  if (!fromHardDrop) playSfx("lock");
   const cleared = clearLines();
   applyBattle(cleared, piece.type, spinType);
   state.placed += 1;
@@ -2706,9 +3145,32 @@ function getHitFeedbackIntensity(hit) {
 function finishPlayerTurnAfterHit(context) {
   if (state.mode !== "playing") return;
   state.enemyCountdown -= 1;
+  if (state.enemyCountdown === 1) triggerEnemyWarningCue();
   if (state.enemyCountdown <= 0) resolveEnemyAttack();
   if (context.lines === 0 && state.pendingGarbage > 0 && state.mode === "playing") {
     applyIncomingGarbage();
+  }
+}
+
+function triggerEnemyWarningCue() {
+  if (!audio.ctx || audio.muted || audio.sfxVolume <= 0 || audio.masterVolume <= 0) return;
+  if (state.mode !== "playing" || isBattleCountdownActive()) return;
+  const now = performance.now();
+  const key = `${state.wave}:${state.defeated}:${state.enemyType?.id}:${state.placed}`;
+  if (audio.lastEnemyWarningKey === key) return;
+  if (now - audio.lastEnemyWarningAt < ENEMY_WARNING_COOLDOWN_MS) return;
+  audio.lastEnemyWarningKey = key;
+  audio.lastEnemyWarningAt = now;
+  playSfx(state.enemyType?.id === "king" || state.miniBoss ? "enemyWarnStrong" : "enemyWarn");
+}
+
+function updateAudioCues(now = performance.now()) {
+  if (!audio.ctx || audio.muted || audio.sfxVolume <= 0 || audio.masterVolume <= 0) return;
+  if (state.mode !== "playing" || isBattleCountdownActive()) return;
+  const hpRatio = state.playerMaxHp > 0 ? state.playerHp / state.playerMaxHp : 1;
+  if (state.playerHp > 0 && hpRatio <= LOW_HP_WARNING_RATIO && now - audio.lastLowHpPulseAt >= LOW_HP_WARNING_COOLDOWN_MS) {
+    audio.lastLowHpPulseAt = now;
+    playSfx("lowHp");
   }
 }
 
@@ -2724,7 +3186,8 @@ function applyEnemyHit(hit) {
   applyEnemyBoardEffect(enemy);
   state.playerHit = 300;
   state.shake = Math.max(state.shake, 9 + garbageAdded * 2);
-  playSfx("enemy");
+  if (blocked > 0) playSfx("shield");
+  if (finalDamage > 0 || garbageAdded > 0) playSfx("enemy");
   state.floaters.push({
     x: 244,
     y: 216,
@@ -2742,10 +3205,7 @@ function applyEnemyHit(hit) {
     });
   }
   if (state.playerHp <= 0) {
-    state.mode = "defeat";
-    setMessage("messagePlayerDefeat");
-    finishRun("defeat");
-    playSfx("defeat");
+    triggerDefeat("messagePlayerDefeat");
   }
 }
 
@@ -2949,7 +3409,7 @@ function applyBattle(lines, pieceType, spinType) {
     weaknessHit: weaknessBonus.multiplier > 1,
     b2bHit: b2bBonus > 0,
     comboBurst: comboMilestoneBonus > 0 || state.combo >= 3,
-    sfx: state.lastPerfectClear ? "perfect" : spinType ? "tspin" : lines >= 4 ? "bigClear" : "clear",
+    sfx: state.lastPerfectClear ? "perfect" : spinType ? "tspin" : lines >= 4 ? "bigClear" : lines === 3 ? "tripleClear" : lines === 2 ? "doubleClear" : "clear",
     shake: state.lastPerfectClear ? 12 : Math.max(4 + lines * 1.8 + Math.min(4, state.combo * 0.7), spinType || lines >= 4 ? 8 : 0),
     burst: spinType || lines >= 4 || state.lastPerfectClear ? {
       x: 994,
@@ -3089,7 +3549,7 @@ function getHeroAttackStyle(lines, spinType, perfectClear, b2bBonus, comboAttack
 
 function startPerfectClearFx(damage) {
   const now = performance.now();
-  duckMusic(0.42, 1.35);
+  duckMusic(0.46, 1.05);
   state.perfectClearFx = {
     startedAt: now,
     duration: 1350,
@@ -3828,10 +4288,24 @@ function getEnemyCountdownForWave() {
   return Math.max(4, state.enemyType.countdown - Math.floor((state.wave - 1) / 10));
 }
 
+const MINI_BOSS_ENEMY_IDS = ["beetle", "mist", "sentinel"];
+
+function findEnemyById(id) {
+  return ENEMIES.find((enemy) => enemy.id === id) || ENEMIES[0];
+}
+
+function getStandardEnemyPool() {
+  return ENEMIES.filter((enemy) => enemy.id !== "king");
+}
+
 function getEnemyForWave(wave) {
-  if (wave % 10 === 0) return ENEMIES.find((enemy) => enemy.id === "king");
-  if (wave % 5 === 0) return ENEMIES.find((enemy) => enemy.id === (Math.floor(wave / 5) % 2 === 0 ? "mist" : "beetle"));
-  return ENEMIES[(wave - 1) % (ENEMIES.length - 1)];
+  if (wave % 10 === 0) return findEnemyById("king");
+  if (wave % 5 === 0) {
+    const miniIndex = Math.floor(wave / 5 - 1) % MINI_BOSS_ENEMY_IDS.length;
+    return findEnemyById(MINI_BOSS_ENEMY_IDS[miniIndex]);
+  }
+  const pool = getStandardEnemyPool();
+  return pool[(wave - 1) % pool.length];
 }
 
 function configureEnemyForWave() {
@@ -3853,10 +4327,7 @@ function addGarbageLines(count) {
   for (let i = 0; i < count; i += 1) {
     const removed = state.board.shift();
     if (removed && rowHasPlayableCells(removed)) {
-      state.mode = "defeat";
-      setMessage("messageGarbageTop");
-      finishRun("defeat");
-      playSfx("defeat");
+      triggerDefeat("messageGarbageTop");
       return;
     }
     const holeMin = state.ultimateActive ? ULTIMATE_WELL_START : 0;
@@ -3929,6 +4400,7 @@ function update(time) {
           }
         }
       }
+      updateAudioCues(time);
     }
 
     tickEffects(dt);
@@ -4022,6 +4494,7 @@ function updateSoftDrop(dt) {
       state.input.softDropTimer = 0;
       break;
     }
+    playSfx("softDrop");
   }
 }
 
@@ -4084,6 +4557,10 @@ function startMusic() {
 
 function playMusicStep() {
   if (!audio.ctx || audio.muted) return;
+  if (audio.musicVolume <= 0) {
+    audio.step += 1;
+    return;
+  }
   const t = audio.ctx.currentTime + 0.025;
   const step = audio.step;
   const beat = step % 16;
@@ -4094,54 +4571,205 @@ function playMusicStep() {
     phrase < 64 ? "build" :
     phrase < 96 ? "climax" :
     "return";
-  const boss = state.enemyType?.id === "king" || state.miniBoss;
-  const danger = state.playerHp / state.playerMaxHp < 0.36 || state.pendingGarbage >= 4;
+  const stage = getCurrentMusicStage();
+  const danger = isDangerMusicActive();
+  updateMusicLayers(stage, danger);
+  maybeTriggerBossStinger(stage, t);
+
+  const profile = getMusicProfile();
+  const motifStage = getDominantMusicStage();
+  const bossLevel = audio.musicLayers.boss || 0;
+  const dangerLevel = audio.musicLayers.danger || 0;
   const chain = state.combo >= 3 || state.b2bActive;
   const playing = state.mode === "playing";
+  const dampedMode = state.mode === "paused" || state.pauseView === "settings" || state.settingsOpen;
+  const activity = playing ? 1 : state.mode === "start" ? 0.84 : dampedMode ? 0.68 : 0.74;
   const sectionEnergy = section === "intro" ? 0.32 : section === "build" ? 0.56 : section === "climax" ? 0.82 : 0.48;
-  audio.targetEnergy = (playing ? sectionEnergy : 0.24) + (chain ? 0.12 : 0) + (boss ? 0.12 : 0) + (danger ? 0.1 : 0);
+  audio.targetEnergy = clamp(profile.energy + (playing ? sectionEnergy * 0.16 : 0.02) + (chain ? 0.07 : 0) + dangerLevel * 0.08, 0, 1);
   audio.energy += (Math.min(1, audio.targetEnergy) - audio.energy) * 0.14;
 
   const energy = audio.energy;
-  const root = MUSIC_ROOT;
+  const root = MUSIC_ROOT * Math.pow(2, profile.rootOffset / 12);
   const stepSec = MUSIC_STEP_MS / 1000;
-  const chord = [0, -5, -2, -7, 3, -5, 5, 0][bar];
+  const chord = getMusicChordPattern(motifStage)[bar % 8];
   const bassPattern = [0, 0, -12, 0, -5, -5, -12, -5, -2, -2, -12, -2, -7, -7, -12, -7];
-  const motifA = [0, null, 3, null, 5, 7, null, 10, 12, null, 10, 7, 5, null, 3, null];
-  const motifB = [12, null, 10, 7, 5, null, 7, 10, 12, 15, null, 12, 10, 7, 5, null];
-  const motifC = [7, 10, 12, null, 15, 12, 10, 7, 5, 7, 10, null, 12, 10, 7, null];
-  const motifReturn = [0, null, 3, 5, null, 7, 10, null, 12, null, 10, 7, 5, null, 3, null];
-  const motif = section === "intro" ? motifA : section === "build" ? motifB : section === "climax" ? motifC : motifReturn;
+  const motif = getMusicMotif(motifStage, section);
   const melodyDegree = motif[beat];
   const bassDegree = chord + bassPattern[beat];
   const bassNote = (root / 2) * Math.pow(2, bassDegree / 12);
   const drone = (root / 4) * Math.pow(2, chord / 12);
   const bellDegree = [12, 15, 19, 22, 24, 22, 19, 15, 17, 15, 12, 10, 12, 15, 19, 22][beat];
 
-  if (beat === 0) tone(drone, stepSec * 12, "sine", 0.09 + energy * 0.045, audio.musicGain, t);
-  if (beat % 4 === 0) tone(bassNote, stepSec * 3.6, "sine", 0.14 + energy * 0.09, audio.musicGain, t);
-  if (beat % 8 === 0 || (section === "climax" && beat % 4 === 0)) deepDrum(82 + boss * 12, 0.18 + energy * 0.14, t);
-  if (section !== "intro" && [3, 6, 10, 13].includes(beat)) handDrum(0.07 + energy * 0.07, t);
-  if ((section === "build" || section === "climax") && [2, 5, 7, 11, 14].includes(beat)) woodClick(0.045 + energy * 0.045, t);
-  if (section === "climax" && beat % 2 === 1) shaker(0.028 + energy * 0.025, t);
-  if (section === "return" && [6, 14].includes(beat)) handDrum(0.055 + energy * 0.045, t);
+  const droneVol = (0.052 + energy * 0.034) * profile.drone * activity;
+  const bassVol = (0.09 + energy * 0.058) * profile.bass * activity;
+  const drumVol = (0.12 + energy * 0.085) * profile.drums * activity;
+  const handVol = (0.052 + energy * 0.052) * profile.hand * activity;
+  const clickVol = (0.034 + energy * 0.034) * profile.click * activity;
+  const shakerVol = (0.02 + energy * 0.02) * profile.shaker * activity;
+  const bellVol = (0.048 + energy * 0.038) * profile.bell * activity;
+  const pluckVol = (section === "climax" ? 0.095 + energy * 0.056 : 0.07 + energy * 0.046) * profile.pluck * activity;
+  const noiseVol = (0.025 + energy * 0.03) * profile.noise * activity;
+
+  if (beat === 0 && droneVol > 0.004) tone(drone, stepSec * 12, "sine", droneVol, audio.musicGain, t);
+  if (beat % 4 === 0 && bassVol > 0.004) tone(bassNote, stepSec * 3.6, "sine", bassVol, audio.musicGain, t);
+  if ((beat % 8 === 0 || (profile.drums > 0.7 && beat % 4 === 0) || (section === "climax" && beat % 4 === 0)) && drumVol > 0.004) {
+    deepDrum(82 + bossLevel * 20 + profile.rootOffset * -1.4, drumVol, t);
+  }
+  if (section !== "intro" && [3, 6, 10, 13].includes(beat) && handVol > 0.004) handDrum(handVol, t);
+  if ((section === "build" || section === "climax" || profile.click > 0.45) && [2, 5, 7, 11, 14].includes(beat) && clickVol > 0.004) {
+    woodClick(clickVol, t);
+  }
+  if ((section === "climax" || profile.shaker > 0.25) && beat % 2 === 1 && shakerVol > 0.003) shaker(shakerVol, t);
+  if (section === "return" && [6, 14].includes(beat) && handVol > 0.004) handDrum(handVol * 0.78, t);
+  if (profile.noise > 0.08 && [1, 9].includes(beat) && noiseVol > 0.003) {
+    filteredNoise(0.12, noiseVol, "bandpass", motifStage === "late" ? 560 : 760, 1.5, audio.musicGain, t + 0.01);
+  }
 
   if (melodyDegree !== null && (playing || beat % 4 === 0)) {
     const note = root * Math.pow(2, (melodyDegree + chord * 0.16) / 12);
-    pluck(note, section === "climax" ? 0.13 + energy * 0.08 : 0.09 + energy * 0.06, t);
-    if (section === "climax" && beat % 4 === 0) pluck(note * 2, 0.05 + energy * 0.04, t + 0.02);
+    if (pluckVol > 0.004) pluck(note, pluckVol, t);
+    if (section === "climax" && beat % 4 === 0 && pluckVol > 0.004) pluck(note * 2, pluckVol * 0.32, t + 0.02);
   }
   if ([4, 12].includes(beat) || (section === "climax" && [3, 7, 11, 15].includes(beat))) {
     const bell = root * Math.pow(2, (bellDegree + chord * 0.12) / 12);
-    mysticBell(bell, 0.055 + energy * 0.055, t + 0.012);
+    if (bellVol > 0.004) mysticBell(bell, bellVol, t + 0.012);
   }
-  if (chain && beat % 4 === 2) mysticBell(root * Math.pow(2, (24 + chord * 0.1) / 12), 0.05 + energy * 0.04, t + 0.03);
-  if (boss && beat % 8 === 0) {
-    deepDrum(64, 0.18 + energy * 0.12, t + 0.035);
-    filteredNoise(0.09, 0.05 + energy * 0.035, "lowpass", 420, 1.2, audio.musicGain, t + 0.02);
+  if (chain && beat % 4 === 2 && bellVol > 0.004) mysticBell(root * Math.pow(2, (24 + chord * 0.1) / 12), bellVol * 0.78, t + 0.03);
+  if (bossLevel > 0.08 && beat % 8 === 0) {
+    deepDrum(58, (0.11 + energy * 0.07) * bossLevel * activity, t + 0.035);
+    filteredNoise(0.11, (0.035 + energy * 0.024) * bossLevel * activity, "lowpass", 420, 1.2, audio.musicGain, t + 0.02);
   }
-  if (danger && beat % 8 === 4) deepDrum(96, 0.16 + energy * 0.08, t);
+  if (bossLevel > 0.2 && [6, 14].includes(beat)) {
+    sweep(96, 220, 0.18, "sawtooth", 0.035 * bossLevel * activity, t, audio.musicGain);
+  }
+  if (dangerLevel > 0.05) {
+    if (beat % 8 === 4) deepDrum(96, (0.07 + energy * 0.04) * dangerLevel * activity, t);
+    if (beat === 12) filteredNoise(0.18, 0.032 * dangerLevel * activity, "lowpass", 280, 0.9, audio.musicGain, t);
+    if (beat === 0) tone(root / 2 * Math.pow(2, -1 / 12), stepSec * 8, "sine", 0.035 * dangerLevel * activity, audio.musicGain, t + 0.018);
+  }
   audio.step += 1;
+}
+
+function getMusicStageByWave(wave) {
+  if (wave > 0 && wave % 10 === 0) return "boss";
+  if (wave >= 15) return "late";
+  if (wave >= 5) return "mid";
+  return "early";
+}
+
+function getCurrentMusicStage() {
+  if (state.mode === "start" || state.mode === "guide") return "menu";
+  return getMusicStageByWave(state.wave || 1);
+}
+
+function isDangerMusicActive() {
+  if (state.mode !== "playing" || state.playerHp <= 0 || isBattleCountdownActive()) return false;
+  const hpRatio = state.playerMaxHp > 0 ? state.playerHp / state.playerMaxHp : 1;
+  return hpRatio < LOW_HP_WARNING_RATIO || state.pendingGarbage >= 4;
+}
+
+function updateMusicLayers(stage, danger) {
+  audio.musicStage = stage;
+  for (const key of MUSIC_STAGE_KEYS) {
+    const target = key === stage ? 1 : 0;
+    audio.musicLayers[key] += (target - audio.musicLayers[key]) * MUSIC_LAYER_SMOOTHING;
+  }
+  audio.musicLayers.danger += ((danger ? 1 : 0) - audio.musicLayers.danger) * MUSIC_DANGER_SMOOTHING;
+  for (const key of MUSIC_LAYER_KEYS) {
+    audio.musicLayers[key] = clamp(audio.musicLayers[key], 0, 1);
+  }
+}
+
+function getMusicProfile() {
+  const profile = { energy: 0, drone: 0, bass: 0, drums: 0, hand: 0, click: 0, shaker: 0, bell: 0, pluck: 0, noise: 0, rootOffset: 0 };
+  let total = 0;
+  for (const key of MUSIC_STAGE_KEYS) {
+    const level = audio.musicLayers[key] || 0;
+    if (level <= 0.001) continue;
+    const stage = MUSIC_STAGES[key];
+    total += level;
+    for (const prop of Object.keys(profile)) profile[prop] += stage[prop] * level;
+  }
+  if (total <= 0.001) return { ...MUSIC_STAGES.menu };
+  for (const prop of Object.keys(profile)) profile[prop] /= total;
+  return profile;
+}
+
+function getDominantMusicStage() {
+  let best = "menu";
+  let bestLevel = -1;
+  for (const key of MUSIC_STAGE_KEYS) {
+    const level = audio.musicLayers[key] || 0;
+    if (level > bestLevel) {
+      best = key;
+      bestLevel = level;
+    }
+  }
+  return best;
+}
+
+function getMusicChordPattern(stage) {
+  return {
+    menu: [0, -5, 3, -2, 0, -7, -5, 0],
+    early: [0, -5, -2, -7, 3, -5, 5, 0],
+    mid: [0, -7, -5, -2, -9, -5, 3, -7],
+    late: [0, -1, -7, -6, -10, -5, -8, -1],
+    boss: [0, -12, -7, -10, -1, -12, -5, -7],
+  }[stage] || [0, -5, -2, -7, 3, -5, 5, 0];
+}
+
+function getMusicMotif(stage, section) {
+  const motifs = {
+    menu: {
+      intro: [0, null, null, 3, null, 7, null, null, 10, null, null, 7, null, 3, null, null],
+      build: [0, null, 3, null, 7, null, 10, null, 12, null, 10, null, 7, null, 3, null],
+      climax: [7, null, 10, null, 12, null, 15, null, 12, null, 10, null, 7, null, 3, null],
+      return: [0, null, null, 3, null, 5, null, null, 7, null, 5, null, 3, null, null, null],
+    },
+    early: {
+      intro: [0, null, 3, null, 5, 7, null, 10, 12, null, 10, 7, 5, null, 3, null],
+      build: [12, null, 10, 7, 5, null, 7, 10, 12, 15, null, 12, 10, 7, 5, null],
+      climax: [7, 10, 12, null, 15, 12, 10, 7, 5, 7, 10, null, 12, 10, 7, null],
+      return: [0, null, 3, 5, null, 7, 10, null, 12, null, 10, 7, 5, null, 3, null],
+    },
+    mid: {
+      intro: [0, null, 5, 7, null, 10, 12, null, 15, null, 12, 10, 7, null, 5, null],
+      build: [12, 10, 7, null, 10, 12, 15, null, 17, 15, 12, null, 10, 7, 5, null],
+      climax: [7, 10, 12, 15, null, 17, 15, 12, 10, 12, 15, null, 17, 15, 12, null],
+      return: [0, null, 5, null, 7, 10, null, 12, 10, null, 7, 5, null, 3, null, null],
+    },
+    late: {
+      intro: [0, null, 1, null, 7, null, 6, null, 10, null, 8, null, 7, null, 1, null],
+      build: [12, null, 13, 10, null, 7, 8, null, 13, null, 12, 8, null, 7, 1, null],
+      climax: [7, 8, 12, 13, null, 15, 13, 12, 8, 7, 8, null, 13, 12, 8, null],
+      return: [0, null, 1, 7, null, 6, null, 1, 0, null, -1, null, 1, null, null, null],
+    },
+    boss: {
+      intro: [0, null, -12, null, -7, null, -10, null, 0, null, -1, null, -7, null, -12, null],
+      build: [0, -7, null, -12, 5, null, -1, -7, 0, null, -10, null, -5, -7, null, -12],
+      climax: [0, -1, 0, 5, null, 7, 5, 0, -1, 0, 5, null, 7, 5, 0, null],
+      return: [0, null, -7, null, -12, null, -10, null, -7, null, -5, null, -7, null, null, null],
+    },
+  };
+  return (motifs[stage] || motifs.early)[section] || motifs.early.intro;
+}
+
+function maybeTriggerBossStinger(stage, startTime) {
+  if (stage !== "boss" || state.mode !== "playing" || isBattleCountdownActive()) return;
+  if (!state.wave || audio.lastBossStingerWave === state.wave) return;
+  audio.lastBossStingerWave = state.wave;
+  playBossStinger(startTime);
+}
+
+function playBossStinger(startTime = audio.ctx.currentTime) {
+  if (!audio.ctx || audio.muted || audio.musicVolume <= 0) return;
+  duckMusic(0.74, 0.72);
+  deepDrum(52, 0.25, startTime);
+  deepDrum(74, 0.18, startTime + 0.22);
+  sweep(70, 520, 0.72, "sawtooth", 0.07, startTime + 0.05, audio.musicGain);
+  sweep(620, 120, 0.64, "triangle", 0.055, startTime + 0.12, audio.musicGain);
+  filteredNoise(0.5, 0.075, "bandpass", 620, 1.5, audio.musicGain, startTime + 0.06);
+  arpeggio([73.42, 110, 146.83, 220], 0.078, "triangle", 0.078, audio.musicGain, startTime + 0.24);
 }
 
 function deepDrum(freq, volume, startTime = audio.ctx.currentTime) {
@@ -4175,6 +4803,7 @@ function mysticBell(freq, volume, startTime = audio.ctx.currentTime) {
 
 function playSfx(name) {
   if (!audio.ctx || audio.muted) return;
+  if (!shouldPlaySfx(name)) return;
   const t = audio.ctx.currentTime;
   const out = beginSfxBus(name);
   audio.currentSfxBus = out;
@@ -4188,39 +4817,52 @@ function playSfx(name) {
     arpeggio([392, 587.33, 783.99, 1174.66], 0.035, "triangle", 0.18);
     sweep(240, 980, 0.18, "sawtooth", 0.1, t, out);
   } else if (name === "move") {
-    tone(360, 0.028, "triangle", 0.055, out, t);
+    tone(360, 0.024, "triangle", 0.04, out, t);
+  } else if (name === "softDrop") {
+    tone(260, 0.018, "triangle", 0.025, out, t);
+    filteredNoise(0.012, 0.012, "highpass", 2100, 0.7, out, t + 0.004);
   } else if (name === "rotate") {
-    tone(520, 0.036, "square", 0.075, out, t);
-    tone(780, 0.026, "triangle", 0.04, out, t + 0.012);
+    tone(520, 0.034, "square", 0.06, out, t);
+    tone(780, 0.024, "triangle", 0.032, out, t + 0.012);
   } else if (name === "rotateT") {
-    arpeggio([392, 493.88, 739.99], 0.028, "triangle", 0.12);
+    arpeggio([392, 493.88, 739.99], 0.028, "triangle", 0.1, out, t);
   } else if (name === "drop") {
-    sweep(170, 58, 0.09, "sawtooth", 0.18);
+    sweep(190, 54, 0.1, "sawtooth", 0.18, t, out);
     noise(0.04, 0.11, out, t);
+  } else if (name === "lock") {
+    tone(128, 0.055, "sine", 0.08, out, t);
+    filteredNoise(0.035, 0.035, "lowpass", 460, 0.9, out, t + 0.006);
   } else if (name === "hold") {
-    arpeggio([330, 247, 392], 0.032, "sine", 0.11);
+    arpeggio([330, 247, 392], 0.032, "sine", 0.09, out, t);
   } else if (name === "clear") {
-    arpeggio([520, 659.25, 783.99], 0.032, "triangle", 0.12);
-    filteredNoise(0.026, 0.036, "highpass", 1800, 2.4, out, t + 0.018);
+    arpeggio([520, 659.25, 783.99], 0.03, "triangle", 0.095, out, t);
+    filteredNoise(0.022, 0.026, "highpass", 1800, 2.4, out, t + 0.016);
+  } else if (name === "doubleClear") {
+    arpeggio([493.88, 659.25, 783.99, 987.77], 0.03, "triangle", 0.105, out, t);
+    filteredNoise(0.028, 0.032, "highpass", 1950, 2.8, out, t + 0.02);
+  } else if (name === "tripleClear") {
+    arpeggio([493.88, 659.25, 783.99, 987.77, 1174.66], 0.03, "triangle", 0.115, out, t);
+    sweep(760, 1180, 0.1, "triangle", 0.05, t + 0.035, out);
+    filteredNoise(0.035, 0.04, "highpass", 2100, 2.4, out, t + 0.025);
   } else if (name === "bigClear") {
-    arpeggio([392, 493.88, 659.25, 880], 0.04, "triangle", 0.18);
-    sweep(920, 1320, 0.16, "square", 0.11, t + 0.03);
+    arpeggio([392, 493.88, 659.25, 880, 1174.66], 0.036, "triangle", 0.15, out, t);
+    sweep(920, 1320, 0.15, "square", 0.085, t + 0.03, out);
     noise(0.06, 0.08, out, t + 0.04);
   } else if (name === "b2b") {
-    arpeggio([554.37, 739.99, 987.77, 1479.98], 0.035, "square", 0.16);
+    arpeggio([554.37, 739.99, 987.77, 1479.98], 0.033, "square", 0.135, out, t);
     tone(196, 0.16, "sawtooth", 0.08, out, t);
   } else if (name === "combo") {
-    arpeggio([659.25, 783.99, 987.77, 1174.66], 0.032, "square", 0.13);
-    sweep(620, 1440, 0.12, "triangle", 0.07, t + 0.028, out);
-    noise(0.045, 0.08, out, t + 0.06);
+    arpeggio([659.25, 783.99, 987.77, 1174.66], 0.028, "square", 0.105, out, t);
+    sweep(620, 1440, 0.11, "triangle", 0.055, t + 0.026, out);
+    filteredNoise(0.04, 0.055, "highpass", 2400, 1.2, out, t + 0.058);
   } else if (name === "cancel") {
-    arpeggio([392, 523.25, 659.25, 783.99], 0.034, "sine", 0.13);
-    sweep(720, 260, 0.11, "triangle", 0.08, t + 0.02);
+    arpeggio([392, 523.25, 659.25, 783.99], 0.034, "sine", 0.105, out, t);
+    sweep(720, 260, 0.11, "triangle", 0.064, t + 0.02, out);
   } else if (name === "perfect") {
-    arpeggio([392, 523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98], 0.038, "triangle", 0.2);
-    tone(130.81, 0.42, "sine", 0.14, out, t);
-    sweep(420, 1680, 0.28, "sawtooth", 0.1, t + 0.05, out);
-    noise(0.13, 0.12, out, t + 0.08);
+    arpeggio([392, 523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98], 0.034, "triangle", 0.175, out, t);
+    tone(130.81, 0.34, "sine", 0.12, out, t);
+    sweep(420, 1680, 0.24, "sawtooth", 0.078, t + 0.045, out);
+    filteredNoise(0.12, 0.085, "highpass", 1200, 0.8, out, t + 0.075);
   } else if (name === "hitLight") {
     tone(680, 0.038, "triangle", 0.078, out, t);
     filteredNoise(0.026, 0.042, "bandpass", 1100, 3.2, out, t + 0.008);
@@ -4229,32 +4871,65 @@ function playSfx(name) {
     sweep(420, 1180, 0.13, "triangle", 0.105, t + 0.014, out);
     filteredNoise(0.064, 0.084, "bandpass", 740, 2.8, out, t + 0.02);
   } else if (name === "hitArcane") {
-    arpeggio([392, 523.25, 783.99, 1046.5], 0.034, "triangle", 0.16);
+    arpeggio([392, 523.25, 783.99, 1046.5], 0.034, "triangle", 0.13, out, t);
     tone(98, 0.32, "sine", 0.13, out, t);
     filteredNoise(0.14, 0.105, "bandpass", 1400, 4, out, t + 0.04);
   } else if (name === "upgrade") {
-    arpeggio([293.66, 369.99, 440, 587.33, 739.99], 0.052, "triangle", 0.15);
+    arpeggio([293.66, 369.99, 440, 587.33, 739.99], 0.052, "triangle", 0.13, out, t);
   } else if (name === "upgradeReady") {
-    arpeggio([369.99, 440, 587.33], 0.042, "triangle", 0.11);
+    arpeggio([369.99, 440, 587.33], 0.042, "triangle", 0.095, out, t);
   } else if (name === "tspin") {
-    arpeggio([493.88, 659.25, 987.77, 1318.51], 0.038, "square", 0.19);
-    tone(164.81, 0.22, "sine", 0.095, out, t);
-    sweep(260, 1180, 0.2, "sawtooth", 0.12, t + 0.04, out);
-    filteredNoise(0.11, 0.095, "bandpass", 1500, 4.2, out, t + 0.08);
+    arpeggio([493.88, 659.25, 987.77, 1318.51], 0.034, "square", 0.16, out, t);
+    tone(164.81, 0.22, "sine", 0.09, out, t);
+    sweep(220, 1260, 0.22, "sawtooth", 0.105, t + 0.032, out);
+    sweep(1260, 360, 0.18, "triangle", 0.052, t + 0.095, out);
+    filteredNoise(0.11, 0.075, "bandpass", 1500, 4.2, out, t + 0.072);
   } else if (name === "enemy") {
-    sweep(220, 70, 0.26, "sawtooth", 0.22);
+    sweep(220, 70, 0.24, "sawtooth", 0.18, t, out);
     noise(0.09, 0.12, out, t + 0.02);
   } else if (name === "weakness") {
-    arpeggio([783.99, 987.77, 1174.66], 0.03, "triangle", 0.15);
+    arpeggio([783.99, 987.77, 1174.66], 0.03, "triangle", 0.12, out, t);
     sweep(520, 1480, 0.13, "square", 0.08, t + 0.02);
+  } else if (name === "shield") {
+    tone(740, 0.06, "sine", 0.095, out, t);
+    tone(1110, 0.045, "triangle", 0.052, out, t + 0.018);
+    sweep(980, 520, 0.14, "triangle", 0.055, t + 0.02, out);
+    filteredNoise(0.055, 0.035, "highpass", 2600, 1.4, out, t + 0.012);
+  } else if (name === "enemyWarn") {
+    tone(330, 0.07, "triangle", 0.09, out, t);
+    tone(440, 0.055, "sine", 0.052, out, t + 0.09);
+    filteredNoise(0.035, 0.026, "bandpass", 1200, 3.8, out, t + 0.012);
+  } else if (name === "enemyWarnStrong") {
+    tone(98, 0.16, "sine", 0.1, out, t);
+    sweep(520, 180, 0.2, "sawtooth", 0.082, t + 0.012, out);
+    tone(660, 0.065, "triangle", 0.07, out, t + 0.08);
+    filteredNoise(0.075, 0.055, "bandpass", 760, 2.5, out, t + 0.035);
+  } else if (name === "lowHp") {
+    tone(92, 0.22, "sine", 0.1, out, t);
+    tone(184, 0.075, "triangle", 0.042, out, t + 0.04);
+    filteredNoise(0.08, 0.035, "lowpass", 360, 0.9, out, t + 0.01);
   } else if (name === "wave") {
-    arpeggio([196, 246.94, 293.66, 392, 493.88, 587.33], 0.058, "triangle", 0.16);
+    arpeggio([196, 246.94, 293.66, 392, 493.88, 587.33], 0.058, "triangle", 0.135, out, t);
     tone(98, 0.36, "sawtooth", 0.1, out, t);
   } else if (name === "defeat") {
-    arpeggio([220, 174.61, 146.83, 110, 73.42], 0.11, "sine", 0.17);
+    arpeggio([220, 174.61, 146.83, 110, 73.42], 0.11, "sine", 0.145, out, t);
     noise(0.18, 0.08, out, t + 0.08);
   }
   audio.currentSfxBus = null;
+}
+
+function shouldPlaySfx(name) {
+  if (audio.sfxVolume <= 0 || audio.masterVolume <= 0) return false;
+  const now = performance.now();
+  audio.activeSfx = audio.activeSfx.filter((voice) => voice.until > now);
+  const cooldown = SFX_COOLDOWNS[name] || 0;
+  const lastPlayed = audio.sfxCooldowns.get(name) || 0;
+  if (cooldown > 0 && now - lastPlayed < cooldown) return false;
+  const priority = SFX_PRIORITY[name] || 2;
+  if (audio.activeSfx.length >= audio.maxSfxVoices && priority < 4) return false;
+  audio.sfxCooldowns.set(name, now);
+  audio.activeSfx.push({ name, until: now + (SFX_DURATIONS[name] || 180), priority });
+  return true;
 }
 
 function beginSfxBus(name) {
@@ -4473,14 +5148,55 @@ function resetCanvasTransform() {
 }
 
 function drawBackground() {
-  if (isImageReady(forestBg)) {
-    ctx.drawImage(forestBg, 0, 0, W, H);
-    ctx.fillStyle = "rgba(4, 7, 12, 0.72)";
-    ctx.fillRect(0, 0, W, H);
-    drawVignette();
+  const stage = getBackgroundForWave(state.wave || 1);
+  const image = getStageBackgroundImage(stage);
+  if (image) {
+    const usingFallback = image !== stage.image;
+    drawImageCoverRaw(image, 0, 0, W, H);
+    drawBackgroundTreatment(stage, usingFallback);
     return;
   }
 
+  drawProceduralBackground();
+}
+
+function getBackgroundForWave(wave) {
+  if (wave > 0 && wave % 10 === 0) return BOSS_BACKGROUND_STAGE;
+  for (let i = BACKGROUND_STAGES.length - 1; i >= 0; i -= 1) {
+    if (wave >= BACKGROUND_STAGES[i].startWave) return BACKGROUND_STAGES[i];
+  }
+  return BACKGROUND_STAGES[0];
+}
+
+function getStageBackgroundImage(stage) {
+  if (isImageReady(stage.image)) return stage.image;
+  if (isImageReady(stage.fallback)) return stage.fallback;
+  return null;
+}
+
+function drawBackgroundTreatment(stage, usingFallback) {
+  ctx.save();
+  if (stage.tint) {
+    ctx.fillStyle = stage.tint;
+    ctx.fillRect(0, 0, W, H);
+  }
+  ctx.fillStyle = `rgba(4, 7, 12, ${usingFallback ? 0.72 : stage.dim})`;
+  ctx.fillRect(0, 0, W, H);
+  if (stage.centerDim && !usingFallback) drawCenterBackgroundShade(stage.centerDim);
+  drawVignette(stage.vignette);
+  ctx.restore();
+}
+
+function drawCenterBackgroundShade(alpha) {
+  const g = ctx.createRadialGradient(W / 2, H / 2, 40, W / 2, H / 2, 460);
+  g.addColorStop(0, `rgba(0, 0, 0, ${alpha})`);
+  g.addColorStop(0.52, `rgba(0, 0, 0, ${alpha * 0.38})`);
+  g.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawProceduralBackground() {
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, "#14202d");
   g.addColorStop(0.46, "#172a25");
@@ -4569,11 +5285,11 @@ function drawRunes() {
   ctx.restore();
 }
 
-function drawVignette() {
+function drawVignette(strength = 0.78) {
   const g = ctx.createRadialGradient(W / 2, H / 2, 180, W / 2, H / 2, 720);
   g.addColorStop(0, "rgba(0, 0, 0, 0)");
-  g.addColorStop(0.58, "rgba(0, 0, 0, 0.16)");
-  g.addColorStop(1, "rgba(0, 0, 0, 0.78)");
+  g.addColorStop(0.58, `rgba(0, 0, 0, ${strength * 0.2})`);
+  g.addColorStop(1, `rgba(0, 0, 0, ${strength})`);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 }
@@ -5469,7 +6185,7 @@ function drawEnemy() {
       ctx.globalCompositeOperation = "lighter";
       ctx.globalAlpha = 0.88;
     }
-    const tall = enemy.id === "vine" || enemy.id === "king" || enemy.id === "mist";
+    const tall = ["vine", "king", "mist", "wisp", "sentinel"].includes(enemy.id);
     drawRosterSprite(enemy.id, tall ? -132 : -126, tall ? -158 : -132, tall ? 264 : 252, tall ? 260 : 222);
     ctx.restore();
   } else if (enemy.id !== "slime") {
@@ -5655,6 +6371,9 @@ function drawEnemySilhouette(enemy, hit) {
   else if (enemy.id === "mushroom") drawMushroomMageBody(enemy);
   else if (enemy.id === "beetle") drawStoneBeetleBody(enemy);
   else if (enemy.id === "mist") drawMistDeerBody(enemy);
+  else if (enemy.id === "thorn") drawStoneBeetleBody(enemy);
+  else if (enemy.id === "wisp") drawMistDeerBody(enemy);
+  else if (enemy.id === "sentinel") drawSlimeKingBody(enemy);
   else if (enemy.id === "king") drawSlimeKingBody(enemy);
   ctx.restore();
 }
@@ -5785,6 +6504,9 @@ function getEnemyIntent(enemy) {
     mushroom: "N",
     beetle: "A",
     mist: "?",
+    thorn: "X",
+    wisp: "*",
+    sentinel: "S",
     king: "B",
   }[enemy.id] || "!";
   if (enemy.id === "mushroom") {
@@ -5792,6 +6514,15 @@ function getEnemyIntent(enemy) {
   }
   if (enemy.id === "beetle") {
     return { icon, title: t("intentArmorCrush"), detail: `${fmt("intentArmorCrushDetail", { damage: state.enemyAttackDamage, garbage })} / ${cancelText}`, color: "#c6b38a" };
+  }
+  if (enemy.id === "thorn") {
+    return { icon, title: t("intentDashSlash"), detail: `${fmt("intentDashSlashDetail", { damage: state.enemyAttackDamage, garbage })} / ${cancelText}`, color: "#b174ff" };
+  }
+  if (enemy.id === "wisp") {
+    return { icon, title: t("intentHomingBolt"), detail: fmt("intentHomingBoltDetail", { damage: state.enemyAttackDamage }), color: "#c7a7ff" };
+  }
+  if (enemy.id === "sentinel") {
+    return { icon, title: t("intentGroundSlam"), detail: `${fmt("intentGroundSlamDetail", { damage: state.enemyAttackDamage, garbage })} / ${cancelText}`, color: "#d7c28f" };
   }
   if (enemy.id === "king") {
     return { icon, title: fmt("intentBossPhase", { phase: getBossPhase() }), detail: `${fmt("intentBossPhaseDetail", { damage: state.enemyAttackDamage })} / +${garbage}`, color: "#f1d36b" };
@@ -6567,11 +7298,14 @@ function drawEnemyAttack(attack, x, y, t) {
     mushroom: "#b690ff",
     beetle: "#c6b38a",
     mist: "#d2ceff",
+    thorn: "#b174ff",
+    wisp: "#c7a7ff",
+    sentinel: "#d7c28f",
     king: "#ffb95f",
     slime: "#82f28f",
   };
   const color = palette[kind] || palette.slime;
-  const garbageAttack = ["vine", "mushroom", "beetle", "mist", "king"].includes(kind);
+  const garbageAttack = ["vine", "mushroom", "beetle", "mist", "thorn", "sentinel", "king"].includes(kind);
   ctx.strokeStyle = hexToRgba(color, garbageAttack ? 0.42 : 0.32);
   ctx.lineWidth = kind === "king" ? 9 : garbageAttack ? 7 : 5;
   ctx.beginPath();
@@ -6589,6 +7323,26 @@ function drawEnemyAttack(attack, x, y, t) {
       ctx.bezierCurveTo(x - 42 + i * 22, y - 14, x + 16 - i * 8, y - 20, x + 5, y + 22);
       ctx.stroke();
     }
+  } else if (kind === "thorn") {
+    ctx.strokeStyle = hexToRgba(color, 0.82);
+    ctx.lineWidth = 5;
+    for (let i = 0; i < 4; i += 1) {
+      const sweep = 22 + i * 10;
+      ctx.beginPath();
+      ctx.moveTo(x - 52 + i * 10, y + 30 - i * 6);
+      ctx.quadraticCurveTo(x + 2, y - sweep, x + 58 - i * 7, y + 12 + i * 3);
+      ctx.stroke();
+    }
+    ctx.fillStyle = hexToRgba("#f2d6ff", 0.78);
+    for (let i = 0; i < 9; i += 1) {
+      const a = -0.8 + i * 0.2 + t * 2.4;
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(a) * 42, y + Math.sin(a) * 24);
+      ctx.lineTo(x + Math.cos(a + 0.12) * 56, y + Math.sin(a + 0.12) * 30);
+      ctx.lineTo(x + Math.cos(a - 0.12) * 52, y + Math.sin(a - 0.12) * 20);
+      ctx.closePath();
+      ctx.fill();
+    }
   } else if (kind === "mushroom") {
     ctx.fillStyle = hexToRgba(color, 0.72);
     for (let i = 0; i < 10; i += 1) {
@@ -6597,6 +7351,25 @@ function drawEnemyAttack(attack, x, y, t) {
       ctx.arc(x + Math.cos(a) * (14 + i * 2), y + Math.sin(a) * 16, 3 + (i % 3), 0, Math.PI * 2);
       ctx.fill();
     }
+  } else if (kind === "wisp") {
+    for (let i = 0; i < 3; i += 1) {
+      const drift = Math.sin(t * Math.PI * 2 + i * 1.7) * 14;
+      ctx.strokeStyle = hexToRgba(i % 2 ? "#e2d8ff" : color, 0.58);
+      ctx.lineWidth = 4 - i * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(x - 58 - i * 8, y + drift);
+      ctx.bezierCurveTo(x - 30, y - 26 + drift, x + 18, y + 22 - drift, x + 46 + i * 8, y - drift * 0.25);
+      ctx.stroke();
+      ctx.fillStyle = hexToRgba(i % 2 ? "#e2d8ff" : "#78dcff", 0.88);
+      ctx.beginPath();
+      ctx.arc(x + 46 + i * 8, y - drift * 0.25, 7 - i, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.strokeStyle = hexToRgba(color, 0.34);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 28 + t * 12, 0, Math.PI * 1.7);
+    ctx.stroke();
   } else if (kind === "mist") {
     ctx.strokeStyle = hexToRgba(color, 0.64);
     ctx.lineWidth = 5;
@@ -6604,6 +7377,26 @@ function drawEnemyAttack(attack, x, y, t) {
       ctx.beginPath();
       ctx.ellipse(x, y + i * 8, 30 + t * 10, 12, t * 5 + i, 0, Math.PI * 1.8);
       ctx.stroke();
+    }
+  } else if (kind === "sentinel") {
+    ctx.fillStyle = "#8f8469";
+    ctx.strokeStyle = hexToRgba(color, 0.72);
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.ellipse(x, y + 12, 56 + t * 12, 16 + t * 6, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, 34 + t * 8, Math.PI * 0.08, Math.PI * 0.92);
+    ctx.stroke();
+    for (let i = 0; i < 8; i += 1) {
+      const a = (Math.PI * 2 * i) / 8 + t;
+      const rx = x + Math.cos(a) * (26 + i);
+      const ry = y + 16 + Math.sin(a) * 12;
+      ctx.save();
+      ctx.translate(rx, ry);
+      ctx.rotate(a);
+      roundedRect(-5, -5, 10 + (i % 3) * 4, 10, 2, true, false);
+      ctx.restore();
     }
   } else if (kind === "beetle" || kind === "king") {
     ctx.fillStyle = kind === "king" ? "#d8bf65" : "#9aa6ae";
@@ -6633,7 +7426,7 @@ function drawEnemyAttack(attack, x, y, t) {
 
 function drawImpactBurst(x, y, color, t, kind = "clear") {
   const k = Math.min(1, (t - 0.78) / 0.22);
-  const strong = kind === "perfect" || kind === "spin" || kind === "b2b" || kind === "combo" || kind === "king";
+  const strong = ["perfect", "spin", "b2b", "combo", "thorn", "wisp", "sentinel", "king"].includes(kind);
   ctx.save();
   ctx.globalAlpha = 1 - k;
   ctx.strokeStyle = color;
@@ -7234,20 +8027,59 @@ function drawMenuHeroShowcase() {
   ctx.rotate(motion.rotate);
   ctx.scale(hero.scale * motion.scaleX, hero.scale * motion.scaleY);
   drawCharacterShadow(0, 174, 146 + motion.shadow, "#6de8ff");
-  if (motion.afterimage > 0.02) {
+  const specialIdle = getMenuSpecialIdle(now);
+  if (specialIdle) {
+    drawMenuSpecialIdleFrame(specialIdle);
+  } else {
+    if (motion.afterimage > 0.02) {
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = motion.afterimage;
+      ctx.translate(-motion.x * 0.55 - 3, 2);
+      ctx.scale(1.01, 1);
+      drawHeroIdleBase();
+      ctx.restore();
+    }
+    drawHeroIdleBase();
+    drawMenuCloakSway(motion, now);
+    drawMenuWeaponPulse(motion, now);
+    drawMenuEyeGlow(motion, now);
+  }
+  drawMenuIdleAura(motion, now);
+  ctx.restore();
+}
+
+function getMenuSpecialIdle(now = performance.now()) {
+  const animationKeys = Object.keys(MENU_HERO_SPECIAL_ANIMATIONS);
+  if (!animationKeys.length) return null;
+  const cycle = MENU_SPECIAL_IDLE_INTERVAL_MS * animationKeys.length;
+  const elapsed = (now - state.menuSpecialIdleStartedAt) % cycle;
+  const slot = Math.floor(elapsed / MENU_SPECIAL_IDLE_INTERVAL_MS);
+  const local = elapsed - slot * MENU_SPECIAL_IDLE_INTERVAL_MS;
+  const key = animationKeys[slot % animationKeys.length];
+  const config = MENU_HERO_SPECIAL_ANIMATIONS[key];
+  const duration = config.frames.length * config.frameMs;
+  if (local > duration) return null;
+  if (!isImageReady(config.image)) return null;
+  const fadeIn = smoothstep(0, MENU_SPECIAL_IDLE_FADE_MS, local);
+  const fadeOut = 1 - smoothstep(duration - MENU_SPECIAL_IDLE_FADE_MS, duration, local);
+  return { config, elapsed: local, alpha: Math.min(fadeIn, fadeOut) };
+}
+
+function drawMenuSpecialIdleFrame(specialIdle) {
+  const { config, elapsed, alpha } = specialIdle;
+  const frameIndex = Math.min(config.frames.length - 1, Math.floor(elapsed / config.frameMs));
+  const frame = config.frames[frameIndex];
+  const draw = config.draw;
+  if (alpha < 0.98) {
     ctx.save();
-    ctx.globalCompositeOperation = "lighter";
-    ctx.globalAlpha = motion.afterimage;
-    ctx.translate(-motion.x * 0.55 - 3, 2);
-    ctx.scale(1.01, 1);
+    ctx.globalAlpha *= 1 - alpha;
     drawHeroIdleBase();
     ctx.restore();
   }
-  drawHeroIdleBase();
-  drawMenuCloakSway(motion, now);
-  drawMenuWeaponPulse(motion, now);
-  drawMenuEyeGlow(motion, now);
-  drawMenuIdleAura(motion, now);
+  ctx.save();
+  ctx.globalAlpha *= alpha;
+  drawSpriteSheetFrame(config, frame, draw.x, draw.y, draw.w, draw.h);
   ctx.restore();
 }
 
@@ -7492,7 +8324,7 @@ function drawResultOverlay() {
   roundedRect(384, 176, 210, 4, 8, true, false);
   wrapText(getMessage(), 384, 206, 504, 28, "rgba(238,244,252,0.76)", 19);
   drawRunSummary();
-  drawMenuButton(384, 468, 248, 44, t("retry"), "Enter", "primary");
+  drawMenuButton(384, 468, 248, 44, t("retry"), "R", "primary");
   drawMenuButton(646, 468, 248, 44, t("menu"), "Esc");
   ctx.restore();
 }
@@ -7508,8 +8340,8 @@ function drawPauseOverlay() {
   drawCard(m.x, m.y, m.w, m.h);
   label(t("pauseMenu"), m.x + 48, m.y + 76, 42, "#f5f1e6");
   wrapText(t("pauseMenuHint"), m.x + 50, m.y + 112, m.w - 100, 22, "rgba(238,244,252,0.62)", 15);
-  drawMenuButton(m.x + 56, m.y + 156, m.w - 112, 48, t("resume"), formatControlKey(state.controls.pause), "primary");
-  drawMenuButton(m.x + 56, m.y + 216, m.w - 112, 44, t("restart"), "Enter");
+  drawMenuButton(m.x + 56, m.y + 156, m.w - 112, 48, t("resume"), controlDisplayValue("pause"), "primary");
+  drawMenuButton(m.x + 56, m.y + 216, m.w - 112, 44, t("restart"), "R");
   drawMenuButton(m.x + 56, m.y + 270, m.w - 112, 44, t("settings"), "");
   drawMenuButton(m.x + 56, m.y + 324, m.w - 112, 44, t("menu"), "Esc");
   drawPauseStat(m.x + 58, m.y + 400, t("waveLabel"), state.wave);
@@ -7524,10 +8356,17 @@ function drawSettingsOverlay(source = "pause") {
   drawCard(s.x, s.y, s.w, s.h);
   label(t("settings"), s.x + 42, s.y + 58, 40, "#f5f1e6");
   const backText = source === "start" ? t("settingsBackMenu") : t("settingsBack");
-  drawMenuButton(s.x + s.w - 216, s.y + 26, 172, 40, backText, "Esc");
+  const backButton = getSettingsBackButtonRect();
+  drawMenuButton(backButton.x, backButton.y, backButton.w, backButton.h, backText, "Esc");
   drawSettingsTabs(s.tabX, s.y + 112);
   drawSettingsContent(s.contentX, s.contentY);
   ctx.restore();
+}
+
+function getSettingsBackButtonRect() {
+  const s = UI_LAYOUT.settings;
+  const w = 274;
+  return { x: s.x + s.w - 42 - w, y: s.y + 26, w, h: 40 };
 }
 
 function drawSettingsTabs(x, y) {
@@ -8010,18 +8849,8 @@ function drawControlGrid(x, y, columns = UI_LAYOUT.controlsGrid.columns, gapX = 
 }
 
 function controlDisplayValue(action) {
-  return {
-    left: "←",
-    right: "→",
-    softDrop: "↓",
-    hardDrop: "Space",
-    rotateCW: "↑ / X",
-    rotateCCW: "Z",
-    rotate180: "A",
-    hold: "Shift / C",
-    pause: "P / Esc",
-    mute: "M",
-  }[action] || formatControlKey(state.controls[action] || "");
+  const keys = getControlKeys(action);
+  return keys.length ? keys.map(formatControlKey).join(" / ") : "-";
 }
 
 function drawPauseButton() {
@@ -8147,10 +8976,10 @@ function drawKeyBindRow(x, y, text, value, binding, w = UI_LAYOUT.controlsGrid.r
 
 function formatControlKey(key) {
   const map = {
-    arrowleft: "LEFT",
-    arrowright: "RIGHT",
-    arrowdown: "DOWN",
-    arrowup: "UP",
+    arrowleft: "←",
+    arrowright: "→",
+    arrowdown: "↓",
+    arrowup: "↑",
     shift: "SHIFT",
     enter: "ENTER",
     escape: "ESC",
@@ -8195,6 +9024,13 @@ function drawImageContain(img, x, y, w, h) {
     return;
   }
   const scale = Math.min(w / img.naturalWidth, h / img.naturalHeight);
+  const dw = img.naturalWidth * scale;
+  const dh = img.naturalHeight * scale;
+  ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+}
+
+function drawImageCoverRaw(img, x, y, w, h) {
+  const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
   const dw = img.naturalWidth * scale;
   const dh = img.naturalHeight * scale;
   ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
@@ -8361,7 +9197,7 @@ window.addEventListener("keydown", (event) => {
   const normalized = normalizeControlKey(key);
   if (state.bindingAction) {
     event.preventDefault();
-    if (key !== "Escape") {
+    if (normalized !== "escape") {
       bindControl(state.bindingAction, normalized);
       syncControlHints();
       saveGame();
@@ -8381,10 +9217,17 @@ window.addEventListener("keydown", (event) => {
   if (key === "Enter" && state.mode !== "playing") {
     if (state.mode === "upgrade") chooseUpgrade(0);
     else if (state.mode === "start" && !state.settingsOpen) resetGame("endless");
-    else if (state.mode === "victory" || state.mode === "defeat") resetGame("endless");
     return;
   }
-  if (isActionKey("pause", key)) {
+  if (normalized === "r" && (state.mode === "victory" || state.mode === "defeat")) {
+    resetGame("endless");
+    return;
+  }
+  if (normalized === "r" && state.mode === "paused" && state.pauseView === "menu") {
+    resetGame(state.runMode);
+    return;
+  }
+  if (normalized !== "escape" && isActionKey("pause", key)) {
     if (state.mode === "playing") {
       state.mode = "paused";
       state.pauseView = "menu";
@@ -8455,18 +9298,25 @@ window.addEventListener("keyup", (event) => {
 
 function isGameKey(key, code) {
   const normalized = normalizeControlKey(key);
-  return Object.values(state.controls).includes(normalized) || key === "Enter" || key === "Escape" || ["1", "2", "3"].includes(key) || code === "Space";
+  return allControlKeys().includes(normalized)
+    || key === "Enter"
+    || key === "Escape"
+    || ["1", "2", "3"].includes(key)
+    || (state.mode === "paused" && state.pauseView === "menu" && normalized === "r")
+    || ((state.mode === "victory" || state.mode === "defeat") && normalized === "r")
+    || code === "Space";
 }
 
 function isActionKey(action, key) {
-  return normalizeControlKey(key) === state.controls[action];
+  return getControlKeys(action).includes(normalizeControlKey(key));
 }
 
 function bindControl(action, key) {
-  for (const id of Object.keys(state.controls)) {
-    if (id !== action && state.controls[id] === key) state.controls[id] = "";
+  const normalized = normalizeControlKey(key);
+  for (const { id } of CONTROL_ACTIONS) {
+    if (id !== action) state.controls[id] = getControlKeys(id).filter((existing) => existing !== normalized);
   }
-  state.controls[action] = key;
+  state.controls[action] = [normalized];
 }
 
 function normalizeControlKey(key) {
@@ -8595,8 +9445,8 @@ function handlePausePointerDown(x, y) {
 }
 
 function handleSettingsPointerDown(x, y, source) {
-  const s = UI_LAYOUT.settings;
-  if (pointInRect(x, y, s.x + s.w - 216, s.y + 26, 172, 40)) {
+  const backButton = getSettingsBackButtonRect();
+  if (pointInRect(x, y, backButton.x, backButton.y, backButton.w, backButton.h)) {
     state.bindingAction = null;
     if (source === "start") state.settingsOpen = false;
     else state.pauseView = "menu";
