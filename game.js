@@ -1,6 +1,6 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const ASSET_VERSION = "2026-05-19-release";
+const ASSET_VERSION = "2026-05-19-content-pass";
 
 function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -53,6 +53,33 @@ function registerImageAsset(id, path) {
   return image;
 }
 
+function registerAudioAsset(id, path, options = {}) {
+  const audioElement = new Audio();
+  const record = {
+    id,
+    type: "audio",
+    path,
+    url: assetPath(path),
+    status: "loading",
+    error: "",
+    element: audioElement,
+  };
+  ASSET_REGISTRY.audio.push(record);
+  audioElement.preload = "auto";
+  audioElement.loop = Boolean(options.loop);
+  audioElement.addEventListener("canplaythrough", () => {
+    record.status = "loaded";
+  }, { once: true });
+  audioElement.addEventListener("error", () => {
+    record.status = "error";
+    record.error = `Failed to load audio: ${record.path}`;
+    warnAssetOnce(record, record.error);
+  });
+  audioElement.src = record.url;
+  audioElement.load();
+  return audioElement;
+}
+
 function warnAssetOnce(record, message) {
   if (ASSET_REGISTRY.warned.has(record.id)) return;
   ASSET_REGISTRY.warned.add(record.id);
@@ -76,7 +103,7 @@ function getAssetSummary() {
     counts,
     images: ASSET_REGISTRY.images.map(({ id, path, url, status, error }) => ({ id, path, url, status, error })),
     fonts: ASSET_REGISTRY.fonts,
-    audio: ASSET_REGISTRY.audio,
+    audio: ASSET_REGISTRY.audio.map(({ id, type, path, url, status, error }) => ({ id, type, path, url, status, error })),
   };
 }
 
@@ -112,6 +139,7 @@ const noaArt = registerImageAsset("noa-portrait", "assets/noa.png");
 const slimeArt = registerImageAsset("forest-slime", "assets/forest-slime.png");
 const rosterArt = registerImageAsset("character-roster", "assets/character-roster-v4-alpha.png");
 const heroIdleArt = registerImageAsset("hero-idle-concept", "assets/images/clean/ET_Character_alpha.png");
+const noaFeedbackBowArt = registerImageAsset("noa-feedback-bow", "assets/images/clean/noa_feedback_bow.png");
 const menuIdleCubeSheet = registerImageAsset("menu-idle-cube-sheet", "assets/images/clean/noa_menu_idle_cube.png");
 const menuIdleMeditateSheet = registerImageAsset("menu-idle-meditate-sheet", "assets/images/clean/noa_menu_idle_meditate.png");
 const heroMeleeSheet = registerImageAsset("hero-melee-sheet", "assets/images/clean/Knife_alpha.png");
@@ -132,6 +160,12 @@ const enemyAttackSheets = {
   wisp: registerImageAsset("enemy-attack-wisp-moth", "assets/images/clean/enemy_attack_wisp_moth.png"),
   sentinel: registerImageAsset("enemy-attack-ruin-sentinel", "assets/images/clean/enemy_attack_ruin_sentinel.png"),
   king: registerImageAsset("enemy-attack-king", "assets/images/clean/enemy_attack_king_redesign.png"),
+};
+const musicLoopAssets = {
+  menu: registerAudioAsset("music-loop-menu", "assets/audio/music_menu_loop.wav", { loop: true }),
+  forest: registerAudioAsset("music-loop-forest", "assets/audio/music_forest_loop.wav", { loop: true }),
+  ruins: registerAudioAsset("music-loop-ruins", "assets/audio/music_ruins_loop.wav", { loop: true }),
+  rift: registerAudioAsset("music-loop-rift", "assets/audio/music_rift_loop.wav", { loop: true }),
 };
 
 const BACKGROUND_STAGES = [
@@ -289,6 +323,10 @@ const audio = {
   musicStage: "menu",
   musicLayers: { menu: 1, early: 0, mid: 0, late: 0, boss: 0, danger: 0 },
   lastBossStingerWave: 0,
+  lastDangerMusicPulseAt: 0,
+  musicLoopSources: new Map(),
+  currentMusicLoopKey: "",
+  lastLoopSyncAt: 0,
 };
 
 const MUSIC_BPM = 105;
@@ -389,14 +427,15 @@ const NEXT_SLOT_H = 50;
 const NEXT_SLOT_GAP = 8;
 const NEXT_SLOT_STEP = NEXT_SLOT_H + NEXT_SLOT_GAP;
 const DROP_MS = 760;
-const SOFT_DROP_MS = 4;
+const SOFT_DROP_MS = 12;
 const LOCK_DELAY_MS = 500;
 const DAS_MS = 128;
 const ARR_MS = 28;
 const PLAYER_MAX_HP = 100;
 const ENEMY_DEFEAT_HEAL = 15;
 const PERFECT_CLEAR_BASE_DAMAGE = 90;
-const SPIN_DAMAGE_BY_LINES = [0, 30, 70, 100, 140];
+const PERFECT_CLEAR_BOSS_HP_RATIO = 0.35;
+const SPIN_DAMAGE_BY_LINES = [0, 35, 85, 115, 150];
 const ATTACK_ROW_DAMAGE = 15;
 const ENEMY_ATTACK_DURATION_MS = 950;
 const ENEMY_ATTACK_FRAME_MS = ENEMY_ATTACK_DURATION_MS / 8;
@@ -414,8 +453,9 @@ const BATTLE_COUNTDOWN_START_WINDOW_MS = 420;
 const FIRST_WAVE_HINT_MS = 4200;
 const FIRST_WAVE_HINT_FADE_MS = 520;
 const PERFECT_HIT_STOP_MS = 150;
-const GITHUB_REPORT_BUG_URL = "https://github.com/D1124423017/T-Spin-Traveler/issues/new";
-const GITHUB_SUGGESTION_URL = "https://github.com/D1124423017/T-Spin-Traveler/discussions";
+const BOSS_PHASE_BANNER_MS = 1550;
+const BOSS_WINDUP_MS = 1350;
+const GITHUB_FEEDBACK_URL = "https://github.com/D1124423017/T-Spin-Traveler/issues";
 
 const BALANCE = {
   enemyWaveHp: 10,
@@ -683,7 +723,7 @@ const UI_LAYOUT = {
   ],
 };
 
-const SETTINGS_TABS = ["controls", "audio", "language", "feedback"];
+const SETTINGS_TABS = ["controls", "handling", "audio", "language", "feedback"];
 
 const MENU_IDLE_SEQUENCE = [
   { id: "idleA", duration: 2200 },
@@ -792,18 +832,21 @@ const translations = {
     settingsBack: "返回暫停",
     settingsBackMenu: "返回主選單",
     settingsTabControls: "操作",
+    settingsTabHandling: "手感",
     settingsTabAudio: "音訊",
     settingsTabLanguage: "語言",
     settingsTabFeedback: "回饋",
     audioSettingsTitle: "音樂與音效",
     controlsSettingsTitle: "操作設定",
+    handlingSettingsTitle: "手感設定",
+    resetKeybinds: "恢復預設按鍵",
+    resetHandling: "恢復預設手感",
     controlListTitle: "完整操作鍵位",
     languageSettingsTitle: "語言設定",
     languageHelp: "切換後會立即刷新遊戲介面文字。B2B、T-Spin 等招式名稱保留英文。",
     feedbackTitle: "回饋與建議",
-    feedbackHelp: "遇到 Bug 或有改進想法，歡迎到 GitHub 留言回報。",
-    feedbackReportBug: "回報 Bug",
-    feedbackSuggestImprovement: "改進建議",
+    feedbackHelp: "遇到 Bug 或有改進想法？歡迎到 GitHub 留下回報，NOA 會感謝你的協助。",
+    feedbackOpenGithub: "前往 GitHub 回饋",
     countdownStart: "START",
     resume: "繼續",
     restart: "重新開始",
@@ -868,6 +911,8 @@ const translations = {
     turnsLater: "{count} 回合後",
     kos: "擊破",
     bossPhase: "Boss 階段 {phase}",
+    bossPhaseShift: "Boss 階段 {phase}",
+    bossRiftWindup: "裂隙重擊蓄力",
     miniBoss: "小 Boss",
     comboLabel: "Combo",
     incomingLabel: "垃圾預告",
@@ -951,6 +996,12 @@ const translations = {
     "build.bossbreaker": "Bossbreaker +{value}",
     "build.clearHeal": "消行回血 +{value}",
     "build.spinHeal": "Spin 回血 +{value}",
+    "build.spinGuardStrike": "Spin 護盾轉攻擊 x{value}",
+    "build.comboEcho": "Combo Echo +{value}",
+    "build.guardReflect": "反射護盾 x{value}",
+    "build.garbageCounter": "垃圾反擊 +{value}",
+    "build.burstCharge": "爆發充能 +{value}",
+    "build.perfectBossDelay": "Boss 延後 +{value}",
     "family.spin": "Spin 流派",
     "family.combo": "Combo 流派",
     "family.defense": "防禦流派",
@@ -992,6 +1043,10 @@ const translations = {
     "damageB2B": "B2B",
     "damageBoss": "Bossbreaker",
     "damagePerfect": "Perfect Clear",
+    "damagePerfectBoss": "Boss 35%",
+    "damageGuardStrike": "護盾轉攻擊",
+    "damageComboEcho": "Combo Echo",
+    "damageGarbageCounter": "垃圾反擊",
     "damageMultiplier": "倍率",
     "damageWeakness": "弱點倍率",
     "damageExecute": "處決補正",
@@ -1049,6 +1104,9 @@ const translations = {
     floaterComboDelay: "Combo {combo}: 延後 +{delay}",
     floaterCancelGarbage: "抵銷 {count} 行垃圾",
     floaterArmored: "護甲減傷",
+    floaterSpinGuardStrike: "護盾轉攻擊 +{damage}",
+    floaterGuardReflect: "護盾反射 -{damage}",
+    floaterPerfectBossDelay: "Boss 延後 +{turns}",
     floaterFullHp: "HP 全滿",
     floaterTBonus: "T 加成",
     floaterB2BRow: "B2B +{rows} 行",
@@ -1134,6 +1192,12 @@ const translations = {
     "upgrade.b2b_preserver": "獲得 2 層 B2B 保護；普通消行不會立刻打斷 B2B。",
     "upgrade.spin_vamp": "Spin 命中額外回復 +6 HP，並額外獲得護盾。",
     "upgrade.combo_aegis": "3 Combo 以上時，每次消行額外獲得 +2 護盾。",
+    "upgrade.spin_guard_reactor": "Spin 命中時消耗最多 24 護盾，轉化為 2 倍額外傷害。",
+    "upgrade.combo_echo_matrix": "4 Combo 以上會觸發 Echo 追加傷害。",
+    "upgrade.aegis_reprisal": "護盾抵擋敵人傷害時，將抵擋量 1.5 倍反射給敵人。",
+    "upgrade.garbage_furnace": "抵銷垃圾時，每抵銷 1 行額外造成 10 傷害。",
+    "upgrade.rift_battery": "Tetris 或 Spin 會額外為終極模式充能。",
+    "upgrade.perfect_anchor": "Perfect Clear 命中 Boss 時，額外延後 Boss 攻擊 2 回合。",
     "upgradeName.tspin_amp": "T-Core 增幅器",
     "upgradeName.garbage_guard": "重力濾鏡",
     "upgradeName.combo_clock": "節奏錨點",
@@ -1157,6 +1221,12 @@ const translations = {
     "upgradeName.b2b_preserver": "B2B 記憶護符",
     "upgradeName.spin_vamp": "Spin 吸能刃",
     "upgradeName.combo_aegis": "Combo 守勢",
+    "upgradeName.spin_guard_reactor": "Spin 護盾反應爐",
+    "upgradeName.combo_echo_matrix": "Combo 回聲矩陣",
+    "upgradeName.aegis_reprisal": "守勢反擊鏡",
+    "upgradeName.garbage_furnace": "垃圾熔爐",
+    "upgradeName.rift_battery": "裂隙電池",
+    "upgradeName.perfect_anchor": "Perfect 錨點",
     "enemy.slime.name": "森林黏液幼體",
     "enemy.slime.trait": "基礎打擊",
     "enemy.vine.name": "藤蔓跳躍獸",
@@ -1195,18 +1265,21 @@ const translations = {
     settingsBack: "Back to Pause",
     settingsBackMenu: "Back to Menu",
     settingsTabControls: "Controls",
+    settingsTabHandling: "Handling",
     settingsTabAudio: "Audio",
     settingsTabLanguage: "Language",
     settingsTabFeedback: "Feedback",
     audioSettingsTitle: "Music & Sound",
     controlsSettingsTitle: "Control Settings",
+    handlingSettingsTitle: "Handling Settings",
+    resetKeybinds: "Reset Keybinds",
+    resetHandling: "Reset Handling",
     controlListTitle: "Full Controls",
     languageSettingsTitle: "Language",
     languageHelp: "Text updates immediately. B2B, T-Spin, and move names stay in English.",
     feedbackTitle: "Feedback",
-    feedbackHelp: "Found a bug or have an idea? Leave feedback on GitHub.",
-    feedbackReportBug: "Report Bug",
-    feedbackSuggestImprovement: "Suggest Idea",
+    feedbackHelp: "Found a bug or have an idea? Leave feedback on GitHub. NOA appreciates your help.",
+    feedbackOpenGithub: "Open GitHub Feedback",
     countdownStart: "START",
     resume: "Resume",
     restart: "Restart",
@@ -1271,6 +1344,8 @@ const translations = {
     turnsLater: "in {count} turns",
     kos: "KOs",
     bossPhase: "Boss Phase {phase}",
+    bossPhaseShift: "Boss Phase {phase}",
+    bossRiftWindup: "Rift Slam Charging",
     miniBoss: "Mini Boss",
     comboLabel: "Combo",
     incomingLabel: "Incoming",
@@ -1354,6 +1429,12 @@ const translations = {
     "build.bossbreaker": "Bossbreaker +{value}",
     "build.clearHeal": "Clear Heal +{value}",
     "build.spinHeal": "Spin Heal +{value}",
+    "build.spinGuardStrike": "Spin Guard Strike x{value}",
+    "build.comboEcho": "Combo Echo +{value}",
+    "build.guardReflect": "Guard Reflect x{value}",
+    "build.garbageCounter": "Garbage Counter +{value}",
+    "build.burstCharge": "Burst Charge +{value}",
+    "build.perfectBossDelay": "Boss Delay +{value}",
     "family.spin": "Spin Flow",
     "family.combo": "Combo Flow",
     "family.defense": "Defense Flow",
@@ -1395,6 +1476,10 @@ const translations = {
     "damageB2B": "B2B",
     "damageBoss": "Bossbreaker",
     "damagePerfect": "Perfect Clear",
+    "damagePerfectBoss": "Boss 35%",
+    "damageGuardStrike": "Guard Strike",
+    "damageComboEcho": "Combo Echo",
+    "damageGarbageCounter": "Garbage Counter",
     "damageMultiplier": "Multiplier",
     "damageWeakness": "Weakness Multiplier",
     "damageExecute": "Execute Adjustment",
@@ -1452,6 +1537,9 @@ const translations = {
     floaterComboDelay: "COMBO {combo}: DELAY +{delay}",
     floaterCancelGarbage: "CANCEL {count} GARBAGE",
     floaterArmored: "ARMORED",
+    floaterSpinGuardStrike: "GUARD STRIKE +{damage}",
+    floaterGuardReflect: "GUARD REFLECT -{damage}",
+    floaterPerfectBossDelay: "BOSS DELAY +{turns}",
     floaterFullHp: "FULL HP",
     floaterTBonus: "T BONUS",
     floaterB2BRow: "B2B +{rows} ROW",
@@ -1537,6 +1625,12 @@ const translations = {
     "upgrade.b2b_preserver": "Gain 2 B2B preserves. Normal clears do not immediately break B2B.",
     "upgrade.spin_vamp": "Spin hits recover +6 extra HP and gain extra Guard.",
     "upgrade.combo_aegis": "At 3+ Combo, each line clear grants +2 extra Guard.",
+    "upgrade.spin_guard_reactor": "Spin hits spend up to 24 Guard and convert it into 2x bonus damage.",
+    "upgrade.combo_echo_matrix": "At 4+ Combo, trigger Echo bonus damage.",
+    "upgrade.aegis_reprisal": "When Guard blocks enemy damage, reflect 1.5x the blocked amount back to the enemy.",
+    "upgrade.garbage_furnace": "When you cancel garbage, deal +10 damage per canceled row.",
+    "upgrade.rift_battery": "Tetris or Spin clears charge the ultimate mode faster.",
+    "upgrade.perfect_anchor": "Perfect Clear against a Boss delays the Boss attack by 2 turns.",
     "upgradeName.tspin_amp": "T-Core Amplifier",
     "upgradeName.garbage_guard": "Gravity Filter",
     "upgradeName.combo_clock": "Tempo Anchor",
@@ -1560,6 +1654,12 @@ const translations = {
     "upgradeName.b2b_preserver": "B2B Memory Charm",
     "upgradeName.spin_vamp": "Spin Siphon Blade",
     "upgradeName.combo_aegis": "Combo Aegis",
+    "upgradeName.spin_guard_reactor": "Spin Guard Reactor",
+    "upgradeName.combo_echo_matrix": "Combo Echo Matrix",
+    "upgradeName.aegis_reprisal": "Aegis Reprisal Mirror",
+    "upgradeName.garbage_furnace": "Garbage Furnace",
+    "upgradeName.rift_battery": "Rift Battery",
+    "upgradeName.perfect_anchor": "Perfect Anchor",
     "enemy.slime.name": "FOREST SLIME HATCHLING",
     "enemy.slime.trait": "BASIC STRIKE",
     "enemy.vine.name": "VINE HOPPER",
@@ -1707,12 +1807,30 @@ const UPGRADES = [
     },
   },
   {
+    id: "spin_guard_reactor",
+    name: "Spin Guard Reactor",
+    rarity: "rare",
+    textKey: "upgrade.spin_guard_reactor",
+    apply: () => {
+      state.upgrades.spinGuardStrike = Math.max(state.upgrades.spinGuardStrike, 2);
+    },
+  },
+  {
     id: "combo_resonator",
     name: "Combo Resonator",
     rarity: "common",
     textKey: "upgrade.combo_resonator",
     apply: () => {
       state.upgrades.comboDamage += 3;
+    },
+  },
+  {
+    id: "combo_echo_matrix",
+    name: "Combo Echo Matrix",
+    rarity: "rare",
+    textKey: "upgrade.combo_echo_matrix",
+    apply: () => {
+      state.upgrades.comboEchoDamage += 6;
     },
   },
   {
@@ -1745,6 +1863,15 @@ const UPGRADES = [
     },
   },
   {
+    id: "aegis_reprisal",
+    name: "Aegis Reprisal Mirror",
+    rarity: "relic",
+    textKey: "upgrade.aegis_reprisal",
+    apply: () => {
+      state.upgrades.guardReflect = Math.max(state.upgrades.guardReflect, 1.5);
+    },
+  },
+  {
     id: "b2b_preserver",
     name: "B2B Memory Charm",
     rarity: "rare",
@@ -1761,6 +1888,15 @@ const UPGRADES = [
     apply: () => {
       state.upgrades.allSpinBonus += 18;
       state.upgrades.garbageCancel += 1;
+    },
+  },
+  {
+    id: "garbage_furnace",
+    name: "Garbage Furnace",
+    rarity: "rare",
+    textKey: "upgrade.garbage_furnace",
+    apply: () => {
+      state.upgrades.garbageCounterDamage += 10;
     },
   },
   {
@@ -1820,6 +1956,24 @@ const UPGRADES = [
     apply: () => {
       state.upgrades.spinHeal += 6;
       state.upgrades.guardGain += 1;
+    },
+  },
+  {
+    id: "rift_battery",
+    name: "Rift Battery",
+    rarity: "rare",
+    textKey: "upgrade.rift_battery",
+    apply: () => {
+      state.upgrades.burstCharge += 2;
+    },
+  },
+  {
+    id: "perfect_anchor",
+    name: "Perfect Anchor",
+    rarity: "relic",
+    textKey: "upgrade.perfect_anchor",
+    apply: () => {
+      state.upgrades.perfectBossDelay += 2;
     },
   },
   {
@@ -2010,6 +2164,7 @@ const ENEMY_ATTACK_ANIMATIONS = {
     frames: [0, 1, 2, 3, 4, 5, 6, 7],
     frameMs: ENEMY_ATTACK_FRAME_MS,
     draw: { x: -198, y: -162, w: 392, h: 306 },
+    hitRatio: 0.72,
     noKeying: true,
   },
   vine: {
@@ -2020,6 +2175,7 @@ const ENEMY_ATTACK_ANIMATIONS = {
     frames: [0, 1, 2, 3, 4, 5, 6, 7],
     frameMs: ENEMY_ATTACK_FRAME_MS,
     draw: { x: -204, y: -158, w: 402, h: 304 },
+    hitRatio: 0.78,
     noKeying: true,
   },
   mushroom: {
@@ -2030,6 +2186,7 @@ const ENEMY_ATTACK_ANIMATIONS = {
     frames: [0, 1, 2, 3, 4, 5, 6, 7],
     frameMs: ENEMY_ATTACK_FRAME_MS,
     draw: { x: -204, y: -174, w: 400, h: 318 },
+    hitRatio: 0.76,
     noKeying: true,
   },
   beetle: {
@@ -2040,6 +2197,7 @@ const ENEMY_ATTACK_ANIMATIONS = {
     frames: [0, 1, 2, 3, 4, 5, 6, 7],
     frameMs: ENEMY_ATTACK_FRAME_MS,
     draw: { x: -212, y: -154, w: 414, h: 304 },
+    hitRatio: 0.8,
     noKeying: true,
   },
   mist: {
@@ -2050,6 +2208,7 @@ const ENEMY_ATTACK_ANIMATIONS = {
     frames: [0, 1, 2, 3, 4, 5, 6, 7],
     frameMs: ENEMY_ATTACK_FRAME_MS,
     draw: { x: -202, y: -176, w: 400, h: 324 },
+    hitRatio: 0.78,
     noKeying: true,
   },
   thorn: {
@@ -2060,6 +2219,7 @@ const ENEMY_ATTACK_ANIMATIONS = {
     frames: [0, 1, 2, 3, 4, 5, 6, 7],
     frameMs: ENEMY_ATTACK_FRAME_MS,
     draw: { x: -214, y: -158, w: 420, h: 306 },
+    hitRatio: 0.8,
     noKeying: true,
   },
   wisp: {
@@ -2070,6 +2230,7 @@ const ENEMY_ATTACK_ANIMATIONS = {
     frames: [0, 1, 2, 3, 4, 5, 6, 7],
     frameMs: ENEMY_ATTACK_FRAME_MS,
     draw: { x: -204, y: -180, w: 402, h: 326 },
+    hitRatio: 0.78,
     noKeying: true,
   },
   sentinel: {
@@ -2080,6 +2241,7 @@ const ENEMY_ATTACK_ANIMATIONS = {
     frames: [0, 1, 2, 3, 4, 5, 6, 7],
     frameMs: ENEMY_ATTACK_FRAME_MS,
     draw: { x: -218, y: -174, w: 428, h: 322 },
+    hitRatio: 0.82,
     noKeying: true,
   },
   king: {
@@ -2090,6 +2252,7 @@ const ENEMY_ATTACK_ANIMATIONS = {
     frames: [0, 1, 2, 3, 4, 5, 6, 7],
     frameMs: ENEMY_ATTACK_FRAME_MS,
     draw: { x: -216, y: -174, w: 424, h: 318 },
+    hitRatio: 0.84,
     noKeying: true,
   },
 };
@@ -2340,6 +2503,12 @@ const state = {
     guardGain: 0,
     comboGuardGain: 0,
     b2bShield: 0,
+    spinGuardStrike: 0,
+    comboEchoDamage: 0,
+    guardReflect: 0,
+    garbageCounterDamage: 0,
+    burstCharge: 0,
+    perfectBossDelay: 0,
   },
   message: "",
   messageKey: "",
@@ -2356,6 +2525,9 @@ const state = {
   countdownMs: 0,
   countdownCue: "",
   firstWaveHintMs: 0,
+  bossPhaseBanner: null,
+  bossWindup: null,
+  lastBossPhase: 1,
   hitStopMs: 0,
   lastMoveWasRotate: false,
   lastRotationKind: null,
@@ -2453,7 +2625,7 @@ function saveGame() {
       musicVolume: audio.musicVolume,
       sfxVolume: audio.sfxVolume,
       muted: audio.muted,
-      audioRevision: 3,
+      audioRevision: 4,
       language: state.language,
       controls: serializeControls(state.controls),
       tuning: { ...state.tuning },
@@ -2473,7 +2645,7 @@ function applySavedSettings() {
   if (settings.language === "en" || settings.language === "zh") state.language = settings.language;
   state.controls = normalizeControlsMap(settings.controls || DEFAULT_CONTROLS);
   state.tuning = { ...DEFAULT_TUNING, ...(settings.tuning || {}) };
-  if ((settings.audioRevision || 0) < 3) state.tuning.softDrop = DEFAULT_TUNING.softDrop;
+  if ((settings.audioRevision || 0) < 4) state.tuning.softDrop = DEFAULT_TUNING.softDrop;
   if (typeof settings.pause === "string") state.controls.pause = normalizeControlKeys(settings.pause);
   applyAudioSettings();
   syncControlHints();
@@ -2616,6 +2788,12 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
     guardGain: 0,
     comboGuardGain: 0,
     b2bShield: 0,
+    spinGuardStrike: 0,
+    comboEchoDamage: 0,
+    guardReflect: 0,
+    garbageCounterDamage: 0,
+    burstCharge: 0,
+    perfectBossDelay: 0,
   };
   state.message = "";
   state.messageKey = "";
@@ -2627,6 +2805,9 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.input.softDrop = false;
   state.input.softDropTimer = 0;
   state.firstWaveHintMs = 0;
+  state.bossPhaseBanner = null;
+  state.bossWindup = null;
+  state.lastBossPhase = 1;
   state.hitStopMs = 0;
   audio.lastBossStingerWave = 0;
   resetInputRepeat();
@@ -3032,6 +3213,13 @@ function getEnemyAnimationDuration(kind) {
   return config ? config.frames.length * config.frameMs : ENEMY_ATTACK_DURATION_MS;
 }
 
+function getEnemyHitDelay(kind) {
+  const config = ENEMY_ATTACK_ANIMATIONS[kind];
+  const duration = getEnemyAnimationDuration(kind);
+  const ratio = typeof config?.hitRatio === "number" ? config.hitRatio : 0.78;
+  return Math.min(duration - 40, Math.floor(duration * ratio));
+}
+
 function schedulePendingHit(hit) {
   state.pendingHits.push({
     ...hit,
@@ -3096,6 +3284,7 @@ function applyPlayerHit(hit) {
   state.enemyHpDisplay = Math.max(state.enemyHpDisplay || beforeEnemyHp, beforeEnemyHp);
   state.enemyHpTrail = Math.max(state.enemyHpTrail || beforeEnemyHp, beforeEnemyHp);
   state.enemyHp = Math.max(0, state.enemyHp - damage);
+  checkBossPhaseTransition(beforeEnemyHp, state.enemyHp);
   const impact = getHitFeedbackIntensity(hit);
   state.enemyHit = Math.max(state.enemyHit, 230 + impact * 110);
   state.enemyHitIntensity = Math.max(state.enemyHitIntensity, impact);
@@ -3163,6 +3352,7 @@ function triggerEnemyWarningCue() {
   if (now - audio.lastEnemyWarningAt < ENEMY_WARNING_COOLDOWN_MS) return;
   audio.lastEnemyWarningKey = key;
   audio.lastEnemyWarningAt = now;
+  if (state.enemyType?.id === "king") startBossWindup(getBossPhase());
   playSfx(state.enemyType?.id === "king" || state.miniBoss ? "enemyWarnStrong" : "enemyWarn");
 }
 
@@ -3208,6 +3398,28 @@ function applyEnemyHit(hit) {
   }
   if (state.playerHp <= 0) {
     triggerDefeat("messagePlayerDefeat");
+    return;
+  }
+  if (blocked > 0 && state.upgrades.guardReflect > 0 && state.enemyHp > 0) {
+    const reflectDamage = Math.floor(blocked * state.upgrades.guardReflect);
+    if (reflectDamage > 0) {
+      const beforeEnemyHp = state.enemyHp;
+      state.enemyHpDisplay = Math.max(state.enemyHpDisplay || beforeEnemyHp, beforeEnemyHp);
+      state.enemyHpTrail = Math.max(state.enemyHpTrail || beforeEnemyHp, beforeEnemyHp);
+      state.enemyHp = Math.max(0, state.enemyHp - reflectDamage);
+      state.stats.damage += reflectDamage;
+      state.enemyHit = Math.max(state.enemyHit, 220);
+      state.enemyHitIntensity = Math.max(state.enemyHitIntensity, 1.05);
+      state.floaters.push({
+        x: 920,
+        y: 430,
+        text: fmt("floaterGuardReflect", { damage: reflectDamage }),
+        color: "#9df7da",
+        life: 1000,
+      });
+      state.bursts.push({ x: 994, y: 346, radius: 16, color: "#9df7da", life: 420, duration: 420, intensity: 1.25 });
+      if (state.enemyHp <= 0) startNextWave();
+    }
   }
 }
 
@@ -3241,6 +3453,20 @@ function applyBattle(lines, pieceType, spinType) {
   if (lines > 0 && spinType) {
     damage += state.upgrades.spinBonus;
     addDamagePart(parts, sources, "damageSpinBonus", state.upgrades.spinBonus, "upgrade");
+    const guardSpent = state.upgrades.spinGuardStrike > 0 ? Math.min(state.guard, 24) : 0;
+    const guardStrikeDamage = Math.floor(guardSpent * state.upgrades.spinGuardStrike);
+    if (guardStrikeDamage > 0) {
+      state.guard -= guardSpent;
+      damage += guardStrikeDamage;
+      addDamagePart(parts, sources, "damageGuardStrike", guardStrikeDamage, "upgrade");
+      state.floaters.push({
+        x: 86,
+        y: 270,
+        text: fmt("floaterSpinGuardStrike", { damage: guardStrikeDamage }),
+        color: "#d7c2ff",
+        life: 1050,
+      });
+    }
   }
   if (lines > 0 && isAllSpinMini) {
     damage += state.upgrades.allSpinBonus;
@@ -3255,6 +3481,11 @@ function applyBattle(lines, pieceType, spinType) {
   const comboUpgradeBonus = lines > 0 && state.combo >= 2 ? state.combo * state.upgrades.comboDamage : 0;
   damage += comboUpgradeBonus;
   addDamagePart(parts, sources, "damageCombo", comboUpgradeBonus, "upgrade");
+  const comboEchoBonus = lines > 0 && state.combo >= 4 && state.upgrades.comboEchoDamage > 0
+    ? Math.min(45, state.combo * state.upgrades.comboEchoDamage)
+    : 0;
+  damage += comboEchoBonus;
+  addDamagePart(parts, sources, "damageComboEcho", comboEchoBonus, "upgrade");
   const bossBonus = lines > 0 && state.enemyType.id === "king" && (spinType || state.b2bActive) ? state.upgrades.bossDamage : 0;
   damage += bossBonus;
   addDamagePart(parts, sources, "damageBoss", bossBonus, "upgrade");
@@ -3291,9 +3522,17 @@ function applyBattle(lines, pieceType, spinType) {
   }
   if (state.lastPerfectClear) {
     const before = damage;
-    damage = Math.max(damage, state.enemyHp);
-    if (damage > before) {
-      addDamagePart(parts, sources, "damageExecute", damage - before, "perfect");
+    if (state.enemyType.id === "king") {
+      damage = Math.max(damage, Math.ceil(state.enemyMaxHp * PERFECT_CLEAR_BOSS_HP_RATIO));
+      damage = Math.min(damage, state.enemyHp);
+      if (damage > before) {
+        addDamagePart(parts, sources, "damagePerfectBoss", damage - before, "perfect");
+      }
+    } else {
+      damage = Math.max(damage, state.enemyHp);
+      if (damage > before) {
+        addDamagePart(parts, sources, "damageExecute", damage - before, "perfect");
+      }
     }
     startPerfectClearFx(damage);
     extendUltimateOnPerfectClear();
@@ -3301,6 +3540,23 @@ function applyBattle(lines, pieceType, spinType) {
   extendUltimateOnCombo(lines);
 
   const canceled = cancelIncomingGarbage(lines);
+  const garbageCounterBonus = canceled > 0 && state.upgrades.garbageCounterDamage > 0
+    ? canceled * state.upgrades.garbageCounterDamage
+    : 0;
+  if (garbageCounterBonus > 0) {
+    damage += garbageCounterBonus;
+    addDamagePart(parts, sources, "damageGarbageCounter", garbageCounterBonus, "upgrade");
+  }
+  if (state.lastPerfectClear && state.enemyType.id === "king" && state.upgrades.perfectBossDelay > 0 && damage < state.enemyHp) {
+    state.enemyCountdown += state.upgrades.perfectBossDelay;
+    state.floaters.push({
+      x: BOARD_X + COLS * TILE + 34,
+      y: BOARD_Y + 194,
+      text: fmt("floaterPerfectBossDelay", { turns: state.upgrades.perfectBossDelay }),
+      color: "#fff0a6",
+      life: 1200,
+    });
+  }
   const comboDelay = lines > 0 && state.combo >= 3
     ? Math.min(5, 1 + Math.floor((state.combo - 1) / 2) + state.upgrades.comboDelay)
     : 0;
@@ -3327,7 +3583,7 @@ function applyBattle(lines, pieceType, spinType) {
   gainGuardFromClear(lines, spinType);
 
   addUpgradeProgress(effectiveLines);
-  addUltimateCharge(lines);
+  addUltimateCharge(lines, spinType);
   updateBackToBack(lines, isDifficultClear);
   updateChallengeProgress(lines, spinType, canceled);
   recordTutorialBattleEvents(lines, spinType, canceled);
@@ -3469,9 +3725,10 @@ function getGarbageDelayForWave() {
   return Math.max(0, 1 + state.upgrades.garbageGrace - Math.floor((state.wave - 1) / BALANCE.garbageDelayStepWaves));
 }
 
-function addUltimateCharge(lines) {
+function addUltimateCharge(lines, spinType = null) {
   if (lines <= 0 || state.ultimateActive) return;
-  state.ultimateCharge = Math.min(ULTIMATE_REQUIRED_LINES, state.ultimateCharge + lines);
+  const bonus = state.upgrades.burstCharge > 0 && (lines >= 4 || spinType) ? state.upgrades.burstCharge : 0;
+  state.ultimateCharge = Math.min(ULTIMATE_REQUIRED_LINES, state.ultimateCharge + lines + bonus);
   if (state.ultimateCharge >= ULTIMATE_REQUIRED_LINES) activateUltimateMode();
 }
 
@@ -4028,6 +4285,7 @@ function resolveEnemyAttack() {
   state.enemyCountdown = getEnemyCountdownForWave();
   if (enemy.id === "king" && getBossPhase() >= 3) state.enemyCountdown = Math.max(4, state.enemyCountdown - 1);
   if (enemy.id === "king" && getBossPhase() >= 4) state.enemyCountdown = Math.max(3, state.enemyCountdown - 1);
+  if (enemy.id === "king") startBossWindup(getBossPhase());
   startEnemyAttackAnimation(enemy.id);
   const enemyAttackDuration = getEnemyAnimationDuration(enemy.id);
   state.attacks.push({
@@ -4042,7 +4300,7 @@ function resolveEnemyAttack() {
   });
   schedulePendingHit({
     type: "enemy",
-    delay: Math.floor(enemyAttackDuration * 0.6),
+    delay: getEnemyHitDelay(enemy.id),
     enemy,
     damageTaken,
     garbageAdded,
@@ -4121,13 +4379,53 @@ function scrambleNextQueue(turns = 3) {
   state.floaters.push({ x: NEXT_PANEL_X - 4, y: NEXT_PANEL_Y + 42, text: t("floaterQueueHex"), color: "#77e8ff", life: 1050 });
 }
 
-function getBossPhase() {
-  if (state.enemyType.id !== "king") return 1;
-  const hpRatio = state.enemyMaxHp ? state.enemyHp / state.enemyMaxHp : 1;
+function getBossPhaseByHp(hp, maxHp) {
+  const hpRatio = maxHp ? hp / maxHp : 1;
   if (hpRatio <= 0.2) return 4;
   if (hpRatio <= 0.4) return 3;
   if (hpRatio <= 0.7) return 2;
   return 1;
+}
+
+function getBossPhase() {
+  if (state.enemyType.id !== "king") return 1;
+  return getBossPhaseByHp(state.enemyHp, state.enemyMaxHp);
+}
+
+function startBossWindup(phase = getBossPhase()) {
+  if (state.enemyType?.id !== "king") return;
+  state.bossWindup = {
+    phase,
+    life: BOSS_WINDUP_MS,
+    duration: BOSS_WINDUP_MS,
+    startedAt: performance.now(),
+  };
+  state.shake = Math.max(state.shake, 8 + phase * 2);
+}
+
+function triggerBossPhaseSignal(phase) {
+  state.lastBossPhase = phase;
+  state.bossPhaseBanner = {
+    phase,
+    life: BOSS_PHASE_BANNER_MS,
+    duration: BOSS_PHASE_BANNER_MS,
+  };
+  state.floaters.push({
+    x: BOARD_X + COLS * TILE + 36,
+    y: BOARD_Y + 96,
+    text: fmt("bossPhaseShift", { phase }),
+    color: "#fff0a6",
+    life: BOSS_PHASE_BANNER_MS,
+  });
+  startBossWindup(phase);
+  playSfx("enemyWarnStrong");
+}
+
+function checkBossPhaseTransition(beforeHp, afterHp) {
+  if (state.enemyType.id !== "king" || afterHp <= 0) return;
+  const beforePhase = getBossPhaseByHp(beforeHp, state.enemyMaxHp);
+  const afterPhase = getBossPhaseByHp(afterHp, state.enemyMaxHp);
+  if (afterPhase > beforePhase && afterPhase > state.lastBossPhase) triggerBossPhaseSignal(afterPhase);
 }
 
 function startNextWave() {
@@ -4321,6 +4619,9 @@ function configureEnemyForWave() {
   state.enemyHpDisplay = state.enemyHp;
   state.enemyHpTrail = state.enemyHp;
   state.enemyHitIntensity = 0;
+  state.lastBossPhase = enemy.id === "king" ? 1 : 0;
+  state.bossPhaseBanner = null;
+  state.bossWindup = null;
   state.enemyAttackDamage = enemy.damage + Math.floor((state.wave - 1) / BALANCE.enemyDamageEveryWaves) * BALANCE.enemyDamageStep + (state.miniBoss ? BALANCE.miniBossDamageBonus : 0);
   state.enemyCountdown = getEnemyCountdownForWave();
 }
@@ -4553,8 +4854,67 @@ function applyAudioSettings() {
 function startMusic() {
   if (!audio.ctx || audio.musicTimer) return;
   audio.step = 0;
-  playMusicStep();
-  audio.musicTimer = window.setInterval(playMusicStep, MUSIC_STEP_MS);
+  updateMusicPlayback();
+  audio.musicTimer = window.setInterval(updateMusicPlayback, 250);
+}
+
+function setupMusicLoopSources() {
+  if (!audio.ctx || !audio.musicGain) return;
+  for (const [key, element] of Object.entries(musicLoopAssets)) {
+    if (!element || audio.musicLoopSources.has(key)) continue;
+    try {
+      const source = audio.ctx.createMediaElementSource(element);
+      source.connect(audio.musicGain);
+      element.loop = true;
+      element.volume = 0;
+      audio.musicLoopSources.set(key, source);
+    } catch (error) {
+      console.warn(`[TST assets] Music loop source failed: ${key}`, error);
+    }
+  }
+}
+
+function getMusicLoopKeyForStage(stage) {
+  if (stage === "menu") return "menu";
+  if (stage === "early") return "forest";
+  if (stage === "mid") return "ruins";
+  return "rift";
+}
+
+function updateMusicPlayback() {
+  if (!audio.ctx) return;
+  const stage = getCurrentMusicStage();
+  const danger = isDangerMusicActive();
+  updateMusicLayers(stage, danger);
+  maybeTriggerBossStinger(stage, audio.ctx.currentTime + 0.03);
+  setupMusicLoopSources();
+
+  const targetKey = getMusicLoopKeyForStage(stage);
+  const enabled = !audio.muted && audio.musicVolume > 0 && audio.masterVolume > 0;
+  for (const [key, element] of Object.entries(musicLoopAssets)) {
+    if (!element) continue;
+    if (!enabled) {
+      element.volume = 0;
+      if (!element.paused) element.pause();
+      continue;
+    }
+    const targetVolume = enabled && key === targetKey ? (stage === "boss" ? 0.86 : 0.78) : 0;
+    element.volume += (targetVolume - element.volume) * 0.18;
+    if (targetVolume > 0.01 && element.paused) {
+      element.play().catch(() => {
+        // Browser autoplay may block until the next user gesture; gameplay continues without music.
+      });
+    }
+    if (element.volume < 0.01 && targetVolume <= 0.01 && !element.paused) element.pause();
+  }
+  audio.currentMusicLoopKey = enabled ? targetKey : "";
+  const now = performance.now();
+  if (danger && enabled && now - audio.lastDangerMusicPulseAt > 2400) {
+    audio.lastDangerMusicPulseAt = now;
+    const t = audio.ctx.currentTime + 0.02;
+    tone(92, 0.2, "sine", 0.08, audio.musicGain, t);
+    filteredNoise(0.16, 0.035, "lowpass", 280, 0.8, audio.musicGain, t + 0.03);
+  }
 }
 
 function playMusicStep() {
@@ -5085,6 +5445,14 @@ function tickEffects(dt) {
   state.combatPopups = state.combatPopups
     .map((popup) => ({ ...popup, life: popup.life - dt }))
     .filter((popup) => popup.life > 0);
+  if (state.bossPhaseBanner) {
+    state.bossPhaseBanner.life -= dt;
+    if (state.bossPhaseBanner.life <= 0) state.bossPhaseBanner = null;
+  }
+  if (state.bossWindup) {
+    state.bossWindup.life -= dt;
+    if (state.bossWindup.life <= 0) state.bossWindup = null;
+  }
   state.attacks = state.attacks
     .map((a) => ({ ...a, life: a.life - dt }))
     .filter((a) => a.life > 0);
@@ -5122,6 +5490,7 @@ function draw() {
     drawParticles();
     drawFloaters();
     drawCombatPopups();
+    drawBossPhaseWarning();
     drawBattleCountdown();
     drawFirstWaveCombatHint();
     drawTutorialPrompt();
@@ -6145,6 +6514,12 @@ function getBuildSummary() {
   if (state.upgrades.bossDamage > 0) items.push(fmt("build.bossbreaker", { value: state.upgrades.bossDamage }));
   if (state.upgrades.clearHeal > 0) items.push(fmt("build.clearHeal", { value: state.upgrades.clearHeal }));
   if (state.upgrades.spinHeal > 0) items.push(fmt("build.spinHeal", { value: state.upgrades.spinHeal }));
+  if (state.upgrades.spinGuardStrike > 0) items.push(fmt("build.spinGuardStrike", { value: state.upgrades.spinGuardStrike }));
+  if (state.upgrades.comboEchoDamage > 0) items.push(fmt("build.comboEcho", { value: state.upgrades.comboEchoDamage }));
+  if (state.upgrades.guardReflect > 0) items.push(fmt("build.guardReflect", { value: state.upgrades.guardReflect.toFixed(1) }));
+  if (state.upgrades.garbageCounterDamage > 0) items.push(fmt("build.garbageCounter", { value: state.upgrades.garbageCounterDamage }));
+  if (state.upgrades.burstCharge > 0) items.push(fmt("build.burstCharge", { value: state.upgrades.burstCharge }));
+  if (state.upgrades.perfectBossDelay > 0) items.push(fmt("build.perfectBossDelay", { value: state.upgrades.perfectBossDelay }));
   if (state.upgrades.guardGain > 0) items.push(`${t("guardLabel")} +${state.upgrades.guardGain}`);
   if (state.upgrades.comboGuardGain > 0) items.push(`Combo ${t("guardLabel")} +${state.upgrades.comboGuardGain}`);
   if (state.upgrades.b2bShield > 0) items.push(`B2B ${t("guardLabel")} ${state.upgrades.b2bShield}`);
@@ -7292,7 +7667,7 @@ function drawPlayerAttack(attack, x, y, t) {
       ctx.fillRect(attack.x1 + Math.cos(a) * 42, attack.y1 + Math.sin(a) * 28, 6, 6);
     }
   }
-  if (t > 0.78) drawImpactBurst(attack.x1, attack.y1, glow, t, special);
+  if (t > 0.78) drawImpactBurst(attack.x1, attack.y1, glow, t, special, 0.78);
   ctx.restore();
 }
 
@@ -7344,6 +7719,8 @@ function drawEnemyAttack(attack, x, y, t) {
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   const kind = attack.attackKind || "slime";
+  const config = ENEMY_ATTACK_ANIMATIONS[kind] || {};
+  const impactStart = typeof config.hitRatio === "number" ? Math.max(0.68, config.hitRatio - 0.02) : 0.78;
   const palette = {
     vine: "#9de06c",
     mushroom: "#b690ff",
@@ -7471,12 +7848,12 @@ function drawEnemyAttack(attack, x, y, t) {
     ctx.arc(x - 4, y - 2, 5, 0, Math.PI * 2);
     ctx.fill();
   }
-  if (t > 0.78) drawImpactBurst(attack.x1, attack.y1, garbageAttack ? color : "#ff7782", t, kind);
+  if (t > impactStart) drawImpactBurst(attack.x1, attack.y1, garbageAttack ? color : "#ff7782", t, kind, impactStart);
   ctx.restore();
 }
 
-function drawImpactBurst(x, y, color, t, kind = "clear") {
-  const k = Math.min(1, (t - 0.78) / 0.22);
+function drawImpactBurst(x, y, color, t, kind = "clear", impactStart = 0.78) {
+  const k = Math.min(1, (t - impactStart) / Math.max(0.05, 1 - impactStart));
   const strong = ["perfect", "spin", "b2b", "combo", "thorn", "wisp", "sentinel", "king"].includes(kind);
   ctx.save();
   ctx.globalAlpha = 1 - k;
@@ -7492,6 +7869,48 @@ function drawImpactBurst(x, y, color, t, kind = "clear") {
     ctx.moveTo(x + Math.cos(a) * 16, y + Math.sin(a) * 16);
     ctx.lineTo(x + Math.cos(a) * (strong ? 72 : 48), y + Math.sin(a) * (strong ? 58 : 38));
     ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawBossPhaseWarning() {
+  const banner = state.bossPhaseBanner;
+  const windup = state.bossWindup;
+  if (!banner && !windup) return;
+  ctx.save();
+  if (windup) {
+    const p = 1 - clamp(windup.life / windup.duration, 0, 1);
+    const pulse = Math.sin(p * Math.PI);
+    ctx.globalCompositeOperation = "lighter";
+    ctx.strokeStyle = `rgba(255, 185, 95, ${0.24 + pulse * 0.46})`;
+    ctx.lineWidth = 3 + windup.phase;
+    ctx.beginPath();
+    ctx.ellipse(994, 346, 92 + pulse * 54, 42 + pulse * 22, -0.18, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = `rgba(177, 116, 255, ${0.16 + pulse * 0.32})`;
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 4; i += 1) {
+      const a = p * Math.PI * 2 + i * Math.PI * 0.5;
+      ctx.beginPath();
+      ctx.arc(994 + Math.cos(a) * 56, 346 + Math.sin(a) * 24, 18 + pulse * 12, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+  if (banner) {
+    const alpha = clamp(banner.life / banner.duration, 0, 1);
+    const reveal = Math.min(1, (banner.duration - banner.life) / 180);
+    const x = W / 2 - 178;
+    const y = 86;
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = `rgba(3, 5, 12, ${0.52 * Math.min(reveal, alpha * 2)})`;
+    roundedRect(x, y, 356, 64, 14, true, false);
+    ctx.strokeStyle = `rgba(255, 185, 95, ${0.38 + reveal * 0.34})`;
+    ctx.lineWidth = 2;
+    roundedRect(x, y, 356, 64, 14, false, true);
+    ctx.textAlign = "center";
+    label(fmt("bossPhaseShift", { phase: banner.phase }).toUpperCase(), W / 2, y + 27, 20, "#fff0a6");
+    label(t("bossRiftWindup"), W / 2, y + 48, 12, "#ffb95f");
+    ctx.textAlign = "left";
   }
   ctx.restore();
 }
@@ -8450,6 +8869,11 @@ function drawSettingsContent(x, y) {
     label(t("controlListTitle").toUpperCase(), x, y + 46, 14, "#fff0a6");
     wrapText(state.bindingAction ? t("binding") : t("bindHelp"), x, y + 74, 660, 18, "rgba(238,244,252,0.6)", 13);
     drawControlGrid(x, y + 112);
+    drawSettingsUtilityButton(getControlsResetButtonRect(), t("resetKeybinds"));
+    return;
+  }
+  if (state.settingsTab === "handling") {
+    drawHandlingSettings(x, y);
     return;
   }
   if (state.settingsTab === "language") {
@@ -8464,17 +8888,16 @@ function drawSettingsContent(x, y) {
 }
 
 function drawSettingsFeedbackCard(x, y, w, h) {
-  const bugRect = getSettingsFeedbackButtonRect("bug", x, y, w, h);
-  const suggestionRect = getSettingsFeedbackButtonRect("suggestion", x, y, w, h);
+  const buttonRect = getSettingsFeedbackButtonRect(x, y, w, h);
   ctx.save();
   ctx.fillStyle = "rgba(8, 13, 20, 0.56)";
   roundedRect(x, y, w, h, 12, true, false);
   ctx.strokeStyle = "rgba(126, 231, 255, 0.22)";
   ctx.lineWidth = 1.5;
   roundedRect(x, y, w, h, 12, false, true);
-  wrapText(t("feedbackHelp"), x + 24, y + 42, w - 48, 22, "rgba(238,244,252,0.72)", 15);
-  drawSettingsFeedbackButton(bugRect, t("feedbackReportBug"), "#ffb7bd");
-  drawSettingsFeedbackButton(suggestionRect, t("feedbackSuggestImprovement"), "#fff0a6");
+  wrapText(t("feedbackHelp"), x + 24, y + 48, w - 278, 23, "rgba(238,244,252,0.76)", 15);
+  drawSettingsFeedbackNoa(x + w - 236, y + 22, 202, h - 42);
+  drawSettingsFeedbackButton(buttonRect, t("feedbackOpenGithub"), "#fff0a6");
   ctx.restore();
 }
 
@@ -8494,18 +8917,51 @@ function drawSettingsFeedbackButton(rect, text, color) {
   ctx.restore();
 }
 
-function getSettingsFeedbackCardRect() {
-  const origin = getSettingsContentOrigin();
-  return { x: origin.x, y: origin.y + 58, w: 590, h: 164 };
+function drawSettingsUtilityButton(rect, text) {
+  const hovered = pointInRect(state.pointer.x, state.pointer.y, rect.x, rect.y, rect.w, rect.h);
+  ctx.save();
+  ctx.fillStyle = hovered ? "rgba(126, 231, 255, 0.2)" : "rgba(10, 16, 25, 0.58)";
+  roundedRect(rect.x, rect.y, rect.w, rect.h, 8, true, false);
+  ctx.strokeStyle = hovered ? "rgba(255, 240, 166, 0.52)" : "rgba(126, 231, 255, 0.26)";
+  ctx.lineWidth = hovered ? 2 : 1.4;
+  roundedRect(rect.x, rect.y, rect.w, rect.h, 8, false, true);
+  fitLabel(text, rect.x + 16, rect.y + 25, rect.w - 32, 14, hovered ? "#fff0a6" : "rgba(245,241,230,0.78)", 11, "800");
+  ctx.restore();
 }
 
-function getSettingsFeedbackButtonRect(kind, cardX, cardY, cardW, cardH = 164) {
-  const gap = 18;
-  const buttonW = 154;
-  const buttonH = 38;
-  const firstX = cardX + cardW - 24 - buttonW * 2 - gap;
-  const x = kind === "bug" ? firstX : firstX + buttonW + gap;
-  return { x, y: cardY + cardH - 54, w: buttonW, h: buttonH };
+function getSettingsFeedbackCardRect() {
+  const origin = getSettingsContentOrigin();
+  return { x: origin.x, y: origin.y + 58, w: 640, h: 292 };
+}
+
+function getControlsResetButtonRect() {
+  const origin = getSettingsContentOrigin();
+  const layout = UI_LAYOUT.controlsGrid;
+  const rows = Math.ceil(CONTROL_ACTIONS.length / layout.columns);
+  return { x: origin.x + 460, y: origin.y + 112 + rows * layout.rowH + 10, w: 220, h: 38 };
+}
+
+function getHandlingResetButtonRect() {
+  const origin = getSettingsContentOrigin();
+  return { x: origin.x + 420, y: origin.y + 430, w: 220, h: 38 };
+}
+
+function getSettingsFeedbackButtonRect(cardX, cardY, cardW, cardH = 292) {
+  return { x: cardX + 24, y: cardY + cardH - 62, w: 232, h: 40 };
+}
+
+function drawSettingsFeedbackNoa(x, y, w, h) {
+  ctx.save();
+  const glow = ctx.createRadialGradient(x + w / 2, y + h * 0.62, 10, x + w / 2, y + h * 0.62, w * 0.58);
+  glow.addColorStop(0, "rgba(126, 231, 255, 0.18)");
+  glow.addColorStop(0.58, "rgba(183, 146, 255, 0.1)");
+  glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(x - 18, y, w + 36, h);
+  ctx.shadowColor = "#b690ff";
+  ctx.shadowBlur = 18;
+  drawImageContain(noaFeedbackBowArt, x, y, w, h);
+  ctx.restore();
 }
 
 function drawPauseStat(x, y, name, value) {
@@ -8670,11 +9126,11 @@ function drawUpgradeSigil(x, y, color, number, scale = 1, alpha = 1) {
 }
 
 function getUpgradeFamily(upgrade) {
-  if (["tspin_amp", "spin_circuit", "all_spin_codex"].includes(upgrade.id)) return BUILD_FAMILY.spin;
-  if (["combo_clock", "combo_resonator", "tempo_engine"].includes(upgrade.id)) return BUILD_FAMILY.combo;
-  if (["combo_aegis", "guard_lattice", "b2b_preserver"].includes(upgrade.id)) return BUILD_FAMILY.defense;
-  if (["garbage_guard", "null_barrier"].includes(upgrade.id)) return BUILD_FAMILY.garbage;
-  if (["b2b_blade", "bossbreaker_relic", "blade_polish", "stellar_caliber", "grey_star_reactor"].includes(upgrade.id)) return BUILD_FAMILY.burst;
+  if (["tspin_amp", "spin_circuit", "all_spin_codex", "spin_guard_reactor"].includes(upgrade.id)) return BUILD_FAMILY.spin;
+  if (["combo_clock", "combo_resonator", "tempo_engine", "combo_echo_matrix"].includes(upgrade.id)) return BUILD_FAMILY.combo;
+  if (["combo_aegis", "guard_lattice", "b2b_preserver", "aegis_reprisal"].includes(upgrade.id)) return BUILD_FAMILY.defense;
+  if (["garbage_guard", "null_barrier", "garbage_furnace"].includes(upgrade.id)) return BUILD_FAMILY.garbage;
+  if (["b2b_blade", "bossbreaker_relic", "blade_polish", "stellar_caliber", "grey_star_reactor", "rift_battery", "perfect_anchor"].includes(upgrade.id)) return BUILD_FAMILY.burst;
   if (["star_mender", "aegis_shell", "vital_core", "recovery_glyph", "void_carapace", "arcane_suture", "spin_vamp"].includes(upgrade.id)) return BUILD_FAMILY.defense;
   return BUILD_FAMILY.burst;
 }
@@ -8887,6 +9343,21 @@ function drawLanguagePill(x, y, w, h, text, active) {
   ctx.restore();
 }
 
+function drawHandlingSettings(x, y) {
+  label(t("handlingSettingsTitle"), x, y, 26, "#8fe8dc");
+  const rows = [
+    ["das", t("das"), t("dasHelp")],
+    ["arr", t("arr"), t("arrHelp")],
+    ["softDrop", t("softDropMs"), t("softDropHelp")],
+    ["lockDelay", t("lockDelayMs"), t("lockDelayHelp")],
+  ];
+  for (let i = 0; i < rows.length; i += 1) {
+    const [key, title, help] = rows[i];
+    drawHandlingSlider(title, help, key, x, y + 66 + i * 88);
+  }
+  drawSettingsUtilityButton(getHandlingResetButtonRect(), t("resetHandling"));
+}
+
 function drawControlGrid(x, y, columns = UI_LAYOUT.controlsGrid.columns, gapX = UI_LAYOUT.controlsGrid.gapX) {
   const layout = UI_LAYOUT.controlsGrid;
   for (let i = 0; i < CONTROL_ACTIONS.length; i += 1) {
@@ -8982,6 +9453,56 @@ function drawTuningSlider(labelText, key, x, y) {
   ctx.strokeStyle = "#101620";
   ctx.lineWidth = 3;
   ctx.stroke();
+  ctx.restore();
+}
+
+function drawHandlingSlider(labelText, helpText, key, x, y) {
+  const spec = TUNING_SLIDERS[key];
+  const value = state.tuning[key];
+  const ratio = clamp((value - spec.min) / (spec.max - spec.min), 0, 1);
+  const trackW = getSettingsSliderTrackWidth("tuning");
+  const trackX = getSettingsSliderTrackX("tuning");
+  const trackY = y + 34;
+  const valueX = trackX + trackW + 28;
+  const shown = key === "arr" && value === 0 ? "0 ms" : `${Math.round(value)} ${spec.unit}`;
+  const active = state.pointer.dragging === `tuning:${key}`;
+  ctx.save();
+  ctx.fillStyle = active ? "rgba(183, 146, 255, 0.18)" : "rgba(8, 13, 20, 0.48)";
+  roundedRect(x, y, 640, 70, 12, true, false);
+  ctx.strokeStyle = active ? "rgba(255, 240, 166, 0.54)" : "rgba(126, 231, 255, 0.2)";
+  ctx.lineWidth = active ? 2 : 1.4;
+  roundedRect(x, y, 640, 70, 12, false, true);
+
+  fitLabel(labelText, x + 18, y + 24, 190, 16, "#f3f2ea", 12, "900");
+  wrapText(helpText, x + 18, y + 46, 205, 16, "rgba(238,244,252,0.58)", 11);
+
+  ctx.fillStyle = "rgba(1, 4, 10, 0.62)";
+  roundedRect(trackX, trackY, trackW, 14, 7, true, false);
+  const g = ctx.createLinearGradient(trackX, trackY, trackX + trackW, trackY);
+  g.addColorStop(0, "#7ef7ff");
+  g.addColorStop(0.58, "#b690ff");
+  g.addColorStop(1, "#fff0a6");
+  ctx.fillStyle = g;
+  roundedRect(trackX, trackY, trackW * ratio, 14, 7, true, false);
+  ctx.strokeStyle = active ? "rgba(255, 240, 166, 0.72)" : "rgba(231,244,255,0.3)";
+  ctx.lineWidth = 2;
+  roundedRect(trackX, trackY, trackW, 14, 7, false, true);
+
+  const knobX = trackX + ratio * trackW;
+  ctx.shadowColor = active ? "#fff0a6" : "#7ef7ff";
+  ctx.shadowBlur = active ? 16 : 9;
+  ctx.fillStyle = active ? "#fff4a8" : "#f3f2ea";
+  ctx.beginPath();
+  ctx.arc(knobX, trackY + 7, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = "#101620";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.font = canvasFont("900", 15, shown, true);
+  ctx.fillStyle = active ? "#fff0a6" : "rgba(245,241,230,0.86)";
+  ctx.fillText(shown, valueX, trackY + 12);
   ctx.restore();
 }
 
@@ -9511,6 +10032,13 @@ function handleSettingsPointerDown(x, y, source) {
     playSfx("hold");
     return;
   }
+  const resetAction = hitSettingsResetButton(x, y);
+  if (resetAction) {
+    if (resetAction === "keybinds") resetKeybindsToDefault();
+    else if (resetAction === "handling") resetHandlingToDefault();
+    playSfx("hold");
+    return;
+  }
   const feedbackUrl = hitSettingsFeedbackLink(x, y);
   if (feedbackUrl) {
     openFeedbackLink(feedbackUrl);
@@ -9561,13 +10089,51 @@ function getSettingsContentOrigin() {
   return { x: UI_LAYOUT.settings.contentX, y: UI_LAYOUT.settings.contentY };
 }
 
+function hitSettingsResetButton(x, y) {
+  if (state.settingsTab === "controls") {
+    const rect = getControlsResetButtonRect();
+    if (pointInRect(x, y, rect.x, rect.y, rect.w, rect.h)) return "keybinds";
+  }
+  if (state.settingsTab === "handling") {
+    const rect = getHandlingResetButtonRect();
+    if (pointInRect(x, y, rect.x, rect.y, rect.w, rect.h)) return "handling";
+  }
+  return "";
+}
+
+function resetKeybindsToDefault() {
+  state.controls = normalizeControlsMap(DEFAULT_CONTROLS);
+  state.bindingAction = null;
+  syncControlHints();
+  saveGame();
+}
+
+function resetHandlingToDefault() {
+  state.tuning = {
+    ...state.tuning,
+    das: DEFAULT_TUNING.das,
+    arr: DEFAULT_TUNING.arr,
+    softDrop: DEFAULT_TUNING.softDrop,
+    lockDelay: DEFAULT_TUNING.lockDelay,
+  };
+  resetInputRepeat();
+  saveGame();
+}
+
+function getSettingsSliderTrackX(kind) {
+  const origin = getSettingsContentOrigin();
+  return kind === "tuning" ? origin.x + 248 : origin.x;
+}
+
+function getSettingsSliderTrackWidth(kind) {
+  return kind === "tuning" ? 278 : 270;
+}
+
 function hitSettingsFeedbackLink(x, y) {
   if (state.settingsTab !== "feedback") return "";
   const card = getSettingsFeedbackCardRect();
-  const bugRect = getSettingsFeedbackButtonRect("bug", card.x, card.y, card.w, card.h);
-  const suggestionRect = getSettingsFeedbackButtonRect("suggestion", card.x, card.y, card.w, card.h);
-  if (pointInRect(x, y, bugRect.x, bugRect.y, bugRect.w, bugRect.h)) return GITHUB_REPORT_BUG_URL;
-  if (pointInRect(x, y, suggestionRect.x, suggestionRect.y, suggestionRect.w, suggestionRect.h)) return GITHUB_SUGGESTION_URL;
+  const buttonRect = getSettingsFeedbackButtonRect(card.x, card.y, card.w, card.h);
+  if (pointInRect(x, y, buttonRect.x, buttonRect.y, buttonRect.w, buttonRect.h)) return GITHUB_FEEDBACK_URL;
   return "";
 }
 
@@ -9591,23 +10157,34 @@ function getCanvasPoint(event) {
 
 function hitSlider(x, y) {
   const origin = getSettingsContentOrigin();
-  const sliders = state.settingsTab === "audio"
-    ? [
-        ["audio:masterVolume", origin.x, origin.y + 64],
-        ["audio:musicVolume", origin.x, origin.y + 128],
-        ["audio:sfxVolume", origin.x, origin.y + 192],
-      ]
-    : [];
-  for (const [key, sx, sy] of sliders) {
-    if (pointInRect(x, y, sx - 14, sy - 16, 298, 44)) return key;
+  const sliders = [];
+  if (state.settingsTab === "audio") {
+    sliders.push(
+      ["audio:masterVolume", origin.x, origin.y + 64, getSettingsSliderTrackWidth("audio")],
+      ["audio:musicVolume", origin.x, origin.y + 128, getSettingsSliderTrackWidth("audio")],
+      ["audio:sfxVolume", origin.x, origin.y + 192, getSettingsSliderTrackWidth("audio")],
+    );
+  } else if (state.settingsTab === "handling") {
+    const trackX = getSettingsSliderTrackX("tuning");
+    const trackW = getSettingsSliderTrackWidth("tuning");
+    sliders.push(
+      ["tuning:das", trackX, origin.y + 66 + 34, trackW],
+      ["tuning:arr", trackX, origin.y + 154 + 34, trackW],
+      ["tuning:softDrop", trackX, origin.y + 242 + 34, trackW],
+      ["tuning:lockDelay", trackX, origin.y + 330 + 34, trackW],
+    );
+  }
+  for (const [key, sx, sy, sw] of sliders) {
+    if (pointInRect(x, y, sx - 16, sy - 18, sw + 32, 50)) return key;
   }
   return null;
 }
 
 function updateSliderFromPointer(key, x) {
   const [kind, name] = key.split(":");
-  const sliderX = getSettingsContentOrigin().x;
-  const value = clamp((x - sliderX) / 270, 0, 1);
+  const sliderX = getSettingsSliderTrackX(kind);
+  const trackW = getSettingsSliderTrackWidth(kind);
+  const value = clamp((x - sliderX) / trackW, 0, 1);
   if (kind === "audio") {
     audio[name] = value;
   } else if (kind === "tuning") {
