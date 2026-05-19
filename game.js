@@ -455,13 +455,14 @@ const FIRST_WAVE_HINT_FADE_MS = 520;
 const PERFECT_HIT_STOP_MS = 150;
 const BOSS_PHASE_BANNER_MS = 1550;
 const BOSS_WINDUP_MS = 1350;
+const HEAVY_ATTACK_WARNING_DAMAGE = 20;
 const GITHUB_FEEDBACK_URL = "https://github.com/D1124423017/T-Spin-Traveler/issues";
 
 const BALANCE = {
   enemyWaveHp: 10,
   miniBossMultiplier: 1.18,
   bossMultiplier: 1.2,
-  enemyDamageEveryWaves: 3,
+  enemyDamageEveryWaves: 4,
   enemyDamageStep: 2,
   miniBossDamageBonus: 2,
   waveHeal: ENEMY_DEFEAT_HEAL,
@@ -473,7 +474,7 @@ const BALANCE = {
   gravityStepMs: 50,
   minGravityMs: 160,
   garbageDelayStepWaves: 10,
-  guardMax: 18,
+  guardMax: 24,
   guardPerLine: 2,
   guardSpinBonus: 3,
   perfectClear4WideExtendMs: 3000,
@@ -913,6 +914,7 @@ const translations = {
     bossPhase: "Boss 階段 {phase}",
     bossPhaseShift: "Boss 階段 {phase}",
     bossRiftWindup: "裂隙重擊蓄力",
+    heavyAttackIncoming: "強力攻擊即將來襲",
     miniBoss: "小 Boss",
     comboLabel: "Combo",
     incomingLabel: "垃圾預告",
@@ -955,6 +957,14 @@ const translations = {
     boardEffectShort: "盤面",
     weakShort: "弱點",
     relicDraft: "遺物選擇",
+    currentBuild: "目前流派",
+    currentBuildTitle: "目前已獲得升級",
+    currentBuildEmpty: "尚未獲得升級",
+    currentBuildStats: "流派統計",
+    currentBuildList: "已獲得升級",
+    currentBuildDirection: "目前偏向：{families}",
+    currentBuildNoDirection: "尚未形成明顯流派",
+    currentBuildClose: "關閉",
     safeNodeDraft: "安全節點，不打斷操作",
     damageRuleLine: "Single 10 / Double 25 / Triple 45 / Tetris 70 / Spin 30-140 / B2B +15 / Weak x1.35",
     upgradeReadyShort: "升級待命",
@@ -1346,6 +1356,7 @@ const translations = {
     bossPhase: "Boss Phase {phase}",
     bossPhaseShift: "Boss Phase {phase}",
     bossRiftWindup: "Rift Slam Charging",
+    heavyAttackIncoming: "Heavy Attack Incoming",
     miniBoss: "Mini Boss",
     comboLabel: "Combo",
     incomingLabel: "Incoming",
@@ -1388,6 +1399,14 @@ const translations = {
     boardEffectShort: "Board",
     weakShort: "Weak",
     relicDraft: "Relic Draft",
+    currentBuild: "Current Build",
+    currentBuildTitle: "Current Build",
+    currentBuildEmpty: "No relics acquired yet.",
+    currentBuildStats: "Family Stats",
+    currentBuildList: "Acquired Relics",
+    currentBuildDirection: "Current direction: {families}",
+    currentBuildNoDirection: "No clear build direction yet",
+    currentBuildClose: "Close",
     safeNodeDraft: "Safe node, never interrupts play",
     damageRuleLine: "Single 10 / Double 25 / Triple 45 / Tetris 70 / Spin 30-140 / B2B +15 / Weak x1.35",
     upgradeReadyShort: "Upgrade Ready",
@@ -2483,6 +2502,8 @@ const state = {
   challenge: null,
   tutorial: null,
   upgradeChoices: [],
+  acquiredRelics: [],
+  currentBuildOpen: false,
   upgrades: {
     tspinBonus: 0,
     garbageCancel: 0,
@@ -2768,6 +2789,8 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.challenge = challengeId ? makeChallengeState(challengeId) : null;
   state.tutorial = null;
   state.upgradeChoices = [];
+  state.acquiredRelics = [];
+  state.currentBuildOpen = false;
   state.upgrades = {
     tspinBonus: 0,
     garbageCancel: 0,
@@ -3344,7 +3367,6 @@ function finishPlayerTurnAfterHit(context) {
 }
 
 function triggerEnemyWarningCue() {
-  if (!audio.ctx || audio.muted || audio.sfxVolume <= 0 || audio.masterVolume <= 0) return;
   if (state.mode !== "playing" || isBattleCountdownActive()) return;
   const now = performance.now();
   const key = `${state.wave}:${state.defeated}:${state.enemyType?.id}:${state.placed}`;
@@ -3353,7 +3375,29 @@ function triggerEnemyWarningCue() {
   audio.lastEnemyWarningKey = key;
   audio.lastEnemyWarningAt = now;
   if (state.enemyType?.id === "king") startBossWindup(getBossPhase());
+  triggerHeavyAttackWarning();
+  if (!audio.ctx || audio.muted || audio.sfxVolume <= 0 || audio.masterVolume <= 0) return;
   playSfx(state.enemyType?.id === "king" || state.miniBoss ? "enemyWarnStrong" : "enemyWarn");
+}
+
+function triggerHeavyAttackWarning() {
+  if (state.enemyCountdown > 1 || state.enemyAttackDamage < HEAVY_ATTACK_WARNING_DAMAGE) return;
+  state.floaters.push({
+    x: BOARD_X + COLS * TILE + 214,
+    y: BOARD_Y + 278,
+    text: t("heavyAttackIncoming"),
+    color: "#ff8ca0",
+    life: 1250,
+  });
+  state.bursts.push({
+    x: BOARD_X + COLS * TILE + 232,
+    y: BOARD_Y + 326,
+    radius: 18,
+    color: "#ff6f9f",
+    life: 420,
+    duration: 420,
+    intensity: 1.1,
+  });
 }
 
 function updateAudioCues(now = performance.now()) {
@@ -4257,7 +4301,10 @@ function completeChallenge(config) {
   state.challenge.complete = true;
   const rewardName = CHALLENGE_REWARDS[config.id];
   const reward = UPGRADES.find((upgrade) => upgrade.name === rewardName);
-  if (reward) reward.apply();
+  if (reward) {
+    reward.apply();
+    recordAcquiredRelic(reward);
+  }
   state.playerHp = Math.min(state.playerMaxHp, state.playerHp + 18);
   state.floaters.push({
     x: BOARD_X - 68,
@@ -4548,6 +4595,7 @@ function chooseUpgrade(index) {
   const upgrade = state.upgradeChoices[index];
   if (!upgrade) return;
   upgrade.apply();
+  recordAcquiredRelic(upgrade);
   state.floaters.push({
     x: 454,
     y: 178,
@@ -4556,10 +4604,24 @@ function chooseUpgrade(index) {
     life: 1200,
   });
   state.upgradeChoices = [];
+  state.currentBuildOpen = false;
   state.mode = "playing";
   state.upgradeReady = state.upgradeMeter >= state.nextUpgradeAt;
   if (!state.active) spawnPiece();
   playSfx("upgrade");
+}
+
+function recordAcquiredRelic(upgrade) {
+  if (!Array.isArray(state.acquiredRelics)) state.acquiredRelics = [];
+  const family = getUpgradeFamily(upgrade);
+  state.acquiredRelics.push({
+    id: upgrade.id,
+    name: upgrade.name,
+    rarity: upgrade.rarity,
+    familyKey: family.labelKey,
+    textKey: upgrade.textKey || "",
+    wave: state.wave,
+  });
 }
 
 function finishRun(outcome) {
@@ -9062,6 +9124,8 @@ function drawUpgradeOverlay() {
   label(t("relicDraft").toUpperCase(), 348, 198, 35, "#f5f1e6");
   label(fmt("waveClearPick", { wave: state.wave - 1 }), 350, 230, 17, "rgba(238,244,252,0.62)");
   label(t("safeNodeDraft"), 350, 252, 13, "#9df7da");
+  const buildButton = getCurrentBuildButtonRect();
+  drawMenuButton(buildButton.x, buildButton.y, buildButton.w, buildButton.h, t("currentBuild"), "");
   for (let i = 0; i < 3; i += 1) {
     const upgrade = state.upgradeChoices[i];
     if (!upgrade) continue;
@@ -9085,7 +9149,160 @@ function drawUpgradeOverlay() {
     wrapText(upgradeText(upgrade), x + 18, y + 134, 142, 18, "rgba(238,244,252,0.64)", 12);
   }
   label(t("upgradeHelp"), 350, 522, 17, "#9fb4ff");
+  if (state.currentBuildOpen) drawCurrentBuildPanel();
   ctx.restore();
+}
+
+function getCurrentBuildButtonRect() {
+  return { x: 772, y: 190, w: 166, h: 38 };
+}
+
+function getCurrentBuildPanelRect() {
+  return { x: 190, y: 82, w: 900, h: 560 };
+}
+
+function getCurrentBuildCloseRect() {
+  const panel = getCurrentBuildPanelRect();
+  return { x: panel.x + panel.w - 178, y: panel.y + 34, w: 132, h: 38 };
+}
+
+function drawCurrentBuildPanel() {
+  const panel = getCurrentBuildPanelRect();
+  const closeRect = getCurrentBuildCloseRect();
+  const groups = getAcquiredRelicGroups();
+  const stats = getCurrentBuildFamilyStats(groups);
+  ctx.save();
+  ctx.fillStyle = "rgba(4, 6, 10, 0.62)";
+  ctx.fillRect(0, 0, W, H);
+  drawCard(panel.x, panel.y, panel.w, panel.h);
+  label(t("currentBuildTitle"), panel.x + 42, panel.y + 58, 32, "#f5f1e6");
+  drawMenuButton(closeRect.x, closeRect.y, closeRect.w, closeRect.h, t("currentBuildClose"), "Esc");
+  wrapText(getCurrentBuildDirectionText(stats), panel.x + 44, panel.y + 92, 660, 20, "rgba(238,244,252,0.72)", 14);
+  label(t("currentBuildStats").toUpperCase(), panel.x + 44, panel.y + 140, 13, "#fff0a6");
+  drawCurrentBuildStats(stats, panel.x + 44, panel.y + 156, panel.w - 88);
+  label(t("currentBuildList").toUpperCase(), panel.x + 44, panel.y + 220, 13, "#8fe8dc");
+  if (!groups.length) {
+    drawCurrentBuildEmpty(panel.x + 44, panel.y + 244, panel.w - 88, 104);
+  } else {
+    drawAcquiredRelicCards(groups, panel.x + 44, panel.y + 244, panel.w - 88, panel.y + panel.h - 44);
+  }
+  ctx.restore();
+}
+
+function drawCurrentBuildEmpty(x, y, w, h) {
+  ctx.save();
+  ctx.fillStyle = "rgba(8, 13, 20, 0.58)";
+  roundedRect(x, y, w, h, 10, true, false);
+  ctx.strokeStyle = "rgba(126, 231, 255, 0.2)";
+  roundedRect(x, y, w, h, 10, false, true);
+  wrapText(t("currentBuildEmpty"), x + 22, y + 48, w - 44, 22, "rgba(238,244,252,0.74)", 16);
+  ctx.restore();
+}
+
+function drawCurrentBuildStats(stats, x, y, w) {
+  if (!stats.length) {
+    drawUpgradePill(x, y, 170, 24, t("currentBuildNoDirection"), "#8fe8dc", 0.1);
+    return;
+  }
+  let xx = x;
+  for (const stat of stats.slice(0, 5)) {
+    const text = `${stat.label} x${stat.count}`;
+    const pillW = Math.min(150, Math.max(88, ctx.measureText(text).width + 28));
+    if (xx + pillW > x + w) break;
+    drawUpgradePill(xx, y, pillW, 24, text.toUpperCase(), stat.color, 0.14);
+    xx += pillW + 10;
+  }
+}
+
+function drawAcquiredRelicCards(groups, x, y, w, bottomY) {
+  const columns = 3;
+  const gap = 12;
+  const cardW = (w - gap * (columns - 1)) / columns;
+  const cardH = 54;
+  const rowGap = 10;
+  const maxRows = Math.max(1, Math.floor((bottomY - y - 24) / (cardH + rowGap)));
+  const maxVisible = maxRows * columns;
+  const visible = groups.slice(0, maxVisible);
+  visible.forEach((group, index) => {
+    const col = index % columns;
+    const row = Math.floor(index / columns);
+    const cardX = x + col * (cardW + gap);
+    const cardY = y + row * (cardH + rowGap);
+    drawAcquiredRelicCard(group, cardX, cardY, cardW, cardH);
+  });
+  if (groups.length > visible.length) {
+    label(`+${groups.length - visible.length}`, x, bottomY - 2, 14, "rgba(238,244,252,0.58)");
+  }
+}
+
+function drawAcquiredRelicCard(group, x, y, w, h) {
+  const rarity = RARITY[group.rarity] || RARITY.common;
+  const family = group.family;
+  ctx.save();
+  const cardG = ctx.createLinearGradient(x, y, x + w, y + h);
+  cardG.addColorStop(0, hexToRgba(rarity.color, 0.14));
+  cardG.addColorStop(1, "rgba(7, 10, 16, 0.72)");
+  ctx.fillStyle = cardG;
+  roundedRect(x, y, w, h, 8, true, false);
+  ctx.strokeStyle = hexToRgba(rarity.color, 0.38);
+  ctx.lineWidth = 1.4;
+  roundedRect(x, y, w, h, 8, false, true);
+  drawUpgradePill(x + 10, y + 8, 56, 18, rarityLabel(group.rarity).toUpperCase(), rarity.color, 0.16);
+  drawUpgradePill(x + 72, y + 8, 76, 18, upgradeFamilyShortLabel(family).toUpperCase(), family.color, 0.12);
+  if (group.count > 1) label(`x${group.count}`, x + w - 30, y + 22, 15, "#fff0a6");
+  fitLabel(upgradeName(group.upgrade), x + 10, y + 37, w - 20, 14, "#f5f1e6", 10, "800", true);
+  fitLabel(upgradeText(group.upgrade), x + 10, y + 49, w - 20, 10, "rgba(238,244,252,0.58)", 8, "600");
+  ctx.restore();
+}
+
+function getAcquiredRelicGroups() {
+  if (!Array.isArray(state.acquiredRelics)) state.acquiredRelics = [];
+  const map = new Map();
+  for (const entry of state.acquiredRelics) {
+    if (!entry?.id) continue;
+    const upgrade = getUpgradeById(entry.id);
+    if (!upgrade) continue;
+    const group = map.get(entry.id);
+    if (group) {
+      group.count += 1;
+      continue;
+    }
+    map.set(entry.id, {
+      id: entry.id,
+      upgrade,
+      count: 1,
+      rarity: entry.rarity || upgrade.rarity,
+      family: getUpgradeFamily(upgrade),
+    });
+  }
+  return [...map.values()];
+}
+
+function getCurrentBuildFamilyStats(groups = getAcquiredRelicGroups()) {
+  const stats = new Map();
+  for (const group of groups) {
+    const key = group.family.labelKey;
+    const current = stats.get(key) || { family: group.family, count: 0 };
+    current.count += group.count;
+    stats.set(key, current);
+  }
+  return [...stats.values()]
+    .sort((a, b) => b.count - a.count)
+    .map(({ family, count }) => ({
+      label: upgradeFamilyShortLabel(family),
+      color: family.color,
+      count,
+    }));
+}
+
+function getCurrentBuildDirectionText(stats) {
+  if (!stats.length) return t("currentBuildNoDirection");
+  const families = stats.slice(0, 2).map((stat) => stat.label).join(" / ");
+  return fmt("currentBuildDirection", { families });
+}
+
+function getUpgradeById(id) {
+  return UPGRADES.find((upgrade) => upgrade.id === id);
 }
 
 function drawUpgradePill(x, y, w, h, text, color, fillAlpha = 0.14) {
@@ -9782,6 +9999,14 @@ window.addEventListener("keydown", (event) => {
     event.preventDefault();
   }
 
+  if (state.mode === "upgrade" && state.currentBuildOpen) {
+    if (key === "Escape") {
+      state.currentBuildOpen = false;
+      playSfx("hold");
+    }
+    return;
+  }
+
   if (state.mode === "upgrade" && ["1", "2", "3"].includes(key)) {
     chooseUpgrade(Number(key) - 1);
     return;
@@ -9933,6 +10158,16 @@ canvas.addEventListener("mousedown", (event) => {
 
   if (!state.settingsOpen && state.mode !== "playing") {
     if (state.mode === "upgrade") {
+      if (state.currentBuildOpen) {
+        handleCurrentBuildPointerDown(p.x, p.y);
+        return;
+      }
+      const buildButton = getCurrentBuildButtonRect();
+      if (pointInRect(p.x, p.y, buildButton.x, buildButton.y, buildButton.w, buildButton.h)) {
+        state.currentBuildOpen = true;
+        playSfx("hold");
+        return;
+      }
       for (let i = 0; i < 3; i += 1) {
         if (pointInRect(p.x, p.y, 342 + i * 204, 292, 180, 186)) {
           chooseUpgrade(i);
@@ -9985,6 +10220,14 @@ canvas.addEventListener("mousedown", (event) => {
     }
   }
 });
+
+function handleCurrentBuildPointerDown(x, y) {
+  const closeRect = getCurrentBuildCloseRect();
+  if (pointInRect(x, y, closeRect.x, closeRect.y, closeRect.w, closeRect.h)) {
+    state.currentBuildOpen = false;
+    playSfx("hold");
+  }
+}
 
 function handlePausePointerDown(x, y) {
   if (state.pauseView === "settings") {
