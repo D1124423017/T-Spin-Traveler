@@ -150,6 +150,19 @@ const heroCombo3Sheet = registerImageAsset("hero-combo-3-sheet", "assets/images/
 const heroUltimateSheet = registerImageAsset("hero-ultimate-sheet", "assets/images/clean/hero_perfect_clear_ultimate_alpha.png");
 const enemyConceptSheetA = registerImageAsset("enemy-concept-sheet-a", "assets/images/clean/Enemy01_alpha.png");
 const enemyConceptSheetB = registerImageAsset("enemy-concept-sheet-b", "assets/images/clean/Enemy02_alpha.png");
+const upgradeCardFrames = {
+  common: registerImageAsset("upgrade-card-frame-common", "assets/ui/relic_cards/upgrade_card_common.png"),
+  rare: registerImageAsset("upgrade-card-frame-rare", "assets/ui/relic_cards/upgrade_card_rare.png"),
+  relic: registerImageAsset("upgrade-card-frame-relic", "assets/ui/relic_cards/upgrade_card_relic.png"),
+  legendary: registerImageAsset("upgrade-card-frame-legendary", "assets/ui/relic_cards/upgrade_card_legendary.png"),
+};
+const legendaryUpgradeEmblems = {
+  singularity_spin_core: registerImageAsset("upgrade-emblem-singularity-spin-core", "assets/ui/relic_cards/upgrade_emblem_singularity_spin_core.png"),
+  combo_constellation: registerImageAsset("upgrade-emblem-combo-constellation", "assets/ui/relic_cards/upgrade_emblem_combo_constellation.png"),
+  aegis_star_mirror: registerImageAsset("upgrade-emblem-aegis-star-mirror", "assets/ui/relic_cards/upgrade_emblem_aegis_star_mirror.png"),
+  garbage_alchemy_core: registerImageAsset("upgrade-emblem-garbage-alchemy-core", "assets/ui/relic_cards/upgrade_emblem_garbage_alchemy_core.png"),
+  perfect_rift_crown: registerImageAsset("upgrade-emblem-perfect-rift-crown", "assets/ui/relic_cards/upgrade_emblem_perfect_rift_crown.png"),
+};
 const enemyAttackSheets = {
   slime: registerImageAsset("enemy-attack-slime", "assets/images/clean/enemy_attack_slime_redesign.png"),
   vine: registerImageAsset("enemy-attack-vine", "assets/images/clean/enemy_attack_vine_redesign.png"),
@@ -435,6 +448,9 @@ const PLAYER_MAX_HP = 100;
 const ENEMY_DEFEAT_HEAL = 15;
 const PERFECT_CLEAR_BASE_DAMAGE = 90;
 const PERFECT_CLEAR_BOSS_HP_RATIO = 0.35;
+const PERFECT_CROWN_BOSS_HP_RATIO = 0.5;
+const LEGENDARY_DRAFT_CHANCE = 0.12;
+const LEGENDARY_BOSS_DRAFT_CHANCE = 0.35;
 const SPIN_DAMAGE_BY_LINES = [0, 35, 85, 115, 150];
 const ATTACK_ROW_DAMAGE = 15;
 const ENEMY_ATTACK_DURATION_MS = 950;
@@ -637,9 +653,62 @@ const TUNING_SLIDERS = {
 };
 
 const RARITY = {
-  common: { label: "Common", color: "#9df7da" },
-  rare: { label: "Rare", color: "#9fb4ff" },
-  relic: { label: "Relic", color: "#fff0a6" },
+  common: {
+    tier: "common",
+    label: "Common",
+    color: "#aeb8c4",
+    titleColor: "#eef3f5",
+    border: "#aeb8c4",
+    fillTop: "rgba(28, 35, 42, 0.84)",
+    fillBottom: "rgba(8, 12, 18, 0.82)",
+    glow: "rgba(174, 184, 196, 0.18)",
+    badgeFill: "rgba(174, 184, 196, 0.16)",
+    badgeText: "#dce4e8",
+    lineWidth: 1.8,
+    emblemAlpha: 0.44,
+  },
+  rare: {
+    tier: "rare",
+    label: "Rare",
+    color: "#70c8ff",
+    titleColor: "#dff7ff",
+    border: "#70c8ff",
+    fillTop: "rgba(18, 37, 58, 0.88)",
+    fillBottom: "rgba(7, 14, 25, 0.84)",
+    glow: "rgba(112, 200, 255, 0.34)",
+    badgeFill: "rgba(112, 200, 255, 0.2)",
+    badgeText: "#cdefff",
+    lineWidth: 2.2,
+    emblemAlpha: 0.62,
+  },
+  relic: {
+    tier: "relic",
+    label: "Relic",
+    color: "#fff0a6",
+    titleColor: "#fff7d2",
+    border: "#fff0a6",
+    fillTop: "rgba(66, 47, 18, 0.88)",
+    fillBottom: "rgba(20, 13, 8, 0.86)",
+    glow: "rgba(255, 224, 122, 0.42)",
+    badgeFill: "rgba(255, 224, 122, 0.22)",
+    badgeText: "#fff7d2",
+    lineWidth: 2.8,
+    emblemAlpha: 0.82,
+  },
+  legendary: {
+    tier: "legendary",
+    label: "Legendary",
+    color: "#ff6f7c",
+    titleColor: "#ffe6e8",
+    border: "#ff6f7c",
+    fillTop: "rgba(82, 18, 31, 0.9)",
+    fillBottom: "rgba(24, 8, 14, 0.88)",
+    glow: "rgba(255, 84, 104, 0.48)",
+    badgeFill: "rgba(255, 84, 104, 0.24)",
+    badgeText: "#ffe6e8",
+    lineWidth: 3,
+    emblemAlpha: 0.9,
+  },
 };
 
 const BUILD_FAMILY = {
@@ -649,6 +718,19 @@ const BUILD_FAMILY = {
   garbage: { labelKey: "family.garbage", color: "#9df7da" },
   burst: { labelKey: "family.burst", color: "#fff0a6" },
   perfect: { labelKey: "family.perfect", color: "#fff0a6" },
+};
+
+const BUILD_TAGS = {
+  Spin: { labelKey: "tag.spin", color: "#d7c2ff", family: "spin" },
+  Combo: { labelKey: "tag.combo", color: "#7ef7ff", family: "combo" },
+  Defense: { labelKey: "tag.defense", color: "#9df7da", family: "defense" },
+  Burst: { labelKey: "tag.burst", color: "#fff0a6", family: "burst" },
+  Survival: { labelKey: "tag.survival", color: "#98f07e", family: "defense" },
+  Garbage: { labelKey: "tag.garbage", color: "#79e2a7", family: "garbage" },
+  Utility: { labelKey: "tag.utility", color: "#9fb4ff", family: "burst" },
+  Perfect: { labelKey: "tag.perfect", color: "#fff0a6", family: "perfect" },
+  B2B: { labelKey: "tag.b2b", color: "#ffdf8a", family: "burst" },
+  "Boss Killer": { labelKey: "tag.bossKiller", color: "#ff8f98", family: "burst" },
 };
 
 const COLORS = {
@@ -897,7 +979,7 @@ const translations = {
     attackPanel: "攻擊",
     upgradeMeterShort: "升級",
     relicProgress: "升級進度",
-    relicDraftReady: "即將獲得遺物",
+    relicDraftReady: "即將進入升級選擇",
     ultimateShort: "大招",
     ultimate4Wide: "4-WIDE 爆發",
     ultimateEnd: "4-WIDE 結束",
@@ -956,12 +1038,13 @@ const translations = {
     threatShort: "威脅",
     boardEffectShort: "盤面",
     weakShort: "弱點",
-    relicDraft: "遺物選擇",
-    currentBuild: "目前流派",
-    currentBuildTitle: "目前已獲得升級",
+    relicDraft: "升級選擇",
+    currentBuild: "已升級",
+    currentBuildTitle: "已升級列表",
     currentBuildEmpty: "尚未獲得升級",
-    currentBuildStats: "流派統計",
-    currentBuildList: "已獲得升級",
+    currentBuildStats: "升級標籤統計",
+    currentBuildList: "已升級項目",
+    currentBuildStrongest: "最強流派",
     currentBuildDirection: "目前偏向：{families}",
     currentBuildNoDirection: "尚未形成明顯流派",
     currentBuildClose: "關閉",
@@ -1024,6 +1107,30 @@ const translations = {
     "familyShort.garbage": "垃圾",
     "familyShort.burst": "爆發",
     "familyShort.perfect": "Perfect",
+    "tag.spin": "Spin",
+    "tag.combo": "Combo",
+    "tag.defense": "防禦",
+    "tag.burst": "爆發",
+    "tag.survival": "生存",
+    "tag.garbage": "垃圾",
+    "tag.utility": "輔助",
+    "tag.perfect": "Perfect",
+    "tag.b2b": "B2B",
+    "tag.bossKiller": "Boss Killer",
+    "stack.stackable": "可疊",
+    "stack.unique": "唯一",
+    "stack.capped": "上限",
+    "stack.scaling": "成長",
+    "upgradeShort.rift_battery": "Tetris / Spin 更快累積 4-WIDE 爆發。",
+    "upgradeShort.perfect_anchor": "Perfect Clear 打中 Boss 時延後 Boss 攻擊。",
+    "upgradeShort.spin_guard_reactor": "Spin 消耗 Guard，轉成額外爆發傷害。",
+    "upgradeShort.aegis_reprisal": "Guard 擋下傷害時反射給敵人。",
+    "upgradeShort.bossbreaker_relic": "Spin / B2B 對 Boss 追加傷害。",
+    "upgradeShort.singularity_spin_core": "每 3 次 Spin 引爆一次奇點。",
+    "upgradeShort.combo_constellation": "高 Combo 會延後敵人攻擊。",
+    "upgradeShort.aegis_star_mirror": "完全格擋時觸發反擊。",
+    "upgradeShort.garbage_alchemy_core": "抵銷垃圾轉為傷害與 Guard。",
+    "upgradeShort.perfect_rift_crown": "Perfect Clear 重創 Boss。",
     "tutorial": "新手教學",
     "tutorialTitle": "3 分鐘戰鬥教學",
     "tutorialSubtitle": "用最短流程理解消行、HOLD、Combo、Spin 與垃圾抵銷。",
@@ -1057,6 +1164,10 @@ const translations = {
     "damageGuardStrike": "護盾轉攻擊",
     "damageComboEcho": "Combo Echo",
     "damageGarbageCounter": "垃圾反擊",
+    "damageSingularity": "奇點爆發",
+    "damageAegisStar": "星盾爆發",
+    "damageGarbageAlchemy": "垃圾鍊成",
+    "damagePerfectCrown": "裂隙王冠",
     "damageMultiplier": "倍率",
     "damageWeakness": "弱點倍率",
     "damageExecute": "處決補正",
@@ -1117,6 +1228,13 @@ const translations = {
     floaterSpinGuardStrike: "護盾轉攻擊 +{damage}",
     floaterGuardReflect: "護盾反射 -{damage}",
     floaterPerfectBossDelay: "Boss 延後 +{turns}",
+    floaterSingularityCharge: "奇點 {count}/3",
+    floaterSingularityBurst: "奇點爆發 +{damage}",
+    floaterComboConstellation: "星圖延後 +{turns}",
+    floaterAegisStar: "星盾爆發 -{damage}",
+    floaterGarbageAlchemy: "垃圾鍊成 +{damage}",
+    floaterGarbageAlchemyGuard: "鍊成護盾 +{guard}",
+    floaterPerfectCrown: "裂隙王冠 +{damage}",
     floaterFullHp: "HP 全滿",
     floaterTBonus: "T 加成",
     floaterB2BRow: "B2B +{rows} 行",
@@ -1208,6 +1326,11 @@ const translations = {
     "upgrade.garbage_furnace": "抵銷垃圾時，每抵銷 1 行額外造成 10 傷害。",
     "upgrade.rift_battery": "Tetris 或 Spin 會額外為終極模式充能。",
     "upgrade.perfect_anchor": "Perfect Clear 命中 Boss 時，額外延後 Boss 攻擊 2 回合。",
+    "upgrade.singularity_spin_core": "每第 3 次 Spin 觸發奇點爆發，造成額外高傷害。",
+    "upgrade.combo_constellation": "每波首次達 4 / 8 Combo 時，延後敵人攻擊。",
+    "upgrade.aegis_star_mirror": "Guard 完全擋下敵人攻擊時，觸發星盾反擊。",
+    "upgrade.garbage_alchemy_core": "抵銷垃圾會轉化為額外傷害；大量抵銷時獲得 Guard。",
+    "upgrade.perfect_rift_crown": "Perfect Clear 對 Boss 的最低傷害提高到 Boss 最大 HP 50%。",
     "upgradeName.tspin_amp": "T-Core 增幅器",
     "upgradeName.garbage_guard": "重力濾鏡",
     "upgradeName.combo_clock": "節奏錨點",
@@ -1237,6 +1360,11 @@ const translations = {
     "upgradeName.garbage_furnace": "垃圾熔爐",
     "upgradeName.rift_battery": "裂隙電池",
     "upgradeName.perfect_anchor": "Perfect 錨點",
+    "upgradeName.singularity_spin_core": "奇點旋轉核心",
+    "upgradeName.combo_constellation": "連鎖星圖",
+    "upgradeName.aegis_star_mirror": "星盾反射鏡",
+    "upgradeName.garbage_alchemy_core": "垃圾鍊成核心",
+    "upgradeName.perfect_rift_crown": "完美裂隙王冠",
     "enemy.slime.name": "森林黏液幼體",
     "enemy.slime.trait": "基礎打擊",
     "enemy.vine.name": "藤蔓跳躍獸",
@@ -1338,8 +1466,8 @@ const translations = {
     hex: "Hex",
     attackPanel: "Attack",
     upgradeMeterShort: "UP",
-    relicProgress: "Relic Progress",
-    relicDraftReady: "Relic Draft Ready",
+    relicProgress: "Upgrade Progress",
+    relicDraftReady: "Upgrade Draft Ready",
     ultimateShort: "ULT",
     ultimate4Wide: "4-WIDE Burst",
     ultimateEnd: "4-WIDE End",
@@ -1398,13 +1526,14 @@ const translations = {
     threatShort: "Threat",
     boardEffectShort: "Board",
     weakShort: "Weak",
-    relicDraft: "Relic Draft",
-    currentBuild: "Current Build",
-    currentBuildTitle: "Current Build",
-    currentBuildEmpty: "No relics acquired yet.",
-    currentBuildStats: "Family Stats",
-    currentBuildList: "Acquired Relics",
-    currentBuildDirection: "Current direction: {families}",
+    relicDraft: "Upgrade Draft",
+    currentBuild: "Upgrades",
+    currentBuildTitle: "Acquired Upgrades",
+    currentBuildEmpty: "No upgrades acquired yet.",
+    currentBuildStats: "Upgrade Tags",
+    currentBuildList: "Acquired Upgrades",
+    currentBuildStrongest: "Strongest Build",
+    currentBuildDirection: "Upgrade direction: {families}",
     currentBuildNoDirection: "No clear build direction yet",
     currentBuildClose: "Close",
     safeNodeDraft: "Safe node, never interrupts play",
@@ -1466,6 +1595,30 @@ const translations = {
     "familyShort.garbage": "Garbage",
     "familyShort.burst": "Burst",
     "familyShort.perfect": "Perfect",
+    "tag.spin": "Spin",
+    "tag.combo": "Combo",
+    "tag.defense": "Defense",
+    "tag.burst": "Burst",
+    "tag.survival": "Survival",
+    "tag.garbage": "Garbage",
+    "tag.utility": "Utility",
+    "tag.perfect": "Perfect",
+    "tag.b2b": "B2B",
+    "tag.bossKiller": "Boss Killer",
+    "stack.stackable": "Stack",
+    "stack.unique": "Unique",
+    "stack.capped": "Cap",
+    "stack.scaling": "Scale",
+    "upgradeShort.rift_battery": "Tetris / Spin charge 4-WIDE Burst faster.",
+    "upgradeShort.perfect_anchor": "Perfect Clear delays Boss attacks on hit.",
+    "upgradeShort.spin_guard_reactor": "Spin spends Guard for burst damage.",
+    "upgradeShort.aegis_reprisal": "Reflect blocked Guard damage to the enemy.",
+    "upgradeShort.bossbreaker_relic": "Spin / B2B deal extra Boss damage.",
+    "upgradeShort.singularity_spin_core": "Every 3 Spin hits detonates a singularity.",
+    "upgradeShort.combo_constellation": "High Combo delays enemy attacks.",
+    "upgradeShort.aegis_star_mirror": "Full Guard blocks trigger a counter.",
+    "upgradeShort.garbage_alchemy_core": "Cancel garbage into damage and Guard.",
+    "upgradeShort.perfect_rift_crown": "Perfect Clear crushes Bosses.",
     "tutorial": "Tutorial",
     "tutorialTitle": "3-Minute Combat Tutorial",
     "tutorialSubtitle": "Learn line clears, HOLD, Combo, Spin, and garbage canceling in one short run.",
@@ -1499,6 +1652,10 @@ const translations = {
     "damageGuardStrike": "Guard Strike",
     "damageComboEcho": "Combo Echo",
     "damageGarbageCounter": "Garbage Counter",
+    "damageSingularity": "Singularity",
+    "damageAegisStar": "Aegis Star",
+    "damageGarbageAlchemy": "Garbage Alchemy",
+    "damagePerfectCrown": "Rift Crown",
     "damageMultiplier": "Multiplier",
     "damageWeakness": "Weakness Multiplier",
     "damageExecute": "Execute Adjustment",
@@ -1559,6 +1716,13 @@ const translations = {
     floaterSpinGuardStrike: "GUARD STRIKE +{damage}",
     floaterGuardReflect: "GUARD REFLECT -{damage}",
     floaterPerfectBossDelay: "BOSS DELAY +{turns}",
+    floaterSingularityCharge: "SINGULARITY {count}/3",
+    floaterSingularityBurst: "SINGULARITY +{damage}",
+    floaterComboConstellation: "CONSTELLATION DELAY +{turns}",
+    floaterAegisStar: "AEGIS STAR -{damage}",
+    floaterGarbageAlchemy: "ALCHEMY +{damage}",
+    floaterGarbageAlchemyGuard: "ALCHEMY GUARD +{guard}",
+    floaterPerfectCrown: "RIFT CROWN +{damage}",
     floaterFullHp: "FULL HP",
     floaterTBonus: "T BONUS",
     floaterB2BRow: "B2B +{rows} ROW",
@@ -1650,6 +1814,11 @@ const translations = {
     "upgrade.garbage_furnace": "When you cancel garbage, deal +10 damage per canceled row.",
     "upgrade.rift_battery": "Tetris or Spin clears charge the ultimate mode faster.",
     "upgrade.perfect_anchor": "Perfect Clear against a Boss delays the Boss attack by 2 turns.",
+    "upgrade.singularity_spin_core": "Every 3rd Spin hit detonates a singularity for heavy bonus damage.",
+    "upgrade.combo_constellation": "Once per wave at 4 / 8 Combo, delay enemy attacks.",
+    "upgrade.aegis_star_mirror": "When Guard fully blocks an enemy attack, trigger a star-shield counter.",
+    "upgrade.garbage_alchemy_core": "Canceled garbage becomes bonus damage. Large cancels also grant Guard.",
+    "upgrade.perfect_rift_crown": "Perfect Clear against a Boss raises minimum damage to 50% Boss Max HP.",
     "upgradeName.tspin_amp": "T-Core Amplifier",
     "upgradeName.garbage_guard": "Gravity Filter",
     "upgradeName.combo_clock": "Tempo Anchor",
@@ -1679,6 +1848,11 @@ const translations = {
     "upgradeName.garbage_furnace": "Garbage Furnace",
     "upgradeName.rift_battery": "Rift Battery",
     "upgradeName.perfect_anchor": "Perfect Anchor",
+    "upgradeName.singularity_spin_core": "Singularity Spin Core",
+    "upgradeName.combo_constellation": "Combo Constellation",
+    "upgradeName.aegis_star_mirror": "Aegis Star Mirror",
+    "upgradeName.garbage_alchemy_core": "Garbage Alchemy Core",
+    "upgradeName.perfect_rift_crown": "Perfect Rift Crown",
     "enemy.slime.name": "FOREST SLIME HATCHLING",
     "enemy.slime.trait": "BASIC STRIKE",
     "enemy.vine.name": "VINE HOPPER",
@@ -1748,6 +1922,8 @@ const UPGRADES = [
     id: "tspin_amp",
     name: "T-Core Amplifier",
     rarity: "rare",
+    tags: ["Spin"],
+    stackRule: "stackable",
     textKey: "upgrade.tspin_amp",
     apply: () => {
       state.upgrades.tspinBonus += 10;
@@ -1757,6 +1933,8 @@ const UPGRADES = [
     id: "garbage_guard",
     name: "Gravity Filter",
     rarity: "common",
+    tags: ["Garbage", "Utility"],
+    stackRule: "stackable",
     textKey: "upgrade.garbage_guard",
     apply: () => {
       state.upgrades.garbageCancel += 1;
@@ -1766,6 +1944,8 @@ const UPGRADES = [
     id: "combo_clock",
     name: "Tempo Anchor",
     rarity: "common",
+    tags: ["Combo", "Utility"],
+    stackRule: "stackable",
     textKey: "upgrade.combo_clock",
     apply: () => {
       state.upgrades.comboDelay += 1;
@@ -1775,6 +1955,8 @@ const UPGRADES = [
     id: "b2b_blade",
     name: "Back-to-Back Blade",
     rarity: "rare",
+    tags: ["B2B", "Burst"],
+    stackRule: "stackable",
     textKey: "upgrade.b2b_blade",
     apply: () => {
       state.upgrades.b2bBonus += 8;
@@ -1784,6 +1966,8 @@ const UPGRADES = [
     id: "star_mender",
     name: "Star Mender",
     rarity: "common",
+    tags: ["Survival", "Defense"],
+    stackRule: "stackable",
     textKey: "upgrade.star_mender",
     apply: () => {
       state.upgrades.waveHeal += 12;
@@ -1793,6 +1977,8 @@ const UPGRADES = [
     id: "vital_core",
     name: "Vital Core",
     rarity: "common",
+    tags: ["Survival", "Defense"],
+    stackRule: "stackable",
     textKey: "upgrade.vital_core",
     apply: () => {
       increasePlayerMaxHp(15, 15);
@@ -1802,6 +1988,8 @@ const UPGRADES = [
     id: "blade_polish",
     name: "Tetr Blade Polish",
     rarity: "common",
+    tags: ["Burst"],
+    stackRule: "stackable",
     textKey: "upgrade.blade_polish",
     apply: () => {
       state.upgrades.lineDamage += 5;
@@ -1811,6 +1999,8 @@ const UPGRADES = [
     id: "recovery_glyph",
     name: "Recovery Glyph",
     rarity: "common",
+    tags: ["Survival", "Defense"],
+    stackRule: "stackable",
     textKey: "upgrade.recovery_glyph",
     apply: () => {
       state.upgrades.clearHeal += 3;
@@ -1820,6 +2010,8 @@ const UPGRADES = [
     id: "spin_circuit",
     name: "Spin Circuit",
     rarity: "common",
+    tags: ["Spin"],
+    stackRule: "stackable",
     textKey: "upgrade.spin_circuit",
     apply: () => {
       state.upgrades.spinBonus += 8;
@@ -1829,6 +2021,9 @@ const UPGRADES = [
     id: "spin_guard_reactor",
     name: "Spin Guard Reactor",
     rarity: "rare",
+    tags: ["Spin", "Defense", "Burst"],
+    stackRule: "capped",
+    shortTextKey: "upgradeShort.spin_guard_reactor",
     textKey: "upgrade.spin_guard_reactor",
     apply: () => {
       state.upgrades.spinGuardStrike = Math.max(state.upgrades.spinGuardStrike, 2);
@@ -1838,6 +2033,8 @@ const UPGRADES = [
     id: "combo_resonator",
     name: "Combo Resonator",
     rarity: "common",
+    tags: ["Combo"],
+    stackRule: "stackable",
     textKey: "upgrade.combo_resonator",
     apply: () => {
       state.upgrades.comboDamage += 3;
@@ -1847,6 +2044,8 @@ const UPGRADES = [
     id: "combo_echo_matrix",
     name: "Combo Echo Matrix",
     rarity: "rare",
+    tags: ["Combo", "Burst"],
+    stackRule: "scaling",
     textKey: "upgrade.combo_echo_matrix",
     apply: () => {
       state.upgrades.comboEchoDamage += 6;
@@ -1856,6 +2055,8 @@ const UPGRADES = [
     id: "aegis_shell",
     name: "Aegis Shell",
     rarity: "common",
+    tags: ["Defense"],
+    stackRule: "stackable",
     textKey: "upgrade.aegis_shell",
     apply: () => {
       state.upgrades.defense += 2;
@@ -1865,6 +2066,8 @@ const UPGRADES = [
     id: "guard_lattice",
     name: "Navigation Guard Lattice",
     rarity: "common",
+    tags: ["Defense"],
+    stackRule: "stackable",
     textKey: "upgrade.guard_lattice",
     apply: () => {
       state.maxGuard += 8;
@@ -1876,6 +2079,8 @@ const UPGRADES = [
     id: "combo_aegis",
     name: "Combo Aegis",
     rarity: "rare",
+    tags: ["Combo", "Defense"],
+    stackRule: "stackable",
     textKey: "upgrade.combo_aegis",
     apply: () => {
       state.upgrades.comboGuardGain += 2;
@@ -1885,6 +2090,9 @@ const UPGRADES = [
     id: "aegis_reprisal",
     name: "Aegis Reprisal Mirror",
     rarity: "relic",
+    tags: ["Defense", "Burst"],
+    stackRule: "capped",
+    shortTextKey: "upgradeShort.aegis_reprisal",
     textKey: "upgrade.aegis_reprisal",
     apply: () => {
       state.upgrades.guardReflect = Math.max(state.upgrades.guardReflect, 1.5);
@@ -1894,6 +2102,8 @@ const UPGRADES = [
     id: "b2b_preserver",
     name: "B2B Memory Charm",
     rarity: "rare",
+    tags: ["B2B", "Defense", "Utility"],
+    stackRule: "stackable",
     textKey: "upgrade.b2b_preserver",
     apply: () => {
       state.upgrades.b2bShield += 2;
@@ -1903,6 +2113,8 @@ const UPGRADES = [
     id: "all_spin_codex",
     name: "All-Spin Codex",
     rarity: "rare",
+    tags: ["Spin", "Garbage"],
+    stackRule: "stackable",
     textKey: "upgrade.all_spin_codex",
     apply: () => {
       state.upgrades.allSpinBonus += 18;
@@ -1913,6 +2125,8 @@ const UPGRADES = [
     id: "garbage_furnace",
     name: "Garbage Furnace",
     rarity: "rare",
+    tags: ["Garbage", "Burst"],
+    stackRule: "stackable",
     textKey: "upgrade.garbage_furnace",
     apply: () => {
       state.upgrades.garbageCounterDamage += 10;
@@ -1922,6 +2136,8 @@ const UPGRADES = [
     id: "tempo_engine",
     name: "Tempo Engine",
     rarity: "rare",
+    tags: ["Combo", "Utility"],
+    stackRule: "stackable",
     textKey: "upgrade.tempo_engine",
     apply: () => {
       state.upgrades.comboDelay += 1;
@@ -1932,6 +2148,8 @@ const UPGRADES = [
     id: "null_barrier",
     name: "Null Barrier",
     rarity: "rare",
+    tags: ["Defense", "Garbage", "Utility"],
+    stackRule: "stackable",
     textKey: "upgrade.null_barrier",
     apply: () => {
       state.upgrades.defense += 3;
@@ -1942,6 +2160,8 @@ const UPGRADES = [
     id: "void_carapace",
     name: "Void Carapace",
     rarity: "rare",
+    tags: ["Survival", "Defense"],
+    stackRule: "stackable",
     textKey: "upgrade.void_carapace",
     apply: () => {
       increasePlayerMaxHp(25, 20);
@@ -1952,6 +2172,8 @@ const UPGRADES = [
     id: "stellar_caliber",
     name: "Stellar Caliber",
     rarity: "rare",
+    tags: ["Burst"],
+    stackRule: "scaling",
     textKey: "upgrade.stellar_caliber",
     apply: () => {
       state.upgrades.damageMultiplier += 0.12;
@@ -1961,6 +2183,8 @@ const UPGRADES = [
     id: "arcane_suture",
     name: "Arcane Suture",
     rarity: "rare",
+    tags: ["Spin", "Survival", "Defense"],
+    stackRule: "stackable",
     textKey: "upgrade.arcane_suture",
     apply: () => {
       increasePlayerMaxHp(10, 10);
@@ -1971,6 +2195,8 @@ const UPGRADES = [
     id: "spin_vamp",
     name: "Spin Siphon Blade",
     rarity: "rare",
+    tags: ["Spin", "Survival", "Defense"],
+    stackRule: "stackable",
     textKey: "upgrade.spin_vamp",
     apply: () => {
       state.upgrades.spinHeal += 6;
@@ -1981,6 +2207,9 @@ const UPGRADES = [
     id: "rift_battery",
     name: "Rift Battery",
     rarity: "rare",
+    tags: ["Burst", "Utility"],
+    stackRule: "stackable",
+    shortTextKey: "upgradeShort.rift_battery",
     textKey: "upgrade.rift_battery",
     apply: () => {
       state.upgrades.burstCharge += 2;
@@ -1990,6 +2219,9 @@ const UPGRADES = [
     id: "perfect_anchor",
     name: "Perfect Anchor",
     rarity: "relic",
+    tags: ["Perfect", "Utility"],
+    stackRule: "stackable",
+    shortTextKey: "upgradeShort.perfect_anchor",
     textKey: "upgrade.perfect_anchor",
     apply: () => {
       state.upgrades.perfectBossDelay += 2;
@@ -1999,6 +2231,9 @@ const UPGRADES = [
     id: "bossbreaker_relic",
     name: "Bossbreaker Relic",
     rarity: "relic",
+    tags: ["B2B", "Spin", "Burst"],
+    stackRule: "stackable",
+    shortTextKey: "upgradeShort.bossbreaker_relic",
     textKey: "upgrade.bossbreaker_relic",
     apply: () => {
       state.upgrades.bossDamage += 20;
@@ -2008,10 +2243,72 @@ const UPGRADES = [
     id: "grey_star_reactor",
     name: "Grey Star Reactor",
     rarity: "relic",
+    tags: ["Survival", "Defense", "Burst"],
+    stackRule: "scaling",
     textKey: "upgrade.grey_star_reactor",
     apply: () => {
       increasePlayerMaxHp(40, 30);
       state.upgrades.damageMultiplier += 0.1;
+    },
+  },
+  {
+    id: "singularity_spin_core",
+    name: "Singularity Spin Core",
+    rarity: "legendary",
+    tags: ["Spin", "Burst"],
+    stackRule: "unique",
+    shortTextKey: "upgradeShort.singularity_spin_core",
+    textKey: "upgrade.singularity_spin_core",
+    apply: () => {
+      state.upgrades.singularitySpinCore = 1;
+    },
+  },
+  {
+    id: "combo_constellation",
+    name: "Combo Constellation",
+    rarity: "legendary",
+    tags: ["Combo", "Utility"],
+    stackRule: "unique",
+    shortTextKey: "upgradeShort.combo_constellation",
+    textKey: "upgrade.combo_constellation",
+    apply: () => {
+      state.upgrades.comboConstellation = 1;
+    },
+  },
+  {
+    id: "aegis_star_mirror",
+    name: "Aegis Star Mirror",
+    rarity: "legendary",
+    tags: ["Defense", "Burst"],
+    stackRule: "unique",
+    shortTextKey: "upgradeShort.aegis_star_mirror",
+    textKey: "upgrade.aegis_star_mirror",
+    apply: () => {
+      state.upgrades.aegisStarMirror = 1;
+    },
+  },
+  {
+    id: "garbage_alchemy_core",
+    name: "Garbage Alchemy Core",
+    rarity: "legendary",
+    tags: ["Garbage", "Burst"],
+    stackRule: "unique",
+    shortTextKey: "upgradeShort.garbage_alchemy_core",
+    textKey: "upgrade.garbage_alchemy_core",
+    apply: () => {
+      state.upgrades.garbageAlchemyCore = 1;
+    },
+  },
+  {
+    id: "perfect_rift_crown",
+    name: "Perfect Rift Crown",
+    rarity: "legendary",
+    tags: ["Perfect", "Boss Killer"],
+    stackRule: "unique",
+    shortTextKey: "upgradeShort.perfect_rift_crown",
+    textKey: "upgrade.perfect_rift_crown",
+    apply: () => {
+      state.upgrades.perfectRiftCrown = 1;
     },
   },
 ];
@@ -2504,6 +2801,11 @@ const state = {
   upgradeChoices: [],
   acquiredRelics: [],
   currentBuildOpen: false,
+  upgradePickConfirm: null,
+  spinSingularityStacks: 0,
+  comboConstellationWave: 0,
+  comboConstellationFirstUsed: false,
+  comboConstellationSecondUsed: false,
   upgrades: {
     tspinBonus: 0,
     garbageCancel: 0,
@@ -2530,6 +2832,11 @@ const state = {
     garbageCounterDamage: 0,
     burstCharge: 0,
     perfectBossDelay: 0,
+    singularitySpinCore: 0,
+    comboConstellation: 0,
+    aegisStarMirror: 0,
+    garbageAlchemyCore: 0,
+    perfectRiftCrown: 0,
   },
   message: "",
   messageKey: "",
@@ -2791,6 +3098,11 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.upgradeChoices = [];
   state.acquiredRelics = [];
   state.currentBuildOpen = false;
+  state.upgradePickConfirm = null;
+  state.spinSingularityStacks = 0;
+  state.comboConstellationWave = 0;
+  state.comboConstellationFirstUsed = false;
+  state.comboConstellationSecondUsed = false;
   state.upgrades = {
     tspinBonus: 0,
     garbageCancel: 0,
@@ -2817,6 +3129,11 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
     garbageCounterDamage: 0,
     burstCharge: 0,
     perfectBossDelay: 0,
+    singularitySpinCore: 0,
+    comboConstellation: 0,
+    aegisStarMirror: 0,
+    garbageAlchemyCore: 0,
+    perfectRiftCrown: 0,
   };
   state.message = "";
   state.messageKey = "";
@@ -3218,6 +3535,28 @@ function addDamagePart(parts, sources, key, value, source) {
   if (source && sources[source] !== undefined) sources[source] += value;
 }
 
+function damageEnemyFromUpgrade(amount, floaterKey, color, x = 920, y = 430) {
+  const damage = Math.max(0, Math.floor(amount));
+  if (damage <= 0 || state.enemyHp <= 0) return 0;
+  const beforeEnemyHp = state.enemyHp;
+  state.enemyHpDisplay = Math.max(state.enemyHpDisplay || beforeEnemyHp, beforeEnemyHp);
+  state.enemyHpTrail = Math.max(state.enemyHpTrail || beforeEnemyHp, beforeEnemyHp);
+  state.enemyHp = Math.max(0, state.enemyHp - damage);
+  state.stats.damage += damage;
+  state.enemyHit = Math.max(state.enemyHit, 220);
+  state.enemyHitIntensity = Math.max(state.enemyHitIntensity, 1.08);
+  state.floaters.push({
+    x,
+    y,
+    text: fmt(floaterKey, { damage }),
+    color,
+    life: 1000,
+  });
+  state.bursts.push({ x: 994, y: 346, radius: 16, color, life: 420, duration: 420, intensity: 1.25 });
+  if (state.enemyHp <= 0) startNextWave();
+  return damage;
+}
+
 function getHeroAnimationDuration(kind) {
   const config = HERO_ANIMATIONS[kind] || HERO_ANIMATIONS.ranged;
   return config.frames.length * config.frameMs;
@@ -3444,6 +3783,7 @@ function applyEnemyHit(hit) {
     triggerDefeat("messagePlayerDefeat");
     return;
   }
+  let enemyDefeatedByReflect = false;
   if (blocked > 0 && state.upgrades.guardReflect > 0 && state.enemyHp > 0) {
     const reflectDamage = Math.floor(blocked * state.upgrades.guardReflect);
     if (reflectDamage > 0) {
@@ -3462,8 +3802,16 @@ function applyEnemyHit(hit) {
         life: 1000,
       });
       state.bursts.push({ x: 994, y: 346, radius: 16, color: "#9df7da", life: 420, duration: 420, intensity: 1.25 });
-      if (state.enemyHp <= 0) startNextWave();
+      if (state.enemyHp <= 0) {
+        enemyDefeatedByReflect = true;
+        startNextWave();
+      }
     }
+  }
+  if (!enemyDefeatedByReflect && blocked > 0 && finalDamage === 0 && state.upgrades.aegisStarMirror > 0 && state.enemyHp > 0 && state.mode === "playing") {
+    const starDamage = Math.max(18, blocked + 12);
+    damageEnemyFromUpgrade(starDamage, "floaterAegisStar", "#ff8f98", 920, 462);
+    playSfx("tspin");
   }
 }
 
@@ -3510,6 +3858,31 @@ function applyBattle(lines, pieceType, spinType) {
         color: "#d7c2ff",
         life: 1050,
       });
+    }
+    if (state.upgrades.singularitySpinCore > 0) {
+      state.spinSingularityStacks = Math.min(3, (state.spinSingularityStacks || 0) + 1);
+      if (state.spinSingularityStacks >= 3) {
+        const singularityDamage = 80;
+        state.spinSingularityStacks = 0;
+        damage += singularityDamage;
+        addDamagePart(parts, sources, "damageSingularity", singularityDamage, "upgrade");
+        state.floaters.push({
+          x: 88,
+          y: 304,
+          text: fmt("floaterSingularityBurst", { damage: singularityDamage }),
+          color: "#ff8f98",
+          life: 1200,
+        });
+        state.bursts.push({ x: BOARD_X + COLS * TILE + 210, y: BOARD_Y + 278, radius: 18, color: "#ff6f7c", life: 460, duration: 460, intensity: 1.4 });
+      } else {
+        state.floaters.push({
+          x: 88,
+          y: 304,
+          text: fmt("floaterSingularityCharge", { count: state.spinSingularityStacks }),
+          color: "#d7c2ff",
+          life: 850,
+        });
+      }
     }
   }
   if (lines > 0 && isAllSpinMini) {
@@ -3568,9 +3941,27 @@ function applyBattle(lines, pieceType, spinType) {
     const before = damage;
     if (state.enemyType.id === "king") {
       damage = Math.max(damage, Math.ceil(state.enemyMaxHp * PERFECT_CLEAR_BOSS_HP_RATIO));
+      let perfectBossDelta = Math.max(0, damage - before);
+      let perfectCrownDelta = 0;
+      if (state.upgrades.perfectRiftCrown > 0) {
+        const crownBefore = damage;
+        damage = Math.max(damage, Math.ceil(state.enemyMaxHp * PERFECT_CROWN_BOSS_HP_RATIO));
+        perfectCrownDelta = Math.max(0, damage - crownBefore);
+      }
       damage = Math.min(damage, state.enemyHp);
-      if (damage > before) {
-        addDamagePart(parts, sources, "damagePerfectBoss", damage - before, "perfect");
+      const cappedDelta = Math.max(0, damage - before);
+      perfectCrownDelta = Math.min(perfectCrownDelta, cappedDelta);
+      perfectBossDelta = Math.min(perfectBossDelta, Math.max(0, cappedDelta - perfectCrownDelta));
+      if (perfectBossDelta > 0) addDamagePart(parts, sources, "damagePerfectBoss", perfectBossDelta, "perfect");
+      if (perfectCrownDelta > 0) {
+        addDamagePart(parts, sources, "damagePerfectCrown", perfectCrownDelta, "upgrade");
+        state.floaters.push({
+          x: BOARD_X + COLS * TILE + 36,
+          y: BOARD_Y + 228,
+          text: fmt("floaterPerfectCrown", { damage: perfectCrownDelta }),
+          color: "#ff8f98",
+          life: 1300,
+        });
       }
     } else {
       damage = Math.max(damage, state.enemyHp);
@@ -3590,6 +3981,31 @@ function applyBattle(lines, pieceType, spinType) {
   if (garbageCounterBonus > 0) {
     damage += garbageCounterBonus;
     addDamagePart(parts, sources, "damageGarbageCounter", garbageCounterBonus, "upgrade");
+  }
+  const garbageAlchemyDamage = canceled > 0 && state.upgrades.garbageAlchemyCore > 0
+    ? canceled * 18 + (canceled >= 3 ? 12 : 0)
+    : 0;
+  if (garbageAlchemyDamage > 0) {
+    damage += garbageAlchemyDamage;
+    addDamagePart(parts, sources, "damageGarbageAlchemy", garbageAlchemyDamage, "upgrade");
+    state.floaters.push({
+      x: BOARD_X + COLS * TILE + 34,
+      y: BOARD_Y + 184,
+      text: fmt("floaterGarbageAlchemy", { damage: garbageAlchemyDamage }),
+      color: "#ff8f98",
+      life: 1150,
+    });
+    if (canceled >= 3) {
+      const guardGain = Math.min(8, canceled * 2);
+      state.guard = Math.min(state.maxGuard, state.guard + guardGain);
+      state.floaters.push({
+        x: 86,
+        y: 248,
+        text: fmt("floaterGarbageAlchemyGuard", { guard: guardGain }),
+        color: "#9df7da",
+        life: 1050,
+      });
+    }
   }
   if (state.lastPerfectClear && state.enemyType.id === "king" && state.upgrades.perfectBossDelay > 0 && damage < state.enemyHp) {
     state.enemyCountdown += state.upgrades.perfectBossDelay;
@@ -3613,6 +4029,33 @@ function applyBattle(lines, pieceType, spinType) {
       color: "#7ef7ff",
       life: 1150,
     });
+  }
+  if (lines > 0 && state.upgrades.comboConstellation > 0 && state.combo >= 4) {
+    if (state.comboConstellationWave !== state.wave) {
+      state.comboConstellationWave = state.wave;
+      state.comboConstellationFirstUsed = false;
+      state.comboConstellationSecondUsed = false;
+    }
+    let constellationDelay = 0;
+    if (!state.comboConstellationFirstUsed) {
+      state.comboConstellationFirstUsed = true;
+      constellationDelay += 1;
+    }
+    if (state.combo >= 8 && !state.comboConstellationSecondUsed) {
+      state.comboConstellationSecondUsed = true;
+      constellationDelay += 1;
+    }
+    if (constellationDelay > 0) {
+      state.enemyCountdown += constellationDelay;
+      state.floaters.push({
+        x: BOARD_X + COLS * TILE + 36,
+        y: BOARD_Y + 148,
+        text: fmt("floaterComboConstellation", { turns: constellationDelay }),
+        color: "#7ef7ff",
+        life: 1200,
+      });
+      playSfx("combo");
+    }
   }
   if (canceled > 0) {
     state.floaters.push({
@@ -4493,6 +4936,9 @@ function startNextWave() {
   state.enemyAnimation = null;
   state.shake = 14;
   state.lastClearedBoss = clearedBoss;
+  state.comboConstellationWave = state.wave;
+  state.comboConstellationFirstUsed = false;
+  state.comboConstellationSecondUsed = false;
   state.upgradeChoices = [];
   state.mode = "playing";
   const beforeHeal = state.playerHp;
@@ -4527,16 +4973,27 @@ function startNextWave() {
 }
 
 function createUpgradeChoices(forceRelic = false, forceRare = false) {
-  const pool = UPGRADES.slice();
+  const legendaryPool = UPGRADES.filter((upgrade) => upgrade.rarity === "legendary");
+  const pool = UPGRADES.filter((upgrade) => upgrade.rarity !== "legendary");
   for (let i = pool.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
+  for (let i = legendaryPool.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [legendaryPool[i], legendaryPool[j]] = [legendaryPool[j], legendaryPool[i]];
+  }
   const choices = [];
-  if (forceRelic) {
+  const legendaryChance = forceRelic
+    ? LEGENDARY_BOSS_DRAFT_CHANCE
+    : state.upgradeTier >= 4 ? LEGENDARY_DRAFT_CHANCE : 0;
+  if (legendaryPool.length && Math.random() < legendaryChance) {
+    choices.push(legendaryPool[0]);
+  }
+  if (forceRelic && !choices.some((upgrade) => upgrade.rarity === "relic" || upgrade.rarity === "legendary")) {
     const relic = pool.find((upgrade) => upgrade.rarity === "relic");
     if (relic) choices.push(relic);
-  } else if (forceRare) {
+  } else if (forceRare && !choices.length) {
     const rare = pool.find((upgrade) => upgrade.rarity === "rare");
     if (rare) choices.push(rare);
   }
@@ -4592,6 +5049,7 @@ function increasePlayerMaxHp(amount, healAmount = amount) {
 }
 
 function chooseUpgrade(index) {
+  if (state.upgradePickConfirm) return;
   const upgrade = state.upgradeChoices[index];
   if (!upgrade) return;
   upgrade.apply();
@@ -4603,23 +5061,43 @@ function chooseUpgrade(index) {
     color: "#fff0a6",
     life: 1200,
   });
+  state.upgradePickConfirm = {
+    index,
+    id: upgrade.id,
+    name: upgradeName(upgrade),
+    rarity: upgrade.rarity,
+    elapsed: 0,
+    duration: 400,
+  };
+  state.currentBuildOpen = false;
+  playSfx("upgrade");
+}
+
+function finishUpgradeSelection() {
   state.upgradeChoices = [];
   state.currentBuildOpen = false;
+  state.upgradePickConfirm = null;
   state.mode = "playing";
   state.upgradeReady = state.upgradeMeter >= state.nextUpgradeAt;
   if (!state.active) spawnPiece();
-  playSfx("upgrade");
+}
+
+function updateUpgradeConfirm(dt) {
+  if (state.mode !== "upgrade" || !state.upgradePickConfirm) return;
+  state.upgradePickConfirm.elapsed += dt;
+  if (state.upgradePickConfirm.elapsed >= state.upgradePickConfirm.duration) finishUpgradeSelection();
 }
 
 function recordAcquiredRelic(upgrade) {
   if (!Array.isArray(state.acquiredRelics)) state.acquiredRelics = [];
-  const family = getUpgradeFamily(upgrade);
   state.acquiredRelics.push({
     id: upgrade.id,
     name: upgrade.name,
     rarity: upgrade.rarity,
-    familyKey: family.labelKey,
+    tags: getUpgradeTags(upgrade),
+    stackRule: upgrade.stackRule || "stackable",
     textKey: upgrade.textKey || "",
+    shortTextKey: upgrade.shortTextKey || "",
     wave: state.wave,
   });
 }
@@ -4767,6 +5245,7 @@ function update(time) {
       }
       updateAudioCues(time);
     }
+    if (state.mode === "upgrade") updateUpgradeConfirm(dt);
 
     tickEffects(dt);
     updateScreenNoteMode();
@@ -9120,41 +9599,232 @@ function drawUpgradeOverlay() {
   ctx.save();
   ctx.fillStyle = "rgba(4, 6, 10, 0.76)";
   ctx.fillRect(0, 0, W, H);
-  drawCard(286, 126, 708, 442);
+  drawCard(286, 126, 708, 522);
   label(t("relicDraft").toUpperCase(), 348, 198, 35, "#f5f1e6");
   label(fmt("waveClearPick", { wave: state.wave - 1 }), 350, 230, 17, "rgba(238,244,252,0.62)");
   label(t("safeNodeDraft"), 350, 252, 13, "#9df7da");
   const buildButton = getCurrentBuildButtonRect();
   drawMenuButton(buildButton.x, buildButton.y, buildButton.w, buildButton.h, t("currentBuild"), "");
+  let hoveredUpgrade = null;
+  let hoveredRect = null;
   for (let i = 0; i < 3; i += 1) {
     const upgrade = state.upgradeChoices[i];
     if (!upgrade) continue;
-    const rarity = RARITY[upgrade.rarity] || RARITY.common;
-    const family = getUpgradeFamily(upgrade);
-    const x = 342 + i * 204;
-    const y = 292;
-    const hovered = pointInRect(state.pointer.x, state.pointer.y, x, y, 180, 186);
-    const cardG = ctx.createLinearGradient(x, y, x, y + 186);
-    cardG.addColorStop(0, hovered ? hexToRgba(rarity.color, 0.22) : "rgba(13, 18, 28, 0.78)");
-    cardG.addColorStop(1, hovered ? "rgba(33, 18, 46, 0.82)" : "rgba(7, 10, 16, 0.76)");
-    ctx.fillStyle = cardG;
-    roundedRect(x, y, 180, 186, 12, true, false);
-    ctx.strokeStyle = hovered ? rarity.color : hexToRgba(rarity.color, 0.42);
-    ctx.lineWidth = hovered ? 3 : 2;
-    roundedRect(x, y, 180, 186, 12, false, true);
-    drawUpgradeSigil(x + 144, y + 42, family.color, i + 1, 0.78, 0.78);
-    drawUpgradePill(x + 16, y + 16, 70, 20, rarityLabel(upgrade.rarity).toUpperCase(), rarity.color, 0.18);
-    drawUpgradePill(x + 16, y + 43, 92, 22, upgradeFamilyShortLabel(family).toUpperCase(), family.color, 0.12);
-    wrapText(upgradeName(upgrade), x + 18, y + 94, 142, 22, "#f5f1e6", 17);
-    wrapText(upgradeText(upgrade), x + 18, y + 134, 142, 18, "rgba(238,244,252,0.64)", 12);
+    const rarity = getRarityVisual(upgrade.rarity);
+    const card = getUpgradeCardRect(i);
+    const hovered = !state.upgradePickConfirm && pointInRect(state.pointer.x, state.pointer.y, card.x, card.y, card.w, card.h);
+    const dimmed = state.upgradePickConfirm && state.upgradePickConfirm.index !== i;
+    if (hovered) {
+      hoveredUpgrade = upgrade;
+      hoveredRect = card;
+    }
+    ctx.save();
+    if (dimmed) ctx.globalAlpha = 0.42;
+    drawUpgradeCardFrame(card.x, card.y, card.w, card.h, rarity, hovered || state.upgradePickConfirm?.index === i);
+    drawRarityBadge(card.x + 24, card.y + 18, 86, 23, rarityLabel(upgrade.rarity).toUpperCase(), rarity);
+    drawUpgradeEmblem(upgrade, card.x + card.w / 2, card.y + 84, rarity, 82);
+    drawLimitedWrapText(upgradeName(upgrade), card.x + 32, card.y + 138, card.w - 64, 20, rarity.titleColor, 17, 2, "900", true);
+    drawUpgradeTagPills(getUpgradeTags(upgrade), card.x + 32, card.y + 172, card.w - 64, 2, 0.84);
+    drawUpgradeDivider(card.x + 32, card.y + 204, card.w - 64, rarity.color, hovered ? 0.64 : 0.4);
+    drawLimitedWrapText(upgradeShortText(upgrade), card.x + 32, card.y + 228, card.w - 64, 17, "rgba(238,244,252,0.76)", 12, 2, "700");
+    ctx.restore();
   }
-  label(t("upgradeHelp"), 350, 522, 17, "#9fb4ff");
+  if (state.upgradePickConfirm) drawUpgradePickConfirmFx();
+  else if (hoveredUpgrade) drawUpgradeDetailPanel(hoveredUpgrade, hoveredRect);
+  label(t("upgradeHelp"), 350, 626, 16, "#9fb4ff");
   if (state.currentBuildOpen) drawCurrentBuildPanel();
   ctx.restore();
 }
 
+function getUpgradeCardRect(index) {
+  return { x: 306 + index * 234, y: 266, w: 206, h: 270 };
+}
+
 function getCurrentBuildButtonRect() {
-  return { x: 772, y: 190, w: 166, h: 38 };
+  return { x: 790, y: 216, w: 166, h: 36 };
+}
+
+function drawUpgradeCardFrame(x, y, w, h, rarity, hovered = false) {
+  ctx.save();
+  const frame = upgradeCardFrames[rarity.tier] || upgradeCardFrames.common;
+  if (isImageReady(frame)) {
+    ctx.shadowColor = rarity.glow;
+    ctx.shadowBlur = hovered ? 24 : 12;
+    ctx.drawImage(frame, x, y, w, h);
+    ctx.shadowBlur = 0;
+    if (hovered) {
+      ctx.strokeStyle = hexToRgba(rarity.border, 0.86);
+      ctx.lineWidth = rarity.lineWidth + 0.8;
+      roundedRect(x + 2, y + 2, w - 4, h - 4, 12, false, true);
+      ctx.fillStyle = hexToRgba(rarity.color, 0.08);
+      roundedRect(x + 8, y + 8, w - 16, h - 16, 10, true, false);
+    }
+    ctx.restore();
+    return;
+  }
+  const glow = hovered ? 0.72 : 0.42;
+  ctx.shadowColor = rarity.glow;
+  ctx.shadowBlur = hovered ? 28 : 16;
+  const cardG = ctx.createLinearGradient(x, y, x, y + h);
+  cardG.addColorStop(0, rarity.fillTop);
+  cardG.addColorStop(0.46, "rgba(12, 14, 24, 0.82)");
+  cardG.addColorStop(1, rarity.fillBottom);
+  ctx.fillStyle = cardG;
+  roundedRect(x, y, w, h, 12, true, false);
+  ctx.shadowBlur = 0;
+
+  const inner = ctx.createLinearGradient(x, y, x + w, y + h);
+  inner.addColorStop(0, hexToRgba(rarity.color, hovered ? 0.18 : 0.1));
+  inner.addColorStop(0.5, "rgba(255, 255, 255, 0)");
+  inner.addColorStop(1, hexToRgba(rarity.color, hovered ? 0.12 : 0.06));
+  ctx.fillStyle = inner;
+  roundedRect(x + 5, y + 5, w - 10, h - 10, 10, true, false);
+
+  const aura = ctx.createRadialGradient(x + w / 2, y + 78, 8, x + w / 2, y + 78, 84);
+  aura.addColorStop(0, hexToRgba(rarity.color, hovered ? 0.28 : 0.18));
+  aura.addColorStop(0.46, hexToRgba(rarity.color, hovered ? 0.12 : 0.07));
+  aura.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = aura;
+  roundedRect(x + 8, y + 42, w - 16, 86, 10, true, false);
+
+  ctx.strokeStyle = hexToRgba(rarity.color, hovered ? 0.24 : 0.14);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(x + w / 2, y + 78, 48, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(x + w / 2, y + 78, 34, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = hovered ? rarity.border : hexToRgba(rarity.border, glow);
+  ctx.lineWidth = hovered ? rarity.lineWidth + 0.6 : rarity.lineWidth;
+  roundedRect(x, y, w, h, 12, false, true);
+
+  ctx.fillStyle = hexToRgba(rarity.color, hovered ? 0.24 : 0.14);
+  roundedRect(x + 10, y + h - 8, w - 20, 3, 2, true, false);
+  drawUpgradeCornerMarks(x, y, w, h, rarity.color, hovered ? 0.58 : 0.34);
+  ctx.restore();
+}
+
+function drawUpgradeCornerMarks(x, y, w, h, color, alpha) {
+  ctx.save();
+  ctx.strokeStyle = hexToRgba(color, alpha);
+  ctx.lineWidth = 1.4;
+  const size = 16;
+  const pad = 8;
+  [
+    [x + pad, y + pad, 1, 1],
+    [x + w - pad, y + pad, -1, 1],
+    [x + pad, y + h - pad, 1, -1],
+    [x + w - pad, y + h - pad, -1, -1],
+  ].forEach(([cx, cy, sx, sy]) => {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + sy * size);
+    ctx.lineTo(cx, cy);
+    ctx.lineTo(cx + sx * size, cy);
+    ctx.stroke();
+  });
+  ctx.restore();
+}
+
+function drawRarityBadge(x, y, w, h, text, rarity) {
+  ctx.save();
+  ctx.fillStyle = rarity.badgeFill;
+  roundedRect(x, y, w, h, 8, true, false);
+  ctx.strokeStyle = hexToRgba(rarity.border, 0.52);
+  ctx.lineWidth = 1.4;
+  roundedRect(x, y, w, h, 8, false, true);
+  fitLabel(text, x + 9, y + h / 2 + 4, w - 18, 10, rarity.badgeText, 8, "900", true);
+  ctx.restore();
+}
+
+function drawUpgradePickHint(x, y, number, rarity) {
+  ctx.save();
+  ctx.fillStyle = "rgba(4, 7, 12, 0.34)";
+  roundedRect(x, y, 22, 20, 6, true, false);
+  ctx.strokeStyle = hexToRgba(rarity.border, 0.28);
+  ctx.lineWidth = 1;
+  roundedRect(x, y, 22, 20, 6, false, true);
+  fitLabel(String(number), x + 7, y + 14, 10, 11, hexToRgba(rarity.badgeText, 0.72), 9, "800", true);
+  ctx.restore();
+}
+
+function drawUpgradeDivider(x, y, w, color, alpha = 0.5) {
+  ctx.save();
+  ctx.strokeStyle = hexToRgba(color, alpha);
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + w * 0.4, y);
+  ctx.moveTo(x + w * 0.6, y);
+  ctx.lineTo(x + w, y);
+  ctx.stroke();
+  ctx.fillStyle = hexToRgba(color, alpha + 0.08);
+  ctx.save();
+  ctx.translate(x + w / 2, y);
+  ctx.rotate(Math.PI / 4);
+  ctx.fillRect(-3, -3, 6, 6);
+  ctx.restore();
+  ctx.restore();
+}
+
+function drawUpgradeEmblem(upgrade, x, y, rarity, size = 82) {
+  const emblem = legendaryUpgradeEmblems[upgrade.id];
+  ctx.save();
+  if (isImageReady(emblem)) {
+    ctx.shadowColor = rarity.glow;
+    ctx.shadowBlur = rarity.tier === "legendary" ? 18 : 10;
+    ctx.globalAlpha = rarity.tier === "legendary" ? 0.96 : 0.84;
+    ctx.drawImage(emblem, x - size / 2, y - size / 2, size, size);
+    ctx.restore();
+    return;
+  }
+  drawUpgradeSigil(x, y, rarity.color, rarity.tier === "legendary" ? 1.08 : 1, rarity.emblemAlpha);
+  ctx.restore();
+}
+
+function drawUpgradeDetailPanel(upgrade, card) {
+  if (!upgrade || !card) return;
+  const rarity = getRarityVisual(upgrade.rarity);
+  const x = 346;
+  const y = 546;
+  const w = 588;
+  const h = 64;
+  ctx.save();
+  ctx.fillStyle = "rgba(5, 9, 15, 0.82)";
+  roundedRect(x, y, w, h, 10, true, false);
+  ctx.strokeStyle = hexToRgba(rarity.border, 0.42);
+  ctx.lineWidth = 1.4;
+  roundedRect(x, y, w, h, 10, false, true);
+  ctx.fillStyle = hexToRgba(rarity.color, 0.18);
+  roundedRect(x + 12, y + 12, 4, h - 24, 4, true, false);
+  fitLabel(upgradeName(upgrade), x + 26, y + 26, 196, 14, rarity.titleColor, 11, "900", true);
+  wrapText(upgradeText(upgrade), x + 226, y + 24, w - 250, 16, "rgba(238,244,252,0.72)", 12);
+  ctx.restore();
+}
+
+function drawUpgradePickConfirmFx() {
+  const pick = state.upgradePickConfirm;
+  if (!pick) return;
+  const card = getUpgradeCardRect(pick.index);
+  const rarity = getRarityVisual(pick.rarity);
+  const t = Math.min(1, pick.elapsed / pick.duration);
+  const pulse = Math.sin(t * Math.PI);
+  ctx.save();
+  ctx.shadowColor = rarity.glow;
+  ctx.shadowBlur = 22 + pulse * 18;
+  ctx.strokeStyle = hexToRgba(rarity.border, 0.72 + pulse * 0.24);
+  ctx.lineWidth = 3 + pulse * 2;
+  roundedRect(card.x - 5, card.y - 5, card.w + 10, card.h + 10, 14, false, true);
+  ctx.fillStyle = hexToRgba(rarity.color, 0.08 + pulse * 0.08);
+  roundedRect(card.x + 8, card.y + 8, card.w - 16, card.h - 16, 10, true, false);
+  fitLabel(pick.name, card.x + 24, card.y + card.h - 22, card.w - 48, 13, rarity.titleColor, 10, "900", true);
+  ctx.restore();
+}
+
+function getRarityVisual(rarity) {
+  const key = rarity === "boss" || rarity === "special" ? "legendary" : rarity;
+  return RARITY[key] || RARITY.common;
 }
 
 function getCurrentBuildPanelRect() {
@@ -9177,7 +9847,8 @@ function drawCurrentBuildPanel() {
   drawCard(panel.x, panel.y, panel.w, panel.h);
   label(t("currentBuildTitle"), panel.x + 42, panel.y + 58, 32, "#f5f1e6");
   drawMenuButton(closeRect.x, closeRect.y, closeRect.w, closeRect.h, t("currentBuildClose"), "Esc");
-  wrapText(getCurrentBuildDirectionText(stats), panel.x + 44, panel.y + 92, 660, 20, "rgba(238,244,252,0.72)", 14);
+  drawCurrentBuildSummary(stats, panel.x + 44, panel.y + 82, 460, 44);
+  wrapText(getCurrentBuildDirectionText(stats), panel.x + 526, panel.y + 104, 314, 18, "rgba(238,244,252,0.62)", 12);
   label(t("currentBuildStats").toUpperCase(), panel.x + 44, panel.y + 140, 13, "#fff0a6");
   drawCurrentBuildStats(stats, panel.x + 44, panel.y + 156, panel.w - 88);
   label(t("currentBuildList").toUpperCase(), panel.x + 44, panel.y + 220, 13, "#8fe8dc");
@@ -9196,6 +9867,19 @@ function drawCurrentBuildEmpty(x, y, w, h) {
   ctx.strokeStyle = "rgba(126, 231, 255, 0.2)";
   roundedRect(x, y, w, h, 10, false, true);
   wrapText(t("currentBuildEmpty"), x + 22, y + 48, w - 44, 22, "rgba(238,244,252,0.74)", 16);
+  ctx.restore();
+}
+
+function drawCurrentBuildSummary(stats, x, y, w, h) {
+  const strongest = stats[0];
+  ctx.save();
+  ctx.fillStyle = "rgba(8, 13, 20, 0.58)";
+  roundedRect(x, y, w, h, 9, true, false);
+  ctx.strokeStyle = strongest ? hexToRgba(strongest.color, 0.34) : "rgba(126, 231, 255, 0.18)";
+  roundedRect(x, y, w, h, 9, false, true);
+  label(t("currentBuildStrongest").toUpperCase(), x + 16, y + 19, 11, "rgba(238,244,252,0.5)");
+  const text = strongest ? `${strongest.label} x${strongest.count}` : t("currentBuildNoDirection");
+  fitLabel(text, x + 16, y + 36, w - 32, 16, strongest ? strongest.color : "#8fe8dc", 11, "900", true);
   ctx.restore();
 }
 
@@ -9218,7 +9902,7 @@ function drawAcquiredRelicCards(groups, x, y, w, bottomY) {
   const columns = 3;
   const gap = 12;
   const cardW = (w - gap * (columns - 1)) / columns;
-  const cardH = 54;
+  const cardH = 66;
   const rowGap = 10;
   const maxRows = Math.max(1, Math.floor((bottomY - y - 24) / (cardH + rowGap)));
   const maxVisible = maxRows * columns;
@@ -9236,22 +9920,22 @@ function drawAcquiredRelicCards(groups, x, y, w, bottomY) {
 }
 
 function drawAcquiredRelicCard(group, x, y, w, h) {
-  const rarity = RARITY[group.rarity] || RARITY.common;
-  const family = group.family;
+  const rarity = getRarityVisual(group.rarity);
   ctx.save();
   const cardG = ctx.createLinearGradient(x, y, x + w, y + h);
-  cardG.addColorStop(0, hexToRgba(rarity.color, 0.14));
-  cardG.addColorStop(1, "rgba(7, 10, 16, 0.72)");
+  cardG.addColorStop(0, rarity.fillTop);
+  cardG.addColorStop(1, rarity.fillBottom);
   ctx.fillStyle = cardG;
   roundedRect(x, y, w, h, 8, true, false);
-  ctx.strokeStyle = hexToRgba(rarity.color, 0.38);
-  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = hexToRgba(rarity.border, 0.42);
+  ctx.lineWidth = Math.max(1.2, rarity.lineWidth - 0.8);
   roundedRect(x, y, w, h, 8, false, true);
-  drawUpgradePill(x + 10, y + 8, 56, 18, rarityLabel(group.rarity).toUpperCase(), rarity.color, 0.16);
-  drawUpgradePill(x + 72, y + 8, 76, 18, upgradeFamilyShortLabel(family).toUpperCase(), family.color, 0.12);
-  if (group.count > 1) label(`x${group.count}`, x + w - 30, y + 22, 15, "#fff0a6");
-  fitLabel(upgradeName(group.upgrade), x + 10, y + 37, w - 20, 14, "#f5f1e6", 10, "800", true);
-  fitLabel(upgradeText(group.upgrade), x + 10, y + 49, w - 20, 10, "rgba(238,244,252,0.58)", 8, "600");
+  drawUpgradeSigil(x + w - 28, y + 26, rarity.color, 0.42, rarity.emblemAlpha * 0.52);
+  drawRarityBadge(x + 10, y + 7, 60, 18, rarityLabel(group.rarity).toUpperCase(), rarity);
+  drawUpgradeTagPills(group.tags, x + 78, y + 6, Math.min(116, w - 122), 2, 0.58);
+  if (group.count > 1) label(`x${group.count}`, x + w - 38, y + 56, 13, "#fff0a6");
+  fitLabel(upgradeName(group.upgrade), x + 10, y + 38, w - 54, 14, rarity.titleColor, 10, "800", true);
+  fitLabel(upgradeShortText(group.upgrade), x + 10, y + 55, w - 58, 10, "rgba(238,244,252,0.6)", 8, "600");
   ctx.restore();
 }
 
@@ -9272,6 +9956,7 @@ function getAcquiredRelicGroups() {
       upgrade,
       count: 1,
       rarity: entry.rarity || upgrade.rarity,
+      tags: getUpgradeTags(upgrade),
       family: getUpgradeFamily(upgrade),
     });
   }
@@ -9281,16 +9966,18 @@ function getAcquiredRelicGroups() {
 function getCurrentBuildFamilyStats(groups = getAcquiredRelicGroups()) {
   const stats = new Map();
   for (const group of groups) {
-    const key = group.family.labelKey;
-    const current = stats.get(key) || { family: group.family, count: 0 };
-    current.count += group.count;
-    stats.set(key, current);
+    for (const tag of group.tags) {
+      const meta = getBuildTagMeta(tag);
+      const current = stats.get(tag) || { tag, meta, count: 0 };
+      current.count += group.count;
+      stats.set(tag, current);
+    }
   }
   return [...stats.values()]
     .sort((a, b) => b.count - a.count)
-    .map(({ family, count }) => ({
-      label: upgradeFamilyShortLabel(family),
-      color: family.color,
+    .map(({ tag, meta, count }) => ({
+      label: buildTagLabel(tag),
+      color: meta.color,
       count,
     }));
 }
@@ -9305,6 +9992,25 @@ function getUpgradeById(id) {
   return UPGRADES.find((upgrade) => upgrade.id === id);
 }
 
+function drawUpgradeTagPills(tags, x, y, maxWidth, maxTags = 2, alpha = 1) {
+  const visibleTags = getUpgradeTags({ tags }).slice(0, maxTags);
+  let xx = x;
+  ctx.save();
+  ctx.font = canvasFont("900", 9, "TAG", true);
+  for (const tag of visibleTags) {
+    const meta = getBuildTagMeta(tag);
+    const text = buildTagLabel(tag).toUpperCase();
+    const pillW = Math.min(66, Math.max(36, ctx.measureText(text).width + 16));
+    if (xx + pillW > x + maxWidth) break;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    drawUpgradePill(xx, y, pillW, 18, text, meta.color, 0.1);
+    ctx.restore();
+    xx += pillW + 5;
+  }
+  ctx.restore();
+}
+
 function drawUpgradePill(x, y, w, h, text, color, fillAlpha = 0.14) {
   ctx.save();
   ctx.fillStyle = hexToRgba(color, fillAlpha);
@@ -9314,48 +10020,137 @@ function drawUpgradePill(x, y, w, h, text, color, fillAlpha = 0.14) {
   roundedRect(x, y, w, h, 7, false, true);
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  fitLabel(text, x + 9, y + h / 2 + 0.5, w - 18, 10, color, 8, "900", true);
+  fitLabel(text, x + 8, y + h / 2 + 0.5, w - 16, Math.min(10, h - 8), color, 8, "900", true);
   ctx.textBaseline = "alphabetic";
   ctx.restore();
 }
 
-function drawUpgradeSigil(x, y, color, number, scale = 1, alpha = 1) {
+function drawUpgradeSigil(x, y, color, scale = 1, alpha = 1) {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(scale, scale);
   ctx.globalAlpha = alpha;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 16;
+  ctx.shadowBlur = 18;
   ctx.strokeStyle = hexToRgba(color, 0.72);
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.8;
   ctx.beginPath();
-  ctx.arc(0, 0, 22, 0, Math.PI * 2);
+  ctx.arc(0, 0, 25, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, 0, 15, 0, Math.PI * 2);
   ctx.stroke();
   ctx.rotate(Math.PI / 4);
-  ctx.strokeRect(-13, -13, 26, 26);
+  ctx.strokeRect(-14, -14, 28, 28);
   ctx.rotate(-Math.PI / 4);
   ctx.fillStyle = hexToRgba(color, 0.18);
   ctx.beginPath();
   ctx.arc(0, 0, 18, 0, Math.PI * 2);
   ctx.fill();
-  label(String(number), -4, 5, 16, "#fff0a6");
+  ctx.fillStyle = hexToRgba(color, 0.5);
+  ctx.beginPath();
+  ctx.moveTo(0, -24);
+  ctx.lineTo(7, -5);
+  ctx.lineTo(24, 0);
+  ctx.lineTo(7, 5);
+  ctx.lineTo(0, 24);
+  ctx.lineTo(-7, 5);
+  ctx.lineTo(-24, 0);
+  ctx.lineTo(-7, -5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = hexToRgba("#ffffff", 0.38);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, -16);
+  ctx.lineTo(5, 0);
+  ctx.lineTo(0, 16);
+  ctx.lineTo(-5, 0);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawLimitedWrapText(text, x, y, maxWidth, lineHeight, color, size, maxLines = 2, weight = "700", forceDisplay = false) {
+  ctx.save();
+  ctx.font = canvasFont(weight, size, text, forceDisplay);
+  ctx.fillStyle = color;
+  const tokens = tokenizeForWrap(String(text));
+  const lines = [];
+  let line = "";
+  let truncated = false;
+  for (const token of tokens) {
+    if (token === "\n") {
+      if (line.trim()) lines.push(line.trimEnd());
+      line = "";
+      if (lines.length >= maxLines) {
+        truncated = true;
+        break;
+      }
+      continue;
+    }
+    const next = line ? line + token : token.trimStart();
+    const test = next.trimStart();
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line.trimEnd());
+      line = token.trimStart();
+      if (lines.length >= maxLines) {
+        truncated = true;
+        break;
+      }
+    } else {
+      line = next;
+    }
+  }
+  if (lines.length < maxLines && line.trim()) lines.push(line.trimEnd());
+  const limited = lines.slice(0, maxLines);
+  if (truncated) {
+    const lastIndex = limited.length - 1;
+    if (lastIndex >= 0) {
+      let last = limited[lastIndex].replace(/\s+$/, "");
+      while (last.length > 1 && ctx.measureText(`${last}...`).width > maxWidth) {
+        last = last.slice(0, -1).trimEnd();
+      }
+      limited[lastIndex] = `${last}...`;
+    }
+  }
+  limited.forEach((lineText, index) => {
+    fitLabel(lineText, x, y + index * lineHeight, maxWidth, size, color, Math.max(8, size - 4), weight, forceDisplay);
+  });
   ctx.restore();
 }
 
 function getUpgradeFamily(upgrade) {
-  if (["tspin_amp", "spin_circuit", "all_spin_codex", "spin_guard_reactor"].includes(upgrade.id)) return BUILD_FAMILY.spin;
-  if (["combo_clock", "combo_resonator", "tempo_engine", "combo_echo_matrix"].includes(upgrade.id)) return BUILD_FAMILY.combo;
-  if (["combo_aegis", "guard_lattice", "b2b_preserver", "aegis_reprisal"].includes(upgrade.id)) return BUILD_FAMILY.defense;
-  if (["garbage_guard", "null_barrier", "garbage_furnace"].includes(upgrade.id)) return BUILD_FAMILY.garbage;
-  if (["b2b_blade", "bossbreaker_relic", "blade_polish", "stellar_caliber", "grey_star_reactor", "rift_battery", "perfect_anchor"].includes(upgrade.id)) return BUILD_FAMILY.burst;
-  if (["star_mender", "aegis_shell", "vital_core", "recovery_glyph", "void_carapace", "arcane_suture", "spin_vamp"].includes(upgrade.id)) return BUILD_FAMILY.defense;
-  return BUILD_FAMILY.burst;
+  const primaryTag = getUpgradeTags(upgrade)[0];
+  const meta = getBuildTagMeta(primaryTag);
+  return BUILD_FAMILY[meta.family] || BUILD_FAMILY.burst;
 }
 
 function upgradeFamilyShortLabel(family) {
   const shortKey = family.labelKey.replace("family.", "familyShort.");
   const shortLabel = t(shortKey);
   return shortLabel === shortKey ? t(family.labelKey) : shortLabel;
+}
+
+function getUpgradeTags(upgrade) {
+  if (Array.isArray(upgrade?.tags) && upgrade.tags.length) return upgrade.tags;
+  return ["Burst"];
+}
+
+function getBuildTagMeta(tag) {
+  return BUILD_TAGS[tag] || BUILD_TAGS.Burst;
+}
+
+function buildTagLabel(tag) {
+  const meta = getBuildTagMeta(tag);
+  const label = t(meta.labelKey);
+  return label === meta.labelKey ? tag : label;
+}
+
+function stackRuleLabel(rule = "stackable") {
+  const key = `stack.${rule}`;
+  const label = t(key);
+  return label === key ? rule : label;
 }
 
 function drawMoveGuideOverlay() {
@@ -9482,6 +10277,11 @@ function upgradeText(upgrade) {
   return state.language === "zh" ? upgrade.text : upgrade.textEn || upgrade.text;
 }
 
+function upgradeShortText(upgrade) {
+  if (upgrade.shortTextKey) return t(upgrade.shortTextKey);
+  return upgradeText(upgrade);
+}
+
 function upgradeName(upgrade) {
   const key = `upgradeName.${upgrade.id}`;
   const translated = t(key);
@@ -9493,6 +10293,9 @@ function rarityLabel(rarity) {
     common: { zh: "Common", en: "Common" },
     rare: { zh: "Rare", en: "Rare" },
     relic: { zh: "Relic", en: "Relic" },
+    legendary: { zh: "Legendary", en: "Legendary" },
+    boss: { zh: "Boss", en: "Boss" },
+    special: { zh: "Special", en: "Special" },
   };
   return (labels[rarity] && labels[rarity][state.language]) || rarity;
 }
@@ -10007,6 +10810,8 @@ window.addEventListener("keydown", (event) => {
     return;
   }
 
+  if (state.mode === "upgrade" && state.upgradePickConfirm) return;
+
   if (state.mode === "upgrade" && ["1", "2", "3"].includes(key)) {
     chooseUpgrade(Number(key) - 1);
     return;
@@ -10158,6 +10963,7 @@ canvas.addEventListener("mousedown", (event) => {
 
   if (!state.settingsOpen && state.mode !== "playing") {
     if (state.mode === "upgrade") {
+      if (state.upgradePickConfirm) return;
       if (state.currentBuildOpen) {
         handleCurrentBuildPointerDown(p.x, p.y);
         return;
@@ -10169,7 +10975,8 @@ canvas.addEventListener("mousedown", (event) => {
         return;
       }
       for (let i = 0; i < 3; i += 1) {
-        if (pointInRect(p.x, p.y, 342 + i * 204, 292, 180, 186)) {
+        const card = getUpgradeCardRect(i);
+        if (pointInRect(p.x, p.y, card.x, card.y, card.w, card.h)) {
           chooseUpgrade(i);
           return;
         }
