@@ -175,10 +175,16 @@ const enemyAttackSheets = {
   king: registerImageAsset("enemy-attack-king", "assets/images/clean/enemy_attack_king_redesign.png"),
 };
 const musicLoopAssets = {
-  menu: registerAudioAsset("music-loop-menu", "assets/audio/music_menu_loop.wav", { loop: true }),
-  forest: registerAudioAsset("music-loop-forest", "assets/audio/music_forest_loop.wav", { loop: true }),
-  ruins: registerAudioAsset("music-loop-ruins", "assets/audio/music_ruins_loop.wav", { loop: true }),
-  rift: registerAudioAsset("music-loop-rift", "assets/audio/music_rift_loop.wav", { loop: true }),
+  menuA: registerAudioAsset("music-loop-menu-a", "assets/audio/music_menu_loop.wav", { loop: true }),
+  menuB: registerAudioAsset("music-loop-menu-b", "assets/audio/music_menu_loop_b.wav", { loop: true }),
+  forestA: registerAudioAsset("music-loop-forest-a", "assets/audio/music_forest_loop.wav", { loop: true }),
+  forestB: registerAudioAsset("music-loop-forest-b", "assets/audio/music_forest_loop_b.wav", { loop: true }),
+  ruinsA: registerAudioAsset("music-loop-ruins-a", "assets/audio/music_ruins_loop.wav", { loop: true }),
+  ruinsB: registerAudioAsset("music-loop-ruins-b", "assets/audio/music_ruins_loop_b.wav", { loop: true }),
+  riftA: registerAudioAsset("music-loop-rift-a", "assets/audio/music_rift_loop.wav", { loop: true }),
+  riftB: registerAudioAsset("music-loop-rift-b", "assets/audio/music_rift_loop_b.wav", { loop: true }),
+  bossA: registerAudioAsset("music-loop-boss-a", "assets/audio/music_boss_loop.wav", { loop: true }),
+  bossB: registerAudioAsset("music-loop-boss-b", "assets/audio/music_boss_loop_b.wav", { loop: true }),
 };
 
 const BACKGROUND_STAGES = [
@@ -339,6 +345,11 @@ const audio = {
   lastDangerMusicPulseAt: 0,
   musicLoopSources: new Map(),
   currentMusicLoopKey: "",
+  selectedMusicLoopKey: "",
+  musicPlaylistStage: "",
+  musicNextRotationAt: 0,
+  musicLastTrackByStage: {},
+  musicFallbackWarned: new Set(),
   lastLoopSyncAt: 0,
 };
 
@@ -349,6 +360,16 @@ const MUSIC_STAGE_KEYS = ["menu", "early", "mid", "late", "boss"];
 const MUSIC_LAYER_KEYS = [...MUSIC_STAGE_KEYS, "danger"];
 const MUSIC_LAYER_SMOOTHING = 0.1;
 const MUSIC_DANGER_SMOOTHING = 0.08;
+const MUSIC_ROTATION_MIN_MS = 60000;
+const MUSIC_ROTATION_MAX_MS = 90000;
+const MUSIC_LOOP_FADE_SMOOTHING = 0.18;
+const MUSIC_PLAYLISTS = {
+  menu: ["menuA", "menuB"],
+  early: ["forestA", "forestB"],
+  mid: ["ruinsA", "ruinsB"],
+  late: ["riftA", "riftB"],
+  boss: ["bossA", "bossB"],
+};
 const MUSIC_STAGES = {
   menu: {
     energy: 0.22,
@@ -5415,11 +5436,69 @@ function setupMusicLoopSources() {
   }
 }
 
-function getMusicLoopKeyForStage(stage) {
-  if (stage === "menu") return "menu";
-  if (stage === "early") return "forest";
-  if (stage === "mid") return "ruins";
-  return "rift";
+function getMusicPlaylistForStage(stage) {
+  return MUSIC_PLAYLISTS[stage] || MUSIC_PLAYLISTS.late || [];
+}
+
+function getAudioAssetRecordForElement(element) {
+  return ASSET_REGISTRY.audio.find((record) => record.element === element) || null;
+}
+
+function isMusicLoopAvailable(key) {
+  const element = musicLoopAssets[key];
+  if (!element) return false;
+  const record = getAudioAssetRecordForElement(element);
+  return !record || record.status !== "error";
+}
+
+function getAvailableMusicLoopKeys(stage) {
+  return getMusicPlaylistForStage(stage).filter(isMusicLoopAvailable);
+}
+
+function randomMusicRotationDelay() {
+  return MUSIC_ROTATION_MIN_MS + Math.random() * (MUSIC_ROTATION_MAX_MS - MUSIC_ROTATION_MIN_MS);
+}
+
+function pickNextMusicLoopKey(stage, previousKey = "") {
+  const available = getAvailableMusicLoopKeys(stage);
+  if (!available.length) return "";
+  if (available.length === 1) return available[0];
+  const lastForStage = audio.musicLastTrackByStage[stage] || "";
+  let candidates = available.filter((key) => key !== previousKey && key !== lastForStage);
+  if (!candidates.length) candidates = available.filter((key) => key !== previousKey);
+  if (!candidates.length) candidates = available;
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+function warnMissingMusicPlaylistOnce(stage) {
+  if (audio.musicFallbackWarned.has(stage)) return;
+  audio.musicFallbackWarned.add(stage);
+  console.warn(`[T-Spin Traveler] No available music loops for stage: ${stage}`);
+}
+
+function selectMusicLoopForStage(stage) {
+  const now = performance.now();
+  const available = getAvailableMusicLoopKeys(stage);
+  if (!available.length) {
+    audio.selectedMusicLoopKey = "";
+    audio.currentMusicLoopKey = "";
+    audio.musicPlaylistStage = stage;
+    audio.musicNextRotationAt = now + MUSIC_ROTATION_MAX_MS;
+    warnMissingMusicPlaylistOnce(stage);
+    return "";
+  }
+
+  const stageChanged = audio.musicPlaylistStage !== stage;
+  const currentInvalid = !available.includes(audio.selectedMusicLoopKey);
+  const shouldRotate = !stageChanged && available.length > 1 && now >= audio.musicNextRotationAt;
+  if (stageChanged || currentInvalid || shouldRotate) {
+    const nextKey = pickNextMusicLoopKey(stage, audio.selectedMusicLoopKey || audio.currentMusicLoopKey);
+    audio.selectedMusicLoopKey = nextKey;
+    audio.musicPlaylistStage = stage;
+    audio.musicLastTrackByStage[stage] = nextKey;
+    audio.musicNextRotationAt = now + randomMusicRotationDelay();
+  }
+  return audio.selectedMusicLoopKey;
 }
 
 function updateMusicPlayback() {
@@ -5430,8 +5509,8 @@ function updateMusicPlayback() {
   maybeTriggerBossStinger(stage, audio.ctx.currentTime + 0.03);
   setupMusicLoopSources();
 
-  const targetKey = getMusicLoopKeyForStage(stage);
   const enabled = !audio.muted && audio.musicVolume > 0 && audio.masterVolume > 0;
+  const targetKey = enabled ? selectMusicLoopForStage(stage) : "";
   for (const [key, element] of Object.entries(musicLoopAssets)) {
     if (!element) continue;
     if (!enabled) {
@@ -5439,8 +5518,9 @@ function updateMusicPlayback() {
       if (!element.paused) element.pause();
       continue;
     }
-    const targetVolume = enabled && key === targetKey ? (stage === "boss" ? 0.86 : 0.78) : 0;
-    element.volume += (targetVolume - element.volume) * 0.18;
+    const isTarget = key === targetKey && isMusicLoopAvailable(key);
+    const targetVolume = isTarget ? (stage === "boss" ? 0.84 : 0.76) : 0;
+    element.volume += (targetVolume - element.volume) * MUSIC_LOOP_FADE_SMOOTHING;
     if (targetVolume > 0.01 && element.paused) {
       element.play().catch(() => {
         // Browser autoplay may block until the next user gesture; gameplay continues without music.
@@ -5556,7 +5636,7 @@ function playMusicStep() {
 function getMusicStageByWave(wave) {
   if (wave > 0 && wave % 10 === 0) return "boss";
   if (wave >= 15) return "late";
-  if (wave >= 5) return "mid";
+  if (wave >= 10) return "mid";
   return "early";
 }
 

@@ -89,14 +89,32 @@ def main():
         ("music_menu_loop.wav", 11, 196.0, [0, 7, 10, 14, 12, 7, 3, 7, 0, 5, 10, 12, 14, 12, 7, 3], {
             "drone": 0.42, "pluck": 0.22, "bell": 0.34, "drums": 0.0, "noise": 0.04, "sweep": 0.28, "bass_pitch": 0, "clicks": [],
         }),
+        ("music_menu_loop_b.wav", 12, 174.0, [0, 5, 9, 12, 16, 12, 9, 5, -2, 3, 7, 10, 14, 10, 7, 3], {
+            "drone": 0.48, "pluck": 0.18, "bell": 0.38, "drums": 0.0, "noise": 0.035, "sweep": 0.32, "bass_pitch": -2, "clicks": [],
+        }),
         ("music_forest_loop.wav", 17, 220.0, [0, 4, 7, 11, 12, 11, 7, 4, 2, 5, 9, 12, 14, 12, 9, 5], {
             "drone": 0.34, "pluck": 0.33, "bell": 0.28, "drums": 0.14, "noise": 0.06, "sweep": 0.18, "bass_pitch": 4, "clicks": [6, 14],
+        }),
+        ("music_forest_loop_b.wav", 18, 207.65, [0, 3, 7, 12, 14, 12, 7, 3, 5, 9, 12, 16, 17, 16, 12, 9], {
+            "drone": 0.38, "pluck": 0.3, "bell": 0.32, "drums": 0.16, "noise": 0.065, "sweep": 0.2, "bass_pitch": 2, "clicks": [5, 10, 14],
         }),
         ("music_ruins_loop.wav", 23, 185.0, [0, 3, 7, 10, 15, 10, 7, 3, -2, 3, 8, 12, 15, 12, 8, 3], {
             "drone": 0.52, "pluck": 0.28, "bell": 0.22, "drums": 0.28, "noise": 0.1, "sweep": 0.24, "bass_pitch": -3, "clicks": [3, 7, 11, 15],
         }),
+        ("music_ruins_loop_b.wav", 24, 196.0, [0, 2, 7, 11, 14, 11, 7, 2, -4, 0, 5, 9, 12, 9, 5, 0], {
+            "drone": 0.56, "pluck": 0.24, "bell": 0.24, "drums": 0.3, "noise": 0.11, "sweep": 0.28, "bass_pitch": -5, "clicks": [2, 6, 10, 13, 15],
+        }),
         ("music_rift_loop.wav", 31, 164.0, [0, 3, 6, 10, 13, 10, 6, 3, -5, 1, 6, 10, 13, 15, 10, 6], {
             "drone": 0.68, "pluck": 0.22, "bell": 0.18, "drums": 0.38, "noise": 0.16, "sweep": 0.36, "bass_pitch": -8, "clicks": [2, 5, 8, 11, 14],
+        }),
+        ("music_rift_loop_b.wav", 32, 155.56, [0, 1, 6, 9, 12, 9, 6, 1, -7, -2, 3, 8, 12, 15, 12, 8], {
+            "drone": 0.72, "pluck": 0.2, "bell": 0.16, "drums": 0.42, "noise": 0.18, "sweep": 0.4, "bass_pitch": -10, "clicks": [1, 4, 7, 10, 13, 15],
+        }),
+        ("music_boss_loop.wav", 41, 146.83, [0, 0, 6, 10, 12, 10, 6, 0, -5, -5, 1, 6, 10, 13, 10, 6], {
+            "drone": 0.76, "pluck": 0.18, "bell": 0.14, "drums": 0.52, "noise": 0.19, "sweep": 0.44, "bass_pitch": -12, "clicks": [2, 4, 6, 10, 12, 14],
+        }),
+        ("music_boss_loop_b.wav", 42, 138.59, [0, 4, 7, 10, 13, 10, 7, 4, -8, -3, 2, 7, 11, 14, 11, 7], {
+            "drone": 0.8, "pluck": 0.16, "bell": 0.18, "drums": 0.56, "noise": 0.21, "sweep": 0.48, "bass_pitch": -14, "clicks": [1, 3, 5, 8, 11, 13, 15],
         }),
     ]
     for filename, seed, root, motif, profile in loops:
