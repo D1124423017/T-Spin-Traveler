@@ -1,6 +1,6 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const ASSET_VERSION = "2026-05-22-sprite16-pass";
+const ASSET_VERSION = "2026-05-22-sprite16-idle-pass";
 
 function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -140,8 +140,8 @@ const slimeArt = registerImageAsset("forest-slime", "assets/forest-slime.png");
 const rosterArt = registerImageAsset("character-roster", "assets/character-roster-v4-alpha.png");
 const heroIdleArt = registerImageAsset("hero-idle-concept", "assets/images/clean/ET_Character_alpha.png");
 const noaFeedbackBowArt = registerImageAsset("noa-feedback-bow", "assets/images/clean/noa_feedback_bow.png");
-const menuIdleCubeSheet = registerImageAsset("menu-idle-cube-sheet", "assets/images/clean/noa_menu_idle_cube.png");
-const menuIdleMeditateSheet = registerImageAsset("menu-idle-meditate-sheet", "assets/images/clean/noa_menu_idle_meditate.png");
+const menuIdleCubeSheet = registerImageAsset("menu-idle-cube-sheet-16", "assets/images/clean/noa_menu_idle_cube_16.png");
+const menuIdleMeditateSheet = registerImageAsset("menu-idle-meditate-sheet-16", "assets/images/clean/noa_menu_idle_meditate_16.png");
 const heroMeleeSheet = registerImageAsset("hero-melee-sheet", "assets/images/clean/Knife_alpha.png");
 const heroMeleeSheetV2 = registerImageAsset("hero-melee-sheet-16", "assets/images/clean/hero_melee_16_spritesheet_alpha.png");
 const heroRangedSheet = registerImageAsset("hero-ranged-sheet", "assets/images/clean/Gun_alpha.png");
@@ -895,9 +895,9 @@ const MENU_HERO_SPECIAL_ANIMATIONS = {
     id: "menu-idle-cube",
     image: menuIdleCubeSheet,
     columns: 4,
-    rows: 3,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-    frameMs: 150,
+    rows: 4,
+    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    frameMs: 122,
     draw: { x: -158, y: -252, w: 316, h: 438 },
     noKeying: true,
   },
@@ -905,9 +905,9 @@ const MENU_HERO_SPECIAL_ANIMATIONS = {
     id: "menu-idle-meditate",
     image: menuIdleMeditateSheet,
     columns: 4,
-    rows: 3,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-    frameMs: 170,
+    rows: 4,
+    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    frameMs: 142,
     draw: { x: -166, y: -252, w: 332, h: 438 },
     noKeying: true,
   },
