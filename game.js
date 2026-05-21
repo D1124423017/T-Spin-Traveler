@@ -177,14 +177,24 @@ const enemyAttackSheets = {
 const musicLoopAssets = {
   menuA: registerAudioAsset("music-loop-menu-a", "assets/audio/music_menu_loop.wav", { loop: true }),
   menuB: registerAudioAsset("music-loop-menu-b", "assets/audio/music_menu_loop_b.wav", { loop: true }),
+  menuC: registerAudioAsset("music-loop-menu-c", "assets/audio/music_menu_loop_c.wav", { loop: true }),
+  menuD: registerAudioAsset("music-loop-menu-d", "assets/audio/music_menu_loop_d.wav", { loop: true }),
   forestA: registerAudioAsset("music-loop-forest-a", "assets/audio/music_forest_loop.wav", { loop: true }),
   forestB: registerAudioAsset("music-loop-forest-b", "assets/audio/music_forest_loop_b.wav", { loop: true }),
+  forestC: registerAudioAsset("music-loop-forest-c", "assets/audio/music_forest_loop_c.wav", { loop: true }),
+  forestD: registerAudioAsset("music-loop-forest-d", "assets/audio/music_forest_loop_d.wav", { loop: true }),
   ruinsA: registerAudioAsset("music-loop-ruins-a", "assets/audio/music_ruins_loop.wav", { loop: true }),
   ruinsB: registerAudioAsset("music-loop-ruins-b", "assets/audio/music_ruins_loop_b.wav", { loop: true }),
+  ruinsC: registerAudioAsset("music-loop-ruins-c", "assets/audio/music_ruins_loop_c.wav", { loop: true }),
+  ruinsD: registerAudioAsset("music-loop-ruins-d", "assets/audio/music_ruins_loop_d.wav", { loop: true }),
   riftA: registerAudioAsset("music-loop-rift-a", "assets/audio/music_rift_loop.wav", { loop: true }),
   riftB: registerAudioAsset("music-loop-rift-b", "assets/audio/music_rift_loop_b.wav", { loop: true }),
+  riftC: registerAudioAsset("music-loop-rift-c", "assets/audio/music_rift_loop_c.wav", { loop: true }),
+  riftD: registerAudioAsset("music-loop-rift-d", "assets/audio/music_rift_loop_d.wav", { loop: true }),
   bossA: registerAudioAsset("music-loop-boss-a", "assets/audio/music_boss_loop.wav", { loop: true }),
   bossB: registerAudioAsset("music-loop-boss-b", "assets/audio/music_boss_loop_b.wav", { loop: true }),
+  bossC: registerAudioAsset("music-loop-boss-c", "assets/audio/music_boss_loop_c.wav", { loop: true }),
+  bossD: registerAudioAsset("music-loop-boss-d", "assets/audio/music_boss_loop_d.wav", { loop: true }),
 };
 
 const BACKGROUND_STAGES = [
@@ -364,11 +374,11 @@ const MUSIC_ROTATION_MIN_MS = 60000;
 const MUSIC_ROTATION_MAX_MS = 90000;
 const MUSIC_LOOP_FADE_SMOOTHING = 0.18;
 const MUSIC_PLAYLISTS = {
-  menu: ["menuA", "menuB"],
-  early: ["forestA", "forestB"],
-  mid: ["ruinsA", "ruinsB"],
-  late: ["riftA", "riftB"],
-  boss: ["bossA", "bossB"],
+  menu: ["menuA", "menuB", "menuC", "menuD"],
+  early: ["forestA", "forestB", "forestC", "forestD"],
+  mid: ["ruinsA", "ruinsB", "ruinsC", "ruinsD"],
+  late: ["riftA", "riftB", "riftC", "riftD"],
+  boss: ["bossA", "bossB", "bossC", "bossD"],
 };
 const MUSIC_STAGES = {
   menu: {
