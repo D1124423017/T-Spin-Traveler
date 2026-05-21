@@ -754,6 +754,19 @@ const BUILD_TAGS = {
   "Boss Killer": { labelKey: "tag.bossKiller", color: "#ff8f98", family: "burst" },
 };
 
+const TRAIT_DEFS = {
+  Defense: { category: "common", breakpoints: [3, 5, 7], icon: "◆", effectKeys: ["traitEffect.defense.1", "traitEffect.defense.2", "traitEffect.defense.3"] },
+  Burst: { category: "common", breakpoints: [3, 5, 7], icon: "✦", effectKeys: ["traitEffect.burst.1", "traitEffect.burst.2", "traitEffect.burst.3"] },
+  Spin: { category: "uncommon", breakpoints: [2, 4, 6], icon: "↻", effectKeys: ["traitEffect.spin.1", "traitEffect.spin.2", "traitEffect.spin.3"] },
+  Utility: { category: "uncommon", breakpoints: [2, 4, 6], icon: "◇", effectKeys: ["traitEffect.utility.1", "traitEffect.utility.2", "traitEffect.utility.3"] },
+  Survival: { category: "uncommon", breakpoints: [2, 4, 6], icon: "✚", effectKeys: ["traitEffect.survival.1", "traitEffect.survival.2", "traitEffect.survival.3"] },
+  Combo: { category: "uncommon", breakpoints: [2, 4, 6], icon: "×", effectKeys: ["traitEffect.combo.1", "traitEffect.combo.2", "traitEffect.combo.3"] },
+  Garbage: { category: "uncommon", breakpoints: [2, 4, 6], icon: "▦", effectKeys: ["traitEffect.garbage.1", "traitEffect.garbage.2", "traitEffect.garbage.3"] },
+  B2B: { category: "rare", breakpoints: [2, 3, 4], icon: "⇄", effectKeys: ["traitEffect.b2b.1", "traitEffect.b2b.2", "traitEffect.b2b.3"] },
+  Perfect: { category: "rare", breakpoints: [2, 3], icon: "★", effectKeys: ["traitEffect.perfect.1", "traitEffect.perfect.2"] },
+  "Boss Killer": { category: "rare", breakpoints: [1, 2], icon: "☄", effectKeys: ["traitEffect.bossKiller.1", "traitEffect.bossKiller.2"] },
+};
+
 const COLORS = {
   I: "#5fd7f4",
   O: "#f0ce5a",
@@ -1066,9 +1079,44 @@ const translations = {
     currentBuildStats: "升級標籤統計",
     currentBuildList: "已升級項目",
     currentBuildStrongest: "最強流派",
+    currentBuildTraits: "已啟動羈絆",
     currentBuildDirection: "目前偏向：{families}",
     currentBuildNoDirection: "尚未形成明顯流派",
     currentBuildClose: "關閉",
+    traitListTitle: "羈絆",
+    traitActive: "已啟動",
+    traitNext: "下一階",
+    traitActivated: "將啟動羈絆",
+    traitUpgrade: "羈絆升級",
+    traitEffectNone: "尚未啟動效果",
+    "traitEffect.spin.1": "Spin 傷害 +6，Spin 額外 Guard +1。",
+    "traitEffect.spin.2": "Spin 傷害 +12，Spin 額外 Guard +2。",
+    "traitEffect.spin.3": "Spin 傷害 +20，Spin 額外 Guard +4。",
+    "traitEffect.combo.1": "Combo 額外傷害 +2 / Combo。",
+    "traitEffect.combo.2": "Combo 額外傷害 +4 / Combo，4+ Combo 延後 +1。",
+    "traitEffect.combo.3": "Combo 額外傷害 +7 / Combo，4+ Combo 延後 +1。",
+    "traitEffect.defense.1": "Guard 上限 +4，消行 Guard +1。",
+    "traitEffect.defense.2": "Guard 上限 +8，消行 Guard +2。",
+    "traitEffect.defense.3": "Guard 上限 +14，消行 Guard +3，格擋反擊。",
+    "traitEffect.burst.1": "高價值消行傷害 +8。",
+    "traitEffect.burst.2": "高價值消行傷害 +16。",
+    "traitEffect.burst.3": "高價值消行傷害 +28。",
+    "traitEffect.survival.1": "每波額外回復 +4 HP。",
+    "traitEffect.survival.2": "每波額外回復 +8 HP。",
+    "traitEffect.survival.3": "每波額外回復 +14 HP。",
+    "traitEffect.garbage.1": "抵銷垃圾每行追加 +5 傷害。",
+    "traitEffect.garbage.2": "抵銷垃圾每行追加 +10 傷害，3+ 行給 Guard。",
+    "traitEffect.garbage.3": "抵銷垃圾每行追加 +16 傷害，3+ 行給更多 Guard。",
+    "traitEffect.utility.1": "高價值消行 Ultimate 充能 +1。",
+    "traitEffect.utility.2": "高價值消行 Ultimate 充能 +2。",
+    "traitEffect.utility.3": "高價值消行 Ultimate 充能 +3。",
+    "traitEffect.perfect.1": "Perfect Clear 額外 +30 傷害並延後 +1。",
+    "traitEffect.perfect.2": "Perfect Clear 額外 +60 傷害並延後 +2。",
+    "traitEffect.b2b.1": "B2B 額外傷害 +6。",
+    "traitEffect.b2b.2": "B2B 額外傷害 +12。",
+    "traitEffect.b2b.3": "B2B 額外傷害 +20。",
+    "traitEffect.bossKiller.1": "對 Boss 高價值消行 +18 傷害。",
+    "traitEffect.bossKiller.2": "對 Boss 高價值消行 +40 傷害。",
     safeNodeDraft: "安全節點，不打斷操作",
     damageRuleLine: "Single 10 / Double 25 / Triple 45 / Tetris 70 / Spin 30-140 / B2B +15 / Weak x1.35",
     upgradeReadyShort: "升級待命",
@@ -1152,6 +1200,14 @@ const translations = {
     "upgradeShort.aegis_star_mirror": "完全格擋時觸發反擊。",
     "upgradeShort.garbage_alchemy_core": "抵銷垃圾轉為傷害與 Guard。",
     "upgradeShort.perfect_rift_crown": "Perfect Clear 重創 Boss。",
+    "upgradeShort.spin_starter": "每波前 2 次 Spin 額外傷害並獲得 Guard。",
+    "upgradeShort.b2b_compass": "B2B 鏈越長，額外傷害越高。",
+    "upgradeShort.combo_safety_net": "每波首次高 Combo 獲得 Guard 並延後敵人。",
+    "upgradeShort.emergency_rift_shield": "低血量時每波一次啟動裂隙護盾。",
+    "upgradeShort.garbage_transmuter": "抵銷垃圾會轉化為額外傷害。",
+    "upgradeShort.perfect_echo": "Perfect Clear 讓下一次消行追加回聲傷害。",
+    "upgradeShort.rift_overdrive": "Boss 戰中高價值消行累積超載爆發。",
+    "upgradeShort.last_star_protocol": "低血量時啟動翻盤協議，強化下一擊。",
     "tutorial": "新手教學",
     "tutorialTitle": "3 分鐘戰鬥教學",
     "tutorialSubtitle": "用最短流程理解消行、HOLD、Combo、Spin 與垃圾抵銷。",
@@ -1189,6 +1245,12 @@ const translations = {
     "damageAegisStar": "星盾爆發",
     "damageGarbageAlchemy": "垃圾鍊成",
     "damagePerfectCrown": "裂隙王冠",
+    "damageSpinStarter": "旋轉起勢",
+    "damageB2BCompass": "B2B 羅盤",
+    "damageGarbageTransmuter": "垃圾轉化",
+    "damagePerfectEcho": "Perfect 回聲",
+    "damageRiftOverdrive": "裂隙超載",
+    "damageLastStar": "最後星協議",
     "damageMultiplier": "倍率",
     "damageWeakness": "弱點倍率",
     "damageExecute": "處決補正",
@@ -1256,6 +1318,18 @@ const translations = {
     floaterGarbageAlchemy: "垃圾鍊成 +{damage}",
     floaterGarbageAlchemyGuard: "鍊成護盾 +{guard}",
     floaterPerfectCrown: "裂隙王冠 +{damage}",
+    floaterSpinStarter: "旋轉起勢 +{damage} / Guard +{guard}",
+    floaterB2BCompass: "B2B 羅盤 +{damage}",
+    floaterComboSafety: "安全網：Guard +{guard} / 延後 +{turns}",
+    floaterEmergencyShield: "裂隙急救盾 +{guard}",
+    floaterGarbageTransmuter: "垃圾轉化 +{damage}",
+    floaterPerfectEchoReady: "Perfect 回聲待命",
+    floaterPerfectEcho: "Perfect 回聲 +{damage}",
+    floaterRiftOverdriveCharge: "裂隙超載 {count}/3",
+    floaterRiftOverdrive: "裂隙超載 +{damage}",
+    floaterLastStarReady: "最後星協議啟動",
+    floaterLastStarGuard: "最後星護盾 +{guard}",
+    floaterLastStar: "最後星協議 +{damage}",
     floaterFullHp: "HP 全滿",
     floaterTBonus: "T 加成",
     floaterB2BRow: "B2B +{rows} 行",
@@ -1352,6 +1426,14 @@ const translations = {
     "upgrade.aegis_star_mirror": "Guard 完全擋下敵人攻擊時，觸發星盾反擊。",
     "upgrade.garbage_alchemy_core": "抵銷垃圾會轉化為額外傷害；大量抵銷時獲得 Guard。",
     "upgrade.perfect_rift_crown": "Perfect Clear 對 Boss 的最低傷害提高到 Boss 最大 HP 50%。",
+    "upgrade.spin_starter": "每波前 2 次 Spin 命中時，額外造成 12 傷害並獲得 4 Guard。",
+    "upgrade.b2b_compass": "每次高價值消行依 B2B 鏈長追加傷害，最高 +32。",
+    "upgrade.combo_safety_net": "每波首次達 4 Combo 以上時，獲得 7 Guard 並延後敵人攻擊 1 回合。",
+    "upgrade.emergency_rift_shield": "HP 降至 30% 以下時，每波一次獲得 14 Guard，可在受擊時立即抵擋。",
+    "upgrade.garbage_transmuter": "抵銷垃圾時，每行追加 12 傷害；一次抵銷 3 行以上再追加 24 傷害。",
+    "upgrade.perfect_echo": "Perfect Clear 會儲存 1 層回聲；下一次非 Perfect 消行追加 45 傷害。",
+    "upgrade.rift_overdrive": "Boss 戰中，Tetris、Spin 或 Perfect Clear 累積超載；第 3 次造成 110 額外傷害。",
+    "upgrade.last_star_protocol": "HP 降至 30% 以下時，每波一次獲得 8 Guard，且下一次消行追加 35% 傷害。",
     "upgradeName.tspin_amp": "T-Core 增幅器",
     "upgradeName.garbage_guard": "重力濾鏡",
     "upgradeName.combo_clock": "節奏錨點",
@@ -1386,6 +1468,14 @@ const translations = {
     "upgradeName.aegis_star_mirror": "星盾反射鏡",
     "upgradeName.garbage_alchemy_core": "垃圾鍊成核心",
     "upgradeName.perfect_rift_crown": "完美裂隙王冠",
+    "upgradeName.spin_starter": "旋轉起勢",
+    "upgradeName.b2b_compass": "B2B 羅盤",
+    "upgradeName.combo_safety_net": "連鎖安全網",
+    "upgradeName.emergency_rift_shield": "裂隙急救盾",
+    "upgradeName.garbage_transmuter": "垃圾轉化器",
+    "upgradeName.perfect_echo": "Perfect 回聲",
+    "upgradeName.rift_overdrive": "裂隙超載",
+    "upgradeName.last_star_protocol": "最後星協議",
     "enemy.slime.name": "森林黏液幼體",
     "enemy.slime.trait": "基礎打擊",
     "enemy.vine.name": "藤蔓跳躍獸",
@@ -1554,9 +1644,44 @@ const translations = {
     currentBuildStats: "Upgrade Tags",
     currentBuildList: "Acquired Upgrades",
     currentBuildStrongest: "Strongest Build",
+    currentBuildTraits: "Active Traits",
     currentBuildDirection: "Upgrade direction: {families}",
     currentBuildNoDirection: "No clear build direction yet",
     currentBuildClose: "Close",
+    traitListTitle: "Traits",
+    traitActive: "Active",
+    traitNext: "Next",
+    traitActivated: "Trait Activated",
+    traitUpgrade: "Trait Upgrade",
+    traitEffectNone: "No active trait effect yet",
+    "traitEffect.spin.1": "Spin damage +6. Spin grants +1 extra Guard.",
+    "traitEffect.spin.2": "Spin damage +12. Spin grants +2 extra Guard.",
+    "traitEffect.spin.3": "Spin damage +20. Spin grants +4 extra Guard.",
+    "traitEffect.combo.1": "Combo bonus damage +2 per Combo.",
+    "traitEffect.combo.2": "Combo bonus damage +4 per Combo. 4+ Combo delays +1.",
+    "traitEffect.combo.3": "Combo bonus damage +7 per Combo. 4+ Combo delays +1.",
+    "traitEffect.defense.1": "Guard cap +4. Line clears grant +1 Guard.",
+    "traitEffect.defense.2": "Guard cap +8. Line clears grant +2 Guard.",
+    "traitEffect.defense.3": "Guard cap +14. Line clears grant +3 Guard and counter on block.",
+    "traitEffect.burst.1": "High-value clears deal +8 damage.",
+    "traitEffect.burst.2": "High-value clears deal +16 damage.",
+    "traitEffect.burst.3": "High-value clears deal +28 damage.",
+    "traitEffect.survival.1": "Recover +4 extra HP each wave.",
+    "traitEffect.survival.2": "Recover +8 extra HP each wave.",
+    "traitEffect.survival.3": "Recover +14 extra HP each wave.",
+    "traitEffect.garbage.1": "Canceled garbage deals +5 damage per row.",
+    "traitEffect.garbage.2": "Canceled garbage deals +10 damage per row. 3+ rows grant Guard.",
+    "traitEffect.garbage.3": "Canceled garbage deals +16 damage per row. 3+ rows grant more Guard.",
+    "traitEffect.utility.1": "High-value clears charge Ultimate +1.",
+    "traitEffect.utility.2": "High-value clears charge Ultimate +2.",
+    "traitEffect.utility.3": "High-value clears charge Ultimate +3.",
+    "traitEffect.perfect.1": "Perfect Clear deals +30 damage and delays +1.",
+    "traitEffect.perfect.2": "Perfect Clear deals +60 damage and delays +2.",
+    "traitEffect.b2b.1": "B2B bonus damage +6.",
+    "traitEffect.b2b.2": "B2B bonus damage +12.",
+    "traitEffect.b2b.3": "B2B bonus damage +20.",
+    "traitEffect.bossKiller.1": "Boss high-value clears deal +18 damage.",
+    "traitEffect.bossKiller.2": "Boss high-value clears deal +40 damage.",
     safeNodeDraft: "Safe node, never interrupts play",
     damageRuleLine: "Single 10 / Double 25 / Triple 45 / Tetris 70 / Spin 30-140 / B2B +15 / Weak x1.35",
     upgradeReadyShort: "Upgrade Ready",
@@ -1640,6 +1765,14 @@ const translations = {
     "upgradeShort.aegis_star_mirror": "Full Guard blocks trigger a counter.",
     "upgradeShort.garbage_alchemy_core": "Cancel garbage into damage and Guard.",
     "upgradeShort.perfect_rift_crown": "Perfect Clear crushes Bosses.",
+    "upgradeShort.spin_starter": "The first 2 Spin hits each wave deal bonus damage and Guard.",
+    "upgradeShort.b2b_compass": "Longer B2B chains add more bonus damage.",
+    "upgradeShort.combo_safety_net": "First high Combo each wave grants Guard and delays enemies.",
+    "upgradeShort.emergency_rift_shield": "Low HP triggers a rift shield once per wave.",
+    "upgradeShort.garbage_transmuter": "Canceled garbage converts into bonus damage.",
+    "upgradeShort.perfect_echo": "Perfect Clear empowers your next line clear.",
+    "upgradeShort.rift_overdrive": "High-value Boss clears charge an overload burst.",
+    "upgradeShort.last_star_protocol": "Low HP arms a comeback boost for your next hit.",
     "tutorial": "Tutorial",
     "tutorialTitle": "3-Minute Combat Tutorial",
     "tutorialSubtitle": "Learn line clears, HOLD, Combo, Spin, and garbage canceling in one short run.",
@@ -1677,6 +1810,12 @@ const translations = {
     "damageAegisStar": "Aegis Star",
     "damageGarbageAlchemy": "Garbage Alchemy",
     "damagePerfectCrown": "Rift Crown",
+    "damageSpinStarter": "Spin Starter",
+    "damageB2BCompass": "B2B Compass",
+    "damageGarbageTransmuter": "Garbage Transmute",
+    "damagePerfectEcho": "Perfect Echo",
+    "damageRiftOverdrive": "Rift Overdrive",
+    "damageLastStar": "Last Star",
     "damageMultiplier": "Multiplier",
     "damageWeakness": "Weakness Multiplier",
     "damageExecute": "Execute Adjustment",
@@ -1744,6 +1883,18 @@ const translations = {
     floaterGarbageAlchemy: "ALCHEMY +{damage}",
     floaterGarbageAlchemyGuard: "ALCHEMY GUARD +{guard}",
     floaterPerfectCrown: "RIFT CROWN +{damage}",
+    floaterSpinStarter: "SPIN START +{damage} / GUARD +{guard}",
+    floaterB2BCompass: "B2B COMPASS +{damage}",
+    floaterComboSafety: "SAFETY NET: GUARD +{guard} / DELAY +{turns}",
+    floaterEmergencyShield: "RIFT SHIELD +{guard}",
+    floaterGarbageTransmuter: "TRANSMUTE +{damage}",
+    floaterPerfectEchoReady: "PERFECT ECHO READY",
+    floaterPerfectEcho: "PERFECT ECHO +{damage}",
+    floaterRiftOverdriveCharge: "OVERDRIVE {count}/3",
+    floaterRiftOverdrive: "OVERDRIVE +{damage}",
+    floaterLastStarReady: "LAST STAR ARMED",
+    floaterLastStarGuard: "LAST STAR GUARD +{guard}",
+    floaterLastStar: "LAST STAR +{damage}",
     floaterFullHp: "FULL HP",
     floaterTBonus: "T BONUS",
     floaterB2BRow: "B2B +{rows} ROW",
@@ -1840,6 +1991,14 @@ const translations = {
     "upgrade.aegis_star_mirror": "When Guard fully blocks an enemy attack, trigger a star-shield counter.",
     "upgrade.garbage_alchemy_core": "Canceled garbage becomes bonus damage. Large cancels also grant Guard.",
     "upgrade.perfect_rift_crown": "Perfect Clear against a Boss raises minimum damage to 50% Boss Max HP.",
+    "upgrade.spin_starter": "The first 2 Spin hits each wave deal +12 damage and grant 4 Guard.",
+    "upgrade.b2b_compass": "High-value clears add damage based on your B2B chain, up to +32.",
+    "upgrade.combo_safety_net": "Once per wave at 4+ Combo, gain 7 Guard and delay the enemy by 1 turn.",
+    "upgrade.emergency_rift_shield": "When HP falls below 30%, gain 14 Guard once per wave. It can block the incoming hit.",
+    "upgrade.garbage_transmuter": "Canceled garbage deals +12 damage per row. Cancel 3+ rows to add +24 more.",
+    "upgrade.perfect_echo": "Perfect Clear stores 1 Echo. Your next non-Perfect line clear deals +45 damage.",
+    "upgrade.rift_overdrive": "During Boss waves, Tetris, Spin, or Perfect Clear charges Overdrive. The 3rd charge deals +110 damage.",
+    "upgrade.last_star_protocol": "When HP falls below 30%, gain 8 Guard once per wave and empower your next line clear with +35% damage.",
     "upgradeName.tspin_amp": "T-Core Amplifier",
     "upgradeName.garbage_guard": "Gravity Filter",
     "upgradeName.combo_clock": "Tempo Anchor",
@@ -1874,6 +2033,14 @@ const translations = {
     "upgradeName.aegis_star_mirror": "Aegis Star Mirror",
     "upgradeName.garbage_alchemy_core": "Garbage Alchemy Core",
     "upgradeName.perfect_rift_crown": "Perfect Rift Crown",
+    "upgradeName.spin_starter": "Spin Starter",
+    "upgradeName.b2b_compass": "B2B Compass",
+    "upgradeName.combo_safety_net": "Combo Safety Net",
+    "upgradeName.emergency_rift_shield": "Emergency Rift Shield",
+    "upgradeName.garbage_transmuter": "Garbage Transmuter",
+    "upgradeName.perfect_echo": "Perfect Echo",
+    "upgradeName.rift_overdrive": "Rift Overdrive",
+    "upgradeName.last_star_protocol": "Last Star Protocol",
     "enemy.slime.name": "FOREST SLIME HATCHLING",
     "enemy.slime.trait": "BASIC STRIKE",
     "enemy.vine.name": "VINE HOPPER",
@@ -2093,7 +2260,7 @@ const UPGRADES = [
     apply: () => {
       state.maxGuard += 8;
       state.upgrades.guardGain += 1;
-      state.guard = Math.min(state.maxGuard, state.guard + 8);
+      state.guard = Math.min(getEffectiveMaxGuard(), state.guard + 8);
     },
   },
   {
@@ -2270,6 +2437,102 @@ const UPGRADES = [
     apply: () => {
       increasePlayerMaxHp(40, 30);
       state.upgrades.damageMultiplier += 0.1;
+    },
+  },
+  {
+    id: "spin_starter",
+    name: "Spin Starter",
+    rarity: "rare",
+    tags: ["Spin", "Defense"],
+    stackRule: "stackable",
+    shortTextKey: "upgradeShort.spin_starter",
+    textKey: "upgrade.spin_starter",
+    apply: () => {
+      state.upgrades.spinStarter += 1;
+    },
+  },
+  {
+    id: "b2b_compass",
+    name: "B2B Compass",
+    rarity: "rare",
+    tags: ["B2B", "Burst"],
+    stackRule: "stackable",
+    shortTextKey: "upgradeShort.b2b_compass",
+    textKey: "upgrade.b2b_compass",
+    apply: () => {
+      state.upgrades.b2bCompass += 4;
+    },
+  },
+  {
+    id: "combo_safety_net",
+    name: "Combo Safety Net",
+    rarity: "rare",
+    tags: ["Combo", "Defense"],
+    stackRule: "stackable",
+    shortTextKey: "upgradeShort.combo_safety_net",
+    textKey: "upgrade.combo_safety_net",
+    apply: () => {
+      state.upgrades.comboSafetyNet += 1;
+    },
+  },
+  {
+    id: "emergency_rift_shield",
+    name: "Emergency Rift Shield",
+    rarity: "relic",
+    tags: ["Survival", "Defense"],
+    stackRule: "stackable",
+    shortTextKey: "upgradeShort.emergency_rift_shield",
+    textKey: "upgrade.emergency_rift_shield",
+    apply: () => {
+      state.upgrades.emergencyRiftShield += 1;
+    },
+  },
+  {
+    id: "garbage_transmuter",
+    name: "Garbage Transmuter",
+    rarity: "relic",
+    tags: ["Garbage", "Burst"],
+    stackRule: "stackable",
+    shortTextKey: "upgradeShort.garbage_transmuter",
+    textKey: "upgrade.garbage_transmuter",
+    apply: () => {
+      state.upgrades.garbageTransmuter += 1;
+    },
+  },
+  {
+    id: "perfect_echo",
+    name: "Perfect Echo",
+    rarity: "relic",
+    tags: ["Perfect", "Utility"],
+    stackRule: "stackable",
+    shortTextKey: "upgradeShort.perfect_echo",
+    textKey: "upgrade.perfect_echo",
+    apply: () => {
+      state.upgrades.perfectEcho += 1;
+    },
+  },
+  {
+    id: "rift_overdrive",
+    name: "Rift Overdrive",
+    rarity: "legendary",
+    tags: ["Burst", "Boss Killer"],
+    stackRule: "unique",
+    shortTextKey: "upgradeShort.rift_overdrive",
+    textKey: "upgrade.rift_overdrive",
+    apply: () => {
+      state.upgrades.riftOverdrive = 1;
+    },
+  },
+  {
+    id: "last_star_protocol",
+    name: "Last Star Protocol",
+    rarity: "legendary",
+    tags: ["Survival", "Burst"],
+    stackRule: "unique",
+    shortTextKey: "upgradeShort.last_star_protocol",
+    textKey: "upgrade.last_star_protocol",
+    apply: () => {
+      state.upgrades.lastStarProtocol = 1;
     },
   },
   {
@@ -2824,9 +3087,17 @@ const state = {
   currentBuildOpen: false,
   upgradePickConfirm: null,
   spinSingularityStacks: 0,
+  spinStarterWave: 0,
+  spinStarterUses: 0,
   comboConstellationWave: 0,
   comboConstellationFirstUsed: false,
   comboConstellationSecondUsed: false,
+  comboSafetyNetWave: 0,
+  emergencyRiftShieldWave: 0,
+  perfectEchoCharges: 0,
+  riftOverdriveCharge: 0,
+  lastStarProtocolWave: 0,
+  lastStarProtocolReady: false,
   upgrades: {
     tspinBonus: 0,
     garbageCancel: 0,
@@ -2858,6 +3129,14 @@ const state = {
     aegisStarMirror: 0,
     garbageAlchemyCore: 0,
     perfectRiftCrown: 0,
+    spinStarter: 0,
+    b2bCompass: 0,
+    comboSafetyNet: 0,
+    emergencyRiftShield: 0,
+    garbageTransmuter: 0,
+    perfectEcho: 0,
+    riftOverdrive: 0,
+    lastStarProtocol: 0,
   },
   message: "",
   messageKey: "",
@@ -3121,9 +3400,17 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.currentBuildOpen = false;
   state.upgradePickConfirm = null;
   state.spinSingularityStacks = 0;
+  state.spinStarterWave = 0;
+  state.spinStarterUses = 0;
   state.comboConstellationWave = 0;
   state.comboConstellationFirstUsed = false;
   state.comboConstellationSecondUsed = false;
+  state.comboSafetyNetWave = 0;
+  state.emergencyRiftShieldWave = 0;
+  state.perfectEchoCharges = 0;
+  state.riftOverdriveCharge = 0;
+  state.lastStarProtocolWave = 0;
+  state.lastStarProtocolReady = false;
   state.upgrades = {
     tspinBonus: 0,
     garbageCancel: 0,
@@ -3155,6 +3442,14 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
     aegisStarMirror: 0,
     garbageAlchemyCore: 0,
     perfectRiftCrown: 0,
+    spinStarter: 0,
+    b2bCompass: 0,
+    comboSafetyNet: 0,
+    emergencyRiftShield: 0,
+    garbageTransmuter: 0,
+    perfectEcho: 0,
+    riftOverdrive: 0,
+    lastStarProtocol: 0,
   };
   state.message = "";
   state.messageKey = "";
@@ -3578,6 +3873,55 @@ function damageEnemyFromUpgrade(amount, floaterKey, color, x = 920, y = 430) {
   return damage;
 }
 
+function grantGuardFromUpgrade(amount, floaterKey, color = "#9df7da", x = 86, y = 270) {
+  const guard = Math.max(0, Math.floor(amount));
+  if (guard <= 0) return 0;
+  const before = state.guard;
+  state.guard = Math.min(getEffectiveMaxGuard(), state.guard + guard);
+  const gained = state.guard - before;
+  if (gained <= 0) return 0;
+  if (floaterKey) {
+    state.floaters.push({
+      x,
+      y,
+      text: fmt(floaterKey, { guard: gained }),
+      color,
+      life: 1050,
+    });
+  }
+  return gained;
+}
+
+function getEffectiveMaxGuard() {
+  return state.maxGuard + getTraitBonus("Defense", [4, 8, 14]);
+}
+
+function triggerEmergencyRiftShield(projectedHp = state.playerHp) {
+  if (state.upgrades.emergencyRiftShield <= 0 || state.emergencyRiftShieldWave === state.wave) return 0;
+  if (state.playerMaxHp <= 0 || projectedHp / state.playerMaxHp > 0.3) return 0;
+  state.emergencyRiftShieldWave = state.wave;
+  const gained = grantGuardFromUpgrade(14 * state.upgrades.emergencyRiftShield, "floaterEmergencyShield", "#9df7da", 86, 248);
+  if (gained > 0) playSfx("shield");
+  return gained;
+}
+
+function triggerLastStarProtocol(projectedHp = state.playerHp) {
+  if (state.upgrades.lastStarProtocol <= 0 || state.lastStarProtocolWave === state.wave) return 0;
+  if (state.playerMaxHp <= 0 || projectedHp / state.playerMaxHp > 0.3) return 0;
+  state.lastStarProtocolWave = state.wave;
+  state.lastStarProtocolReady = true;
+  const gained = grantGuardFromUpgrade(8, "floaterLastStarGuard", "#ff8f98", 86, 282);
+  state.floaters.push({
+    x: BOARD_X + COLS * TILE + 36,
+    y: BOARD_Y + 216,
+    text: t("floaterLastStarReady"),
+    color: "#ff8f98",
+    life: 1250,
+  });
+  playSfx("upgradeReady");
+  return gained;
+}
+
 function getHeroAnimationDuration(kind) {
   const config = HERO_ANIMATIONS[kind] || HERO_ANIMATIONS.ranged;
   return config.frames.length * config.frameMs;
@@ -3773,9 +4117,17 @@ function updateAudioCues(now = performance.now()) {
 function applyEnemyHit(hit) {
   if (state.mode !== "playing") return;
   const { enemy, damageTaken, garbageAdded } = hit;
-  const blocked = Math.min(state.guard, damageTaken);
+  let blocked = Math.min(state.guard, damageTaken);
+  let finalDamage = Math.max(0, damageTaken - blocked);
+  const projectedHp = state.playerHp - finalDamage;
+  if (state.playerMaxHp > 0 && projectedHp / state.playerMaxHp <= 0.3) {
+    const gained = triggerEmergencyRiftShield(projectedHp) + triggerLastStarProtocol(projectedHp);
+    if (gained > 0) {
+      blocked = Math.min(state.guard, damageTaken);
+      finalDamage = Math.max(0, damageTaken - blocked);
+    }
+  }
   state.guard -= blocked;
-  const finalDamage = Math.max(0, damageTaken - blocked);
   state.playerHp = Math.max(0, state.playerHp - finalDamage);
   state.pendingGarbage += garbageAdded;
   if (garbageAdded > 0) state.garbageGrace = getGarbageDelayForWave();
@@ -3829,6 +4181,13 @@ function applyEnemyHit(hit) {
       }
     }
   }
+  if (!enemyDefeatedByReflect && blocked > 0 && getTraitStage("Defense") >= 3 && state.enemyHp > 0 && state.mode === "playing") {
+    const traitReflectDamage = Math.floor(blocked * 0.5);
+    if (traitReflectDamage > 0) {
+      damageEnemyFromUpgrade(traitReflectDamage, "floaterGuardReflect", "#9df7da", 920, 444);
+      enemyDefeatedByReflect = state.mode !== "playing" || state.enemyHp <= 0;
+    }
+  }
   if (!enemyDefeatedByReflect && blocked > 0 && finalDamage === 0 && state.upgrades.aegisStarMirror > 0 && state.enemyHp > 0 && state.mode === "playing") {
     const starDamage = Math.max(18, blocked + 12);
     damageEnemyFromUpgrade(starDamage, "floaterAegisStar", "#ff8f98", 920, 462);
@@ -3866,6 +4225,31 @@ function applyBattle(lines, pieceType, spinType) {
   if (lines > 0 && spinType) {
     damage += state.upgrades.spinBonus;
     addDamagePart(parts, sources, "damageSpinBonus", state.upgrades.spinBonus, "upgrade");
+    const traitSpinDamage = getTraitBonus("Spin", [6, 12, 20]);
+    if (traitSpinDamage > 0) {
+      damage += traitSpinDamage;
+      addDamagePart(parts, sources, "damageSpinBonus", traitSpinDamage, "upgrade");
+    }
+    if (state.upgrades.spinStarter > 0) {
+      if (state.spinStarterWave !== state.wave) {
+        state.spinStarterWave = state.wave;
+        state.spinStarterUses = 0;
+      }
+      if (state.spinStarterUses < 2) {
+        state.spinStarterUses += 1;
+        const starterDamage = 12 * state.upgrades.spinStarter;
+        const starterGuard = grantGuardFromUpgrade(4 * state.upgrades.spinStarter, null);
+        damage += starterDamage;
+        addDamagePart(parts, sources, "damageSpinStarter", starterDamage, "upgrade");
+        state.floaters.push({
+          x: BOARD_X + COLS * TILE + 34,
+          y: BOARD_Y + 176,
+          text: fmt("floaterSpinStarter", { damage: starterDamage, guard: starterGuard }),
+          color: "#d7c2ff",
+          life: 1050,
+        });
+      }
+    }
     const guardSpent = state.upgrades.spinGuardStrike > 0 ? Math.min(state.guard, 24) : 0;
     const guardStrikeDamage = Math.floor(guardSpent * state.upgrades.spinGuardStrike);
     if (guardStrikeDamage > 0) {
@@ -3919,20 +4303,100 @@ function applyBattle(lines, pieceType, spinType) {
   const comboUpgradeBonus = lines > 0 && state.combo >= 2 ? state.combo * state.upgrades.comboDamage : 0;
   damage += comboUpgradeBonus;
   addDamagePart(parts, sources, "damageCombo", comboUpgradeBonus, "upgrade");
+  const comboTraitBonus = lines > 0 && state.combo >= 2 ? state.combo * getTraitBonus("Combo", [2, 4, 7]) : 0;
+  damage += comboTraitBonus;
+  addDamagePart(parts, sources, "damageCombo", comboTraitBonus, "upgrade");
   const comboEchoBonus = lines > 0 && state.combo >= 4 && state.upgrades.comboEchoDamage > 0
     ? Math.min(45, state.combo * state.upgrades.comboEchoDamage)
     : 0;
   damage += comboEchoBonus;
   addDamagePart(parts, sources, "damageComboEcho", comboEchoBonus, "upgrade");
+  const b2bCompassBonus = lines > 0 && isDifficultClear && state.upgrades.b2bCompass > 0
+    ? Math.min(32, Math.max(1, state.b2bChain + 1) * state.upgrades.b2bCompass)
+    : 0;
+  if (b2bCompassBonus > 0) {
+    damage += b2bCompassBonus;
+    addDamagePart(parts, sources, "damageB2BCompass", b2bCompassBonus, "upgrade");
+    state.floaters.push({
+      x: BOARD_X + COLS * TILE + 36,
+      y: BOARD_Y + 206,
+      text: fmt("floaterB2BCompass", { damage: b2bCompassBonus }),
+      color: "#fff0a6",
+      life: 1000,
+    });
+  }
+  const b2bTraitBonus = b2bAttackRows > 0 ? getTraitBonus("B2B", [6, 12, 20]) : 0;
+  damage += b2bTraitBonus;
+  addDamagePart(parts, sources, "damageB2B", b2bTraitBonus, "b2b");
+  const burstTraitBonus = lines > 0 && (lines >= 4 || spinType || state.lastPerfectClear) ? getTraitBonus("Burst", [8, 16, 28]) : 0;
+  damage += burstTraitBonus;
+  addDamagePart(parts, sources, "damageLineBonus", burstTraitBonus, "upgrade");
+  const bossTraitBonus = lines > 0 && state.enemyType.id === "king" && (lines >= 4 || spinType || state.b2bActive || state.lastPerfectClear) ? getTraitBonus("Boss Killer", [18, 40]) : 0;
   const bossBonus = lines > 0 && state.enemyType.id === "king" && (spinType || state.b2bActive) ? state.upgrades.bossDamage : 0;
   damage += bossBonus;
   addDamagePart(parts, sources, "damageBoss", bossBonus, "upgrade");
+  damage += bossTraitBonus;
+  addDamagePart(parts, sources, "damageBoss", bossTraitBonus, "upgrade");
   if (state.lastPerfectClear) {
     damage += PERFECT_CLEAR_BASE_DAMAGE;
     addDamagePart(parts, sources, "damagePerfect", PERFECT_CLEAR_BASE_DAMAGE, "perfect");
+    const perfectTraitDamage = getTraitBonus("Perfect", [30, 60]);
+    damage += perfectTraitDamage;
+    addDamagePart(parts, sources, "damagePerfect", perfectTraitDamage, "perfect");
   }
   damage += b2bBonus;
   addDamagePart(parts, sources, "damageB2B", b2bBonus, "b2b");
+  if (lines > 0 && !state.lastPerfectClear && state.perfectEchoCharges > 0) {
+    state.perfectEchoCharges -= 1;
+    const echoDamage = 45;
+    damage += echoDamage;
+    addDamagePart(parts, sources, "damagePerfectEcho", echoDamage, "upgrade");
+    state.floaters.push({
+      x: BOARD_X + COLS * TILE + 34,
+      y: BOARD_Y + 236,
+      text: fmt("floaterPerfectEcho", { damage: echoDamage }),
+      color: "#fff0a6",
+      life: 1100,
+    });
+  }
+  if (lines > 0 && state.lastStarProtocolReady) {
+    state.lastStarProtocolReady = false;
+    const lastStarDamage = Math.max(12, Math.floor(damage * 0.35));
+    damage += lastStarDamage;
+    addDamagePart(parts, sources, "damageLastStar", lastStarDamage, "upgrade");
+    state.floaters.push({
+      x: BOARD_X + COLS * TILE + 36,
+      y: BOARD_Y + 262,
+      text: fmt("floaterLastStar", { damage: lastStarDamage }),
+      color: "#ff8f98",
+      life: 1150,
+    });
+  }
+  if (lines > 0 && state.enemyType.id === "king" && state.upgrades.riftOverdrive > 0 && (lines >= 4 || spinType || state.lastPerfectClear)) {
+    state.riftOverdriveCharge = Math.min(3, state.riftOverdriveCharge + 1);
+    if (state.riftOverdriveCharge >= 3) {
+      state.riftOverdriveCharge = 0;
+      const overdriveDamage = 110;
+      damage += overdriveDamage;
+      addDamagePart(parts, sources, "damageRiftOverdrive", overdriveDamage, "upgrade");
+      state.floaters.push({
+        x: BOARD_X + COLS * TILE + 36,
+        y: BOARD_Y + 292,
+        text: fmt("floaterRiftOverdrive", { damage: overdriveDamage }),
+        color: "#ff8f98",
+        life: 1250,
+      });
+      state.bursts.push({ x: BOARD_X + COLS * TILE + 210, y: BOARD_Y + 278, radius: 20, color: "#ff6f7c", life: 520, duration: 520, intensity: 1.5 });
+    } else {
+      state.floaters.push({
+        x: BOARD_X + COLS * TILE + 36,
+        y: BOARD_Y + 292,
+        text: fmt("floaterRiftOverdriveCharge", { count: state.riftOverdriveCharge }),
+        color: "#ff8f98",
+        life: 950,
+      });
+    }
+  }
 
   const multipliers = [];
   if (lines === 1 && state.enemyType.armorSingle && !state.lastPerfectClear) {
@@ -3991,6 +4455,16 @@ function applyBattle(lines, pieceType, spinType) {
       }
     }
     startPerfectClearFx(damage);
+    if (state.upgrades.perfectEcho > 0) {
+      state.perfectEchoCharges = Math.min(2, state.perfectEchoCharges + state.upgrades.perfectEcho);
+      state.floaters.push({
+        x: BOARD_X + COLS * TILE + 34,
+        y: BOARD_Y + 254,
+        text: t("floaterPerfectEchoReady"),
+        color: "#fff0a6",
+        life: 1150,
+      });
+    }
     extendUltimateOnPerfectClear();
   }
   extendUltimateOnCombo(lines);
@@ -4002,6 +4476,39 @@ function applyBattle(lines, pieceType, spinType) {
   if (garbageCounterBonus > 0) {
     damage += garbageCounterBonus;
     addDamagePart(parts, sources, "damageGarbageCounter", garbageCounterBonus, "upgrade");
+  }
+  const garbageTransmuterDamage = canceled > 0 && state.upgrades.garbageTransmuter > 0
+    ? canceled * 12 * state.upgrades.garbageTransmuter + (canceled >= 3 ? 24 : 0)
+    : 0;
+  const garbageTraitPerRow = getTraitBonus("Garbage", [5, 10, 16]);
+  const garbageTraitDamage = canceled > 0 ? canceled * garbageTraitPerRow : 0;
+  if (garbageTraitDamage > 0) {
+    damage += garbageTraitDamage;
+    addDamagePart(parts, sources, "damageGarbageCounter", garbageTraitDamage, "upgrade");
+  }
+  if (canceled >= 3 && garbageTraitPerRow >= 10) {
+    const traitGuard = garbageTraitPerRow >= 16 ? 6 : 3;
+    const gained = grantGuardFromUpgrade(traitGuard, null);
+    if (gained > 0) {
+      state.floaters.push({
+        x: 86,
+        y: 232,
+        text: fmt("floaterGarbageAlchemyGuard", { guard: gained }),
+        color: "#79e2a7",
+        life: 1000,
+      });
+    }
+  }
+  if (garbageTransmuterDamage > 0) {
+    damage += garbageTransmuterDamage;
+    addDamagePart(parts, sources, "damageGarbageTransmuter", garbageTransmuterDamage, "upgrade");
+    state.floaters.push({
+      x: BOARD_X + COLS * TILE + 34,
+      y: BOARD_Y + 172,
+      text: fmt("floaterGarbageTransmuter", { damage: garbageTransmuterDamage }),
+      color: "#79e2a7",
+      life: 1050,
+    });
   }
   const garbageAlchemyDamage = canceled > 0 && state.upgrades.garbageAlchemyCore > 0
     ? canceled * 18 + (canceled >= 3 ? 12 : 0)
@@ -4018,7 +4525,7 @@ function applyBattle(lines, pieceType, spinType) {
     });
     if (canceled >= 3) {
       const guardGain = Math.min(8, canceled * 2);
-      state.guard = Math.min(state.maxGuard, state.guard + guardGain);
+      state.guard = Math.min(getEffectiveMaxGuard(), state.guard + guardGain);
       state.floaters.push({
         x: 86,
         y: 248,
@@ -4038,6 +4545,19 @@ function applyBattle(lines, pieceType, spinType) {
       life: 1200,
     });
   }
+  if (state.lastPerfectClear) {
+    const perfectTraitDelay = getTraitBonus("Perfect", [1, 2]);
+    if (perfectTraitDelay > 0 && damage < state.enemyHp) {
+      state.enemyCountdown += perfectTraitDelay;
+      state.floaters.push({
+        x: BOARD_X + COLS * TILE + 34,
+        y: BOARD_Y + 218,
+        text: fmt("floaterPerfectBossDelay", { turns: perfectTraitDelay }),
+        color: "#fff0a6",
+        life: 1100,
+      });
+    }
+  }
   const comboDelay = lines > 0 && state.combo >= 3
     ? Math.min(5, 1 + Math.floor((state.combo - 1) / 2) + state.upgrades.comboDelay)
     : 0;
@@ -4050,6 +4570,30 @@ function applyBattle(lines, pieceType, spinType) {
       color: "#7ef7ff",
       life: 1150,
     });
+  }
+  const comboTraitDelay = lines > 0 && state.combo >= 4 ? getTraitBonus("Combo", [0, 1, 1]) : 0;
+  if (comboTraitDelay > 0) {
+    state.enemyCountdown += comboTraitDelay;
+    state.floaters.push({
+      x: BOARD_X + COLS * TILE + 36,
+      y: BOARD_Y + 144,
+      text: fmt("floaterComboDelay", { combo: state.combo, delay: comboTraitDelay }),
+      color: "#7ef7ff",
+      life: 1050,
+    });
+  }
+  if (lines > 0 && state.upgrades.comboSafetyNet > 0 && state.combo >= 4 && state.comboSafetyNetWave !== state.wave) {
+    state.comboSafetyNetWave = state.wave;
+    const guardGain = grantGuardFromUpgrade(7 * state.upgrades.comboSafetyNet, null);
+    state.enemyCountdown += 1;
+    state.floaters.push({
+      x: BOARD_X + COLS * TILE + 36,
+      y: BOARD_Y + 174,
+      text: fmt("floaterComboSafety", { guard: guardGain, turns: 1 }),
+      color: "#7ef7ff",
+      life: 1200,
+    });
+    playSfx("shield");
   }
   if (lines > 0 && state.upgrades.comboConstellation > 0 && state.combo >= 4) {
     if (state.comboConstellationWave !== state.wave) {
@@ -4208,9 +4752,11 @@ function getComboMilestoneDamage(combo) {
 function gainGuardFromClear(lines, spinType) {
   if (lines <= 0) return;
   const comboGuard = state.combo >= 3 ? state.upgrades.comboGuardGain : 0;
-  const gain = lines * BALANCE.guardPerLine + (spinType ? BALANCE.guardSpinBonus : 0) + state.upgrades.guardGain + comboGuard;
+  const traitDefenseGuard = getTraitBonus("Defense", [1, 2, 3]);
+  const traitSpinGuard = spinType ? getTraitBonus("Spin", [1, 2, 4]) : 0;
+  const gain = lines * BALANCE.guardPerLine + (spinType ? BALANCE.guardSpinBonus : 0) + state.upgrades.guardGain + comboGuard + traitDefenseGuard + traitSpinGuard;
   const before = state.guard;
-  state.guard = Math.min(state.maxGuard, state.guard + gain);
+  state.guard = Math.min(getEffectiveMaxGuard(), state.guard + gain);
   const gained = state.guard - before;
   if (gained > 0 && (lines >= 3 || spinType)) {
     state.floaters.push({
@@ -4235,7 +4781,9 @@ function getGarbageDelayForWave() {
 
 function addUltimateCharge(lines, spinType = null) {
   if (lines <= 0 || state.ultimateActive) return;
-  const bonus = state.upgrades.burstCharge > 0 && (lines >= 4 || spinType) ? state.upgrades.burstCharge : 0;
+  const highValue = lines >= 4 || spinType;
+  const bonus = (state.upgrades.burstCharge > 0 && highValue ? state.upgrades.burstCharge : 0)
+    + (highValue ? getTraitBonus("Utility", [1, 2, 3]) : 0);
   state.ultimateCharge = Math.min(ULTIMATE_REQUIRED_LINES, state.ultimateCharge + lines + bonus);
   if (state.ultimateCharge >= ULTIMATE_REQUIRED_LINES) activateUltimateMode();
 }
@@ -4963,7 +5511,7 @@ function startNextWave() {
   state.upgradeChoices = [];
   state.mode = "playing";
   const beforeHeal = state.playerHp;
-  const waveHeal = BALANCE.waveHeal + state.upgrades.waveHeal;
+  const waveHeal = BALANCE.waveHeal + state.upgrades.waveHeal + getTraitBonus("Survival", [4, 8, 14]);
   state.playerHp = Math.min(state.playerMaxHp, state.playerHp + waveHeal);
   const healed = state.playerHp - beforeHeal;
   state.floaters.push({
@@ -5181,6 +5729,7 @@ function configureEnemyForWave() {
   state.enemyHpTrail = state.enemyHp;
   state.enemyHitIntensity = 0;
   state.lastBossPhase = enemy.id === "king" ? 1 : 0;
+  if (enemy.id !== "king") state.riftOverdriveCharge = 0;
   state.bossPhaseBanner = null;
   state.bossWindup = null;
   state.enemyAttackDamage = enemy.damage + Math.floor((state.wave - 1) / BALANCE.enemyDamageEveryWaves) * BALANCE.enemyDamageStep + (state.miniBoss ? BALANCE.miniBossDamageBonus : 0);
@@ -6103,6 +6652,7 @@ function draw() {
     drawBackground();
     drawPanels();
     drawPlayer();
+    drawTraitList();
     drawEnemy();
     drawBoard();
     drawSidePieces();
@@ -6469,6 +7019,56 @@ function drawTopQuestBar() {
   ctx.restore();
 }
 
+function drawTraitList() {
+  if (state.mode !== "playing" && state.mode !== "paused") return;
+  const traits = getTraitEntries().filter((trait) => trait.count > 0).slice(0, 7);
+  if (!traits.length) return;
+  const x = 18;
+  const y = 292;
+  const w = 178;
+  const rowH = 27;
+  const h = 32 + traits.length * rowH + 10;
+  ctx.save();
+  ctx.fillStyle = "rgba(4, 7, 14, 0.58)";
+  roundedRect(x, y, w, h, 10, true, false);
+  ctx.strokeStyle = "rgba(126, 231, 255, 0.22)";
+  ctx.lineWidth = 1.2;
+  roundedRect(x, y, w, h, 10, false, true);
+  label(t("traitListTitle").toUpperCase(), x + 14, y + 21, 12, "#8fe8dc");
+  for (let i = 0; i < traits.length; i += 1) {
+    const trait = traits[i];
+    const yy = y + 32 + i * rowH;
+    drawTraitListRow(trait, x + 8, yy, w - 16, rowH - 4);
+  }
+  ctx.restore();
+}
+
+function drawTraitListRow(trait, x, y, w, h) {
+  const active = trait.stage > 0;
+  const next = trait.nextThreshold || trait.def.breakpoints[trait.def.breakpoints.length - 1];
+  const color = trait.color;
+  ctx.save();
+  ctx.fillStyle = active ? hexToRgba(color, 0.16) : "rgba(8, 13, 20, 0.48)";
+  roundedRect(x, y, w, h, 7, true, false);
+  ctx.strokeStyle = active ? hexToRgba(color, 0.45 + trait.stage * 0.08) : "rgba(238,244,252,0.1)";
+  roundedRect(x, y, w, h, 7, false, true);
+  ctx.fillStyle = hexToRgba(color, active ? 0.26 : 0.12);
+  roundedRect(x + 5, y + 4, 18, h - 8, 6, true, false);
+  ctx.textAlign = "center";
+  ctx.font = canvasFont("900", 11, trait.def.icon, true);
+  ctx.fillStyle = active ? color : "rgba(238,244,252,0.54)";
+  ctx.fillText(trait.def.icon, x + 14, y + 16);
+  ctx.textAlign = "left";
+  fitLabel(trait.label, x + 30, y + 15, 78, 11, active ? "#f5f1e6" : "rgba(238,244,252,0.58)", 9, "800", true);
+  ctx.textAlign = "right";
+  fitLabel(`${trait.count}/${next}`, x + w - 40, y + 15, 34, 11, active ? color : "rgba(238,244,252,0.5)", 9, "900", true);
+  if (active) {
+    ctx.fillStyle = trait.stage >= 3 ? "rgba(255, 240, 166, 0.86)" : color;
+    ctx.fillRect(x + w - 28, y + h - 5, Math.min(22, 7 + trait.stage * 5), 2);
+  }
+  ctx.restore();
+}
+
 function getRelicProgressInfo() {
   const tierStep = state.upgradeTier > 0
     ? BALANCE.upgradeGrowthPerTier * state.upgradeTier
@@ -6604,7 +7204,8 @@ function drawPresentationSigil(x, y, r, color) {
 }
 
 function drawGuardMeter(x, y, w = 190) {
-  const ratio = state.maxGuard ? state.guard / state.maxGuard : 0;
+  const maxGuard = getEffectiveMaxGuard();
+  const ratio = maxGuard ? state.guard / maxGuard : 0;
   ctx.save();
   ctx.fillStyle = "rgba(7, 10, 16, 0.5)";
   roundedRect(x, y, w, 20, 6, true, false);
@@ -6612,7 +7213,7 @@ function drawGuardMeter(x, y, w = 190) {
   roundedRect(x, y, w * ratio, 20, 6, true, false);
   ctx.strokeStyle = "rgba(157, 247, 218, 0.3)";
   roundedRect(x, y, w, 20, 6, false, true);
-  label(`${t("guardLabel")} ${state.guard}/${state.maxGuard}`, x + 10, y + 14, 11, state.guard > 0 ? "#9df7da" : "rgba(238,244,252,0.46)");
+  label(`${t("guardLabel")} ${state.guard}/${maxGuard}`, x + 10, y + 14, 11, state.guard > 0 ? "#9df7da" : "rgba(238,244,252,0.46)");
   ctx.restore();
 }
 
@@ -9707,6 +10308,7 @@ function drawUpgradeOverlay() {
     drawUpgradeTagPills(getUpgradeTags(upgrade), card.x + 32, card.y + 172, card.w - 64, 2, 0.84);
     drawUpgradeDivider(card.x + 32, card.y + 204, card.w - 64, rarity.color, hovered ? 0.64 : 0.4);
     drawLimitedWrapText(upgradeShortText(upgrade), card.x + 32, card.y + 228, card.w - 64, 17, "rgba(238,244,252,0.76)", 12, 2, "700");
+    drawUpgradeTraitHint(upgrade, card);
     ctx.restore();
   }
   if (state.upgradePickConfirm) drawUpgradePickConfirmFx();
@@ -9883,6 +10485,20 @@ function drawUpgradeDetailPanel(upgrade, card) {
   ctx.restore();
 }
 
+function drawUpgradeTraitHint(upgrade, card) {
+  const hint = getTraitChangeHintsForUpgrade(upgrade)[0];
+  if (!hint) return;
+  const text = `${t(hint.type === "activate" ? "traitActivated" : "traitUpgrade")}: ${hint.label} ${hint.count}/${hint.next}`;
+  ctx.save();
+  ctx.fillStyle = hexToRgba(hint.color, 0.16);
+  roundedRect(card.x + 28, card.y + card.h - 34, card.w - 56, 20, 7, true, false);
+  ctx.strokeStyle = hexToRgba(hint.color, 0.44);
+  ctx.lineWidth = 1.2;
+  roundedRect(card.x + 28, card.y + card.h - 34, card.w - 56, 20, 7, false, true);
+  fitLabel(text, card.x + 38, card.y + card.h - 20, card.w - 76, 10, hint.color, 8, "900", true);
+  ctx.restore();
+}
+
 function drawUpgradePickConfirmFx() {
   const pick = state.upgradePickConfirm;
   if (!pick) return;
@@ -9931,11 +10547,13 @@ function drawCurrentBuildPanel() {
   wrapText(getCurrentBuildDirectionText(stats), panel.x + 526, panel.y + 104, 314, 18, "rgba(238,244,252,0.62)", 12);
   label(t("currentBuildStats").toUpperCase(), panel.x + 44, panel.y + 140, 13, "#fff0a6");
   drawCurrentBuildStats(stats, panel.x + 44, panel.y + 156, panel.w - 88);
-  label(t("currentBuildList").toUpperCase(), panel.x + 44, panel.y + 220, 13, "#8fe8dc");
+  label(t("currentBuildTraits").toUpperCase(), panel.x + 44, panel.y + 198, 13, "#fff0a6");
+  drawCurrentBuildTraitDetails(getTraitEntries(groups), panel.x + 44, panel.y + 214, panel.w - 88, 58);
+  label(t("currentBuildList").toUpperCase(), panel.x + 44, panel.y + 298, 13, "#8fe8dc");
   if (!groups.length) {
-    drawCurrentBuildEmpty(panel.x + 44, panel.y + 244, panel.w - 88, 104);
+    drawCurrentBuildEmpty(panel.x + 44, panel.y + 322, panel.w - 88, 104);
   } else {
-    drawAcquiredRelicCards(groups, panel.x + 44, panel.y + 244, panel.w - 88, panel.y + panel.h - 44);
+    drawAcquiredRelicCards(groups, panel.x + 44, panel.y + 322, panel.w - 88, panel.y + panel.h - 44);
   }
   ctx.restore();
 }
@@ -9976,6 +10594,28 @@ function drawCurrentBuildStats(stats, x, y, w) {
     drawUpgradePill(xx, y, pillW, 24, text.toUpperCase(), stat.color, 0.14);
     xx += pillW + 10;
   }
+}
+
+function drawCurrentBuildTraitDetails(traits, x, y, w, h) {
+  const shown = traits.filter((trait) => trait.count > 0).slice(0, 4);
+  if (!shown.length) {
+    drawUpgradePill(x, y, 180, 24, t("traitEffectNone"), "#8fe8dc", 0.1);
+    return;
+  }
+  const gap = 10;
+  const cardW = (w - gap * 3) / 4;
+  shown.forEach((trait, index) => {
+    const xx = x + index * (cardW + gap);
+    const active = trait.stage > 0;
+    ctx.save();
+    ctx.fillStyle = active ? hexToRgba(trait.color, 0.15) : "rgba(8, 13, 20, 0.48)";
+    roundedRect(xx, y, cardW, h, 8, true, false);
+    ctx.strokeStyle = active ? hexToRgba(trait.color, 0.42) : "rgba(238,244,252,0.12)";
+    roundedRect(xx, y, cardW, h, 8, false, true);
+    fitLabel(`${trait.label} ${trait.count}/${trait.nextThreshold || trait.def.breakpoints[trait.def.breakpoints.length - 1]}`, xx + 12, y + 18, cardW - 24, 12, active ? trait.color : "rgba(238,244,252,0.62)", 9, "900", true);
+    fitLabel(getTraitEffectText(trait), xx + 12, y + 39, cardW - 24, 12, "rgba(238,244,252,0.62)", 8, "700");
+    ctx.restore();
+  });
 }
 
 function drawAcquiredRelicCards(groups, x, y, w, bottomY) {
@@ -10060,6 +10700,95 @@ function getCurrentBuildFamilyStats(groups = getAcquiredRelicGroups()) {
       color: meta.color,
       count,
     }));
+}
+
+function getTraitEntries(groups = getAcquiredRelicGroups()) {
+  const stats = new Map();
+  for (const group of groups) {
+    for (const tag of group.tags) {
+      const def = TRAIT_DEFS[tag];
+      if (!def) continue;
+      const meta = getBuildTagMeta(tag);
+      const entry = stats.get(tag) || { tag, def, meta, count: 0 };
+      entry.count += group.count;
+      stats.set(tag, entry);
+    }
+  }
+  return [...stats.values()]
+    .map((entry) => {
+      const stage = getTraitStage(entry.tag, entry.count);
+      const nextThreshold = getTraitNextThreshold(entry.tag, entry.count);
+      return {
+        ...entry,
+        stage,
+        nextThreshold,
+        active: stage > 0,
+        label: buildTagLabel(entry.tag),
+        color: entry.meta.color,
+      };
+    })
+    .sort((a, b) => (b.stage - a.stage) || (b.count - a.count) || a.label.localeCompare(b.label));
+}
+
+function getTraitCount(tag, groups = getAcquiredRelicGroups()) {
+  let count = 0;
+  for (const group of groups) {
+    if (group.tags.includes(tag)) count += group.count;
+  }
+  return count;
+}
+
+function getTraitStage(tag, count = getTraitCount(tag)) {
+  const def = TRAIT_DEFS[tag];
+  if (!def) return 0;
+  let stage = 0;
+  for (const breakpoint of def.breakpoints) {
+    if (count >= breakpoint) stage += 1;
+  }
+  return stage;
+}
+
+function getTraitNextThreshold(tag, count = getTraitCount(tag)) {
+  const def = TRAIT_DEFS[tag];
+  if (!def) return null;
+  return def.breakpoints.find((breakpoint) => count < breakpoint) || null;
+}
+
+function getTraitBonus(tag, values) {
+  const stage = getTraitStage(tag);
+  if (stage <= 0) return 0;
+  return values[Math.min(stage, values.length) - 1] || 0;
+}
+
+function getTraitEffectText(entry) {
+  if (!entry || entry.stage <= 0) return t("traitEffectNone");
+  const key = entry.def.effectKeys[Math.min(entry.stage, entry.def.effectKeys.length) - 1];
+  return key ? t(key) : t("traitEffectNone");
+}
+
+function getTraitChangeHintsForUpgrade(upgrade) {
+  const tags = getUpgradeTags(upgrade);
+  const hints = [];
+  for (const tag of tags) {
+    const def = TRAIT_DEFS[tag];
+    if (!def) continue;
+    const before = getTraitCount(tag);
+    const after = before + 1;
+    const beforeStage = getTraitStage(tag, before);
+    const afterStage = getTraitStage(tag, after);
+    if (afterStage > beforeStage) {
+      const next = getTraitNextThreshold(tag, after) || def.breakpoints[def.breakpoints.length - 1];
+      hints.push({
+        tag,
+        label: buildTagLabel(tag),
+        color: getBuildTagMeta(tag).color,
+        type: beforeStage === 0 ? "activate" : "upgrade",
+        count: after,
+        next,
+      });
+    }
+  }
+  return hints;
 }
 
 function getCurrentBuildDirectionText(stats) {
