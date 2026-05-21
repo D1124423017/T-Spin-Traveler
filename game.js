@@ -143,6 +143,7 @@ const noaFeedbackBowArt = registerImageAsset("noa-feedback-bow", "assets/images/
 const menuIdleCubeSheet = registerImageAsset("menu-idle-cube-sheet", "assets/images/clean/noa_menu_idle_cube.png");
 const menuIdleMeditateSheet = registerImageAsset("menu-idle-meditate-sheet", "assets/images/clean/noa_menu_idle_meditate.png");
 const heroMeleeSheet = registerImageAsset("hero-melee-sheet", "assets/images/clean/Knife_alpha.png");
+const heroMeleeSheetV2 = registerImageAsset("hero-melee-sheet-v2", "assets/images/clean/hero_melee_20_spritesheet_alpha.png");
 const heroRangedSheet = registerImageAsset("hero-ranged-sheet", "assets/images/clean/Gun_alpha.png");
 const heroCombo1Sheet = registerImageAsset("hero-combo-1-sheet", "assets/images/clean/hero_combo_01_spritesheet_alpha.png");
 const heroCombo2Sheet = registerImageAsset("hero-combo-2-sheet", "assets/images/clean/hero_combo_02_spritesheet_alpha.png");
@@ -165,11 +166,13 @@ const legendaryUpgradeEmblems = {
 };
 const enemyAttackSheets = {
   slime: registerImageAsset("enemy-attack-slime", "assets/images/clean/enemy_attack_slime_redesign.png"),
+  slime16: registerImageAsset("enemy-attack-slime-16", "assets/images/clean/enemy_attack_slime_16.png"),
   vine: registerImageAsset("enemy-attack-vine", "assets/images/clean/enemy_attack_vine_redesign.png"),
   mushroom: registerImageAsset("enemy-attack-mushroom", "assets/images/clean/enemy_attack_mushroom_redesign.png"),
   beetle: registerImageAsset("enemy-attack-beetle", "assets/images/clean/enemy_attack_beetle_redesign.png"),
   mist: registerImageAsset("enemy-attack-mist", "assets/images/clean/enemy_attack_mist_redesign.png"),
   thorn: registerImageAsset("enemy-attack-thorn-prowler", "assets/images/clean/enemy_attack_thorn_prowler.png"),
+  thorn16: registerImageAsset("enemy-attack-thorn-prowler-16", "assets/images/clean/enemy_attack_thorn_prowler_16.png"),
   wisp: registerImageAsset("enemy-attack-wisp-moth", "assets/images/clean/enemy_attack_wisp_moth.png"),
   sentinel: registerImageAsset("enemy-attack-ruin-sentinel", "assets/images/clean/enemy_attack_ruin_sentinel.png"),
   king: registerImageAsset("enemy-attack-king", "assets/images/clean/enemy_attack_king_redesign.png"),
@@ -262,14 +265,16 @@ const HERO_ANIMATIONS = {
   // Replace frame rects here if a future spritesheet uses uneven cells.
   melee: {
     id: "melee",
-    image: heroMeleeSheet,
-    columns: 4,
-    rows: 2,
-    frameRects: HERO_FRAME_RECTS,
-    frames: [0, 1, 2, 3, 4, 5, 6],
-    frameMs: 120,
-    hitFrame: 3,
+    image: heroMeleeSheetV2,
+    columns: 5,
+    rows: 4,
+    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+    frameMs: 62,
+    timing: [82, 72, 74, 68, 58, 52, 48, 46, 52, 86, 76, 70, 66, 70, 74, 78, 86, 90, 90, 90],
+    hitFrame: 9,
     label: "Tetr Blade",
+    draw: { x: -152, y: -226, w: 304, h: 420 },
+    noKeying: true,
   },
   ranged: {
     id: "ranged",
@@ -499,6 +504,7 @@ const BATTLE_COUNTDOWN_MS = 3000;
 const BATTLE_COUNTDOWN_START_WINDOW_MS = 420;
 const FIRST_WAVE_HINT_MS = 4200;
 const FIRST_WAVE_HINT_FADE_MS = 520;
+const CONTROL_HINT_FULL_MS = 26000;
 const PERFECT_HIT_STOP_MS = 150;
 const BOSS_PHASE_BANNER_MS = 1550;
 const BOSS_WINDUP_MS = 1350;
@@ -826,11 +832,11 @@ const UI_LAYOUT = {
     titleY: 104,
     subtitleY: 154,
     primaryY: 250,
-    tutorialY: 344,
-    utilityY: 426,
-    primaryH: 72,
-    buttonH: 56,
-    buttonGap: 18,
+    tutorialY: 330,
+    utilityY: 386,
+    primaryH: 64,
+    buttonH: 44,
+    buttonGap: 10,
   },
   countdown: { cardW: 236, cardH: 108, yOffset: -18, barGap: 16 },
   pauseButton: { x: 1192, y: 24, w: 50, h: 38 },
@@ -1098,6 +1104,8 @@ const translations = {
     traitNext: "下一階",
     traitActivated: "將啟動羈絆",
     traitUpgrade: "羈絆升級",
+    traitProgressActivate: "{tag} +1，距離啟動還差 {remain}",
+    traitProgressUpgrade: "{tag} +1，距離升級還差 {remain}",
     traitEffectNone: "尚未啟動效果",
     "traitEffect.spin.1": "Spin 傷害 +6，Spin 額外 Guard +1。",
     "traitEffect.spin.2": "Spin 傷害 +12，Spin 額外 Guard +2。",
@@ -1663,6 +1671,8 @@ const translations = {
     traitNext: "Next",
     traitActivated: "Trait Activated",
     traitUpgrade: "Trait Upgrade",
+    traitProgressActivate: "{tag} +1, {remain} more to activate",
+    traitProgressUpgrade: "{tag} +1, {remain} more to upgrade",
     traitEffectNone: "No active trait effect yet",
     "traitEffect.spin.1": "Spin damage +6. Spin grants +1 extra Guard.",
     "traitEffect.spin.2": "Spin damage +12. Spin grants +2 extra Guard.",
@@ -2768,13 +2778,14 @@ const ENEMIES = [
 const ENEMY_ATTACK_ANIMATIONS = {
   slime: {
     id: "enemy-attack-slime",
-    image: enemyAttackSheets.slime,
-    columns: 8,
-    rows: 1,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7],
-    frameMs: ENEMY_ATTACK_FRAME_MS,
+    image: enemyAttackSheets.slime16,
+    columns: 4,
+    rows: 4,
+    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    frameMs: 60,
+    timing: [78, 76, 72, 68, 64, 58, 52, 50, 78, 84, 72, 68, 72, 78, 84, 88],
     draw: { x: -198, y: -162, w: 392, h: 306 },
-    hitRatio: 0.72,
+    hitFrame: 8,
     noKeying: true,
   },
   vine: {
@@ -2823,13 +2834,14 @@ const ENEMY_ATTACK_ANIMATIONS = {
   },
   thorn: {
     id: "enemy-attack-thorn",
-    image: enemyAttackSheets.thorn,
+    image: enemyAttackSheets.thorn16,
     columns: 4,
-    rows: 2,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7],
-    frameMs: ENEMY_ATTACK_FRAME_MS,
+    rows: 4,
+    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    frameMs: 60,
+    timing: [82, 80, 78, 72, 62, 54, 48, 48, 66, 88, 72, 68, 72, 78, 86, 90],
     draw: { x: -214, y: -158, w: 420, h: 306 },
-    hitRatio: 0.8,
+    hitFrame: 9,
     noKeying: true,
   },
   wisp: {
@@ -3071,6 +3083,7 @@ const state = {
   queueHex: 0,
   mistGarbage: 0,
   lastGarbageHole: null,
+  garbageHoleRun: 0,
   miniBoss: false,
   lastClearedBoss: false,
   b2bActive: false,
@@ -3163,6 +3176,7 @@ const state = {
   countdownMs: 0,
   countdownCue: "",
   firstWaveHintMs: 0,
+  controlHintsFullUntil: 0,
   bossPhaseBanner: null,
   bossWindup: null,
   lastBossPhase: 1,
@@ -3385,6 +3399,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.queueHex = 0;
   state.mistGarbage = 0;
   state.lastGarbageHole = null;
+  state.garbageHoleRun = 0;
   state.miniBoss = false;
   state.lastClearedBoss = false;
   state.b2bActive = false;
@@ -3471,6 +3486,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.input.softDrop = false;
   state.input.softDropTimer = 0;
   state.firstWaveHintMs = 0;
+  state.controlHintsFullUntil = performance.now() + BATTLE_COUNTDOWN_MS + CONTROL_HINT_FULL_MS;
   state.bossPhaseBanner = null;
   state.bossWindup = null;
   state.lastBossPhase = 1;
@@ -3934,27 +3950,82 @@ function triggerLastStarProtocol(projectedHp = state.playerHp) {
 
 function getHeroAnimationDuration(kind) {
   const config = HERO_ANIMATIONS[kind] || HERO_ANIMATIONS.ranged;
-  return config.frames.length * config.frameMs;
+  return getAnimationDuration(config);
 }
 
 function getHeroHitDelay(kind) {
   const config = HERO_ANIMATIONS[kind] || HERO_ANIMATIONS.ranged;
-  const duration = getHeroAnimationDuration(kind);
-  if (typeof config.hitRatio === "number") return Math.floor(duration * config.hitRatio);
-  const frame = typeof config.hitFrame === "number" ? config.hitFrame : Math.floor(config.frames.length * 0.55);
-  return Math.min(duration - 40, Math.floor((frame + 0.5) * config.frameMs));
+  return getAnimationHitDelay(config, 0.55);
 }
 
 function getEnemyAnimationDuration(kind) {
   const config = ENEMY_ATTACK_ANIMATIONS[kind];
-  return config ? config.frames.length * config.frameMs : ENEMY_ATTACK_DURATION_MS;
+  return config ? getAnimationDuration(config) : ENEMY_ATTACK_DURATION_MS;
 }
 
 function getEnemyHitDelay(kind) {
   const config = ENEMY_ATTACK_ANIMATIONS[kind];
-  const duration = getEnemyAnimationDuration(kind);
-  const ratio = typeof config?.hitRatio === "number" ? config.hitRatio : 0.78;
-  return Math.min(duration - 40, Math.floor(duration * ratio));
+  if (!config) return Math.floor(ENEMY_ATTACK_DURATION_MS * 0.78);
+  return getAnimationHitDelay(config, 0.78);
+}
+
+function getAnimationFrameDuration(config, index) {
+  if (Array.isArray(config?.timing) && config.timing.length) {
+    const value = Number(config.timing[Math.min(index, config.timing.length - 1)]);
+    if (Number.isFinite(value) && value > 0) return value;
+  }
+  const fallback = Number(config?.frameMs);
+  return Number.isFinite(fallback) && fallback > 0 ? fallback : 100;
+}
+
+function getAnimationDuration(config) {
+  if (!config?.frames?.length) return 0;
+  let duration = 0;
+  for (let i = 0; i < config.frames.length; i += 1) {
+    duration += getAnimationFrameDuration(config, i);
+  }
+  return duration;
+}
+
+function getAnimationFrameInfo(config, elapsed) {
+  const frames = config?.frames || [];
+  if (!frames.length) return { frameIndex: 0, frame: 0, local: 0, frameDuration: 100 };
+  let remaining = Math.max(0, elapsed);
+  for (let i = 0; i < frames.length; i += 1) {
+    const frameDuration = getAnimationFrameDuration(config, i);
+    if (remaining < frameDuration || i === frames.length - 1) {
+      return {
+        frameIndex: i,
+        frame: frames[i],
+        local: clamp(remaining / frameDuration, 0, 1),
+        frameDuration,
+      };
+    }
+    remaining -= frameDuration;
+  }
+  const lastIndex = frames.length - 1;
+  return {
+    frameIndex: lastIndex,
+    frame: frames[lastIndex],
+    local: 1,
+    frameDuration: getAnimationFrameDuration(config, lastIndex),
+  };
+}
+
+function getAnimationHitDelay(config, fallbackRatio) {
+  const duration = getAnimationDuration(config);
+  if (duration <= 0) return 0;
+  if (typeof config.hitRatio === "number") return Math.floor(duration * config.hitRatio);
+  const fallbackFrame = Math.floor((config.frames?.length || 1) * fallbackRatio);
+  const hitFrame = clamp(
+    typeof config.hitFrame === "number" ? config.hitFrame : fallbackFrame,
+    0,
+    Math.max(0, (config.frames?.length || 1) - 1)
+  );
+  let delay = 0;
+  for (let i = 0; i < hitFrame; i += 1) delay += getAnimationFrameDuration(config, i);
+  delay += getAnimationFrameDuration(config, hitFrame) * 0.5;
+  return Math.min(Math.max(0, duration - 40), Math.floor(delay));
 }
 
 function schedulePendingHit(hit) {
@@ -4952,7 +5023,7 @@ function startHeroAttackAnimation(kind) {
   state.heroAnimation = {
     kind,
     startedAt: performance.now(),
-    duration: config.frames.length * config.frameMs,
+    duration: getAnimationDuration(config),
   };
 }
 
@@ -4962,7 +5033,7 @@ function startEnemyAttackAnimation(kind) {
   state.enemyAnimation = {
     kind,
     startedAt: performance.now(),
-    duration: config.frames.length * config.frameMs,
+    duration: getAnimationDuration(config),
   };
 }
 
@@ -5755,11 +5826,7 @@ function addGarbageLines(count) {
     }
     const holeMin = state.ultimateActive ? ULTIMATE_WELL_START : 0;
     const holeMax = state.ultimateActive ? ULTIMATE_WELL_START + ULTIMATE_WELL_WIDTH - 1 : COLS - 1;
-    let hole = holeMin + Math.floor(Math.random() * (holeMax - holeMin + 1));
-    if (state.mistGarbage > 0 && state.lastGarbageHole !== null) {
-      hole = clamp(state.lastGarbageHole + (Math.random() > 0.5 ? 1 : -1), holeMin, holeMax);
-      state.mistGarbage -= 1;
-    }
+    const hole = chooseGarbageHole(holeMin, holeMax);
     state.lastGarbageHole = hole;
     const row = Array.from({ length: COLS }, (_, x) => {
       if (state.ultimateActive && !isUltimateWellColumn(x)) return ULTIMATE_WALL;
@@ -5769,6 +5836,64 @@ function addGarbageLines(count) {
     spawnGarbageParticles(hole);
   }
   applyUltimateWalls();
+}
+
+function chooseGarbageHole(holeMin, holeMax) {
+  const previous = Number.isInteger(state.lastGarbageHole) && state.lastGarbageHole >= holeMin && state.lastGarbageHole <= holeMax
+    ? state.lastGarbageHole
+    : null;
+
+  if (state.mistGarbage > 0 && previous !== null) {
+    state.mistGarbage -= 1;
+    state.garbageHoleRun = 0;
+    const roll = Math.random();
+    if (roll < 0.66) {
+      const direction = Math.random() < 0.5 ? -1 : 1;
+      const drifted = clamp(previous + direction, holeMin, holeMax);
+      return drifted === previous ? randomGarbageHole(holeMin, holeMax, previous) : drifted;
+    }
+    if (roll < 0.82) return previous;
+    return randomGarbageHole(holeMin, holeMax, previous);
+  }
+
+  if (previous === null) {
+    state.garbageHoleRun = randomCleanGarbageRun();
+    return randomGarbageHole(holeMin, holeMax);
+  }
+
+  if (state.garbageHoleRun > 0) {
+    state.garbageHoleRun -= 1;
+    return previous;
+  }
+
+  const next = Math.random() < 0.78
+    ? nearbyGarbageHole(previous, holeMin, holeMax)
+    : randomGarbageHole(holeMin, holeMax, previous);
+  state.garbageHoleRun = randomCleanGarbageRun();
+  return next;
+}
+
+function randomCleanGarbageRun() {
+  const roll = Math.random();
+  if (roll < 0.14) return 0;
+  if (roll < 0.56) return 1;
+  if (roll < 0.86) return 2;
+  return 3;
+}
+
+function nearbyGarbageHole(previous, holeMin, holeMax) {
+  const direction = Math.random() < 0.5 ? -1 : 1;
+  const shifted = clamp(previous + direction, holeMin, holeMax);
+  return shifted === previous ? randomGarbageHole(holeMin, holeMax, previous) : shifted;
+}
+
+function randomGarbageHole(holeMin, holeMax, avoid = null) {
+  const width = holeMax - holeMin + 1;
+  if (width <= 1) return holeMin;
+  let hole = holeMin + Math.floor(Math.random() * width);
+  if (avoid === null || hole !== avoid) return hole;
+  hole = holeMin + ((hole - holeMin + 1 + Math.floor(Math.random() * (width - 1))) % width);
+  return hole;
 }
 
 function spawnGarbageParticles(hole) {
@@ -6593,9 +6718,16 @@ function updateScreenNoteMode() {
   const note = document.querySelector(".screen-note");
   if (!note) return;
   const showPlayHints = state.mode === "playing";
-  note.classList.toggle("menu", !showPlayHints);
-  note.classList.toggle("compact", showPlayHints);
-  note.classList.toggle("countdown", isBattleCountdownActive());
+  const showReferenceHints = state.mode === "paused" || state.settingsOpen || state.mode === "guide";
+  const showHints = showPlayHints || showReferenceHints;
+  const faded = showPlayHints
+    && !isBattleCountdownActive()
+    && !state.tutorial
+    && performance.now() > (state.controlHintsFullUntil || 0);
+  note.classList.toggle("menu", !showHints);
+  note.classList.toggle("compact", showHints);
+  note.classList.toggle("countdown", showPlayHints && isBattleCountdownActive());
+  note.classList.toggle("faded", faded);
 }
 
 function previewSfx() {
@@ -7031,23 +7163,23 @@ function drawTopQuestBar() {
 
 function drawTraitList() {
   if (state.mode !== "playing" && state.mode !== "paused") return;
-  const traits = getTraitEntries().filter((trait) => trait.count > 0).slice(0, 7);
+  const traits = getTraitEntries().filter((trait) => trait.count > 0).slice(0, 6);
   if (!traits.length) return;
-  const x = 18;
+  const x = 20;
   const y = 292;
-  const w = 178;
-  const rowH = 27;
-  const h = 32 + traits.length * rowH + 10;
+  const w = 132;
+  const rowH = 24;
+  const h = 27 + traits.length * rowH + 8;
   ctx.save();
-  ctx.fillStyle = "rgba(4, 7, 14, 0.58)";
-  roundedRect(x, y, w, h, 10, true, false);
-  ctx.strokeStyle = "rgba(126, 231, 255, 0.22)";
-  ctx.lineWidth = 1.2;
-  roundedRect(x, y, w, h, 10, false, true);
-  label(t("traitListTitle").toUpperCase(), x + 14, y + 21, 12, "#8fe8dc");
+  ctx.fillStyle = "rgba(4, 7, 14, 0.38)";
+  roundedRect(x, y, w, h, 9, true, false);
+  ctx.strokeStyle = "rgba(126, 231, 255, 0.16)";
+  ctx.lineWidth = 1;
+  roundedRect(x, y, w, h, 9, false, true);
+  label(t("traitListTitle").toUpperCase(), x + 10, y + 19, 10, "rgba(143, 232, 220, 0.74)");
   for (let i = 0; i < traits.length; i += 1) {
     const trait = traits[i];
-    const yy = y + 32 + i * rowH;
+    const yy = y + 27 + i * rowH;
     drawTraitListRow(trait, x + 8, yy, w - 16, rowH - 4);
   }
   ctx.restore();
@@ -7056,27 +7188,46 @@ function drawTraitList() {
 function drawTraitListRow(trait, x, y, w, h) {
   const active = trait.stage > 0;
   const next = trait.nextThreshold || trait.def.breakpoints[trait.def.breakpoints.length - 1];
-  const color = trait.color;
+  const color = trait.stage >= 3 ? "#fff0a6" : trait.stage >= 2 ? "#d7c2ff" : trait.color;
   ctx.save();
-  ctx.fillStyle = active ? hexToRgba(color, 0.16) : "rgba(8, 13, 20, 0.48)";
-  roundedRect(x, y, w, h, 7, true, false);
-  ctx.strokeStyle = active ? hexToRgba(color, 0.45 + trait.stage * 0.08) : "rgba(238,244,252,0.1)";
-  roundedRect(x, y, w, h, 7, false, true);
-  ctx.fillStyle = hexToRgba(color, active ? 0.26 : 0.12);
-  roundedRect(x + 5, y + 4, 18, h - 8, 6, true, false);
+  ctx.fillStyle = active ? hexToRgba(color, 0.14) : "rgba(8, 13, 20, 0.34)";
+  roundedRect(x, y, w, h, 6, true, false);
+  ctx.strokeStyle = active ? hexToRgba(color, 0.5 + trait.stage * 0.09) : "rgba(238,244,252,0.09)";
+  ctx.lineWidth = active ? 1.2 : 1;
+  roundedRect(x, y, w, h, 6, false, true);
+  ctx.fillStyle = hexToRgba(color, active ? 0.24 : 0.08);
+  roundedRect(x + 4, y + 3, 16, h - 6, 5, true, false);
   ctx.textAlign = "center";
-  ctx.font = canvasFont("900", 11, trait.def.icon, true);
-  ctx.fillStyle = active ? color : "rgba(238,244,252,0.54)";
-  ctx.fillText(trait.def.icon, x + 14, y + 16);
+  ctx.font = canvasFont("900", 10, trait.def.icon, true);
+  ctx.fillStyle = active ? color : "rgba(238,244,252,0.44)";
+  ctx.fillText(trait.def.icon, x + 12, y + 14);
   ctx.textAlign = "left";
-  fitLabel(trait.label, x + 30, y + 15, 78, 11, active ? "#f5f1e6" : "rgba(238,244,252,0.58)", 9, "800", true);
+  fitLabel(getTraitHudLabel(trait), x + 26, y + 14, 48, 10, active ? "#f5f1e6" : "rgba(238,244,252,0.48)", 8, "800", true);
   ctx.textAlign = "right";
-  fitLabel(`${trait.count}/${next}`, x + w - 40, y + 15, 34, 11, active ? color : "rgba(238,244,252,0.5)", 9, "900", true);
+  fitLabel(`${trait.count}/${next}`, x + w - 32, y + 14, 28, 10, active ? color : "rgba(238,244,252,0.44)", 8, "900", true);
   if (active) {
-    ctx.fillStyle = trait.stage >= 3 ? "rgba(255, 240, 166, 0.86)" : color;
-    ctx.fillRect(x + w - 28, y + h - 5, Math.min(22, 7 + trait.stage * 5), 2);
+    ctx.fillStyle = color;
+    ctx.globalAlpha = trait.stage >= 3 ? 0.9 : 0.64;
+    ctx.fillRect(x + w - 26, y + h - 4, Math.min(20, 6 + trait.stage * 5), 2);
   }
   ctx.restore();
+}
+
+function getTraitHudLabel(trait) {
+  const zh = state.language === "zh";
+  const labels = {
+    Spin: "Spin",
+    Combo: "Combo",
+    Defense: zh ? "防禦" : "Def",
+    Burst: zh ? "爆發" : "Burst",
+    Survival: zh ? "生存" : "Surv",
+    Garbage: zh ? "垃圾" : "Garbage",
+    Utility: zh ? "輔助" : "Util",
+    Perfect: "PC",
+    B2B: "B2B",
+    "Boss Killer": "Boss",
+  };
+  return labels[trait.tag] || trait.label;
 }
 
 function getRelicProgressInfo() {
@@ -7247,8 +7398,18 @@ function drawHeroSprite(hit) {
 }
 
 function drawHeroIdleBase() {
-  if (isImageReady(heroMeleeSheet)) {
+  if (isImageReady(HERO_ANIMATIONS.melee.image)) {
     drawSpriteSheetFrame(HERO_ANIMATIONS.melee, 0, -132, -222, 264, 410);
+  } else if (isImageReady(heroMeleeSheet)) {
+    drawSpriteSheetFrame({
+      id: "melee-fallback",
+      image: heroMeleeSheet,
+      columns: 4,
+      rows: 2,
+      frameRects: HERO_FRAME_RECTS,
+      frames: [0, 1, 2, 3, 4, 5, 6],
+      frameMs: 120,
+    }, 0, -132, -222, 264, 410);
   } else if (isImageReady(heroIdleArt)) {
     // Concept sheet fallback: crop the clearest full-body pose from the lower stance strip.
     drawKeyedImageCropContain(heroIdleArt, 820, 1198, 178, 312, -114, -206, 228, 390, "idle-concept");
@@ -7271,7 +7432,7 @@ function drawHeroAnimationFrame() {
     state.heroAnimation = null;
     return false;
   }
-  const frameIndex = Math.min(config.frames.length - 1, Math.floor(elapsed / config.frameMs));
+  const frameIndex = getAnimationFrameInfo(config, elapsed).frameIndex;
   if (isImageReady(config.image)) {
     const draw = config.draw || { x: -132, y: -222, w: 264, h: 410 };
     drawSpriteAnimationFrame(config, elapsed, draw.x, draw.y, draw.w, draw.h);
@@ -7399,9 +7560,7 @@ function drawFallbackRangedPose(progress, frameIndex) {
 }
 
 function drawSpriteAnimationFrame(config, elapsed, x, y, w, h) {
-  const slot = Math.floor(elapsed / config.frameMs);
-  const frameIndex = Math.min(config.frames.length - 1, slot);
-  const local = (elapsed % config.frameMs) / config.frameMs;
+  const { frameIndex, local } = getAnimationFrameInfo(config, elapsed);
   const currentFrame = config.frames[frameIndex];
   const previousFrame = config.frames[Math.max(0, frameIndex - 1)];
   const nextFrame = config.frames[Math.min(config.frames.length - 1, frameIndex + 1)];
@@ -7983,8 +8142,9 @@ function drawEnemyAttackAnimationFrame(enemy, hit) {
     ctx.restore();
     return false;
   }
-  const frameIndex = Math.min(config.frames.length - 1, Math.floor(elapsed / config.frameMs));
-  const local = (elapsed % config.frameMs) / config.frameMs;
+  const frameInfo = getAnimationFrameInfo(config, elapsed);
+  const frameIndex = frameInfo.frameIndex;
+  const local = frameInfo.local;
   const rect = config.frames[frameIndex];
   const nextFrameIndex = Math.min(config.frames.length - 1, frameIndex + 1);
   const nextRect = config.frames[nextFrameIndex];
@@ -9598,11 +9758,25 @@ function menuActionText(key) {
   return t(key).toUpperCase();
 }
 
+function getMainMenuButtonRects() {
+  const m = UI_LAYOUT.menu;
+  const pad = m.padding || 36;
+  const bx = m.x + pad;
+  const bw = m.w - pad * 2;
+  return {
+    start: { x: bx, y: m.primaryY, w: bw, h: m.primaryH },
+    tutorial: { x: bx, y: m.tutorialY, w: bw, h: m.buttonH },
+    guide: { x: bx, y: m.utilityY, w: bw, h: m.buttonH },
+    settings: { x: bx, y: m.utilityY + m.buttonH + m.buttonGap, w: bw, h: m.buttonH },
+  };
+}
+
 function drawStartMenuOverlay() {
   const m = UI_LAYOUT.menu;
   const pad = m.padding || 36;
   const bx = m.x + pad;
   const bw = m.w - pad * 2;
+  const buttons = getMainMenuButtonRects();
   drawMainMenuScene();
   drawMenuHeroShowcase();
   ctx.save();
@@ -9655,11 +9829,11 @@ function drawStartMenuOverlay() {
   drawCard(m.x, m.y, m.w, m.h);
   drawCornerGlyph(m.x + m.w / 2, m.y - 2, "#9fb4ff");
   label(t("menuActions").toUpperCase(), bx, m.y + 58, 15, "#fff0a6");
-  wrapText(t("startPanelHint"), bx, m.y + 92, bw, 21, "rgba(238,244,252,0.58)", 13);
-  drawMenuButton(bx, m.primaryY, bw, m.primaryH, menuActionText("startGame"), "Enter", "primary");
-  drawMenuButton(bx, m.tutorialY, bw, m.buttonH, t("tutorialStart"), t("tutorialHintShort"));
-  drawMenuButton(bx, m.utilityY, bw, m.buttonH, menuActionText("settings"), "");
-  drawMenuButton(bx, m.utilityY + m.buttonH + m.buttonGap, bw, m.buttonH, menuActionText("moveGuide"), "Spin");
+  wrapText(t("startPanelHint"), bx, m.y + 88, bw, 19, "rgba(238,244,252,0.58)", 12);
+  drawMenuButton(buttons.start.x, buttons.start.y, buttons.start.w, buttons.start.h, menuActionText("startGame"), "Enter", "primary");
+  drawMenuButton(buttons.tutorial.x, buttons.tutorial.y, buttons.tutorial.w, buttons.tutorial.h, t("tutorialStart"), t("tutorialHintShort"));
+  drawMenuButton(buttons.guide.x, buttons.guide.y, buttons.guide.w, buttons.guide.h, menuActionText("moveGuide"), "Spin");
+  drawMenuButton(buttons.settings.x, buttons.settings.y, buttons.settings.w, buttons.settings.h, menuActionText("settings"), "");
   label(t("startHint"), bx, m.y + m.h - 42, 13, "#9fb4ff");
   ctx.restore();
 }
@@ -9720,6 +9894,7 @@ function drawMenuHeroShowcase() {
   const now = performance.now();
   const pose = getMenuIdlePose(now);
   const motion = getMenuIdleMotion(pose, now);
+  const specialIdle = getMenuSpecialIdle(now);
   const hero = UI_LAYOUT.menuHero;
   const anchorX = hero.x;
   const anchorY = hero.y;
@@ -9729,7 +9904,6 @@ function drawMenuHeroShowcase() {
   ctx.rotate(motion.rotate);
   ctx.scale(hero.scale * motion.scaleX, hero.scale * motion.scaleY);
   drawCharacterShadow(0, 174, 146 + motion.shadow, "#6de8ff");
-  const specialIdle = getMenuSpecialIdle(now);
   if (specialIdle) {
     drawMenuSpecialIdleFrame(specialIdle);
   } else {
@@ -10296,8 +10470,6 @@ function drawUpgradeOverlay() {
   label(t("safeNodeDraft"), 350, 252, 13, "#9df7da");
   const buildButton = getCurrentBuildButtonRect();
   drawMenuButton(buildButton.x, buildButton.y, buildButton.w, buildButton.h, t("currentBuild"), "");
-  let hoveredUpgrade = null;
-  let hoveredRect = null;
   for (let i = 0; i < 3; i += 1) {
     const upgrade = state.upgradeChoices[i];
     if (!upgrade) continue;
@@ -10305,31 +10477,26 @@ function drawUpgradeOverlay() {
     const card = getUpgradeCardRect(i);
     const hovered = !state.upgradePickConfirm && pointInRect(state.pointer.x, state.pointer.y, card.x, card.y, card.w, card.h);
     const dimmed = state.upgradePickConfirm && state.upgradePickConfirm.index !== i;
-    if (hovered) {
-      hoveredUpgrade = upgrade;
-      hoveredRect = card;
-    }
     ctx.save();
     if (dimmed) ctx.globalAlpha = 0.42;
     drawUpgradeCardFrame(card.x, card.y, card.w, card.h, rarity, hovered || state.upgradePickConfirm?.index === i);
     drawRarityBadge(card.x + 24, card.y + 18, 86, 23, rarityLabel(upgrade.rarity).toUpperCase(), rarity);
-    drawUpgradeEmblem(upgrade, card.x + card.w / 2, card.y + 84, rarity, 82);
-    drawLimitedWrapText(upgradeName(upgrade), card.x + 32, card.y + 138, card.w - 64, 20, rarity.titleColor, 17, 2, "900", true);
-    drawUpgradeTagPills(getUpgradeTags(upgrade), card.x + 32, card.y + 172, card.w - 64, 2, 0.84);
-    drawUpgradeDivider(card.x + 32, card.y + 204, card.w - 64, rarity.color, hovered ? 0.64 : 0.4);
-    drawLimitedWrapText(upgradeShortText(upgrade), card.x + 32, card.y + 228, card.w - 64, 17, "rgba(238,244,252,0.76)", 12, 2, "700");
+    drawUpgradeEmblem(upgrade, card.x + card.w / 2, card.y + 88, rarity, 84);
+    drawLimitedWrapText(upgradeName(upgrade), card.x + 32, card.y + 148, card.w - 64, 20, rarity.titleColor, 17, 2, "900", true);
+    drawUpgradeTagPills(getUpgradeTags(upgrade), card.x + 32, card.y + 184, card.w - 64, 2, 0.84);
+    drawUpgradeDivider(card.x + 32, card.y + 216, card.w - 64, rarity.color, hovered ? 0.64 : 0.4);
+    drawLimitedWrapText(upgradeShortText(upgrade), card.x + 32, card.y + 240, card.w - 64, 17, "rgba(238,244,252,0.76)", 12, 2, "700");
     drawUpgradeTraitHint(upgrade, card);
     ctx.restore();
   }
   if (state.upgradePickConfirm) drawUpgradePickConfirmFx();
-  else if (hoveredUpgrade) drawUpgradeDetailPanel(hoveredUpgrade, hoveredRect);
-  label(t("upgradeHelp"), 350, 626, 16, "#9fb4ff");
+  label(t("upgradeHelp"), 350, 622, 14, "rgba(159, 180, 255, 0.72)");
   if (state.currentBuildOpen) drawCurrentBuildPanel();
   ctx.restore();
 }
 
 function getUpgradeCardRect(index) {
-  return { x: 306 + index * 234, y: 266, w: 206, h: 270 };
+  return { x: 300 + index * 238, y: 260, w: 218, h: 326 };
 }
 
 function getCurrentBuildButtonRect() {
@@ -10475,37 +10642,34 @@ function drawUpgradeEmblem(upgrade, x, y, rarity, size = 82) {
   ctx.restore();
 }
 
-function drawUpgradeDetailPanel(upgrade, card) {
-  if (!upgrade || !card) return;
-  const rarity = getRarityVisual(upgrade.rarity);
-  const x = 346;
-  const y = 546;
-  const w = 588;
-  const h = 64;
-  ctx.save();
-  ctx.fillStyle = "rgba(5, 9, 15, 0.82)";
-  roundedRect(x, y, w, h, 10, true, false);
-  ctx.strokeStyle = hexToRgba(rarity.border, 0.42);
-  ctx.lineWidth = 1.4;
-  roundedRect(x, y, w, h, 10, false, true);
-  ctx.fillStyle = hexToRgba(rarity.color, 0.18);
-  roundedRect(x + 12, y + 12, 4, h - 24, 4, true, false);
-  fitLabel(upgradeName(upgrade), x + 26, y + 26, 196, 14, rarity.titleColor, 11, "900", true);
-  wrapText(upgradeText(upgrade), x + 226, y + 24, w - 250, 16, "rgba(238,244,252,0.72)", 12);
-  ctx.restore();
-}
-
 function drawUpgradeTraitHint(upgrade, card) {
   const hint = getTraitChangeHintsForUpgrade(upgrade)[0];
   if (!hint) return;
-  const text = `${t(hint.type === "activate" ? "traitActivated" : "traitUpgrade")}: ${hint.label} ${hint.count}/${hint.next}`;
+  const isUpgrade = hint.type === "upgrade";
+  const isActivate = hint.type === "activate";
+  const accent = isUpgrade ? "#fff0a6" : isActivate ? "#9df7da" : hint.color;
+  const text = hint.type === "progress"
+    ? fmt(hint.stage > 0 ? "traitProgressUpgrade" : "traitProgressActivate", { tag: hint.label, remain: hint.remaining })
+    : `${t(isActivate ? "traitActivated" : "traitUpgrade")}: ${hint.label} ${hint.count}/${hint.next}`;
+  const x = card.x + 24;
+  const y = card.y + card.h - 48;
+  const w = card.w - 48;
+  const h = 30;
   ctx.save();
-  ctx.fillStyle = hexToRgba(hint.color, 0.16);
-  roundedRect(card.x + 28, card.y + card.h - 34, card.w - 56, 20, 7, true, false);
-  ctx.strokeStyle = hexToRgba(hint.color, 0.44);
-  ctx.lineWidth = 1.2;
-  roundedRect(card.x + 28, card.y + card.h - 34, card.w - 56, 20, 7, false, true);
-  fitLabel(text, card.x + 38, card.y + card.h - 20, card.w - 76, 10, hint.color, 8, "900", true);
+  if (isActivate || isUpgrade) {
+    ctx.shadowColor = hexToRgba(accent, isUpgrade ? 0.42 : 0.32);
+    ctx.shadowBlur = isUpgrade ? 12 : 9;
+  }
+  ctx.fillStyle = hexToRgba(accent, isUpgrade ? 0.2 : isActivate ? 0.17 : 0.1);
+  roundedRect(x, y, w, h, 8, true, false);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = hexToRgba(accent, isUpgrade ? 0.56 : isActivate ? 0.46 : 0.26);
+  ctx.lineWidth = isActivate || isUpgrade ? 1.4 : 1;
+  roundedRect(x, y, w, h, 8, false, true);
+  ctx.fillStyle = hexToRgba(accent, isUpgrade ? 0.28 : isActivate ? 0.2 : 0.13);
+  roundedRect(x + 8, y + 8, 14, 14, 5, true, false);
+  fitLabel(isUpgrade ? "↑" : isActivate ? "✦" : "+", x + 11, y + 20, 8, 10, accent, 8, "900", true);
+  fitLabel(text, x + 28, y + 20, w - 38, 10, isActivate || isUpgrade ? "#f5f1e6" : hexToRgba(accent, 0.82), 8, "900", true);
   ctx.restore();
 }
 
@@ -10787,7 +10951,9 @@ function getTraitChangeHintsForUpgrade(upgrade) {
     const beforeStage = getTraitStage(tag, before);
     const afterStage = getTraitStage(tag, after);
     if (afterStage > beforeStage) {
-      const next = getTraitNextThreshold(tag, after) || def.breakpoints[def.breakpoints.length - 1];
+      const next = beforeStage === 0
+        ? def.breakpoints[0]
+        : getTraitNextThreshold(tag, after) || def.breakpoints[Math.min(afterStage - 1, def.breakpoints.length - 1)];
       hints.push({
         tag,
         label: buildTagLabel(tag),
@@ -10795,10 +10961,28 @@ function getTraitChangeHintsForUpgrade(upgrade) {
         type: beforeStage === 0 ? "activate" : "upgrade",
         count: after,
         next,
+        stage: afterStage,
+        priority: beforeStage === 0 ? 0 : 1,
       });
+      continue;
     }
+    const next = getTraitNextThreshold(tag, before);
+    if (!next) continue;
+    const remaining = next - after;
+    if (remaining <= 0) continue;
+    hints.push({
+      tag,
+      label: buildTagLabel(tag),
+      color: getBuildTagMeta(tag).color,
+      type: "progress",
+      count: after,
+      next,
+      remaining,
+      stage: beforeStage,
+      priority: 2,
+    });
   }
-  return hints;
+  return hints.sort((a, b) => (a.priority - b.priority) || ((a.remaining ?? 0) - (b.remaining ?? 0)) || a.label.localeCompare(b.label));
 }
 
 function getCurrentBuildDirectionText(stats) {
@@ -11802,19 +11986,16 @@ canvas.addEventListener("mousedown", (event) => {
       }
     }
     if (state.mode === "start") {
-      const m = UI_LAYOUT.menu;
-      const pad = m.padding || 36;
-      const bx = m.x + pad;
-      const bw = m.w - pad * 2;
-      if (pointInRect(p.x, p.y, bx, m.primaryY, bw, m.primaryH)) resetGame("endless");
-      else if (pointInRect(p.x, p.y, bx, m.tutorialY, bw, m.buttonH)) startTutorial();
-      else if (pointInRect(p.x, p.y, bx, m.utilityY, bw, m.buttonH)) {
-        state.settingsOpen = true;
-        state.settingsTab = "controls";
+      const buttons = getMainMenuButtonRects();
+      if (pointInRect(p.x, p.y, buttons.start.x, buttons.start.y, buttons.start.w, buttons.start.h)) resetGame("endless");
+      else if (pointInRect(p.x, p.y, buttons.tutorial.x, buttons.tutorial.y, buttons.tutorial.w, buttons.tutorial.h)) startTutorial();
+      else if (pointInRect(p.x, p.y, buttons.guide.x, buttons.guide.y, buttons.guide.w, buttons.guide.h)) {
+        state.mode = "guide";
         playSfx("hold");
       }
-      else if (pointInRect(p.x, p.y, bx, m.utilityY + m.buttonH + m.buttonGap, bw, m.buttonH)) {
-        state.mode = "guide";
+      else if (pointInRect(p.x, p.y, buttons.settings.x, buttons.settings.y, buttons.settings.w, buttons.settings.h)) {
+        state.settingsOpen = true;
+        state.settingsTab = "controls";
         playSfx("hold");
       }
       return;
