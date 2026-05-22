@@ -1,6 +1,6 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const ASSET_VERSION = "2026-05-22-sprite16-idle-pass";
+const ASSET_VERSION = "2026-05-22-sprite16-scale-pass";
 
 function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -281,7 +281,7 @@ const HERO_ANIMATIONS = {
     timing: [82, 72, 70, 64, 58, 52, 48, 48, 58, 82, 72, 66, 70, 78, 86, 90],
     hitFrame: 8,
     label: "Tetr Blade",
-    draw: { x: -152, y: -226, w: 304, h: 420 },
+    draw: { x: -174, y: -252, w: 348, h: 486 },
     noKeying: true,
   },
   ranged: {
@@ -294,7 +294,7 @@ const HERO_ANIMATIONS = {
     timing: [72, 68, 64, 60, 56, 52, 48, 48, 68, 78, 62, 58, 66, 76, 84, 88],
     hitFrame: 8,
     label: "Tetr Pistol",
-    draw: { x: -152, y: -226, w: 304, h: 420 },
+    draw: { x: -174, y: -252, w: 348, h: 486 },
     noKeying: true,
   },
   combo1: {
@@ -307,7 +307,7 @@ const HERO_ANIMATIONS = {
     timing: [74, 70, 66, 60, 54, 50, 48, 58, 74, 70, 64, 64, 70, 76, 82, 86],
     hitFrame: 7,
     label: "Combo Blade I",
-    draw: { x: -152, y: -226, w: 304, h: 420 },
+    draw: { x: -174, y: -252, w: 348, h: 486 },
     noKeying: true,
   },
   combo2: {
@@ -320,7 +320,7 @@ const HERO_ANIMATIONS = {
     timing: [72, 68, 64, 58, 52, 48, 46, 56, 70, 68, 62, 62, 68, 74, 80, 84],
     hitFrame: 7,
     label: "Combo Blade II",
-    draw: { x: -152, y: -226, w: 304, h: 420 },
+    draw: { x: -174, y: -252, w: 348, h: 486 },
     noKeying: true,
   },
   combo3: {
@@ -333,7 +333,7 @@ const HERO_ANIMATIONS = {
     timing: [70, 66, 62, 56, 50, 46, 44, 52, 68, 66, 60, 60, 66, 72, 78, 82],
     hitFrame: 8,
     label: "Combo Blade III",
-    draw: { x: -152, y: -226, w: 304, h: 420 },
+    draw: { x: -174, y: -252, w: 348, h: 486 },
     noKeying: true,
   },
   ultimate: {
@@ -841,7 +841,7 @@ const UI_LAYOUT = {
   playerStage: { x: 18, y: 188, w: 380, h: 392 },
   enemyStage: { x: 858, y: 246, w: 410, h: 320 },
   boardFrame: { x: BOARD_X - 18, y: BOARD_Y - 18, w: COLS * TILE + 36, h: ROWS * TILE + 36 },
-  menuHero: { x: 392, y: 462, scale: 1.1 },
+  menuHero: { x: 392, y: 450, scale: 1.2 },
   menu: {
     x: 804,
     y: 96,
@@ -7425,7 +7425,7 @@ function drawHeroSprite(hit) {
 
 function drawHeroIdleBase() {
   if (isImageReady(HERO_ANIMATIONS.melee.image)) {
-    drawSpriteSheetFrame(HERO_ANIMATIONS.melee, 0, -132, -222, 264, 410);
+    drawSpriteSheetFrame(HERO_ANIMATIONS.melee, 0, -158, -252, 316, 472);
   } else if (isImageReady(heroMeleeSheet)) {
     drawSpriteSheetFrame({
       id: "melee-fallback",
