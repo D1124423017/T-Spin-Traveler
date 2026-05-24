@@ -3759,23 +3759,42 @@ function recordAcquiredRelic(upgrade) {
 function settleRunRiftEnergy() {
   if (!state.runStats) state.runStats = makeRunStats();
   if (state.runStats.riftEnergySettled) return state.runStats.riftEnergyEarned || 0;
-  state.runStats.waveReached = Math.max(
-    state.runStats.waveReached || 1,
-    state.stats?.peakWave || 1,
-    state.wave || 1,
-  );
-  state.runStats.maxCombo = Math.max(state.runStats.maxCombo || 0, state.stats?.maxCombo || 0);
-  state.runStats.perfectClearCount = Math.max(
-    state.runStats.perfectClearCount || 0,
-    state.stats?.perfectClears || 0,
-  );
-  state.runStats.spinCount = Math.max(state.runStats.spinCount || 0, state.stats?.spins || 0);
-  const earned = calculateRiftEnergyEarned(state.runStats);
+  const settlementStats = getRunRiftEnergyStatsSnapshot();
+  Object.assign(state.runStats, settlementStats);
+  const earned = calculateRiftEnergyEarned(settlementStats);
   state.metaProgress = grantRiftEnergy(state.metaProgress, earned);
   saveMetaProgress(state.metaProgress);
   state.runStats.riftEnergyEarned = earned;
   state.runStats.riftEnergySettled = true;
   return earned;
+}
+
+function getRunRiftEnergyStatsSnapshot() {
+  const stats = state.runStats || makeRunStats();
+  return {
+    waveReached: Math.max(stats.waveReached || 1, state.stats?.peakWave || 1, state.wave || 1),
+    normalEnemyKills: stats.normalEnemyKills || 0,
+    bossKills: stats.bossKills || 0,
+    perfectClearCount: Math.max(stats.perfectClearCount || 0, state.stats?.perfectClears || 0),
+    spinCount: Math.max(stats.spinCount || 0, state.stats?.spins || 0),
+    maxCombo: Math.max(stats.maxCombo || 0, state.stats?.maxCombo || 0),
+  };
+}
+
+function hasRunRiftEnergyActivity(stats) {
+  return (stats.normalEnemyKills || 0) > 0
+    || (stats.bossKills || 0) > 0
+    || (stats.perfectClearCount || 0) > 0
+    || (stats.spinCount || 0) > 0
+    || (stats.maxCombo || 0) >= 5
+    || (stats.waveReached || 1) > 1;
+}
+
+function getCurrentRunRiftEnergyEarned() {
+  if (!state.runStats) return 0;
+  if (state.runStats.riftEnergySettled) return state.runStats.riftEnergyEarned || 0;
+  const stats = getRunRiftEnergyStatsSnapshot();
+  return hasRunRiftEnergyActivity(stats) ? calculateRiftEnergyEarned(stats) : 0;
 }
 
 function finishRun(outcome) {
@@ -4891,7 +4910,7 @@ function draw() {
     drawFirstWaveCombatHint();
     drawTutorialPrompt();
     drawOverlay();
-    if (!["start", "guide", "upgrade", "victory", "defeat"].includes(state.mode)) drawSettings();
+    if (!["start", "guide", "upgrade", "metaUpgrade", "victory", "defeat"].includes(state.mode)) drawSettings();
     drawPerfectClearFx();
   } finally {
     ctx.restore();
@@ -5222,7 +5241,6 @@ function drawBoardFrame(x, y, w, h) {
 }
 
 function drawTopQuestBar() {
-  const progress = getRelicProgressInfo();
   ctx.save();
   ctx.fillStyle = "rgba(4, 7, 14, 0.8)";
   roundedRect(404, 10, 472, 38, 10, true, false);
@@ -5240,7 +5258,6 @@ function drawTopQuestBar() {
   ctx.beginPath();
   ctx.arc(427, 29, 7, 0, Math.PI * 2);
   ctx.fill();
-  drawRelicProgressBar(450, 34, 386, 6, progress);
   ctx.restore();
 }
 
@@ -5329,11 +5346,15 @@ function getRelicProgressInfo() {
   };
 }
 
-function drawRelicProgressBar(x, y, w, h, progress) {
-  const glow = progress.ready || progress.ratio >= 0.75;
-  const text = progress.ready
+function getRelicProgressText(progress) {
+  return progress.ready
     ? t("relicDraftReady")
     : `${t("relicProgress")} ${Math.floor(progress.current)} / ${progress.target}`;
+}
+
+function drawRelicProgressBar(x, y, w, h, progress, showText = true) {
+  const glow = progress.ready || progress.ratio >= 0.75;
+  const text = getRelicProgressText(progress);
   ctx.save();
   ctx.fillStyle = "rgba(4, 9, 18, 0.72)";
   roundedRect(x, y, w, h, h / 2, true, false);
@@ -5350,8 +5371,10 @@ function drawRelicProgressBar(x, y, w, h, progress) {
   ctx.shadowBlur = 0;
   ctx.strokeStyle = glow ? "rgba(255, 240, 166, 0.54)" : "rgba(126, 231, 255, 0.28)";
   roundedRect(x, y, w, h, h / 2, false, true);
-  ctx.textAlign = "left";
-  fitLabel(text, x, y + 14, w, 11, glow ? "#fff0a6" : "rgba(238,244,252,0.7)", 9, "800");
+  if (showText) {
+    ctx.textAlign = "left";
+    fitLabel(text, x, y + 14, w, 11, glow ? "#fff0a6" : "rgba(238,244,252,0.7)", 9, "800");
+  }
   ctx.restore();
 }
 
@@ -5434,6 +5457,35 @@ function drawPlayer() {
   drawHeroSprite(hit);
   if (playerAttack) drawNoaAttackPose(playerAttack);
   ctx.restore();
+  ctx.restore();
+  drawPlayerRelicProgress();
+}
+
+function drawPlayerRelicProgress() {
+  const progress = getRelicProgressInfo();
+  const x = 56;
+  const y = 622;
+  const w = 292;
+  const h = 46;
+  const glow = progress.ready || progress.ratio >= 0.75;
+  ctx.save();
+  const bg = ctx.createLinearGradient(x, y, x + w, y + h);
+  bg.addColorStop(0, "rgba(4, 9, 18, 0.62)");
+  bg.addColorStop(0.55, "rgba(18, 16, 38, 0.58)");
+  bg.addColorStop(1, "rgba(6, 13, 23, 0.62)");
+  ctx.fillStyle = bg;
+  ctx.shadowColor = glow ? "rgba(255, 240, 166, 0.22)" : "rgba(109, 232, 255, 0.12)";
+  ctx.shadowBlur = glow ? 18 : 10;
+  roundedRect(x, y, w, h, 10, true, false);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = glow ? "rgba(255, 240, 166, 0.44)" : "rgba(126, 231, 255, 0.22)";
+  ctx.lineWidth = 1.3;
+  roundedRect(x, y, w, h, 10, false, true);
+  ctx.fillStyle = glow ? "rgba(255, 240, 166, 0.2)" : "rgba(126, 231, 255, 0.12)";
+  roundedRect(x + 12, y + 10, 24, 24, 7, true, false);
+  drawCornerGlyph(x + 24, y + 22, glow ? "#fff0a6" : "#8fe8dc");
+  fitLabel(getRelicProgressText(progress), x + 46, y + 25, w - 60, 12, glow ? "#fff0a6" : "rgba(238,244,252,0.74)", 10, "900", true);
+  drawRelicProgressBar(x + 14, y + 33, w - 28, 7, progress, false);
   ctx.restore();
 }
 
@@ -8625,6 +8677,7 @@ function drawOverlay() {
 function drawResultOverlay() {
   const victory = state.mode === "victory";
   const accent = victory ? "#fff0a6" : "#ff8f98";
+  const buttons = getResultButtonRects();
   ctx.save();
   drawDimOverlay(0.82);
   drawCard(318, 62, 644, 536);
@@ -8634,9 +8687,19 @@ function drawResultOverlay() {
   roundedRect(384, 156, 210, 4, 8, true, false);
   wrapText(getMessage(), 384, 186, 504, 28, "rgba(238,244,252,0.76)", 19);
   drawRunSummary();
-  drawMenuButton(384, 528, 248, 44, t("retry"), "R", "primary");
-  drawMenuButton(646, 528, 248, 44, t("menu"), "Esc");
+  drawMenuButton(buttons.retry.x, buttons.retry.y, buttons.retry.w, buttons.retry.h, t("retry"), "R", "primary");
+  drawMenuButton(buttons.upgrade.x, buttons.upgrade.y, buttons.upgrade.w, buttons.upgrade.h, t("upgradeMenu"), "");
+  drawMenuButton(buttons.menu.x, buttons.menu.y, buttons.menu.w, buttons.menu.h, t("menu"), "Esc");
   ctx.restore();
+}
+
+function getResultButtonRects() {
+  const y = 528;
+  return {
+    retry: { x: 354, y, w: 172, h: 44 },
+    upgrade: { x: 554, y, w: 172, h: 44 },
+    menu: { x: 754, y, w: 172, h: 44 },
+  };
 }
 
 function drawPauseOverlay() {
@@ -8856,11 +8919,34 @@ function drawRunSummary() {
     label(String(rows[i][1]), x + 118, y - 3, 15, "#f5f1e6");
     if (rows[i][2]) label(rows[i][2], x + 168, y - 3, 11, "#9fb4ff");
   }
-  label(t("summaryDamageSources"), 384, 438, 14, "#8fe8dc");
-  wrapText(formatDamageSources(), 520, 438, 360, 18, "rgba(238,244,252,0.66)", 12);
-  label(fmt("riftEnergyEarned", { amount: state.runStats?.riftEnergyEarned || 0 }), 384, 470, 14, "#fff0a6");
-  label(fmt("riftEnergyTotal", { amount: state.metaProgress?.riftEnergy || 0 }), 646, 470, 14, "#9fb4ff");
-  label(getNextRunGoalText(), 384, 494, 13, "#fff0a6");
+  drawResultRiftEnergyPanel(384, 390, 510, 60);
+  label(t("summaryDamageSources"), 384, 472, 14, "#8fe8dc");
+  wrapText(formatDamageSources(), 520, 472, 360, 18, "rgba(238,244,252,0.66)", 12);
+  label(getNextRunGoalText(), 384, 498, 13, "#fff0a6");
+  ctx.restore();
+}
+
+function drawResultRiftEnergyPanel(x, y, w, h) {
+  const earned = state.runStats?.riftEnergyEarned || 0;
+  const total = state.metaProgress?.riftEnergy || 0;
+  ctx.save();
+  const glow = earned > 0;
+  const bg = ctx.createLinearGradient(x, y, x + w, y + h);
+  bg.addColorStop(0, "rgba(26, 17, 48, 0.68)");
+  bg.addColorStop(0.55, "rgba(8, 13, 24, 0.72)");
+  bg.addColorStop(1, "rgba(20, 33, 48, 0.56)");
+  ctx.fillStyle = bg;
+  ctx.shadowColor = glow ? "rgba(184, 141, 255, 0.26)" : "rgba(126, 231, 255, 0.1)";
+  ctx.shadowBlur = glow ? 18 : 9;
+  roundedRect(x, y, w, h, 10, true, false);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = glow ? "rgba(255, 240, 166, 0.38)" : "rgba(145, 232, 222, 0.2)";
+  ctx.lineWidth = 1.4;
+  roundedRect(x, y, w, h, 10, false, true);
+  drawImageContain(riftEnergyIcon, x + 12, y + 8, 44, 44);
+  label(t("riftEnergy").toUpperCase(), x + 68, y + 21, 12, "#d7c2ff");
+  fitLabel(fmt("riftEnergyEarned", { amount: earned }), x + 68, y + 43, 228, 16, "#fff0a6", 12, "900", true);
+  fitLabel(fmt("riftEnergyTotal", { amount: total }), x + 314, y + 43, 174, 14, "#9fb4ff", 11, "800", true);
   ctx.restore();
 }
 
@@ -9942,7 +10028,32 @@ function controlLabel(action) {
 }
 
 function drawSettings() {
-  if (state.mode === "playing") drawPauseButton();
+  if (state.mode === "playing") {
+    drawRunRiftEnergyHud();
+    drawPauseButton();
+  }
+}
+
+function drawRunRiftEnergyHud() {
+  const amount = getCurrentRunRiftEnergyEarned();
+  const b = UI_LAYOUT.pauseButton;
+  const w = 116;
+  const h = 36;
+  const x = b.x - w - 12;
+  const y = b.y + 1;
+  const pulse = amount > 0 ? 0.5 + Math.sin(performance.now() * 0.007) * 0.5 : 0;
+  ctx.save();
+  ctx.fillStyle = amount > 0 ? "rgba(25, 15, 46, 0.72)" : "rgba(8, 13, 20, 0.58)";
+  ctx.shadowColor = `rgba(184, 141, 255, ${0.14 + pulse * 0.12})`;
+  ctx.shadowBlur = amount > 0 ? 14 : 8;
+  roundedRect(x, y, w, h, 10, true, false);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = amount > 0 ? "rgba(255, 240, 166, 0.38)" : "rgba(145, 232, 222, 0.22)";
+  ctx.lineWidth = 1.5;
+  roundedRect(x, y, w, h, 10, false, true);
+  drawImageContain(riftEnergyIcon, x + 8, y + 4, 28, 28);
+  fitLabel(String(amount), x + 43, y + 23, w - 54, 19, amount > 0 ? "#fff0a6" : "rgba(238,244,252,0.72)", 14, "900", true);
+  ctx.restore();
 }
 
 function drawLanguageToggle(x, y) {
@@ -10633,13 +10744,24 @@ canvas.addEventListener("mousedown", (event) => {
       state.mode = "start";
       return;
     }
-    if ((state.mode === "victory" || state.mode === "defeat") && pointInRect(p.x, p.y, 646, 528, 248, 44)) {
-      state.mode = "start";
-      return;
-    }
-    if ((state.mode === "victory" || state.mode === "defeat") && pointInRect(p.x, p.y, 384, 528, 248, 44)) {
-      resetGame("endless");
-      return;
+    if (state.mode === "victory" || state.mode === "defeat") {
+      const buttons = getResultButtonRects();
+      if (pointInRect(p.x, p.y, buttons.retry.x, buttons.retry.y, buttons.retry.w, buttons.retry.h)) {
+        resetGame("endless");
+        return;
+      }
+      if (pointInRect(p.x, p.y, buttons.upgrade.x, buttons.upgrade.y, buttons.upgrade.w, buttons.upgrade.h)) {
+        state.mode = "metaUpgrade";
+        state.metaProgress = loadMetaProgress();
+        state.metaUpgradeMessage = { key: "", vars: {}, until: 0 };
+        playSfx("hold");
+        return;
+      }
+      if (pointInRect(p.x, p.y, buttons.menu.x, buttons.menu.y, buttons.menu.w, buttons.menu.h)) {
+        state.mode = "start";
+        playSfx("hold");
+        return;
+      }
     }
   }
 });
