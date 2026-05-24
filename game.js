@@ -27,6 +27,7 @@ import {
   rosterArt,
   slimeArt,
   upgradeCardFrames,
+  upgradeTypeIcons,
 } from "./src/data/assets.js";
 import { ENEMIES } from "./src/data/enemies.js";
 import { translations } from "./src/data/i18n.js";
@@ -311,15 +312,23 @@ const HIDDEN = 2;
 const TILE = 29;
 const BOARD_X = 476;
 const BOARD_Y = 72;
-const HOLD_PANEL_X = BOARD_X - 108;
+const HOLD_PANEL_X = BOARD_X - 116;
 const HOLD_PANEL_Y = BOARD_Y + 42;
+const HOLD_PANEL_W = 106;
+const HOLD_PANEL_H = 112;
+const HOLD_PREVIEW_BOX_W = 86;
+const HOLD_PREVIEW_BOX_H = 66;
+const HOLD_PREVIEW_CELL_SIZE = 16;
 const NEXT_PANEL_X = BOARD_X + COLS * TILE + 22;
 const NEXT_PANEL_Y = BOARD_Y + 42;
 const NEXT_PREVIEW_COUNT = 5;
-const NEXT_PANEL_W = 88;
-const NEXT_SLOT_H = 50;
+const NEXT_PANEL_W = 98;
+const NEXT_SLOT_H = 56;
 const NEXT_SLOT_GAP = 8;
 const NEXT_SLOT_STEP = NEXT_SLOT_H + NEXT_SLOT_GAP;
+const NEXT_PREVIEW_BOX_W = 80;
+const NEXT_PREVIEW_BOX_H = 50;
+const NEXT_PREVIEW_CELL_SIZE = 12.8;
 const DROP_MS = 760;
 const SOFT_DROP_MS = 12;
 const LOCK_DELAY_MS = 500;
@@ -994,6 +1003,7 @@ const state = {
   challenge: null,
   tutorial: null,
   upgradeChoices: [],
+  upgradeDraftReason: null,
   acquiredRelics: [],
   currentBuildOpen: false,
   upgradePickConfirm: null,
@@ -1354,6 +1364,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.challenge = challengeId ? makeChallengeState(challengeId) : null;
   state.tutorial = null;
   state.upgradeChoices = [];
+  state.upgradeDraftReason = null;
   state.acquiredRelics = [];
   state.currentBuildOpen = false;
   state.upgradePickConfirm = null;
@@ -3670,10 +3681,11 @@ function addUpgradeProgress(effectiveLines) {
       life: 1200,
     });
     playSfx("upgradeReady");
+    triggerUpgradeIfReady(false, false, "progress");
   }
 }
 
-function triggerUpgradeIfReady(forceRelic = false, forceRare = false) {
+function triggerUpgradeIfReady(forceRelic = false, forceRare = false, reason = "wave") {
   if (state.mode !== "playing") return false;
   const ready = state.upgradeMeter >= state.nextUpgradeAt;
   if (!ready && !forceRelic && !forceRare) return false;
@@ -3682,6 +3694,7 @@ function triggerUpgradeIfReady(forceRelic = false, forceRare = false) {
   state.nextUpgradeAt += BALANCE.upgradeGrowthPerTier * state.upgradeTier;
   state.upgradeReady = false;
   state.upgradeChoices = createUpgradeChoices(forceRelic, forceRare);
+  state.upgradeDraftReason = reason;
   state.mode = "upgrade";
   state.floaters.push({
     x: 454,
@@ -3733,6 +3746,8 @@ function finishUpgradeSelection() {
   state.upgradePickConfirm = null;
   state.mode = "playing";
   state.upgradeReady = state.upgradeMeter >= state.nextUpgradeAt;
+  state.upgradeDraftReason = null;
+  if (state.upgradeReady && triggerUpgradeIfReady(false, false, "progress")) return;
   if (!state.active) spawnPiece();
 }
 
@@ -6192,7 +6207,7 @@ function drawEnemy() {
   if (drawEnemyAttackAnimationFrame(enemy, hit)) {
     // Enemy attack animations use the standardized 16-frame sheets.
   } else if (drawEnemyConceptArt(enemy, hit)) {
-    // Project-local concept sheets are now the primary enemy source.
+    // Project-local concept sheets are the primary idle enemy source.
   } else if (isImageReady(rosterArt)) {
     ctx.save();
     ctx.shadowColor = hexToRgba(enemy.color, 0.55);
@@ -6307,7 +6322,12 @@ function drawEnemyConceptArt(enemy, hit) {
     ctx.globalCompositeOperation = "lighter";
     ctx.globalAlpha = 0.88;
   }
-  drawKeyedImageCropContain(sheet, rect.x, rect.y, rect.w, rect.h, draw.x, draw.y, draw.w, draw.h, enemy.artKey || enemy.id);
+  if (enemy.artFacing === "right") {
+    ctx.scale(-1, 1);
+    drawKeyedImageCropContain(sheet, rect.x, rect.y, rect.w, rect.h, -draw.x - draw.w, draw.y, draw.w, draw.h, enemy.artKey || enemy.id);
+  } else {
+    drawKeyedImageCropContain(sheet, rect.x, rect.y, rect.w, rect.h, draw.x, draw.y, draw.w, draw.h, enemy.artKey || enemy.id);
+  }
   ctx.restore();
   return true;
 }
@@ -7031,8 +7051,9 @@ function drawSidePieces() {
 
 function drawHoldPanel() {
   ctx.save();
-  const w = 98;
-  const h = 102;
+  const w = HOLD_PANEL_W;
+  const h = HOLD_PANEL_H;
+  const locked = !state.canHold && Boolean(state.hold);
   ctx.fillStyle = "rgba(3, 5, 10, 0.62)";
   roundedRect(HOLD_PANEL_X, HOLD_PANEL_Y, w, h, 14, true, false);
   ctx.strokeStyle = state.canHold ? "rgba(255, 224, 162, 0.38)" : "rgba(223, 243, 255, 0.12)";
@@ -7040,8 +7061,17 @@ function drawHoldPanel() {
   roundedRect(HOLD_PANEL_X, HOLD_PANEL_Y, w, h, 14, false, true);
   label(t("hold").toUpperCase(), HOLD_PANEL_X + 11, HOLD_PANEL_Y + 22, 13, state.canHold ? "#ffe0a3" : "rgba(245,241,230,0.42)");
   ctx.fillStyle = "rgba(126, 231, 255, 0.035)";
-  roundedRect(HOLD_PANEL_X + 10, HOLD_PANEL_Y + 34, w - 20, 56, 10, true, false);
-  drawMiniPiece(state.hold, HOLD_PANEL_X + 13, HOLD_PANEL_Y + 45, 13, 72, 54);
+  roundedRect(HOLD_PANEL_X + 10, HOLD_PANEL_Y + 36, w - 20, 64, 10, true, false);
+  drawMiniPiece(
+    state.hold,
+    HOLD_PANEL_X + 18,
+    HOLD_PANEL_Y + 44,
+    HOLD_PREVIEW_CELL_SIZE,
+    HOLD_PREVIEW_BOX_W,
+    HOLD_PREVIEW_BOX_H,
+    { disabled: locked },
+  );
+  if (locked) drawHoldLockedOverlay(HOLD_PANEL_X + 10, HOLD_PANEL_Y + 36, w - 20, 64);
   ctx.restore();
 }
 
@@ -7059,13 +7089,41 @@ function drawNextQueuePanel() {
     const slotY = NEXT_PANEL_Y + 34 + i * NEXT_SLOT_STEP;
     ctx.fillStyle = "rgba(126, 231, 255, 0.03)";
     roundedRect(NEXT_PANEL_X + 9, slotY, w - 18, NEXT_SLOT_H, 9, true, false);
-    drawMiniPiece(state.queue[i], NEXT_PANEL_X + 12, slotY + 10, 10.8, 66, 46);
+    drawMiniPiece(state.queue[i], NEXT_PANEL_X + 17, slotY + 11, NEXT_PREVIEW_CELL_SIZE, NEXT_PREVIEW_BOX_W, NEXT_PREVIEW_BOX_H);
   }
   if (state.queueHex > 0) {
     ctx.fillStyle = "rgba(119, 232, 255, 0.11)";
     roundedRect(NEXT_PANEL_X + 8, NEXT_PANEL_Y + h - 31, w - 16, 20, 8, true, false);
     label(`${t("hex").toUpperCase()} ${state.queueHex}`, NEXT_PANEL_X + 13, NEXT_PANEL_Y + h - 17, 10, "#77e8ff");
   }
+  ctx.restore();
+}
+
+function drawHoldLockedOverlay(x, y, w, h) {
+  ctx.save();
+  ctx.fillStyle = "rgba(2, 5, 10, 0.46)";
+  roundedRect(x, y, w, h, 10, true, false);
+  ctx.strokeStyle = "rgba(176, 199, 224, 0.22)";
+  ctx.lineWidth = 1.1;
+  roundedRect(x + 1, y + 1, w - 2, h - 2, 9, false, true);
+  ctx.globalAlpha = 0.36;
+  ctx.strokeStyle = "rgba(223, 243, 255, 0.34)";
+  ctx.lineWidth = 1;
+  for (let sx = x - h; sx < x + w; sx += 12) {
+    ctx.beginPath();
+    ctx.moveTo(sx, y + h);
+    ctx.lineTo(sx + h, y);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 0.82;
+  ctx.strokeStyle = "rgba(215, 194, 255, 0.72)";
+  ctx.lineWidth = 2;
+  const cx = x + w - 18;
+  const cy = y + 18;
+  roundedRect(cx - 9, cy - 1, 18, 14, 4, false, true);
+  ctx.beginPath();
+  ctx.arc(cx, cy - 2, 7, Math.PI, 0);
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -7662,7 +7720,7 @@ function drawParticles() {
   ctx.globalAlpha = 1;
 }
 
-function drawMiniPiece(type, x, y, size = 14, boxW = 92, boxH = 58) {
+function drawMiniPiece(type, x, y, size = 14, boxW = 92, boxH = 58, options = {}) {
   ctx.save();
   ctx.fillStyle = "rgba(5,8,12,0.66)";
   roundedRect(x - 8, y - 8, boxW, boxH, 6, true, false);
@@ -7673,11 +7731,17 @@ function drawMiniPiece(type, x, y, size = 14, boxW = 92, boxH = 58) {
     const shape = PIECES[type];
     const offX = x + (boxW - 16 - shape[0].length * size) / 2;
     const offY = y + (boxH - 16 - shape.length * size) / 2;
+    ctx.save();
+    if (options.disabled) {
+      ctx.globalAlpha *= 0.48;
+      ctx.filter = "grayscale(1) saturate(0.35) brightness(0.82)";
+    }
     for (let r = 0; r < shape.length; r += 1) {
       for (let c = 0; c < shape[r].length; c += 1) {
         if (shape[r][c]) drawBlock(offX + c * size, offY + r * size, COLORS[type], false, size);
       }
     }
+    ctx.restore();
   }
   ctx.restore();
 }
@@ -9149,10 +9213,14 @@ function drawUpgradeOverlay() {
   ctx.save();
   ctx.fillStyle = "rgba(4, 6, 10, 0.76)";
   ctx.fillRect(0, 0, W, H);
-  drawCard(286, 126, 708, 522);
-  label(t("relicDraft").toUpperCase(), 348, 198, 35, "#f5f1e6");
-  label(fmt("waveClearPick", { wave: state.wave - 1 }), 350, 230, 17, "rgba(238,244,252,0.62)");
-  label(t("safeNodeDraft"), 350, 252, 13, "#9df7da");
+  const panel = getUpgradeOverlayPanelRect();
+  drawCard(panel.x, panel.y, panel.w, panel.h);
+  label(t("relicDraft").toUpperCase(), panel.x + 62, 198, 35, "#f5f1e6");
+  const draftDetail = state.upgradeDraftReason === "progress"
+    ? t("upgradeProgressPick")
+    : fmt("waveClearPick", { wave: Math.max(1, state.wave - 1) });
+  label(draftDetail, panel.x + 64, 230, 17, "rgba(238,244,252,0.62)");
+  label(t("safeNodeDraft"), panel.x + 64, 252, 13, "#9df7da");
   const buildButton = getCurrentBuildButtonRect();
   drawMenuButton(buildButton.x, buildButton.y, buildButton.w, buildButton.h, t("currentBuild"), "");
   for (let i = 0; i < 3; i += 1) {
@@ -9162,26 +9230,45 @@ function drawUpgradeOverlay() {
     const card = getUpgradeCardRect(i);
     const hovered = !state.upgradePickConfirm && pointInRect(state.pointer.x, state.pointer.y, card.x, card.y, card.w, card.h);
     const dimmed = state.upgradePickConfirm && state.upgradePickConfirm.index !== i;
+    const layout = getUpgradeCardContentLayout(card);
     ctx.save();
     if (dimmed) ctx.globalAlpha = 0.42;
     drawUpgradeCardFrame(card.x, card.y, card.w, card.h, rarity, hovered || state.upgradePickConfirm?.index === i);
-    drawRarityBadge(card.x + 24, card.y + 18, 86, 23, rarityLabel(upgrade.rarity).toUpperCase(), rarity);
-    drawUpgradeEmblem(upgrade, card.x + card.w / 2, card.y + 88, rarity, 84);
-    drawLimitedWrapText(upgradeName(upgrade), card.x + 32, card.y + 148, card.w - 64, 20, rarity.titleColor, 17, 2, "900", true);
-    drawUpgradeTagPills(getUpgradeTags(upgrade), card.x + 32, card.y + 184, card.w - 64, 2, 0.84);
-    drawUpgradeDivider(card.x + 32, card.y + 216, card.w - 64, rarity.color, hovered ? 0.64 : 0.4);
-    drawLimitedWrapText(upgradeShortText(upgrade), card.x + 32, card.y + 240, card.w - 64, 17, "rgba(238,244,252,0.76)", 12, 2, "700");
+    drawRarityBadge(layout.badge.x, layout.badge.y, layout.badge.w, layout.badge.h, rarityLabel(upgrade.rarity).toUpperCase(), rarity);
+    drawUpgradeEmblem(upgrade, layout.icon.x, layout.icon.y, rarity, layout.icon.size);
+    drawLimitedWrapText(upgradeName(upgrade), layout.title.x, layout.title.y, layout.title.w, layout.title.lineH, rarity.titleColor, layout.title.size, 2, "900", true);
+    drawUpgradeTagPills(getUpgradeTags(upgrade), layout.tags.x, layout.tags.y, layout.tags.w, 2, 0.84);
+    drawUpgradeDivider(layout.divider.x, layout.divider.y, layout.divider.w, rarity.color, hovered ? 0.58 : 0.34);
+    drawLimitedWrapText(upgradeShortText(upgrade), layout.desc.x, layout.desc.y, layout.desc.w, layout.desc.lineH, "rgba(238,244,252,0.78)", layout.desc.size, 3, "700");
     drawUpgradeTraitHint(upgrade, card);
     ctx.restore();
   }
   if (state.upgradePickConfirm) drawUpgradePickConfirmFx();
-  label(t("upgradeHelp"), 350, 622, 14, "rgba(159, 180, 255, 0.72)");
+  label(t("upgradeHelp"), panel.x + 64, 644, 14, "rgba(159, 180, 255, 0.72)");
   if (state.currentBuildOpen) drawCurrentBuildPanel();
   ctx.restore();
 }
 
+function getUpgradeOverlayPanelRect() {
+  return { x: 238, y: 126, w: 804, h: 546 };
+}
+
 function getUpgradeCardRect(index) {
-  return { x: 300 + index * 238, y: 260, w: 218, h: 326 };
+  const w = 232;
+  const gap = 28;
+  return { x: 280 + index * (w + gap), y: 262, w, h: 348 };
+}
+
+function getUpgradeCardContentLayout(card) {
+  return {
+    badge: { x: card.x + 25, y: card.y + 18, w: 88, h: 23 },
+    icon: { x: card.x + card.w / 2, y: card.y + 88, size: 68 },
+    title: { x: card.x + 28, y: card.y + 154, w: card.w - 56, lineH: 19, size: 16 },
+    tags: { x: card.x + 28, y: card.y + 203, w: card.w - 56 },
+    divider: { x: card.x + 28, y: card.y + 234, w: card.w - 56 },
+    desc: { x: card.x + 28, y: card.y + 252, w: card.w - 56, lineH: 15, size: 11 },
+    trait: { x: card.x + 24, y: card.y + card.h - 58, w: card.w - 48, h: 36 },
+  };
 }
 
 function getCurrentBuildButtonRect() {
@@ -9193,15 +9280,19 @@ function drawUpgradeCardFrame(x, y, w, h, rarity, hovered = false) {
   const frame = upgradeCardFrames[rarity.tier] || upgradeCardFrames.common;
   if (isImageReady(frame)) {
     ctx.shadowColor = rarity.glow;
-    ctx.shadowBlur = hovered ? 24 : 12;
+    ctx.shadowBlur = hovered ? 18 : 10;
     ctx.drawImage(frame, x, y, w, h);
     ctx.shadowBlur = 0;
     if (hovered) {
-      ctx.strokeStyle = hexToRgba(rarity.border, 0.86);
-      ctx.lineWidth = rarity.lineWidth + 0.8;
-      roundedRect(x + 2, y + 2, w - 4, h - 4, 12, false, true);
-      ctx.fillStyle = hexToRgba(rarity.color, 0.08);
-      roundedRect(x + 8, y + 8, w - 16, h - 16, 10, true, false);
+      ctx.shadowColor = rarity.glow;
+      ctx.shadowBlur = 18;
+      ctx.strokeStyle = hexToRgba(rarity.border, 0.72);
+      ctx.lineWidth = 2.2;
+      roundedRect(x - 5, y - 5, w + 10, h + 10, 13, false, true);
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = hexToRgba(rarity.border, 0.42);
+      ctx.lineWidth = 1.2;
+      roundedRect(x + 9, y + 9, w - 18, h - 18, 10, false, true);
     }
     ctx.restore();
     return;
@@ -9312,9 +9403,36 @@ function drawUpgradeDivider(x, y, w, color, alpha = 0.5) {
   ctx.restore();
 }
 
+function getUpgradeTypeIcon(upgrade) {
+  const tags = getUpgradeTags(upgrade);
+  if (tags.includes("Spin")) return upgradeTypeIcons.spin;
+  if (tags.includes("Combo")) return upgradeTypeIcons.combo;
+  if (tags.includes("Garbage")) return upgradeTypeIcons.garbage;
+  if (tags.includes("Survival")) return upgradeTypeIcons.survival;
+  if (tags.includes("Defense")) return upgradeTypeIcons.guard;
+  if (tags.includes("Perfect")) return upgradeTypeIcons.rift;
+  if (tags.includes("B2B") || tags.includes("Burst") || tags.includes("Boss Killer")) return upgradeTypeIcons.attack;
+  if (tags.includes("Utility")) return upgradeTypeIcons.defense;
+  return upgradeTypeIcons.rift;
+}
+
 function drawUpgradeEmblem(upgrade, x, y, rarity, size = 82) {
+  const icon = getUpgradeTypeIcon(upgrade);
   const emblem = legendaryUpgradeEmblems[upgrade.id];
   ctx.save();
+  ctx.shadowColor = rarity.glow;
+  ctx.shadowBlur = rarity.tier === "legendary" ? 18 : 12;
+  if (isImageReady(icon)) {
+    ctx.globalAlpha = rarity.tier === "legendary" ? 0.98 : 0.92;
+    ctx.drawImage(icon, x - size / 2, y - size / 2, size, size);
+    if (isImageReady(emblem)) {
+      const small = size * 0.42;
+      ctx.globalAlpha = 0.78;
+      ctx.drawImage(emblem, x + size * 0.1, y + size * 0.08, small, small);
+    }
+    ctx.restore();
+    return;
+  }
   if (isImageReady(emblem)) {
     ctx.shadowColor = rarity.glow;
     ctx.shadowBlur = rarity.tier === "legendary" ? 18 : 10;
@@ -9336,10 +9454,8 @@ function drawUpgradeTraitHint(upgrade, card) {
   const text = hint.type === "progress"
     ? fmt(hint.stage > 0 ? "traitProgressUpgrade" : "traitProgressActivate", { tag: hint.label, remain: hint.remaining })
     : `${t(isActivate ? "traitActivated" : "traitUpgrade")}: ${hint.label} ${hint.count}/${hint.next}`;
-  const x = card.x + 24;
-  const y = card.y + card.h - 48;
-  const w = card.w - 48;
-  const h = 30;
+  const layout = getUpgradeCardContentLayout(card).trait;
+  const { x, y, w, h } = layout;
   ctx.save();
   if (isActivate || isUpgrade) {
     ctx.shadowColor = hexToRgba(accent, isUpgrade ? 0.42 : 0.32);
@@ -9352,9 +9468,9 @@ function drawUpgradeTraitHint(upgrade, card) {
   ctx.lineWidth = isActivate || isUpgrade ? 1.4 : 1;
   roundedRect(x, y, w, h, 8, false, true);
   ctx.fillStyle = hexToRgba(accent, isUpgrade ? 0.28 : isActivate ? 0.2 : 0.13);
-  roundedRect(x + 8, y + 8, 14, 14, 5, true, false);
-  fitLabel(isUpgrade ? "↑" : isActivate ? "✦" : "+", x + 11, y + 20, 8, 10, accent, 8, "900", true);
-  fitLabel(text, x + 28, y + 20, w - 38, 10, isActivate || isUpgrade ? "#f5f1e6" : hexToRgba(accent, 0.82), 8, "900", true);
+  roundedRect(x + 9, y + 10, 15, 15, 5, true, false);
+  fitLabel(isUpgrade ? "↑" : isActivate ? "✦" : "+", x + 12, y + 22, 9, 11, accent, 8, "900", true);
+  fitLabel(text, x + 32, y + 23, w - 44, 11, isActivate || isUpgrade ? "#f5f1e6" : hexToRgba(accent, 0.84), 8, "900", true);
   ctx.restore();
 }
 
@@ -9367,13 +9483,14 @@ function drawUpgradePickConfirmFx() {
   const pulse = Math.sin(t * Math.PI);
   ctx.save();
   ctx.shadowColor = rarity.glow;
-  ctx.shadowBlur = 22 + pulse * 18;
-  ctx.strokeStyle = hexToRgba(rarity.border, 0.72 + pulse * 0.24);
-  ctx.lineWidth = 3 + pulse * 2;
-  roundedRect(card.x - 5, card.y - 5, card.w + 10, card.h + 10, 14, false, true);
-  ctx.fillStyle = hexToRgba(rarity.color, 0.08 + pulse * 0.08);
-  roundedRect(card.x + 8, card.y + 8, card.w - 16, card.h - 16, 10, true, false);
-  fitLabel(pick.name, card.x + 24, card.y + card.h - 22, card.w - 48, 13, rarity.titleColor, 10, "900", true);
+  ctx.shadowBlur = 16 + pulse * 12;
+  ctx.strokeStyle = hexToRgba(rarity.border, 0.58 + pulse * 0.26);
+  ctx.lineWidth = 2.4 + pulse * 1.4;
+  roundedRect(card.x - 8, card.y - 8, card.w + 16, card.h + 16, 15, false, true);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = hexToRgba(rarity.color, 0.32 + pulse * 0.2);
+  ctx.lineWidth = 1.2;
+  roundedRect(card.x + 8, card.y + 8, card.w - 16, card.h - 16, 10, false, true);
   ctx.restore();
 }
 

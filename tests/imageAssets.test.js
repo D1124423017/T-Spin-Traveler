@@ -86,6 +86,24 @@ const metaUpgradeIcons = [
   "assets/ui/meta_upgrades/meta_upgrade_guard.png",
 ];
 
+const upgradeTypeIcons = [
+  "assets/ui/upgrades/upgrade_icon_attack.png",
+  "assets/ui/upgrades/upgrade_icon_defense.png",
+  "assets/ui/upgrades/upgrade_icon_survival.png",
+  "assets/ui/upgrades/upgrade_icon_guard.png",
+  "assets/ui/upgrades/upgrade_icon_combo.png",
+  "assets/ui/upgrades/upgrade_icon_spin.png",
+  "assets/ui/upgrades/upgrade_icon_garbage.png",
+  "assets/ui/upgrades/upgrade_icon_rift.png",
+];
+
+const upgradeCardFrames = [
+  "assets/ui/relic_cards/upgrade_card_common.png",
+  "assets/ui/relic_cards/upgrade_card_rare.png",
+  "assets/ui/relic_cards/upgrade_card_relic.png",
+  "assets/ui/relic_cards/upgrade_card_legendary.png",
+];
+
 describe("image assets", () => {
   it("registers only existing image files", () => {
     const source = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
@@ -144,6 +162,18 @@ describe("image assets", () => {
   it("keeps generated Rift Energy and meta upgrade icons as 512px alpha PNGs", () => {
     for (const icon of metaUpgradeIcons) {
       expect(readPngInfo(icon)).toEqual({ width: 512, height: 512, colorType: 6 });
+    }
+  });
+
+  it("keeps upgrade type icons as 512px alpha PNGs", () => {
+    for (const icon of upgradeTypeIcons) {
+      expect(readPngInfo(icon)).toEqual({ width: 512, height: 512, colorType: 6 });
+    }
+  });
+
+  it("keeps upgrade card frames at the in-game card ratio with alpha", () => {
+    for (const frame of upgradeCardFrames) {
+      expect(readPngInfo(frame)).toEqual({ width: 512, height: 768, colorType: 6 });
     }
   });
 });

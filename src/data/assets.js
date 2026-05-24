@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-05-25-rift-energy-meta";
+export const ASSET_VERSION = "2026-05-25-upgrade-ui";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -147,6 +147,17 @@ export const upgradeCardFrames = {
   rare: registerImageAsset("upgrade-card-frame-rare", "assets/ui/relic_cards/upgrade_card_rare.png"),
   relic: registerImageAsset("upgrade-card-frame-relic", "assets/ui/relic_cards/upgrade_card_relic.png"),
   legendary: registerImageAsset("upgrade-card-frame-legendary", "assets/ui/relic_cards/upgrade_card_legendary.png"),
+};
+
+export const upgradeTypeIcons = {
+  attack: registerImageAsset("upgrade-type-icon-attack", "assets/ui/upgrades/upgrade_icon_attack.png"),
+  defense: registerImageAsset("upgrade-type-icon-defense", "assets/ui/upgrades/upgrade_icon_defense.png"),
+  survival: registerImageAsset("upgrade-type-icon-survival", "assets/ui/upgrades/upgrade_icon_survival.png"),
+  guard: registerImageAsset("upgrade-type-icon-guard", "assets/ui/upgrades/upgrade_icon_guard.png"),
+  combo: registerImageAsset("upgrade-type-icon-combo", "assets/ui/upgrades/upgrade_icon_combo.png"),
+  spin: registerImageAsset("upgrade-type-icon-spin", "assets/ui/upgrades/upgrade_icon_spin.png"),
+  garbage: registerImageAsset("upgrade-type-icon-garbage", "assets/ui/upgrades/upgrade_icon_garbage.png"),
+  rift: registerImageAsset("upgrade-type-icon-rift", "assets/ui/upgrades/upgrade_icon_rift.png"),
 };
 
 export const legendaryUpgradeEmblems = {

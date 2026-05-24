@@ -34,6 +34,7 @@ export const ENEMIES = [
     artRect: { x: 118, y: 118, w: 360, h: 230 },
     artDraw: { x: -144, y: -150, w: 288, h: 236 },
     artKey: "vine-hopper",
+    artFacing: "right",
   },
   {
     id: "mushroom",
