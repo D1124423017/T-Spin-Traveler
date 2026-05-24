@@ -5430,10 +5430,16 @@ function drawHeroSprite(hit) {
 }
 
 function drawHeroIdleBase(context = "battle") {
-  if (context === "menu" && isImageReady(noaMenuShowcaseArt)) {
-    drawImageContain(noaMenuShowcaseArt, -170, -328, 340, 510);
-  } else if (context !== "menu" && isImageReady(noaBattleIdleArt)) {
+  if (context === "menu") {
+    if (drawMenuHeroIdleSprite(getMenuIdlePose(), performance.now())) return;
+    if (isImageReady(noaMenuShowcaseArt)) {
+      drawImageContain(noaMenuShowcaseArt, -170, -328, 340, 510);
+      return;
+    }
+  }
+  if (context !== "menu" && isImageReady(noaBattleIdleArt)) {
     drawImageContain(noaBattleIdleArt, -138, -236, 276, 414);
+    return;
   } else if (isImageReady(rosterArt)) {
     drawRosterSprite("noa", -118, -214, 236, 402);
   } else if (isImageReady(heroIdleArt)) {
@@ -8105,6 +8111,25 @@ function drawMenuHeroInteractionGlow(motion, now) {
   ctx.restore();
 }
 
+function getMenuHeroIdleConfig(pose) {
+  return pose?.id === "idleC"
+    ? MENU_HERO_SPECIAL_ANIMATIONS.meditate
+    : MENU_HERO_SPECIAL_ANIMATIONS.cube;
+}
+
+function drawMenuHeroIdleSprite(pose = getMenuIdlePose(), now = performance.now(), alpha = 1) {
+  const config = getMenuHeroIdleConfig(pose);
+  if (!config || !isImageReady(config.image)) return false;
+  const duration = getAnimationDuration(config) || config.frames.length * config.frameMs;
+  const elapsed = duration > 0 ? (now - state.menuSpecialIdleStartedAt) % duration : 0;
+  const draw = alignDrawBoxToBaseline(config.draw, CHARACTER_BASELINES.menu.localY);
+  ctx.save();
+  ctx.globalAlpha *= alpha;
+  drawSpriteAnimationFrame(config, elapsed, draw.x, draw.y, draw.w, draw.h);
+  ctx.restore();
+  return true;
+}
+
 function drawMenuHeroDialogueBubble() {
   const interaction = state.menuHeroInteraction;
   const now = performance.now();
@@ -8188,7 +8213,6 @@ function drawMenuHeroShowcase() {
   const pose = getMenuIdlePose(now);
   const motion = getMenuIdleMotion(pose, now);
   const interaction = getMenuHeroInteractionMotion(now);
-  const specialIdle = null;
   const hero = UI_LAYOUT.menuHero;
   const anchorX = hero.x;
   const anchorY = hero.y;
@@ -8199,23 +8223,19 @@ function drawMenuHeroShowcase() {
   ctx.scale(hero.scale * motion.scaleX * interaction.scale, hero.scale * motion.scaleY * interaction.scale);
   drawCharacterShadow(0, CHARACTER_BASELINES.menu.localY, CHARACTER_BASELINES.menu.shadowW + motion.shadow + interaction.shadow, "#6de8ff");
   drawMenuHeroInteractionGlow(interaction, now);
-  if (specialIdle) {
-    drawMenuSpecialIdleFrame(specialIdle);
-  } else {
-    if (motion.afterimage > 0.02) {
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = motion.afterimage;
-      ctx.translate(-motion.x * 0.55 - 3, 2);
-      ctx.scale(1.01, 1);
-      drawHeroIdleBase("menu");
-      ctx.restore();
-    }
+  if (motion.afterimage > 0.02) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = motion.afterimage;
+    ctx.translate(-motion.x * 0.55 - 3, 2);
+    ctx.scale(1.01, 1);
     drawHeroIdleBase("menu");
-    drawMenuCloakSway(motion, now);
-    drawMenuWeaponPulse(motion, now);
-    drawMenuEyeGlow(motion, now);
+    ctx.restore();
   }
+  drawHeroIdleBase("menu");
+  drawMenuCloakSway(motion, now);
+  drawMenuWeaponPulse(motion, now);
+  drawMenuEyeGlow(motion, now);
   drawMenuIdleAura(motion, now);
   ctx.restore();
 }
