@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-05-22-noa-standalone-art";
+export const ASSET_VERSION = "2026-05-24-music-unlock-fix";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -71,6 +71,11 @@ export function registerAudioAsset(id, path, options = {}) {
   ASSET_REGISTRY.audio.push(record);
   audioElement.preload = "auto";
   audioElement.loop = Boolean(options.loop);
+  const markLoaded = () => {
+    if (record.status !== "error") record.status = "loaded";
+  };
+  audioElement.addEventListener("loadeddata", markLoaded, { once: true });
+  audioElement.addEventListener("canplay", markLoaded, { once: true });
   audioElement.addEventListener("canplaythrough", () => {
     record.status = "loaded";
   }, { once: true });

@@ -1,4 +1,5 @@
 import {
+  ASSET_REGISTRY,
   BACKGROUND_STAGES,
   BOSS_BACKGROUND_STAGE,
   enemyAttackSheets,
@@ -176,6 +177,7 @@ const audio = {
   sfxGain: null,
   currentSfxBus: null,
   musicTimer: null,
+  musicStepTimer: null,
   step: 0,
   energy: 0,
   targetEnergy: 0,
@@ -201,9 +203,17 @@ const audio = {
   musicNextRotationAt: 0,
   musicLastTrackByStage: {},
   musicFallbackWarned: new Set(),
+  musicPlayBlockedWarned: new Set(),
   lastLoopSyncAt: 0,
 };
 
+const AUDIO_SETTINGS_REVISION = 5;
+const DEFAULT_AUDIO_SETTINGS = {
+  muted: false,
+  masterVolume: 1,
+  musicVolume: 0.92,
+  sfxVolume: 0.78,
+};
 const MUSIC_BPM = 105;
 const MUSIC_STEP_MS = 60000 / (MUSIC_BPM * 4);
 const MUSIC_ROOT = 146.83; // D minor, stable fantasy battle color.
@@ -581,7 +591,7 @@ const UI_LAYOUT = {
   playerStage: { x: 18, y: 188, w: 380, h: 392 },
   enemyStage: { x: 858, y: 246, w: 410, h: 320 },
   boardFrame: { x: BOARD_X - 18, y: BOARD_Y - 18, w: COLS * TILE + 36, h: ROWS * TILE + 36 },
-  menuHero: { x: 430, y: 456, scale: 1.0 },
+  menuHero: { x: 350, y: 540, scale: 0.68 },
   menu: {
     x: 804,
     y: 96,
@@ -614,6 +624,43 @@ const UI_LAYOUT = {
     "screenMute",
   ],
 };
+
+const MENU_HERO_DIALOGUE_KEYS = {
+  hover: ["menuHeroHover1", "menuHeroHover2", "menuHeroHover3"],
+  click: ["menuHeroClick1", "menuHeroClick2", "menuHeroClick3"],
+};
+
+const MENU_HERO_DIALOGUE_MS = {
+  hover: 2600,
+  click: 3400,
+};
+
+const CHARACTER_BASELINES = {
+  player: {
+    groundY: UI_LAYOUT.playerStage.y + 360,
+    localY: 120,
+    scale: 1.1,
+    glowRadius: 158,
+    sigilRadius: 122,
+    shadowW: 116,
+    animationScale: 1.32,
+    animationBottomOffset: 10,
+  },
+  enemy: {
+    groundY: UI_LAYOUT.enemyStage.y + 358,
+    localY: 104,
+    scale: 1.32,
+    glowRadius: 184,
+    sigilRadius: 150,
+    shadowW: 140,
+  },
+  menu: {
+    localY: 116,
+    shadowW: 118,
+  },
+};
+
+const SPRITE_FRAME_CROP_INSET = 2;
 
 const SETTINGS_TABS = ["controls", "handling", "audio", "language", "feedback"];
 
@@ -998,6 +1045,18 @@ const state = {
   pauseView: "menu",
   bindingAction: null,
   menuSpecialIdleStartedAt: performance.now(),
+  menuHeroInteraction: {
+    hovered: false,
+    hoverStartedAt: 0,
+    actionKind: "",
+    actionStartedAt: 0,
+    actionUntil: 0,
+    lineKey: "",
+    lineKind: "",
+    lineStartedAt: 0,
+    lineUntil: 0,
+    lineIndex: 0,
+  },
   language: "zh",
   controls: normalizeControlsMap(DEFAULT_CONTROLS),
   tuning: { ...DEFAULT_TUNING },
@@ -1105,7 +1164,7 @@ function saveGame() {
       musicVolume: audio.musicVolume,
       sfxVolume: audio.sfxVolume,
       muted: audio.muted,
-      audioRevision: 4,
+      audioRevision: AUDIO_SETTINGS_REVISION,
       language: state.language,
       controls: serializeControls(state.controls),
       tuning: { ...state.tuning },
@@ -1118,10 +1177,17 @@ function saveGame() {
 
 function applySavedSettings() {
   const settings = state.save.settings || {};
-  if (typeof settings.masterVolume === "number") audio.masterVolume = settings.masterVolume;
-  if (typeof settings.musicVolume === "number") audio.musicVolume = settings.musicVolume;
-  if (typeof settings.sfxVolume === "number") audio.sfxVolume = settings.sfxVolume;
-  if (typeof settings.muted === "boolean") audio.muted = settings.muted;
+  const resetLegacySilentAudio = shouldResetLegacySilentAudio(settings);
+  audio.masterVolume = resetLegacySilentAudio
+    ? DEFAULT_AUDIO_SETTINGS.masterVolume
+    : readSavedVolume(settings.masterVolume, DEFAULT_AUDIO_SETTINGS.masterVolume);
+  audio.musicVolume = resetLegacySilentAudio
+    ? DEFAULT_AUDIO_SETTINGS.musicVolume
+    : readSavedVolume(settings.musicVolume, DEFAULT_AUDIO_SETTINGS.musicVolume);
+  audio.sfxVolume = readSavedVolume(settings.sfxVolume, DEFAULT_AUDIO_SETTINGS.sfxVolume);
+  audio.muted = resetLegacySilentAudio
+    ? DEFAULT_AUDIO_SETTINGS.muted
+    : typeof settings.muted === "boolean" ? settings.muted : DEFAULT_AUDIO_SETTINGS.muted;
   if (settings.language === "en" || settings.language === "zh") state.language = settings.language;
   state.controls = normalizeControlsMap(settings.controls || DEFAULT_CONTROLS);
   state.tuning = { ...DEFAULT_TUNING, ...(settings.tuning || {}) };
@@ -1129,6 +1195,16 @@ function applySavedSettings() {
   if (typeof settings.pause === "string") state.controls.pause = normalizeControlKeys(settings.pause);
   applyAudioSettings();
   syncControlHints();
+}
+
+function readSavedVolume(value, fallback) {
+  return Number.isFinite(value) ? clamp(value, 0, 1) : fallback;
+}
+
+function shouldResetLegacySilentAudio(settings) {
+  const revision = Number.isFinite(settings.audioRevision) ? settings.audioRevision : 0;
+  if (revision >= AUDIO_SETTINGS_REVISION) return false;
+  return settings.muted === true || settings.masterVolume === 0 || settings.musicVolume === 0;
 }
 
 function refillQueue() {
@@ -3958,7 +4034,10 @@ function releaseHorizontal(dir) {
 
 function unlockAudio() {
   if (audio.ctx) {
-    if (audio.ctx.state === "suspended") audio.ctx.resume();
+    if (audio.ctx.state === "suspended") {
+      audio.ctx.resume().then(updateMusicPlayback).catch(() => {});
+    }
+    startMusic();
     return;
   }
   const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -3972,6 +4051,9 @@ function unlockAudio() {
   audio.sfxGain.connect(audio.master);
   audio.master.connect(audio.ctx.destination);
   startMusic();
+  if (audio.ctx.state === "suspended") {
+    audio.ctx.resume().then(updateMusicPlayback).catch(() => {});
+  }
 }
 
 function applyAudioSettings() {
@@ -3982,10 +4064,15 @@ function applyAudioSettings() {
 }
 
 function startMusic() {
-  if (!audio.ctx || audio.musicTimer) return;
-  audio.step = 0;
-  updateMusicPlayback();
-  audio.musicTimer = window.setInterval(updateMusicPlayback, 250);
+  if (!audio.ctx) return;
+  if (!audio.musicTimer) {
+    audio.step = 0;
+    updateMusicPlayback();
+    audio.musicTimer = window.setInterval(updateMusicPlayback, 250);
+  }
+  if (!audio.musicStepTimer) {
+    audio.musicStepTimer = window.setInterval(playMusicStep, MUSIC_STEP_MS);
+  }
 }
 
 function setupMusicLoopSources() {
@@ -4090,9 +4177,7 @@ function updateMusicPlayback() {
     const targetVolume = isTarget ? (stage === "boss" ? 0.84 : 0.76) : 0;
     element.volume += (targetVolume - element.volume) * MUSIC_LOOP_FADE_SMOOTHING;
     if (targetVolume > 0.01 && element.paused) {
-      element.play().catch(() => {
-        // Browser autoplay may block until the next user gesture; gameplay continues without music.
-      });
+      playMusicLoopElement(key, element);
     }
     if (element.volume < 0.01 && targetVolume <= 0.01 && !element.paused) element.pause();
   }
@@ -4106,8 +4191,33 @@ function updateMusicPlayback() {
   }
 }
 
+function playMusicLoopElement(key, element) {
+  const playPromise = element.play();
+  if (!playPromise || typeof playPromise.then !== "function") return;
+  playPromise
+    .then(() => {
+      audio.musicPlayBlockedWarned.delete(key);
+    })
+    .catch((error) => {
+      if (!audio.musicPlayBlockedWarned.has(key)) {
+        audio.musicPlayBlockedWarned.add(key);
+        console.warn(`[T-Spin Traveler] Music loop playback blocked: ${key}`, error);
+      }
+    });
+}
+
+function hasAudibleMusicLoop() {
+  if (!audio.currentMusicLoopKey || audio.muted || audio.masterVolume <= 0 || audio.musicVolume <= 0) return false;
+  const element = musicLoopAssets[audio.currentMusicLoopKey];
+  return Boolean(element && !element.paused && element.readyState > 0 && element.volume > 0.02);
+}
+
 function playMusicStep() {
   if (!audio.ctx || audio.muted) return;
+  if (hasAudibleMusicLoop()) {
+    audio.step += 1;
+    return;
+  }
   if (audio.musicVolume <= 0) {
     audio.step += 1;
     return;
@@ -5173,6 +5283,38 @@ function drawCornerGlyph(x, y, color) {
   ctx.restore();
 }
 
+function getBaselineAnchorY(groundY, localBaselineY, scale = 1) {
+  return groundY - localBaselineY * scale;
+}
+
+function scaleAroundBaseline(scaleX, scaleY, localBaselineY) {
+  ctx.translate(0, localBaselineY);
+  ctx.scale(scaleX, scaleY);
+  ctx.translate(0, -localBaselineY);
+}
+
+function scaleDrawBoxFromBottom(draw, scale = 1) {
+  if (scale === 1) return { ...draw };
+  const centerX = draw.x + draw.w / 2;
+  const bottomY = draw.y + draw.h;
+  const w = draw.w * scale;
+  const h = draw.h * scale;
+  return {
+    x: centerX - w / 2,
+    y: bottomY - h,
+    w,
+    h,
+  };
+}
+
+function alignDrawBoxToBaseline(draw, localBaselineY, options = {}) {
+  const scaled = scaleDrawBoxFromBottom(draw, options.scale || 1);
+  return {
+    ...scaled,
+    y: localBaselineY + (options.bottomOffset || 0) - scaled.h,
+  };
+}
+
 function drawPlayer() {
   const hit = state.playerHit > 0;
   const playerAttack = state.attacks.find((attack) => attack.type === "player");
@@ -5185,18 +5327,24 @@ function drawPlayer() {
   drawGuardMeter(left, panel.y + 122, innerW);
   drawBuildChip(left, panel.y + 156, innerW);
   ctx.save();
-  drawStageGlow(stage.x + stage.w / 2, stage.y + 322, 164, "#6de8ff");
-  drawPresentationSigil(stage.x + stage.w / 2, stage.y + 318, 128, "#6de8ff");
-  ctx.translate(stage.x + stage.w / 2, stage.y + 228);
+  const pose = CHARACTER_BASELINES.player;
+  const centerX = stage.x + stage.w / 2;
+  const anchorY = getBaselineAnchorY(pose.groundY, pose.localY, pose.scale);
+  drawStageGlow(centerX, pose.groundY, pose.glowRadius, "#6de8ff");
+  drawPresentationSigil(centerX, pose.groundY - 4, pose.sigilRadius, "#6de8ff");
+  ctx.translate(centerX, anchorY);
+  ctx.scale(pose.scale, pose.scale);
+  drawCharacterShadow(0, pose.localY, pose.shadowW, "#6de8ff");
+
+  ctx.save();
   if (hit) ctx.translate(-10, 0);
-  const bob = Math.sin(performance.now() * 0.0025) * 4;
+  const bob = Math.sin(performance.now() * 0.0025) * 1.2;
   const attackMotion = playerAttack ? Math.sin((playerAttack.life / playerAttack.duration) * Math.PI) * 10 : 0;
   ctx.translate(attackMotion, bob);
-  if (hit) ctx.scale(1.08, 0.92);
-  ctx.scale(1.1, 1.1);
-  drawCharacterShadow(0, 170, 128, "#6de8ff");
+  if (hit) scaleAroundBaseline(1.08, 0.92, pose.localY);
   drawHeroSprite(hit);
   if (playerAttack) drawNoaAttackPose(playerAttack);
+  ctx.restore();
   ctx.restore();
 }
 
@@ -5322,7 +5470,10 @@ function drawHeroAnimationFrame() {
   }
   const frameIndex = getAnimationFrameInfo(config, elapsed).frameIndex;
   if (isImageReady(config.image)) {
-    const draw = config.draw || { x: -132, y: -222, w: 264, h: 410 };
+    const draw = alignDrawBoxToBaseline(config.draw || { x: -132, y: -222, w: 264, h: 410 }, CHARACTER_BASELINES.player.localY, {
+      scale: CHARACTER_BASELINES.player.animationScale,
+      bottomOffset: CHARACTER_BASELINES.player.animationBottomOffset,
+    });
     drawSpriteAnimationFrame(config, elapsed, draw.x, draw.y, draw.w, draw.h);
   } else {
     drawFallbackHeroAttackAnimation(state.heroAnimation.kind, elapsed / state.heroAnimation.duration, frameIndex);
@@ -5453,20 +5604,21 @@ function drawSpriteAnimationFrame(config, elapsed, x, y, w, h) {
   const previousFrame = config.frames[Math.max(0, frameIndex - 1)];
   const nextFrame = config.frames[Math.min(config.frames.length - 1, frameIndex + 1)];
   const motion = String(config.id || "").startsWith("enemy") ? 7 : 10;
-  if (previousFrame !== currentFrame && local < 0.42) {
+  const blendFrames = config.blendFrames === true;
+  if (blendFrames && previousFrame !== currentFrame && local < 0.42) {
     const ghostAlpha = (1 - local / 0.42) * 0.18;
     drawSpriteSheetFrame(config, previousFrame, x - motion * ghostAlpha, y, w, h, ghostAlpha);
   }
   drawSpriteSheetFrame(config, currentFrame, x, y, w, h);
   const blend = smoothstep(0.5, 1, local);
-  if (blend > 0 && nextFrame !== currentFrame) {
+  if (blendFrames && blend > 0 && nextFrame !== currentFrame) {
     drawSpriteSheetFrame(config, nextFrame, x + motion * 0.04 * blend, y, w, h, blend * 0.48);
   }
 }
 
 function drawSpriteSheetFrame(config, frame, x, y, w, h, alpha = 1) {
   const img = config.image;
-  const rect = getSpriteFrameRect(config, frame);
+  const rect = insetSpriteFrameRect(getSpriteFrameRect(config, frame), img);
   const keyed = getKeyedSpriteFrame(config, frame, rect);
   ctx.save();
   ctx.globalAlpha *= alpha;
@@ -5476,6 +5628,18 @@ function drawSpriteSheetFrame(config, frame, x, y, w, h, alpha = 1) {
     drawImageCropContain(img, rect.x, rect.y, rect.w, rect.h, x, y, w, h);
   }
   ctx.restore();
+}
+
+function insetSpriteFrameRect(rect, img) {
+  const inset = Math.min(SPRITE_FRAME_CROP_INSET, rect.w / 8, rect.h / 8);
+  if (inset <= 0) return { ...rect };
+  const maxW = img?.naturalWidth || rect.x + rect.w;
+  const maxH = img?.naturalHeight || rect.y + rect.h;
+  const x = clamp(rect.x + inset, 0, Math.max(0, maxW - 1));
+  const y = clamp(rect.y + inset, 0, Math.max(0, maxH - 1));
+  const w = Math.max(1, Math.min(rect.w - inset * 2, maxW - x));
+  const h = Math.max(1, Math.min(rect.h - inset * 2, maxH - y));
+  return { x, y, w, h };
 }
 
 function getSpriteFrameRect(config, frame) {
@@ -5866,18 +6030,24 @@ function drawEnemy() {
   drawEnemyIntent(left, intentY, getEnemyIntent(enemy), innerW);
   drawEnemyBehaviorChips(left, intentY + 96, enemy, innerW);
   ctx.save();
-  drawStageGlow(stage.x + stage.w / 2, stage.y + 288, 184, enemy.color);
-  drawPresentationSigil(stage.x + stage.w / 2, stage.y + 292, 150, enemy.color);
-  ctx.translate(stage.x + stage.w / 2, stage.y + 238);
+  const pose = CHARACTER_BASELINES.enemy;
+  const centerX = stage.x + stage.w / 2;
+  const anchorY = getBaselineAnchorY(pose.groundY, pose.localY, pose.scale);
+  drawStageGlow(centerX, pose.groundY, pose.glowRadius, enemy.color);
+  drawPresentationSigil(centerX, pose.groundY - 2, pose.sigilRadius, enemy.color);
+  ctx.translate(centerX, anchorY);
+  ctx.scale(pose.scale, pose.scale);
+  drawCharacterShadow(0, pose.localY, pose.shadowW, enemy.color);
+
+  ctx.save();
   if (hit) {
     const tremor = Math.sin(performance.now() * 0.085) * 4.2 * hitIntensity;
     const recoil = Math.cos(performance.now() * 0.052) * 2.4 * hitIntensity;
     ctx.translate(tremor, recoil);
   }
-  if (hit) ctx.scale(1.08, 0.92);
   const pulse = 1 + Math.sin(performance.now() * 0.006) * 0.018;
-  ctx.scale(pulse * 1.32, pulse * 1.32);
-  drawCharacterShadow(0, 116, 140, enemy.color);
+  scaleAroundBaseline(pulse, pulse, pose.localY);
+  if (hit) scaleAroundBaseline(1.08, 0.92, pose.localY);
   if (drawEnemyAttackAnimationFrame(enemy, hit)) {
     // Attack animations use the enemy concept sheet attack vignettes.
   } else if (drawEnemyConceptArt(enemy, hit)) {
@@ -5891,7 +6061,11 @@ function drawEnemy() {
       ctx.globalAlpha = 0.88;
     }
     const tall = ["vine", "king", "mist", "wisp", "sentinel"].includes(enemy.id);
-    drawRosterSprite(enemy.id, tall ? -132 : -126, tall ? -158 : -132, tall ? 264 : 252, tall ? 260 : 222);
+    const draw = alignDrawBoxToBaseline(
+      { x: tall ? -132 : -126, y: tall ? -158 : -132, w: tall ? 264 : 252, h: tall ? 260 : 222 },
+      CHARACTER_BASELINES.enemy.localY,
+    );
+    drawRosterSprite(enemy.id, draw.x, draw.y, draw.w, draw.h);
     ctx.restore();
   } else if (enemy.id !== "slime") {
     drawEnemySilhouette(enemy, hit);
@@ -5904,13 +6078,15 @@ function drawEnemy() {
       ctx.globalCompositeOperation = "lighter";
       ctx.globalAlpha = 0.88;
     }
-    drawImageContain(slimeArt, -122, -126, 244, 206);
+    const draw = alignDrawBoxToBaseline({ x: -122, y: -126, w: 244, h: 206 }, CHARACTER_BASELINES.enemy.localY);
+    drawImageContain(slimeArt, draw.x, draw.y, draw.w, draw.h);
     ctx.restore();
     drawEnemyOverlay(enemy);
   } else {
     drawSlimeFallback(hit);
   }
   if (hit) drawEnemyHitFlash(enemy, hitIntensity);
+  ctx.restore();
   ctx.restore();
 }
 
@@ -5981,7 +6157,7 @@ function drawEnemyConceptArt(enemy, hit) {
   const sheet = enemy.artSheet === "enemy02" ? enemyConceptSheetB : enemyConceptSheetA;
   if (!isImageReady(sheet) || !enemy.artRect) return false;
   const rect = enemy.artRect;
-  const draw = enemy.artDraw || { x: -130, y: -150, w: 260, h: 240 };
+  const draw = alignDrawBoxToBaseline(enemy.artDraw || { x: -130, y: -150, w: 260, h: 240 }, CHARACTER_BASELINES.enemy.localY);
   ctx.save();
   ctx.shadowColor = hexToRgba(enemy.color, hit ? 0.82 : 0.56);
   ctx.shadowBlur = hit ? 36 : 22;
@@ -6004,10 +6180,10 @@ function drawEnemyAttackAnimationFrame(enemy, hit) {
     state.enemyAnimation = null;
     return false;
   }
-  const draw = config.draw || enemy.artDraw || { x: -140, y: -150, w: 280, h: 240 };
+  const draw = alignDrawBoxToBaseline(config.draw || enemy.artDraw || { x: -140, y: -150, w: 280, h: 240 }, CHARACTER_BASELINES.enemy.localY);
   ctx.save();
   const anticipation = Math.sin((elapsed / state.enemyAnimation.duration) * Math.PI);
-  ctx.translate(anticipation * (enemy.id === "beetle" || enemy.id === "vine" ? -10 : 0), anticipation * -4);
+  ctx.translate(anticipation * (enemy.id === "beetle" || enemy.id === "vine" ? -10 : 0), 0);
   ctx.shadowColor = hexToRgba(enemy.color, hit ? 0.86 : 0.62);
   ctx.shadowBlur = hit ? 38 : 26;
   ctx.filter = config.noKeying ? "none" : enemy.filter;
@@ -6048,7 +6224,7 @@ function drawEnemyAttackAnimationFrame(enemy, hit) {
     draw.h,
     `${enemy.artKey || enemy.id}-attack-${frameIndex}`
   );
-  const blend = clamp((local - 0.68) / 0.32, 0, 1);
+  const blend = config.blendFrames === true ? clamp((local - 0.68) / 0.32, 0, 1) : 0;
   if (blend > 0 && nextFrameIndex !== frameIndex) {
     drawKeyedImageCropContain(
       sheet,
@@ -7778,6 +7954,7 @@ function drawStartMenuOverlay() {
   label(t("startTagline").toUpperCase(), 106, 210, 17, "#e0d2ff");
   ctx.shadowBlur = 0;
   wrapText(t("startWorldHint"), 106, 248, 372, 25, "rgba(245,248,255,0.78)", 15);
+  drawMenuHeroDialogueBubble();
 
   drawCard(m.x, m.y, m.w, m.h);
   drawCornerGlyph(m.x + m.w / 2, m.y - 2, "#9fb4ff");
@@ -7806,6 +7983,169 @@ function drawMainMenuScene() {
   ctx.moveTo(86, 642);
   ctx.bezierCurveTo(262, 602, 462, 674, 700, 614);
   ctx.stroke();
+  ctx.restore();
+}
+
+function isMenuHeroInteractive() {
+  return state.mode === "start" && state.assetLoadingDone && !state.settingsOpen;
+}
+
+function getMenuHeroHitRect() {
+  const hero = UI_LAYOUT.menuHero;
+  return {
+    x: hero.x - 150 * hero.scale,
+    y: hero.y - 328 * hero.scale,
+    w: 330 * hero.scale,
+    h: 452 * hero.scale,
+  };
+}
+
+function isPointOverMenuHero(x, y) {
+  const rect = getMenuHeroHitRect();
+  return isMenuHeroInteractive() && pointInRect(x, y, rect.x, rect.y, rect.w, rect.h);
+}
+
+function updateMenuHeroHoverFromPointer(x = state.pointer.x, y = state.pointer.y) {
+  const interaction = state.menuHeroInteraction;
+  const hovered = isPointOverMenuHero(x, y);
+  const now = performance.now();
+  if (hovered && !interaction.hovered) {
+    interaction.hoverStartedAt = now;
+    setMenuHeroDialogue("hover", now);
+  }
+  interaction.hovered = hovered;
+  if (!hovered && interaction.lineKind === "hover" && now > interaction.lineStartedAt + 500) {
+    interaction.lineUntil = Math.min(interaction.lineUntil, now + 520);
+  }
+  return hovered;
+}
+
+function setMenuHeroDialogue(kind, now = performance.now()) {
+  const keys = MENU_HERO_DIALOGUE_KEYS[kind] || MENU_HERO_DIALOGUE_KEYS.hover;
+  const interaction = state.menuHeroInteraction;
+  const index = interaction.lineIndex % keys.length;
+  interaction.lineIndex += 1;
+  interaction.lineKey = keys[index];
+  interaction.lineKind = kind;
+  interaction.lineStartedAt = now;
+  interaction.lineUntil = now + (MENU_HERO_DIALOGUE_MS[kind] || MENU_HERO_DIALOGUE_MS.hover);
+}
+
+function triggerMenuHeroAction(kind = "click") {
+  if (!isMenuHeroInteractive()) return false;
+  const now = performance.now();
+  const interaction = state.menuHeroInteraction;
+  interaction.hovered = true;
+  interaction.actionKind = kind;
+  interaction.actionStartedAt = now;
+  interaction.actionUntil = now + 1120;
+  setMenuHeroDialogue("click", now);
+  playSfx("hold");
+  return true;
+}
+
+function updateMenuHeroInteractionForFrame(now = performance.now()) {
+  const interaction = state.menuHeroInteraction;
+  if (!isMenuHeroInteractive()) {
+    interaction.hovered = false;
+    return;
+  }
+  if (interaction.actionKind && now >= interaction.actionUntil) interaction.actionKind = "";
+  if (interaction.hovered && now > interaction.actionUntil && now > interaction.lineUntil + 1300) {
+    setMenuHeroDialogue("hover", now);
+  }
+}
+
+function getMenuHeroInteractionMotion(now = performance.now()) {
+  updateMenuHeroInteractionForFrame(now);
+  const interaction = state.menuHeroInteraction;
+  const hoverPulse = interaction.hovered ? 0.5 + Math.sin(now * 0.008) * 0.5 : 0;
+  let action = 0;
+  if (interaction.actionUntil > now) {
+    const duration = Math.max(1, interaction.actionUntil - interaction.actionStartedAt);
+    const progress = clamp((now - interaction.actionStartedAt) / duration, 0, 1);
+    action = Math.sin(progress * Math.PI);
+  }
+  const intensity = Math.max(hoverPulse * 0.55, action);
+  return {
+    x: action * 8,
+    y: -action * 12 - hoverPulse * 1.6,
+    rotate: action * 0.052 + hoverPulse * 0.006,
+    scale: 1 + hoverPulse * 0.016 + action * 0.055,
+    shadow: hoverPulse * 7 + action * 11,
+    aura: intensity,
+  };
+}
+
+function drawMenuHeroInteractionGlow(motion, now) {
+  if (motion.aura <= 0.02) return;
+  const baseline = CHARACTER_BASELINES.menu.localY;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.globalAlpha = 0.18 + motion.aura * 0.36;
+  ctx.strokeStyle = motion.aura > 0.75 ? "#fff0a6" : "#7ef7ff";
+  ctx.shadowColor = ctx.strokeStyle;
+  ctx.shadowBlur = 16 + motion.aura * 18;
+  ctx.lineWidth = 1.6 + motion.aura * 1.4;
+  ctx.beginPath();
+  ctx.ellipse(0, baseline, 92 + motion.aura * 18, 20 + motion.aura * 5, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  for (let i = 0; i < 7; i += 1) {
+    const angle = now * 0.002 + i * 0.92;
+    const r = 76 + (i % 3) * 14 + motion.aura * 8;
+    const x = Math.cos(angle) * r;
+    const y = 8 + Math.sin(angle * 1.35) * 70;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle + Math.PI / 4);
+    ctx.fillStyle = i % 2 ? "#d7c2ff" : "#7ef7ff";
+    ctx.fillRect(-3, -3, 6, 6);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawMenuHeroDialogueBubble() {
+  const interaction = state.menuHeroInteraction;
+  const now = performance.now();
+  if (!interaction.lineKey || now >= interaction.lineUntil || !isMenuHeroInteractive()) return;
+  const age = now - interaction.lineStartedAt;
+  const remaining = interaction.lineUntil - now;
+  const alpha = Math.min(clamp(age / 180, 0, 1), clamp(remaining / 320, 0, 1));
+  if (alpha <= 0) return;
+
+  const hero = UI_LAYOUT.menuHero;
+  const bubbleW = state.language === "en" ? 342 : 316;
+  const bubbleH = state.language === "en" ? 86 : 76;
+  const x = clamp(hero.x + 116 * hero.scale, 96, UI_LAYOUT.menu.x - bubbleW - 28);
+  const y = clamp(hero.y - 260 * hero.scale, 286, 456);
+  const tailX = hero.x + 42 * hero.scale;
+  const tailY = hero.y - 120 * hero.scale;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.shadowColor = "rgba(126, 231, 255, 0.28)";
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = "rgba(5, 9, 17, 0.84)";
+  ctx.beginPath();
+  ctx.moveTo(x + 42, y + bubbleH - 2);
+  ctx.lineTo(x + 72, y + bubbleH - 2);
+  ctx.lineTo(tailX, tailY);
+  ctx.closePath();
+  ctx.fill();
+  roundedRect(x, y, bubbleW, bubbleH, 10, true, false);
+  ctx.shadowBlur = 0;
+  const glow = ctx.createLinearGradient(x, y, x + bubbleW, y + bubbleH);
+  glow.addColorStop(0, "rgba(126, 231, 255, 0.14)");
+  glow.addColorStop(0.55, "rgba(183, 146, 255, 0.13)");
+  glow.addColorStop(1, "rgba(255, 240, 166, 0.12)");
+  ctx.fillStyle = glow;
+  roundedRect(x + 5, y + 5, bubbleW - 10, bubbleH - 10, 8, true, false);
+  ctx.strokeStyle = interaction.lineKind === "click" ? "rgba(255, 240, 166, 0.62)" : "rgba(126, 231, 255, 0.44)";
+  ctx.lineWidth = 1.8;
+  roundedRect(x, y, bubbleW, bubbleH, 10, false, true);
+  label("NOA", x + 18, y + 24, 11, "#fff0a6");
+  wrapText(t(interaction.lineKey), x + 18, y + 48, bubbleW - 34, 19, "#f5f1e6", 13);
   ctx.restore();
 }
 
@@ -7847,16 +8187,18 @@ function drawMenuHeroShowcase() {
   const now = performance.now();
   const pose = getMenuIdlePose(now);
   const motion = getMenuIdleMotion(pose, now);
+  const interaction = getMenuHeroInteractionMotion(now);
   const specialIdle = null;
   const hero = UI_LAYOUT.menuHero;
   const anchorX = hero.x;
   const anchorY = hero.y;
   drawMenuIdleParticles(anchorX, anchorY, pose, motion, now);
   ctx.save();
-  ctx.translate(anchorX + motion.x, anchorY + motion.y);
-  ctx.rotate(motion.rotate);
-  ctx.scale(hero.scale * motion.scaleX, hero.scale * motion.scaleY);
-  drawCharacterShadow(0, 174, 146 + motion.shadow, "#6de8ff");
+  ctx.translate(anchorX + motion.x + interaction.x, anchorY + motion.y + interaction.y);
+  ctx.rotate(motion.rotate + interaction.rotate);
+  ctx.scale(hero.scale * motion.scaleX * interaction.scale, hero.scale * motion.scaleY * interaction.scale);
+  drawCharacterShadow(0, CHARACTER_BASELINES.menu.localY, CHARACTER_BASELINES.menu.shadowW + motion.shadow + interaction.shadow, "#6de8ff");
+  drawMenuHeroInteractionGlow(interaction, now);
   if (specialIdle) {
     drawMenuSpecialIdleFrame(specialIdle);
   } else {
@@ -7908,7 +8250,8 @@ function drawMenuSpecialIdleFrame(specialIdle) {
   }
   ctx.save();
   ctx.globalAlpha *= alpha;
-  drawSpriteSheetFrame(config, frame, draw.x, draw.y, draw.w, draw.h);
+  const alignedDraw = alignDrawBoxToBaseline(draw, CHARACTER_BASELINES.menu.localY);
+  drawSpriteSheetFrame(config, frame, alignedDraw.x, alignedDraw.y, alignedDraw.w, alignedDraw.h);
   ctx.restore();
 }
 
@@ -9891,6 +10234,8 @@ canvas.addEventListener("mousemove", (event) => {
   const p = getCanvasPoint(event);
   state.pointer.x = p.x;
   state.pointer.y = p.y;
+  const heroHovered = updateMenuHeroHoverFromPointer(p.x, p.y);
+  canvas.style.cursor = heroHovered ? "pointer" : "";
   if (state.pointer.down && state.pointer.dragging) {
     updateSliderFromPointer(state.pointer.dragging, p.x);
   }
@@ -9918,6 +10263,11 @@ canvas.addEventListener("mousedown", (event) => {
 
   if (state.mode === "start" && state.settingsOpen) {
     handleSettingsPointerDown(p.x, p.y, "start");
+    return;
+  }
+
+  if (state.mode === "start" && state.assetLoadingDone && !state.settingsOpen && isPointOverMenuHero(p.x, p.y)) {
+    triggerMenuHeroAction("click");
     return;
   }
 
