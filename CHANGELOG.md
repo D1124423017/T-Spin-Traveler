@@ -16,6 +16,10 @@ Notable project updates for T-Spin Traveler are recorded here.
 - `game.js` now delegates core Tetris, asset registry, and battle result flow to smaller modules while preserving desktop browser gameplay.
 - Documentation now states desktop browser only with keyboard controls required.
 
+### Removed
+
+- Obsolete promotional trailer artifacts and unused placeholder modules that were not imported by the game runtime or tests.
+
 ### Fixed
 
 - Spin detection no longer treats a single upward collision as enough for All-Spin; non-T pieces must be immobile in four directions, and O pieces do not trigger All-Spin.
@@ -39,7 +43,6 @@ Notable project updates for T-Spin Traveler are recorded here.
 - Audio v0.4 music layers for menu, early, mid, late, boss, and danger states.
 - NOA main-menu idle sprite sheets for cube and meditate idles.
 - Enemy-specific attack sprite sheets for Thorn Prowler, Wisp Moth, and Ruin Sentinel.
-- Promotional trailer template, render script, and tracked `trailer.mp4`.
 
 ### Changed
 

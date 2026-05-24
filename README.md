@@ -4,8 +4,6 @@
 
 Project docs: [Testing checklist](TESTING.md)｜[Changelog](CHANGELOG.md)
 
-Promo trailer assets: [trailer.html](trailer.html) and `trailer.mp4` are included for demo promotion and later editing.
-
 ---
 
 ## English Introduction
@@ -113,17 +111,26 @@ T-Spin-Traveler/
 │   └── balance.js
 ├── src/
 │   ├── main.js
-│   ├── audio/
 │   ├── combat/
-│   ├── core/
+│   │   ├── damage.js
+│   │   └── upgradeEffects.js
 │   ├── data/
-│   ├── render/
+│   │   ├── assets.js
+│   │   ├── enemies.js
+│   │   ├── i18n.js
+│   │   └── upgrades.js
 │   └── tetris/
+│       ├── board.js
+│       ├── hold.js
+│       ├── pieces.js
+│       └── spinDetection.js
 ├── tests/
+├── tools/
 ├── index.html
 ├── styles.css
 ├── game.js
 ├── package.json
+├── package-lock.json
 ├── TESTING.md
 ├── CHANGELOG.md
 ├── .gitignore

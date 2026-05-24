@@ -150,7 +150,7 @@ Use this checklist after every gameplay, UI, asset, audio, or deployment change.
 - [ ] `renders/` is ignored and not committed.
 - [ ] `.codex/` is ignored for future files; already tracked files should be reviewed separately.
 - [ ] `dist/`, `tmp/`, and large render output folders are ignored.
-- [ ] Confirm whether tracked `trailer.mp4` should remain in the repository before release.
+- [ ] Confirm no obsolete promotional render artifacts are tracked.
 - [ ] Confirm asset cache version before publishing GitHub Pages.
 
 ## Suggested Local Smoke Commands
