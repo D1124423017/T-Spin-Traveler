@@ -13,12 +13,12 @@ function readPngSize(relativePath) {
 }
 
 const runtimeAnimationSheets = [
-  { path: "assets/images/clean/hero_melee_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_ranged_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/hero_melee_combat_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/hero_ranged_combat_16_spritesheet_alpha.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/hero_combo_01_16_spritesheet_alpha.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/hero_combo_02_16_spritesheet_alpha.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/hero_combo_03_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_perfect_clear_ultimate_alpha.png", columns: 8, rows: 2 },
+  { path: "assets/images/clean/hero_ultimate_16_spritesheet_alpha.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/noa_menu_idle_cube_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/noa_menu_idle_meditate_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/enemy_attack_slime_16.png", columns: 4, rows: 4 },
@@ -42,6 +42,9 @@ const upgradedBackgrounds = [
 ];
 
 const legacyAnimationNames = [
+  "hero_melee_16_spritesheet_alpha.png",
+  "hero_ranged_16_spritesheet_alpha.png",
+  "hero_perfect_clear_ultimate_alpha.png",
   "Knife_alpha.png",
   "Gun_alpha.png",
   "hero_melee_20_spritesheet_alpha.png",
@@ -59,6 +62,12 @@ const legacyAnimationNames = [
   "enemy_attack_wisp_moth.png",
   "enemy_attack_ruin_sentinel.png",
   "enemy_attack_king_redesign.png",
+];
+
+const heroCombatSheets = [
+  "assets/images/clean/hero_melee_combat_16_spritesheet_alpha.png",
+  "assets/images/clean/hero_ranged_combat_16_spritesheet_alpha.png",
+  "assets/images/clean/hero_ultimate_16_spritesheet_alpha.png",
 ];
 
 describe("image assets", () => {
@@ -83,12 +92,31 @@ describe("image assets", () => {
     }
   });
 
+  it("uses the normalized hero combat frame grid", () => {
+    for (const sheet of heroCombatSheets) {
+      expect(readPngSize(sheet)).toEqual({ width: 3584, height: 2048 });
+    }
+  });
+
   it("does not keep legacy non-16 animation sheets in the clean asset folder", () => {
     const cleanDir = path.join(projectRoot, "assets/images/clean");
     const existing = new Set(fs.readdirSync(cleanDir));
     const leftovers = legacyAnimationNames.filter((name) => existing.has(name));
 
     expect(leftovers).toEqual([]);
+  });
+
+  it("does not register legacy hero combat sheet paths", () => {
+    const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
+    const legacyHeroSheets = [
+      "hero_melee_16_spritesheet_alpha.png",
+      "hero_ranged_16_spritesheet_alpha.png",
+      "hero_perfect_clear_ultimate_alpha.png",
+    ];
+
+    for (const sheetName of legacyHeroSheets) {
+      expect(assetsSource).not.toContain(sheetName);
+    }
   });
 
   it("keeps generated backgrounds at 1920 x 1080", () => {

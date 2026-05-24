@@ -86,7 +86,7 @@ const HERO_ANIMATIONS = {
     timing: [82, 72, 70, 64, 58, 52, 48, 48, 58, 82, 72, 66, 70, 78, 86, 90],
     hitFrame: 8,
     label: "Tetr Blade",
-    draw: { x: -160, y: -232, w: 320, h: 448 },
+    draw: { x: -336, y: -264, w: 672, h: 384 },
     noKeying: true,
   },
   ranged: {
@@ -99,7 +99,7 @@ const HERO_ANIMATIONS = {
     timing: [72, 68, 64, 60, 56, 52, 48, 48, 68, 78, 62, 58, 66, 76, 84, 88],
     hitFrame: 8,
     label: "Tetr Pistol",
-    draw: { x: -160, y: -232, w: 320, h: 448 },
+    draw: { x: -336, y: -264, w: 672, h: 384 },
     noKeying: true,
   },
   combo1: {
@@ -144,13 +144,13 @@ const HERO_ANIMATIONS = {
   ultimate: {
     id: "ultimate",
     image: heroUltimateSheet,
-    columns: 8,
-    rows: 2,
+    columns: 4,
+    rows: 4,
     frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     frameMs: 85,
     hitRatio: 0.55,
     label: "Perfect Clear Rift",
-    draw: { x: -168, y: -250, w: 336, h: 500 },
+    draw: { x: -352, y: -276, w: 704, h: 402 },
     noKeying: true,
   },
 };
@@ -625,7 +625,7 @@ const MENU_HERO_DIALOGUE_MS = {
 const MENU_HERO_IDLE_TRIGGER_COOLDOWN_MS = 5000;
 
 const STAGE_BASELINE_OFFSETS = {
-  player: { centerX: -6, groundY: 356 },
+  player: { centerX: -6, groundY: 384 },
   enemy: { centerX: 12, groundY: 352 },
 };
 
@@ -639,8 +639,8 @@ const CHARACTER_BASELINES = {
     sigilRadius: 116,
     sigilYOffset: -2,
     shadowW: 112,
-    animationScale: 1.14,
-    animationBottomOffset: 4,
+    animationScale: 1,
+    animationBottomOffset: 18,
   },
   enemy: {
     groundY: UI_LAYOUT.enemyStage.y + STAGE_BASELINE_OFFSETS.enemy.groundY,
@@ -5441,7 +5441,7 @@ function drawHeroIdleBase(context = "battle") {
     }
   }
   if (context !== "menu" && isImageReady(noaBattleIdleArt)) {
-    drawImageContain(noaBattleIdleArt, -138, -236, 276, 414);
+    drawImageContain(noaBattleIdleArt, -138, -224, 276, 414);
     return;
   } else if (isImageReady(rosterArt)) {
     drawRosterSprite("noa", -118, -214, 236, 402);
@@ -7459,9 +7459,9 @@ function drawPerfectClearFx() {
     ctx.globalAlpha = 0.96 * alpha;
     ctx.shadowColor = "rgba(199, 167, 255, 0.9)";
     ctx.shadowBlur = 36 + burst * 28;
-    const heroW = 430 + burst * 34;
-    const heroH = 532 + burst * 42;
-    drawSpriteAnimationFrame(HERO_ANIMATIONS.ultimate, elapsed, 72, 116 - burst * 16, heroW, heroH);
+    const heroW = 704 + burst * 44;
+    const heroH = 402 + burst * 26;
+    drawSpriteAnimationFrame(HERO_ANIMATIONS.ultimate, elapsed, 42, 202 - burst * 12, heroW, heroH);
     ctx.restore();
   }
 

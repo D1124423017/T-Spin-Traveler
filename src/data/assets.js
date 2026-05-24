@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-05-24-visual-assets-16f";
+export const ASSET_VERSION = "2026-05-25-hero-combat-sheets";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -133,12 +133,12 @@ export const noaBattleIdleArt = registerImageAsset("noa-battle-idle", "assets/im
 export const noaFeedbackBowArt = registerImageAsset("noa-feedback-bow", "assets/images/clean/noa_feedback_bow.png");
 export const menuIdleCubeSheet = registerImageAsset("menu-idle-cube-sheet-16", "assets/images/clean/noa_menu_idle_cube_16.png");
 export const menuIdleMeditateSheet = registerImageAsset("menu-idle-meditate-sheet-16", "assets/images/clean/noa_menu_idle_meditate_16.png");
-export const heroMeleeSheetV2 = registerImageAsset("hero-melee-sheet-16", "assets/images/clean/hero_melee_16_spritesheet_alpha.png");
-export const heroRangedSheetV2 = registerImageAsset("hero-ranged-sheet-16", "assets/images/clean/hero_ranged_16_spritesheet_alpha.png");
+export const heroMeleeSheetV2 = registerImageAsset("hero-melee-sheet-16", "assets/images/clean/hero_melee_combat_16_spritesheet_alpha.png");
+export const heroRangedSheetV2 = registerImageAsset("hero-ranged-sheet-16", "assets/images/clean/hero_ranged_combat_16_spritesheet_alpha.png");
 export const heroCombo1Sheet = registerImageAsset("hero-combo-1-sheet-16", "assets/images/clean/hero_combo_01_16_spritesheet_alpha.png");
 export const heroCombo2Sheet = registerImageAsset("hero-combo-2-sheet-16", "assets/images/clean/hero_combo_02_16_spritesheet_alpha.png");
 export const heroCombo3Sheet = registerImageAsset("hero-combo-3-sheet-16", "assets/images/clean/hero_combo_03_16_spritesheet_alpha.png");
-export const heroUltimateSheet = registerImageAsset("hero-ultimate-sheet", "assets/images/clean/hero_perfect_clear_ultimate_alpha.png");
+export const heroUltimateSheet = registerImageAsset("hero-ultimate-sheet", "assets/images/clean/hero_ultimate_16_spritesheet_alpha.png");
 export const enemyConceptSheetA = registerImageAsset("enemy-concept-sheet-a", "assets/images/clean/Enemy01_alpha.png");
 export const enemyConceptSheetB = registerImageAsset("enemy-concept-sheet-b", "assets/images/clean/Enemy02_alpha.png");
 
