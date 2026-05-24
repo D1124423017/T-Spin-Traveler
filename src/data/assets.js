@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-05-24-music-unlock-fix";
+export const ASSET_VERSION = "2026-05-24-visual-assets-16f";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -125,7 +125,6 @@ export const stageForestGateNightBg = registerImageAsset("stage-forest-gate-nigh
 export const stageArcaneRuinsMidBg = registerImageAsset("stage-arcane-ruins-mid", "assets/backgrounds/stage_arcane_ruins_mid.png");
 export const stageCorruptedForestLateBg = registerImageAsset("stage-corrupted-forest-late", "assets/backgrounds/stage_corrupted_forest_late.png");
 export const stageRiftBossBg = registerImageAsset("stage-rift-boss", "assets/backgrounds/stage_rift_boss.png");
-export const noaArt = registerImageAsset("noa-portrait", "assets/noa.png");
 export const slimeArt = registerImageAsset("forest-slime", "assets/forest-slime.png");
 export const rosterArt = registerImageAsset("character-roster", "assets/character-roster-v4-alpha.png");
 export const heroIdleArt = registerImageAsset("hero-idle-concept", "assets/images/clean/ET_Character_alpha.png");
@@ -134,9 +133,7 @@ export const noaBattleIdleArt = registerImageAsset("noa-battle-idle", "assets/im
 export const noaFeedbackBowArt = registerImageAsset("noa-feedback-bow", "assets/images/clean/noa_feedback_bow.png");
 export const menuIdleCubeSheet = registerImageAsset("menu-idle-cube-sheet-16", "assets/images/clean/noa_menu_idle_cube_16.png");
 export const menuIdleMeditateSheet = registerImageAsset("menu-idle-meditate-sheet-16", "assets/images/clean/noa_menu_idle_meditate_16.png");
-export const heroMeleeSheet = registerImageAsset("hero-melee-sheet", "assets/images/clean/Knife_alpha.png");
 export const heroMeleeSheetV2 = registerImageAsset("hero-melee-sheet-16", "assets/images/clean/hero_melee_16_spritesheet_alpha.png");
-export const heroRangedSheet = registerImageAsset("hero-ranged-sheet", "assets/images/clean/Gun_alpha.png");
 export const heroRangedSheetV2 = registerImageAsset("hero-ranged-sheet-16", "assets/images/clean/hero_ranged_16_spritesheet_alpha.png");
 export const heroCombo1Sheet = registerImageAsset("hero-combo-1-sheet-16", "assets/images/clean/hero_combo_01_16_spritesheet_alpha.png");
 export const heroCombo2Sheet = registerImageAsset("hero-combo-2-sheet-16", "assets/images/clean/hero_combo_02_16_spritesheet_alpha.png");
@@ -161,23 +158,14 @@ export const legendaryUpgradeEmblems = {
 };
 
 export const enemyAttackSheets = {
-  slime: registerImageAsset("enemy-attack-slime", "assets/images/clean/enemy_attack_slime_redesign.png"),
   slime16: registerImageAsset("enemy-attack-slime-16", "assets/images/clean/enemy_attack_slime_16.png"),
-  vine: registerImageAsset("enemy-attack-vine", "assets/images/clean/enemy_attack_vine_redesign.png"),
   vine16: registerImageAsset("enemy-attack-vine-16", "assets/images/clean/enemy_attack_vine_16.png"),
-  mushroom: registerImageAsset("enemy-attack-mushroom", "assets/images/clean/enemy_attack_mushroom_redesign.png"),
   mushroom16: registerImageAsset("enemy-attack-mushroom-16", "assets/images/clean/enemy_attack_mushroom_16.png"),
-  beetle: registerImageAsset("enemy-attack-beetle", "assets/images/clean/enemy_attack_beetle_redesign.png"),
   beetle16: registerImageAsset("enemy-attack-beetle-16", "assets/images/clean/enemy_attack_beetle_16.png"),
-  mist: registerImageAsset("enemy-attack-mist", "assets/images/clean/enemy_attack_mist_redesign.png"),
   mist16: registerImageAsset("enemy-attack-mist-16", "assets/images/clean/enemy_attack_mist_16.png"),
-  thorn: registerImageAsset("enemy-attack-thorn-prowler", "assets/images/clean/enemy_attack_thorn_prowler.png"),
   thorn16: registerImageAsset("enemy-attack-thorn-prowler-16", "assets/images/clean/enemy_attack_thorn_prowler_16.png"),
-  wisp: registerImageAsset("enemy-attack-wisp-moth", "assets/images/clean/enemy_attack_wisp_moth.png"),
   wisp16: registerImageAsset("enemy-attack-wisp-moth-16", "assets/images/clean/enemy_attack_wisp_moth_16.png"),
-  sentinel: registerImageAsset("enemy-attack-ruin-sentinel", "assets/images/clean/enemy_attack_ruin_sentinel.png"),
   sentinel16: registerImageAsset("enemy-attack-ruin-sentinel-16", "assets/images/clean/enemy_attack_ruin_sentinel_16.png"),
-  king: registerImageAsset("enemy-attack-king", "assets/images/clean/enemy_attack_king_redesign.png"),
   king16: registerImageAsset("enemy-attack-king-16", "assets/images/clean/enemy_attack_king_16.png"),
 };
 

@@ -11,9 +11,7 @@ import {
   heroCombo2Sheet,
   heroCombo3Sheet,
   heroIdleArt,
-  heroMeleeSheet,
   heroMeleeSheetV2,
-  heroRangedSheet,
   heroRangedSheetV2,
   heroUltimateSheet,
   isImageReady,
@@ -21,7 +19,6 @@ import {
   menuIdleCubeSheet,
   menuIdleMeditateSheet,
   musicLoopAssets,
-  noaArt,
   noaBattleIdleArt,
   noaFeedbackBowArt,
   noaMenuShowcaseArt,
@@ -77,18 +74,8 @@ function canvasFont(weight, size, text = "", forceDisplay = false) {
   return `${weight} ${size}px ${forceDisplay || shouldUseDisplayFont(text) ? DISPLAY_FONT_STACK : UI_FONT_STACK}`;
 }
 
-const HERO_FRAME_RECTS = [
-  { x: 0, y: 58, w: 362, h: 386 },
-  { x: 362, y: 58, w: 362, h: 386 },
-  { x: 724, y: 58, w: 362, h: 386 },
-  { x: 1086, y: 58, w: 362, h: 386 },
-  { x: 0, y: 592, w: 362, h: 390 },
-  { x: 362, y: 592, w: 362, h: 390 },
-  { x: 724, y: 592, w: 362, h: 390 },
-];
-
 const HERO_ANIMATIONS = {
-  // Replace frame rects here if a future spritesheet uses uneven cells.
+  // Runtime character animations are standardized to 16 frames.
   melee: {
     id: "melee",
     image: heroMeleeSheetV2,
@@ -637,24 +624,33 @@ const MENU_HERO_DIALOGUE_MS = {
 
 const MENU_HERO_IDLE_TRIGGER_COOLDOWN_MS = 5000;
 
+const STAGE_BASELINE_OFFSETS = {
+  player: { centerX: -6, groundY: 356 },
+  enemy: { centerX: 12, groundY: 352 },
+};
+
 const CHARACTER_BASELINES = {
   player: {
-    groundY: UI_LAYOUT.playerStage.y + 360,
+    groundY: UI_LAYOUT.playerStage.y + STAGE_BASELINE_OFFSETS.player.groundY,
+    centerOffsetX: STAGE_BASELINE_OFFSETS.player.centerX,
     localY: 120,
-    scale: 1.1,
-    glowRadius: 158,
-    sigilRadius: 122,
-    shadowW: 116,
-    animationScale: 1.32,
-    animationBottomOffset: 10,
+    scale: 1.08,
+    glowRadius: 150,
+    sigilRadius: 116,
+    sigilYOffset: -2,
+    shadowW: 112,
+    animationScale: 1.14,
+    animationBottomOffset: 4,
   },
   enemy: {
-    groundY: UI_LAYOUT.enemyStage.y + 358,
+    groundY: UI_LAYOUT.enemyStage.y + STAGE_BASELINE_OFFSETS.enemy.groundY,
+    centerOffsetX: STAGE_BASELINE_OFFSETS.enemy.centerX,
     localY: 104,
-    scale: 1.32,
-    glowRadius: 184,
-    sigilRadius: 150,
-    shadowW: 140,
+    scale: 1.28,
+    glowRadius: 176,
+    sigilRadius: 144,
+    sigilYOffset: -2,
+    shadowW: 134,
   },
   menu: {
     localY: 116,
@@ -662,7 +658,7 @@ const CHARACTER_BASELINES = {
   },
 };
 
-const SPRITE_FRAME_CROP_INSET = 2;
+const SPRITE_FRAME_CROP_INSET = 3;
 
 const SETTINGS_TABS = ["controls", "handling", "audio", "language", "feedback"];
 
@@ -5335,10 +5331,10 @@ function drawPlayer() {
   drawBuildChip(left, panel.y + 156, innerW);
   ctx.save();
   const pose = CHARACTER_BASELINES.player;
-  const centerX = stage.x + stage.w / 2;
+  const centerX = stage.x + stage.w / 2 + pose.centerOffsetX;
   const anchorY = getBaselineAnchorY(pose.groundY, pose.localY, pose.scale);
   drawStageGlow(centerX, pose.groundY, pose.glowRadius, "#6de8ff");
-  drawPresentationSigil(centerX, pose.groundY - 4, pose.sigilRadius, "#6de8ff");
+  drawPresentationSigil(centerX, pose.groundY + pose.sigilYOffset, pose.sigilRadius, "#6de8ff");
   ctx.translate(centerX, anchorY);
   ctx.scale(pose.scale, pose.scale);
   drawCharacterShadow(0, pose.localY, pose.shadowW, "#6de8ff");
@@ -5454,18 +5450,6 @@ function drawHeroIdleBase(context = "battle") {
     drawKeyedImageCropContain(heroIdleArt, 820, 1198, 178, 312, -114, -206, 228, 390, "idle-concept");
   } else if (isImageReady(HERO_ANIMATIONS.melee.image)) {
     drawSpriteSheetFrame(HERO_ANIMATIONS.melee, 0, -132, -222, 264, 410);
-  } else if (isImageReady(heroMeleeSheet)) {
-    drawSpriteSheetFrame({
-      id: "melee-fallback",
-      image: heroMeleeSheet,
-      columns: 4,
-      rows: 2,
-      frameRects: HERO_FRAME_RECTS,
-      frames: [0, 1, 2, 3, 4, 5, 6],
-      frameMs: 120,
-    }, 0, -132, -222, 264, 410);
-  } else if (isImageReady(noaArt)) {
-    drawImageContain(noaArt, -112, -210, 224, 392);
   } else {
     drawNoaFallback(false);
   }
@@ -5660,11 +5644,17 @@ function getSpriteFrameRect(config, frame) {
   const cols = config.columns;
   const cellW = config.image.naturalWidth / cols;
   const cellH = config.image.naturalHeight / config.rows;
+  const col = frame % cols;
+  const row = Math.floor(frame / cols);
+  const x0 = Math.round(col * cellW);
+  const y0 = Math.round(row * cellH);
+  const x1 = Math.round((col + 1) * cellW);
+  const y1 = Math.round((row + 1) * cellH);
   return {
-    x: (frame % cols) * cellW,
-    y: Math.floor(frame / cols) * cellH,
-    w: cellW,
-    h: cellH,
+    x: x0,
+    y: y0,
+    w: Math.max(1, x1 - x0),
+    h: Math.max(1, y1 - y0),
   };
 }
 
@@ -6044,10 +6034,10 @@ function drawEnemy() {
   drawEnemyBehaviorChips(left, intentY + 96, enemy, innerW);
   ctx.save();
   const pose = CHARACTER_BASELINES.enemy;
-  const centerX = stage.x + stage.w / 2;
+  const centerX = stage.x + stage.w / 2 + pose.centerOffsetX;
   const anchorY = getBaselineAnchorY(pose.groundY, pose.localY, pose.scale);
   drawStageGlow(centerX, pose.groundY, pose.glowRadius, enemy.color);
-  drawPresentationSigil(centerX, pose.groundY - 2, pose.sigilRadius, enemy.color);
+  drawPresentationSigil(centerX, pose.groundY + pose.sigilYOffset, pose.sigilRadius, enemy.color);
   ctx.translate(centerX, anchorY);
   ctx.scale(pose.scale, pose.scale);
   drawCharacterShadow(0, pose.localY, pose.shadowW, enemy.color);
@@ -6062,7 +6052,7 @@ function drawEnemy() {
   scaleAroundBaseline(pulse, pulse, pose.localY);
   if (hit) scaleAroundBaseline(1.08, 0.92, pose.localY);
   if (drawEnemyAttackAnimationFrame(enemy, hit)) {
-    // Attack animations use the enemy concept sheet attack vignettes.
+    // Enemy attack animations use the standardized 16-frame sheets.
   } else if (drawEnemyConceptArt(enemy, hit)) {
     // Project-local concept sheets are now the primary enemy source.
   } else if (isImageReady(rosterArt)) {

@@ -1,16 +1,11 @@
-Place the approved game assets here with these exact filenames:
+Project image asset notes:
 
-- `ET_Character.png`: Noa design/reference sheet. The game uses this as a fallback source.
-- `Knife.png`: 4 x 2 Noa melee attack sheet, read left-to-right, top row first.
-- `Gun.png`: 4 x 2 Noa ranged attack sheet, read left-to-right, top row first.
-- `hero_combo_attack_spritesheet.png`: 4 x 2 Noa melee combo attack sheet for 5 Combo milestone bursts.
-- `hero_combo_chain_spritesheet.png`: 4 x 3 Noa melee combo chain sheet. Each row is a different follow-up melee attack.
-- `hero_combo_01_spritesheet.png`: 4 x 2 Noa combo follow-up 1, eight frames.
-- `hero_combo_02_spritesheet.png`: 4 x 2 Noa combo follow-up 2, eight frames.
-- `hero_combo_03_spritesheet.png`: 4 x 2 Noa combo follow-up 3, eight frames.
-- `Enemy01.png`: Forest Realm I enemy concept sheet used for early enemy crops.
-- `Enemy02.png`: Forest Realm I expansion enemy concept sheet used for later enemy crops.
-- `enemy01_attack_spritesheet.png`: Generated 4 x 2 enemy attack concept sheet.
-- `enemy02_attack_spritesheet.png`: Generated 4 x 2 enemy attack concept sheet.
+- Runtime character and attack animations use 16-frame sprite sheets.
+- Current hero attack sheets are 4 x 4, read left-to-right and top-to-bottom.
+- Current menu idle sheets are 4 x 4, read left-to-right and top-to-bottom.
+- Current enemy attack sheets are 4 x 4, read left-to-right and top-to-bottom.
+- `hero_perfect_clear_ultimate_alpha.png` is 8 x 2, still 16 frames.
+- `Enemy01_alpha.png` and `Enemy02_alpha.png` are enemy concept crop sheets, not frame animations.
+- `ET_Character_alpha.png`, `noa_battle_idle.png`, `noa_menu_showcase.png`, and `noa_feedback_bow.png` are fallback or presentation art.
 
-If a future sheet uses uneven frame sizes, update `HERO_ANIMATIONS` and the crop helper in `game.js`.
+If a future animation asset is added, keep it at 16 frames and update the animation config in `game.js`.
