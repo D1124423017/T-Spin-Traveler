@@ -12,6 +12,15 @@ function readPngSize(relativePath) {
   };
 }
 
+function readPngInfo(relativePath) {
+  const buffer = fs.readFileSync(path.join(projectRoot, relativePath));
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20),
+    colorType: buffer.readUInt8(25),
+  };
+}
+
 const runtimeAnimationSheets = [
   { path: "assets/images/clean/hero_melee_combat_16_spritesheet_alpha.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/hero_ranged_combat_16_spritesheet_alpha.png", columns: 4, rows: 4 },
@@ -70,6 +79,13 @@ const heroCombatSheets = [
   "assets/images/clean/hero_ultimate_16_spritesheet_alpha.png",
 ];
 
+const metaUpgradeIcons = [
+  "assets/ui/icons/rift_energy_icon.png",
+  "assets/ui/meta_upgrades/meta_upgrade_hp.png",
+  "assets/ui/meta_upgrades/meta_upgrade_attack.png",
+  "assets/ui/meta_upgrades/meta_upgrade_guard.png",
+];
+
 describe("image assets", () => {
   it("registers only existing image files", () => {
     const source = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
@@ -122,6 +138,12 @@ describe("image assets", () => {
   it("keeps generated backgrounds at 1920 x 1080", () => {
     for (const background of upgradedBackgrounds) {
       expect(readPngSize(background)).toEqual({ width: 1920, height: 1080 });
+    }
+  });
+
+  it("keeps generated Rift Energy and meta upgrade icons as 512px alpha PNGs", () => {
+    for (const icon of metaUpgradeIcons) {
+      expect(readPngInfo(icon)).toEqual({ width: 512, height: 512, colorType: 6 });
     }
   });
 });

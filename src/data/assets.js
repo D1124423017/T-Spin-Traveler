@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-05-25-hero-combat-sheets";
+export const ASSET_VERSION = "2026-05-25-rift-energy-meta";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -155,6 +155,14 @@ export const legendaryUpgradeEmblems = {
   aegis_star_mirror: registerImageAsset("upgrade-emblem-aegis-star-mirror", "assets/ui/relic_cards/upgrade_emblem_aegis_star_mirror.png"),
   garbage_alchemy_core: registerImageAsset("upgrade-emblem-garbage-alchemy-core", "assets/ui/relic_cards/upgrade_emblem_garbage_alchemy_core.png"),
   perfect_rift_crown: registerImageAsset("upgrade-emblem-perfect-rift-crown", "assets/ui/relic_cards/upgrade_emblem_perfect_rift_crown.png"),
+};
+
+export const riftEnergyIcon = registerImageAsset("rift-energy-icon", "assets/ui/icons/rift_energy_icon.png");
+
+export const metaUpgradeIcons = {
+  hp: registerImageAsset("meta-upgrade-hp-icon", "assets/ui/meta_upgrades/meta_upgrade_hp.png"),
+  attack: registerImageAsset("meta-upgrade-attack-icon", "assets/ui/meta_upgrades/meta_upgrade_attack.png"),
+  guard: registerImageAsset("meta-upgrade-guard-icon", "assets/ui/meta_upgrades/meta_upgrade_guard.png"),
 };
 
 export const enemyAttackSheets = {

@@ -16,12 +16,14 @@ import {
   heroUltimateSheet,
   isImageReady,
   legendaryUpgradeEmblems,
+  metaUpgradeIcons,
   menuIdleCubeSheet,
   menuIdleMeditateSheet,
   musicLoopAssets,
   noaBattleIdleArt,
   noaFeedbackBowArt,
   noaMenuShowcaseArt,
+  riftEnergyIcon,
   rosterArt,
   slimeArt,
   upgradeCardFrames,
@@ -57,6 +59,16 @@ import {
   calculateDamage as calculateBaseDamage,
 } from "./src/combat/damage.js";
 import { applyUpgradeEffect } from "./src/combat/upgradeEffects.js";
+import {
+  META_UPGRADE_DEFS,
+  buyMetaUpgrade,
+  calculateRiftEnergyEarned,
+  getMetaBonuses,
+  getMetaUpgradeCost,
+  grantRiftEnergy,
+  loadMetaProgress,
+  saveMetaProgress,
+} from "./src/core/metaProgress.js";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -976,6 +988,8 @@ const state = {
   upgradeReady: false,
   stats: makeStats(),
   save: loadSave(),
+  metaProgress: loadMetaProgress(),
+  runStats: makeRunStats(),
   runFinalized: false,
   challenge: null,
   tutorial: null,
@@ -1038,6 +1052,7 @@ const state = {
   message: "",
   messageKey: "",
   messageVars: {},
+  metaUpgradeMessage: { key: "", vars: {}, until: 0 },
   settingsOpen: false,
   settingsTab: "controls",
   pauseView: "menu",
@@ -1129,6 +1144,19 @@ function makeStats() {
     bestHit: 0,
     damageSources: Object.fromEntries(DAMAGE_SOURCE_KEYS.map((key) => [key, 0])),
     rating: "GOOD",
+  };
+}
+
+function makeRunStats() {
+  return {
+    waveReached: 1,
+    normalEnemyKills: 0,
+    bossKills: 0,
+    perfectClearCount: 0,
+    spinCount: 0,
+    maxCombo: 0,
+    riftEnergyEarned: 0,
+    riftEnergySettled: false,
   };
 }
 
@@ -1321,6 +1349,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.upgradeTier = 0;
   state.upgradeReady = false;
   state.stats = makeStats();
+  state.runStats = makeRunStats();
   state.runFinalized = false;
   state.challenge = challengeId ? makeChallengeState(challengeId) : null;
   state.tutorial = null;
@@ -1383,6 +1412,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.message = "";
   state.messageKey = "";
   state.messageVars = {};
+  state.metaUpgradeMessage = { key: "", vars: {}, until: 0 };
   state.lastMoveWasRotate = false;
   state.lastRotationKind = null;
   state.lastKickIndex = null;
@@ -1398,9 +1428,18 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.hitStopMs = 0;
   audio.lastBossStingerWave = 0;
   resetInputRepeat();
+  applyMetaProgressToNewRun();
   refillQueue();
   spawnPiece();
   startBattleCountdown();
+}
+
+function applyMetaProgressToNewRun() {
+  state.metaProgress = loadMetaProgress();
+  const bonuses = getMetaBonuses(state.metaProgress);
+  state.playerMaxHp = PLAYER_MAX_HP + bonuses.hpBonus;
+  state.playerHp = state.playerMaxHp;
+  state.guard = Math.min(getEffectiveMaxGuard(), bonuses.guardBonus);
 }
 
 function startBattleCountdown() {
@@ -1617,6 +1656,7 @@ function lockPiece(fromHardDrop = false) {
 
   if (!fromHardDrop) playSfx("lock");
   const cleared = clearLines();
+  recordRunClearStats(cleared, spinType);
   applyBattle(cleared, piece.type, spinType);
   state.placed += 1;
   state.queueHex = Math.max(0, state.queueHex - 1);
@@ -1666,6 +1706,14 @@ function clearLines() {
   state.lastPerfectClear = isBoardEmpty();
   if (state.lastPerfectClear) state.perfectClears += 1;
   return result.cleared;
+}
+
+function recordRunClearStats(lines, spinType) {
+  if (!state.runStats) state.runStats = makeRunStats();
+  state.runStats.waveReached = Math.max(state.runStats.waveReached || 1, state.wave || 1);
+  state.runStats.maxCombo = Math.max(state.runStats.maxCombo || 0, state.combo || 0);
+  if (state.lastPerfectClear) state.runStats.perfectClearCount += 1;
+  if (lines > 0 && spinType) state.runStats.spinCount += 1;
 }
 
 function isBoardEmpty() {
@@ -2391,6 +2439,13 @@ function calculateDamage(context, snapshot) {
     const multiplier = 1 + state.upgrades.damageMultiplier;
     damage = Math.floor(damage * multiplier);
     multipliers.push({ key: "damageMultiplier", value: `x${multiplier.toFixed(2)}` });
+    sources.upgrade += damage - before;
+  }
+  const metaAttackMultiplier = getMetaBonuses(state.metaProgress).attackMultiplier;
+  if (damage > 0 && metaAttackMultiplier > 1) {
+    const before = damage;
+    damage = Math.floor(damage * metaAttackMultiplier);
+    multipliers.push({ key: "damageMetaAttack", value: `x${metaAttackMultiplier.toFixed(2)}` });
     sources.upgrade += damage - before;
   }
   if (state.lastPerfectClear) {
@@ -3510,6 +3565,7 @@ function checkBossPhaseTransition(beforeHp, afterHp) {
 function startNextWave() {
   const clearedBoss = state.enemyType.id === "king";
   const clearedMiniBoss = state.miniBoss;
+  recordRunEnemyDefeat(clearedBoss);
   state.defeated += 1;
   if (state.defeated >= RUN_MODES[state.runMode].targetWaves) {
     state.mode = "victory";
@@ -3559,6 +3615,13 @@ function startNextWave() {
   });
   triggerUpgradeIfReady(clearedBoss, clearedMiniBoss);
   playSfx("wave");
+}
+
+function recordRunEnemyDefeat(clearedBoss) {
+  if (!state.runStats) state.runStats = makeRunStats();
+  state.runStats.waveReached = Math.max(state.runStats.waveReached || 1, state.wave || 1);
+  if (clearedBoss) state.runStats.bossKills += 1;
+  else state.runStats.normalEnemyKills += 1;
 }
 
 function createUpgradeChoices(forceRelic = false, forceRare = false) {
@@ -3693,6 +3756,28 @@ function recordAcquiredRelic(upgrade) {
   });
 }
 
+function settleRunRiftEnergy() {
+  if (!state.runStats) state.runStats = makeRunStats();
+  if (state.runStats.riftEnergySettled) return state.runStats.riftEnergyEarned || 0;
+  state.runStats.waveReached = Math.max(
+    state.runStats.waveReached || 1,
+    state.stats?.peakWave || 1,
+    state.wave || 1,
+  );
+  state.runStats.maxCombo = Math.max(state.runStats.maxCombo || 0, state.stats?.maxCombo || 0);
+  state.runStats.perfectClearCount = Math.max(
+    state.runStats.perfectClearCount || 0,
+    state.stats?.perfectClears || 0,
+  );
+  state.runStats.spinCount = Math.max(state.runStats.spinCount || 0, state.stats?.spins || 0);
+  const earned = calculateRiftEnergyEarned(state.runStats);
+  state.metaProgress = grantRiftEnergy(state.metaProgress, earned);
+  saveMetaProgress(state.metaProgress);
+  state.runStats.riftEnergyEarned = earned;
+  state.runStats.riftEnergySettled = true;
+  return earned;
+}
+
 function finishRun(outcome) {
   if (state.runFinalized) return;
   state.runFinalized = true;
@@ -3705,6 +3790,7 @@ function finishRun(outcome) {
   state.save.bestDamage = Math.max(state.save.bestDamage || 0, state.stats.damage);
   state.save.bestHit = Math.max(state.save.bestHit || 0, state.stats.bestHit);
   state.save.perfectClears = Math.max(state.save.perfectClears || 0, state.stats.perfectClears);
+  settleRunRiftEnergy();
   saveGame();
 }
 
@@ -7833,8 +7919,9 @@ function getMainMenuButtonRects() {
   return {
     start: { x: bx, y: m.primaryY, w: bw, h: m.primaryH },
     tutorial: { x: bx, y: m.tutorialY, w: bw, h: m.buttonH },
-    guide: { x: bx, y: m.utilityY, w: bw, h: m.buttonH },
-    settings: { x: bx, y: m.utilityY + m.buttonH + m.buttonGap, w: bw, h: m.buttonH },
+    metaUpgrade: { x: bx, y: m.utilityY, w: bw, h: m.buttonH },
+    guide: { x: bx, y: m.utilityY + m.buttonH + m.buttonGap, w: bw, h: m.buttonH },
+    settings: { x: bx, y: m.utilityY + (m.buttonH + m.buttonGap) * 2, w: bw, h: m.buttonH },
   };
 }
 
@@ -7965,6 +8052,7 @@ function drawStartMenuOverlay() {
   wrapText(t("startPanelHint"), bx, m.y + 88, bw, 19, "rgba(238,244,252,0.58)", 12);
   drawMenuButton(buttons.start.x, buttons.start.y, buttons.start.w, buttons.start.h, menuActionText("startGame"), "Enter", "primary");
   drawMenuButton(buttons.tutorial.x, buttons.tutorial.y, buttons.tutorial.w, buttons.tutorial.h, t("tutorialStart"), t("tutorialHintShort"));
+  drawMenuButton(buttons.metaUpgrade.x, buttons.metaUpgrade.y, buttons.metaUpgrade.w, buttons.metaUpgrade.h, menuActionText("upgradeMenu"), "");
   drawMenuButton(buttons.guide.x, buttons.guide.y, buttons.guide.w, buttons.guide.h, menuActionText("moveGuide"), "Spin");
   drawMenuButton(buttons.settings.x, buttons.settings.y, buttons.settings.w, buttons.settings.h, menuActionText("settings"), "");
   label(t("startHint"), bx, m.y + m.h - 42, 13, "#9fb4ff");
@@ -8473,6 +8561,10 @@ function drawMenuIdleParticles(anchorX, anchorY, pose, motion, now) {
 
 function drawOverlay() {
   if (state.mode === "playing") return;
+  if (state.mode === "metaUpgrade") {
+    drawMetaUpgradeScreen();
+    return;
+  }
   if (state.mode === "upgrade") {
     drawUpgradeOverlay();
     return;
@@ -8535,15 +8627,15 @@ function drawResultOverlay() {
   const accent = victory ? "#fff0a6" : "#ff8f98";
   ctx.save();
   drawDimOverlay(0.82);
-  drawCard(318, 82, 644, 456);
+  drawCard(318, 62, 644, 536);
   ctx.textAlign = "left";
-  label(victory ? t("victory") : t("defeat"), 382, 154, 48, "#f5f1e6");
+  label(victory ? t("victory") : t("defeat"), 382, 134, 48, "#f5f1e6");
   ctx.fillStyle = accent;
-  roundedRect(384, 176, 210, 4, 8, true, false);
-  wrapText(getMessage(), 384, 206, 504, 28, "rgba(238,244,252,0.76)", 19);
+  roundedRect(384, 156, 210, 4, 8, true, false);
+  wrapText(getMessage(), 384, 186, 504, 28, "rgba(238,244,252,0.76)", 19);
   drawRunSummary();
-  drawMenuButton(384, 468, 248, 44, t("retry"), "R", "primary");
-  drawMenuButton(646, 468, 248, 44, t("menu"), "Esc");
+  drawMenuButton(384, 528, 248, 44, t("retry"), "R", "primary");
+  drawMenuButton(646, 528, 248, 44, t("menu"), "Esc");
   ctx.restore();
 }
 
@@ -8752,21 +8844,23 @@ function drawRunSummary() {
     [t("summaryBestHit"), state.stats.bestHit, `${t("bestLabel")} ${state.save.bestHit || 0}`],
   ];
   ctx.save();
-  label(fmt("rating", { rating: state.stats.rating }), 384, 264, 23, getRatingColor(state.stats.rating));
+  label(fmt("rating", { rating: state.stats.rating }), 384, 244, 23, getRatingColor(state.stats.rating));
   for (let i = 0; i < rows.length; i += 1) {
     const col = i % 2;
     const row = Math.floor(i / 2);
     const x = 384 + col * 258;
-    const y = 298 + row * 32;
+    const y = 278 + row * 32;
     ctx.fillStyle = "rgba(8, 13, 20, 0.5)";
     roundedRect(x, y - 20, 244, 24, 6, true, false);
     label(rows[i][0], x + 12, y - 3, 13, "rgba(238,244,252,0.54)");
     label(String(rows[i][1]), x + 118, y - 3, 15, "#f5f1e6");
     if (rows[i][2]) label(rows[i][2], x + 168, y - 3, 11, "#9fb4ff");
   }
-  label(t("summaryDamageSources"), 384, 436, 14, "#8fe8dc");
-  wrapText(formatDamageSources(), 520, 436, 360, 18, "rgba(238,244,252,0.66)", 12);
-  label(getNextRunGoalText(), 384, 458, 13, "#fff0a6");
+  label(t("summaryDamageSources"), 384, 438, 14, "#8fe8dc");
+  wrapText(formatDamageSources(), 520, 438, 360, 18, "rgba(238,244,252,0.66)", 12);
+  label(fmt("riftEnergyEarned", { amount: state.runStats?.riftEnergyEarned || 0 }), 384, 470, 14, "#fff0a6");
+  label(fmt("riftEnergyTotal", { amount: state.metaProgress?.riftEnergy || 0 }), 646, 470, 14, "#9fb4ff");
+  label(getNextRunGoalText(), 384, 494, 13, "#fff0a6");
   ctx.restore();
 }
 
@@ -8800,6 +8894,169 @@ function getRatingColor(rating) {
   if (rating === "BRUTAL") return "#ff8f98";
   if (rating === "CLEAN") return "#9df7da";
   return "#f5f1e6";
+}
+
+function drawMetaUpgradeScreen() {
+  const progress = state.metaProgress;
+  ctx.save();
+  drawMainMenuScene();
+  drawDimOverlay(0.58);
+  drawCard(166, 68, 948, 586);
+  drawCornerGlyph(640, 88, "#fff0a6");
+  label(t("metaUpgradeTitle").toUpperCase(), 224, 136, 42, "#f5f1e6");
+  wrapText(t("metaUpgradeHelp"), 224, 172, 710, 22, "rgba(238,244,252,0.68)", 15);
+  drawRiftEnergyBadge(812, 118, 240, 58, progress.riftEnergy);
+
+  const rows = getMetaUpgradeRowRects();
+  for (const def of Object.values(META_UPGRADE_DEFS)) {
+    drawMetaUpgradeRow(def, rows[def.id], progress);
+  }
+  const message = getMetaUpgradeMessage();
+  if (message) label(message, 224, 590, 15, "#fff0a6");
+  const back = getMetaUpgradeBackButtonRect();
+  drawMenuButton(back.x, back.y, back.w, back.h, t("backToMenu"), "Esc");
+  ctx.restore();
+}
+
+function drawRiftEnergyBadge(x, y, w, h, amount) {
+  ctx.save();
+  const hovered = pointInRect(state.pointer.x, state.pointer.y, x, y, w, h);
+  ctx.fillStyle = hovered ? "rgba(50, 30, 86, 0.72)" : "rgba(9, 12, 24, 0.72)";
+  ctx.shadowColor = "rgba(184, 141, 255, 0.35)";
+  ctx.shadowBlur = 16;
+  roundedRect(x, y, w, h, 10, true, false);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = "rgba(215, 194, 255, 0.42)";
+  ctx.lineWidth = 1.6;
+  roundedRect(x, y, w, h, 10, false, true);
+  drawImageContain(riftEnergyIcon, x + 10, y + 5, 48, 48);
+  fitLabel(fmt("riftEnergyAmount", { amount }), x + 66, y + 35, w - 82, 17, "#f8f3cf", 13, "900", true);
+  ctx.restore();
+}
+
+function getMetaUpgradeRowRects() {
+  const x = 220;
+  const y = 228;
+  const w = 838;
+  const h = 92;
+  const gap = 18;
+  return {
+    hp: { x, y, w, h, buyX: x + w - 142, buyY: y + 25, buyW: 112, buyH: 42 },
+    attack: { x, y: y + h + gap, w, h, buyX: x + w - 142, buyY: y + h + gap + 25, buyW: 112, buyH: 42 },
+    guard: { x, y: y + (h + gap) * 2, w, h, buyX: x + w - 142, buyY: y + (h + gap) * 2 + 25, buyW: 112, buyH: 42 },
+  };
+}
+
+function getMetaUpgradeBackButtonRect() {
+  return { x: 812, y: 574, w: 240, h: 44 };
+}
+
+function drawMetaUpgradeRow(def, rect, progress) {
+  if (!def || !rect) return;
+  const level = progress.metaUpgrades[def.levelKey] || 0;
+  const cost = getMetaUpgradeCost(def.id, level);
+  const maxed = level >= def.maxLevel;
+  const canBuy = cost !== null && progress.riftEnergy >= cost;
+  const hovered = pointInRect(state.pointer.x, state.pointer.y, rect.x, rect.y, rect.w, rect.h);
+  ctx.save();
+  const fill = ctx.createLinearGradient(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h);
+  fill.addColorStop(0, hovered ? "rgba(33, 45, 67, 0.78)" : "rgba(7, 12, 21, 0.68)");
+  fill.addColorStop(0.55, "rgba(32, 20, 56, 0.64)");
+  fill.addColorStop(1, "rgba(7, 13, 24, 0.72)");
+  ctx.fillStyle = fill;
+  roundedRect(rect.x, rect.y, rect.w, rect.h, 10, true, false);
+  ctx.strokeStyle = hovered ? "rgba(255, 240, 166, 0.48)" : "rgba(145, 232, 222, 0.2)";
+  ctx.lineWidth = 1.5;
+  roundedRect(rect.x, rect.y, rect.w, rect.h, 10, false, true);
+  drawImageContain(metaUpgradeIcons[def.iconKey], rect.x + 16, rect.y + 14, 64, 64);
+  fitLabel(t(def.nameKey), rect.x + 96, rect.y + 31, 200, 20, "#f5f1e6", 15, "900", true);
+  label(fmt("metaUpgradeLevel", { level, max: def.maxLevel }), rect.x + 96, rect.y + 57, 14, "#9fb4ff");
+  label(fmt("metaUpgradeCurrent", { value: formatMetaUpgradeEffect(def, level) }), rect.x + 318, rect.y + 33, 14, "rgba(238,244,252,0.72)");
+  const nextText = maxed
+    ? t("metaUpgradeMaxed")
+    : fmt("metaUpgradeNext", { value: formatMetaUpgradeEffect(def, level + 1) });
+  label(nextText, rect.x + 318, rect.y + 59, 14, maxed ? "#fff0a6" : "rgba(238,244,252,0.72)");
+  const costText = maxed ? t("metaUpgradeMaxed") : fmt("metaUpgradeCost", { cost });
+  label(costText, rect.x + 610, rect.y + 57, 13, canBuy || maxed ? "#fff0a6" : "#ffb7bd");
+  drawMetaUpgradeBuyButton(rect, maxed, canBuy);
+  ctx.restore();
+}
+
+function formatMetaUpgradeEffect(def, level) {
+  const value = Math.max(0, level) * def.valuePerLevel;
+  if (def.id === "hp") return fmt("metaUpgradeHpEffect", { value });
+  if (def.id === "attack") return fmt("metaUpgradeAttackEffect", { value });
+  if (def.id === "guard") return fmt("metaUpgradeGuardEffect", { value });
+  return `+${value}`;
+}
+
+function drawMetaUpgradeBuyButton(rect, maxed, canBuy) {
+  const hovered = pointInRect(state.pointer.x, state.pointer.y, rect.buyX, rect.buyY, rect.buyW, rect.buyH);
+  ctx.save();
+  ctx.fillStyle = maxed
+    ? "rgba(255, 240, 166, 0.12)"
+    : canBuy
+      ? hovered ? "rgba(184, 141, 255, 0.36)" : "rgba(184, 141, 255, 0.22)"
+      : "rgba(44, 48, 58, 0.5)";
+  roundedRect(rect.buyX, rect.buyY, rect.buyW, rect.buyH, 8, true, false);
+  ctx.strokeStyle = maxed
+    ? "rgba(255, 240, 166, 0.36)"
+    : canBuy
+      ? "rgba(255, 240, 166, 0.55)"
+      : "rgba(238,244,252,0.16)";
+  ctx.lineWidth = 1.5;
+  roundedRect(rect.buyX, rect.buyY, rect.buyW, rect.buyH, 8, false, true);
+  fitLabel(maxed ? t("metaUpgradeMaxed") : t("metaUpgradeBuy"), rect.buyX + 14, rect.buyY + 26, rect.buyW - 28, 16, canBuy || maxed ? "#f8f3cf" : "rgba(238,244,252,0.42)", 12, "900", true);
+  ctx.restore();
+}
+
+function getMetaUpgradeMessage() {
+  const message = state.metaUpgradeMessage;
+  if (!message?.key || performance.now() > message.until) return "";
+  return fmt(message.key, message.vars || {});
+}
+
+function handleMetaUpgradePointerDown(x, y) {
+  const back = getMetaUpgradeBackButtonRect();
+  if (pointInRect(x, y, back.x, back.y, back.w, back.h)) {
+    state.mode = "start";
+    state.metaUpgradeMessage = { key: "", vars: {}, until: 0 };
+    playSfx("hold");
+    return true;
+  }
+  const rows = getMetaUpgradeRowRects();
+  for (const def of Object.values(META_UPGRADE_DEFS)) {
+    const rect = rows[def.id];
+    if (pointInRect(x, y, rect.buyX, rect.buyY, rect.buyW, rect.buyH)) {
+      purchaseMetaUpgrade(def.id);
+      return true;
+    }
+  }
+  return false;
+}
+
+function purchaseMetaUpgrade(id) {
+  const before = loadMetaProgress();
+  const result = buyMetaUpgrade(before, id);
+  state.metaProgress = result.progress;
+  const def = META_UPGRADE_DEFS[id];
+  if (result.ok) {
+    saveMetaProgress(state.metaProgress);
+    state.metaUpgradeMessage = {
+      key: "metaUpgradePurchased",
+      vars: { name: def ? t(def.nameKey) : "" },
+      until: performance.now() + 2200,
+    };
+    playSfx("upgrade");
+    return true;
+  }
+  state.metaUpgradeMessage = {
+    key: result.reason === "maxed" ? "metaUpgradeMaxed" : "metaUpgradeNotEnough",
+    vars: {},
+    until: performance.now() + 1800,
+  };
+  playSfx("hold");
+  return false;
 }
 
 function drawUpgradeOverlay() {
@@ -10202,7 +10459,7 @@ window.addEventListener("keydown", (event) => {
       state.mode = "playing";
       state.pauseView = "menu";
       state.settingsOpen = false;
-    } else if (state.mode === "guide" || state.mode === "victory" || state.mode === "defeat") {
+    } else if (state.mode === "metaUpgrade" || state.mode === "guide" || state.mode === "victory" || state.mode === "defeat") {
       state.mode = "start";
       state.settingsOpen = false;
     } else {
@@ -10314,6 +10571,10 @@ canvas.addEventListener("mousedown", (event) => {
   }
 
   if (!state.settingsOpen && state.mode !== "playing") {
+    if (state.mode === "metaUpgrade") {
+      handleMetaUpgradePointerDown(p.x, p.y);
+      return;
+    }
     if (state.mode === "upgrade") {
       if (state.upgradePickConfirm) return;
       if (state.currentBuildOpen) {
@@ -10338,6 +10599,12 @@ canvas.addEventListener("mousedown", (event) => {
       const buttons = getMainMenuButtonRects();
       if (pointInRect(p.x, p.y, buttons.start.x, buttons.start.y, buttons.start.w, buttons.start.h)) resetGame("endless");
       else if (pointInRect(p.x, p.y, buttons.tutorial.x, buttons.tutorial.y, buttons.tutorial.w, buttons.tutorial.h)) startTutorial();
+      else if (pointInRect(p.x, p.y, buttons.metaUpgrade.x, buttons.metaUpgrade.y, buttons.metaUpgrade.w, buttons.metaUpgrade.h)) {
+        state.mode = "metaUpgrade";
+        state.metaProgress = loadMetaProgress();
+        state.metaUpgradeMessage = { key: "", vars: {}, until: 0 };
+        playSfx("hold");
+      }
       else if (pointInRect(p.x, p.y, buttons.guide.x, buttons.guide.y, buttons.guide.w, buttons.guide.h)) {
         state.mode = "guide";
         playSfx("hold");
@@ -10366,11 +10633,11 @@ canvas.addEventListener("mousedown", (event) => {
       state.mode = "start";
       return;
     }
-    if ((state.mode === "victory" || state.mode === "defeat") && pointInRect(p.x, p.y, 646, 468, 248, 44)) {
+    if ((state.mode === "victory" || state.mode === "defeat") && pointInRect(p.x, p.y, 646, 528, 248, 44)) {
       state.mode = "start";
       return;
     }
-    if ((state.mode === "victory" || state.mode === "defeat") && pointInRect(p.x, p.y, 384, 468, 248, 44)) {
+    if ((state.mode === "victory" || state.mode === "defeat") && pointInRect(p.x, p.y, 384, 528, 248, 44)) {
       resetGame("endless");
       return;
     }
