@@ -635,6 +635,8 @@ const MENU_HERO_DIALOGUE_MS = {
   click: 3400,
 };
 
+const MENU_HERO_IDLE_TRIGGER_COOLDOWN_MS = 5000;
+
 const CHARACTER_BASELINES = {
   player: {
     groundY: UI_LAYOUT.playerStage.y + 360,
@@ -1056,6 +1058,11 @@ const state = {
     lineStartedAt: 0,
     lineUntil: 0,
     lineIndex: 0,
+    idleKind: "cube",
+    idleStartedAt: 0,
+    idleUntil: 0,
+    idleCooldownUntil: 0,
+    idleTriggerCount: 0,
   },
   language: "zh",
   controls: normalizeControlsMap(DEFAULT_CONTROLS),
@@ -5431,7 +5438,7 @@ function drawHeroSprite(hit) {
 
 function drawHeroIdleBase(context = "battle") {
   if (context === "menu") {
-    if (drawMenuHeroIdleSprite(getMenuIdlePose(), performance.now())) return;
+    if (drawMenuHeroIdleSprite(performance.now())) return;
     if (isImageReady(noaMenuShowcaseArt)) {
       drawImageContain(noaMenuShowcaseArt, -170, -328, 340, 510);
       return;
@@ -8041,10 +8048,21 @@ function triggerMenuHeroAction(kind = "click") {
   if (!isMenuHeroInteractive()) return false;
   const now = performance.now();
   const interaction = state.menuHeroInteraction;
+  const canTriggerIdle = now >= interaction.idleCooldownUntil;
   interaction.hovered = true;
   interaction.actionKind = kind;
   interaction.actionStartedAt = now;
   interaction.actionUntil = now + 1120;
+  if (canTriggerIdle) {
+    const idleKind = interaction.idleTriggerCount % 2 === 0 ? "cube" : "meditate";
+    const config = getMenuHeroIdleConfig(idleKind);
+    const duration = getAnimationDuration(config) || ((config?.frames?.length || 1) * (config?.frameMs || 120));
+    interaction.idleKind = idleKind;
+    interaction.idleStartedAt = now;
+    interaction.idleUntil = now + duration;
+    interaction.idleCooldownUntil = now + MENU_HERO_IDLE_TRIGGER_COOLDOWN_MS;
+    interaction.idleTriggerCount += 1;
+  }
   setMenuHeroDialogue("click", now);
   playSfx("hold");
   return true;
@@ -8057,6 +8075,10 @@ function updateMenuHeroInteractionForFrame(now = performance.now()) {
     return;
   }
   if (interaction.actionKind && now >= interaction.actionUntil) interaction.actionKind = "";
+  if (interaction.idleUntil && now >= interaction.idleUntil) {
+    interaction.idleStartedAt = 0;
+    interaction.idleUntil = 0;
+  }
   if (interaction.hovered && now > interaction.actionUntil && now > interaction.lineUntil + 1300) {
     setMenuHeroDialogue("hover", now);
   }
@@ -8111,21 +8133,31 @@ function drawMenuHeroInteractionGlow(motion, now) {
   ctx.restore();
 }
 
-function getMenuHeroIdleConfig(pose) {
-  return pose?.id === "idleC"
+function getMenuHeroIdleConfig(kind = "cube") {
+  return kind === "meditate"
     ? MENU_HERO_SPECIAL_ANIMATIONS.meditate
     : MENU_HERO_SPECIAL_ANIMATIONS.cube;
 }
 
-function drawMenuHeroIdleSprite(pose = getMenuIdlePose(), now = performance.now(), alpha = 1) {
-  const config = getMenuHeroIdleConfig(pose);
+function getMenuHeroIdlePlayback(now = performance.now()) {
+  const interaction = state.menuHeroInteraction;
+  const active = interaction.idleUntil > now;
+  return {
+    active,
+    config: getMenuHeroIdleConfig(active ? interaction.idleKind : "cube"),
+    elapsed: active ? now - interaction.idleStartedAt : 0,
+  };
+}
+
+function drawMenuHeroIdleSprite(now = performance.now(), alpha = 1) {
+  const playback = getMenuHeroIdlePlayback(now);
+  const config = playback.config;
   if (!config || !isImageReady(config.image)) return false;
-  const duration = getAnimationDuration(config) || config.frames.length * config.frameMs;
-  const elapsed = duration > 0 ? (now - state.menuSpecialIdleStartedAt) % duration : 0;
   const draw = alignDrawBoxToBaseline(config.draw, CHARACTER_BASELINES.menu.localY);
   ctx.save();
   ctx.globalAlpha *= alpha;
-  drawSpriteAnimationFrame(config, elapsed, draw.x, draw.y, draw.w, draw.h);
+  if (playback.active) drawSpriteAnimationFrame(config, playback.elapsed, draw.x, draw.y, draw.w, draw.h);
+  else drawSpriteSheetFrame(config, config.frames[0], draw.x, draw.y, draw.w, draw.h);
   ctx.restore();
   return true;
 }
