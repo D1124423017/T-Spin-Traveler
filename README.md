@@ -109,12 +109,34 @@ The game is designed around the idea that different puzzle actions should create
 ```txt
 T-Spin-Traveler/
 ├── assets/
+├── data/
+│   └── balance.js
+├── src/
+│   ├── main.js
+│   ├── audio/
+│   ├── combat/
+│   ├── core/
+│   ├── data/
+│   ├── render/
+│   └── tetris/
+├── tests/
 ├── index.html
 ├── styles.css
 ├── game.js
+├── package.json
+├── TESTING.md
+├── CHANGELOG.md
 ├── .gitignore
 └── README.md
 ```
+
+---
+
+## Recommended Platform｜建議平台
+
+Desktop browser only. Keyboard controls required. Mobile touch controls are not supported.
+
+本遊戲以電腦版瀏覽器與鍵盤操作為主，不支援手機觸控操作。
 
 ---
 
@@ -133,17 +155,25 @@ https://d1124423017.github.io/T-Spin-Traveler/
 
 1. Download or clone this repository.
 2. Open the project folder.
-3. Open `index.html` in a web browser.
+3. Run a local web server, then open the local URL in a desktop browser.
 
-You can also run the project with a local server, such as the **Live Server** extension in Visual Studio Code.
+The game uses ES modules, so a local server such as the **Live Server** extension in Visual Studio Code is recommended.
+
+For development checks:
+
+```powershell
+npm install
+npm run check
+npm run test
+```
 
 ### 中文
 
 1. 下載或 Clone 這個專案。
 2. 開啟專案資料夾。
-3. 使用瀏覽器開啟 `index.html`。
+3. 啟動本機網頁伺服器，使用電腦版瀏覽器開啟本機網址。
 
-也可以使用 Visual Studio Code 的 **Live Server** 套件執行。
+本遊戲入口使用 ES modules，建議使用 Visual Studio Code 的 **Live Server** 套件或其他本機伺服器執行。
 
 ---
 
@@ -218,8 +248,8 @@ This project is currently a playable HTML Canvas prototype.
 - Stronger VFX and hit feedback  
   更強的特效與打擊回饋
 
-- Mobile-friendly controls  
-  手機版操作支援
+- Desktop-focused keyboard controls polish
+  電腦鍵盤操作手感優化
 
 ---
 
@@ -228,7 +258,9 @@ This project is currently a playable HTML Canvas prototype.
 - HTML
 - CSS
 - JavaScript
+- ES Modules
 - HTML Canvas
+- Vitest
 - GitHub Pages
 
 ---

@@ -5,7 +5,9 @@ Use this checklist after every gameplay, UI, asset, audio, or deployment change.
 ## Basic Boot
 
 - [ ] GitHub Pages opens: https://d1124423017.github.io/T-Spin-Traveler/
-- [ ] Local build opens from `index.html` or a local server.
+- [ ] Local build opens from a desktop-browser local server.
+- [ ] GitHub Pages smoke test reaches the asset loading screen, then the main menu.
+- [ ] Recommended platform is treated as desktop-only: keyboard required, no mobile touch controls.
 - [ ] Main menu renders in Traditional Chinese.
 - [ ] Main menu renders in English.
 - [ ] Display font loads for English title, HUD text, numbers, and combat popups.
@@ -17,7 +19,7 @@ Use this checklist after every gameplay, UI, asset, audio, or deployment change.
 
 ## Settings
 
-- [ ] Left tabs show only Controls / Audio / Language / Feedback.
+- [ ] Left tabs show only Controls / Handling / Audio / Language / Feedback.
 - [ ] General tab is not shown.
 - [ ] Controls list is readable in Traditional Chinese.
 - [ ] Controls list is readable in English.
@@ -86,6 +88,8 @@ Use this checklist after every gameplay, UI, asset, audio, or deployment change.
 
 - [ ] 1920x1080 viewport reads clearly.
 - [ ] Small desktop window reads clearly.
+- [ ] Desktop keyboard hints remain visible and readable.
+- [ ] No mobile virtual buttons or touch-only controls are shown.
 - [ ] Traditional Chinese UI does not overlap.
 - [ ] English UI does not overlap.
 - [ ] Board remains the first visual priority.
@@ -152,7 +156,8 @@ Use this checklist after every gameplay, UI, asset, audio, or deployment change.
 ## Suggested Local Smoke Commands
 
 ```powershell
-node --check game.js
+npm run check
+npm run test
 git diff --check
 git status --short --ignored
 ```

@@ -8,14 +8,17 @@ Notable project updates for T-Spin Traveler are recorded here.
 
 - Release-oriented testing checklist updates for Settings, controls rebinding, background progression, audio layers, defeat retry, and file hygiene.
 - Git ignore rules for generated render outputs, temporary folders, and local Codex workspace files.
+- ES module entry through `src/main.js`, focused core modules, `package.json`, and Vitest coverage for board, hold, queue, Spin detection, and damage calculation.
+- Asset loading screen before the main menu with fallback warning text for failed assets.
 
 ### Changed
 
-- No gameplay changes are pending in this section.
+- `game.js` now delegates core Tetris, asset registry, and battle result flow to smaller modules while preserving desktop browser gameplay.
+- Documentation now states desktop browser only with keyboard controls required.
 
 ### Fixed
 
-- No fixes are pending in this section.
+- Spin detection no longer treats a single upward collision as enough for All-Spin; non-T pieces must be immobile in four directions, and O pieces do not trigger All-Spin.
 
 ## [Current Prototype] - 2026-05-19
 
@@ -42,7 +45,7 @@ Notable project updates for T-Spin Traveler are recorded here.
 
 - Main menu hierarchy and visual polish improved for a more game-like first screen.
 - Battle HUD readability improved around player, enemy, Hold, Next, and combat feedback.
-- Settings menu reworked to four tabs: Controls, Audio, Language, Feedback.
+- Settings menu reworked to five tabs: Controls, Handling, Audio, Language, Feedback.
 - Settings and Pause Menu readability polished.
 - Display font readability improved through multiple passes, prioritizing readable English letters and HUD numbers.
 - Next preview changed from 4 pieces to 5 pieces.

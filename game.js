@@ -1,120 +1,67 @@
+import {
+  BACKGROUND_STAGES,
+  BOSS_BACKGROUND_STAGE,
+  enemyAttackSheets,
+  enemyConceptSheetA,
+  enemyConceptSheetB,
+  forestBg,
+  getImageAssetRecord,
+  heroCombo1Sheet,
+  heroCombo2Sheet,
+  heroCombo3Sheet,
+  heroIdleArt,
+  heroMeleeSheet,
+  heroMeleeSheetV2,
+  heroRangedSheet,
+  heroRangedSheetV2,
+  heroUltimateSheet,
+  isImageReady,
+  legendaryUpgradeEmblems,
+  menuIdleCubeSheet,
+  menuIdleMeditateSheet,
+  musicLoopAssets,
+  noaArt,
+  noaBattleIdleArt,
+  noaFeedbackBowArt,
+  noaMenuShowcaseArt,
+  rosterArt,
+  slimeArt,
+  upgradeCardFrames,
+} from "./src/data/assets.js";
+import { ENEMIES } from "./src/data/enemies.js";
+import { translations } from "./src/data/i18n.js";
+import {
+  BUILD_TAGS,
+  RARITY,
+  TRAIT_DEFS,
+  UPGRADES,
+} from "./src/data/upgrades.js";
+import {
+  I_KICKS,
+  JLSTZ_KICKS,
+  PIECES,
+  cloneMatrix,
+  createSevenBag,
+  get180Kicks,
+  rotateMatrix,
+} from "./src/tetris/pieces.js";
+import {
+  clearFullLines,
+  collides as collidesOnBoard,
+  isBoardEmpty as isBoardEmptyCore,
+  makeBoard as makeEmptyBoard,
+} from "./src/tetris/board.js";
+import {
+  detectSpin as detectSpinCore,
+  isPieceImmobile as isPieceImmobileCore,
+} from "./src/tetris/spinDetection.js";
+import {
+  calculateDamage as calculateBaseDamage,
+} from "./src/combat/damage.js";
+import { applyUpgradeEffect } from "./src/combat/upgradeEffects.js";
+
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const ASSET_VERSION = "2026-05-22-sprite16-scale-pass";
-
-function assetPath(path) {
-  const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
-  const overrides = typeof window !== "undefined" ? window.TST_ASSET_OVERRIDES || {} : {};
-  const resolvedPath = overrides[path] || path;
-  const externalPath = /^(data:|blob:|https?:|file:)/.test(resolvedPath);
-  return isFilePreview || externalPath ? resolvedPath : `${resolvedPath}?v=${ASSET_VERSION}`;
-}
-
-const ASSET_REGISTRY = {
-  images: [],
-  byImage: new WeakMap(),
-  warned: new Set(),
-  fonts: [
-    { id: "display-font-woff2", type: "font", path: "assets/fonts/TSpinTravelerDisplay.woff2", status: "css-managed" },
-    { id: "display-font-ttf", type: "font", path: "assets/fonts/TSpinTravelerDisplay.ttf", status: "css-managed" },
-  ],
-  audio: [
-    { id: "web-audio-synth", type: "audio", path: "", status: "generated" },
-  ],
-};
-
-function registerImageAsset(id, path) {
-  const image = new Image();
-  const record = {
-    id,
-    type: "image",
-    path,
-    url: assetPath(path),
-    status: "loading",
-    error: "",
-    image,
-  };
-  ASSET_REGISTRY.images.push(record);
-  ASSET_REGISTRY.byImage.set(image, record);
-  image.decoding = "async";
-  image.addEventListener("load", () => {
-    record.status = image.naturalWidth > 0 ? "loaded" : "error";
-    if (record.status === "error") {
-      record.error = "Image loaded with empty dimensions.";
-      warnAssetOnce(record, record.error);
-    }
-  });
-  image.addEventListener("error", () => {
-    record.status = "error";
-    record.error = `Failed to load image: ${record.path}`;
-    warnAssetOnce(record, record.error);
-  });
-  image.src = record.url;
-  return image;
-}
-
-function registerAudioAsset(id, path, options = {}) {
-  const audioElement = new Audio();
-  const record = {
-    id,
-    type: "audio",
-    path,
-    url: assetPath(path),
-    status: "loading",
-    error: "",
-    element: audioElement,
-  };
-  ASSET_REGISTRY.audio.push(record);
-  audioElement.preload = "auto";
-  audioElement.loop = Boolean(options.loop);
-  audioElement.addEventListener("canplaythrough", () => {
-    record.status = "loaded";
-  }, { once: true });
-  audioElement.addEventListener("error", () => {
-    record.status = "error";
-    record.error = `Failed to load audio: ${record.path}`;
-    warnAssetOnce(record, record.error);
-  });
-  audioElement.src = record.url;
-  audioElement.load();
-  return audioElement;
-}
-
-function warnAssetOnce(record, message) {
-  if (ASSET_REGISTRY.warned.has(record.id)) return;
-  ASSET_REGISTRY.warned.add(record.id);
-  console.warn(`[T-Spin Traveler] ${message}`, record.url);
-}
-
-function isImageReady(image) {
-  return Boolean(image && image.complete && image.naturalWidth > 0 && image.naturalHeight > 0);
-}
-
-function getImageAssetRecord(image) {
-  return image ? ASSET_REGISTRY.byImage.get(image) : null;
-}
-
-function getAssetSummary() {
-  const counts = ASSET_REGISTRY.images.reduce((result, record) => {
-    result[record.status] = (result[record.status] || 0) + 1;
-    return result;
-  }, {});
-  return {
-    counts,
-    images: ASSET_REGISTRY.images.map(({ id, path, url, status, error }) => ({ id, path, url, status, error })),
-    fonts: ASSET_REGISTRY.fonts,
-    audio: ASSET_REGISTRY.audio.map(({ id, type, path, url, status, error }) => ({ id, type, path, url, status, error })),
-  };
-}
-
-if (typeof window !== "undefined") {
-  window.TST_ASSETS = {
-    images: ASSET_REGISTRY.images,
-    fonts: ASSET_REGISTRY.fonts,
-    audio: ASSET_REGISTRY.audio,
-    getSummary: getAssetSummary,
-  };
-}
 
 const DISPLAY_FONT_STACK = "'TSpin Traveler Display', 'Noto Sans TC', system-ui, sans-serif";
 const UI_FONT_STACK = "'Trebuchet MS', 'Noto Sans TC', system-ui, sans-serif";
@@ -128,136 +75,6 @@ function shouldUseDisplayFont(text) {
 function canvasFont(weight, size, text = "", forceDisplay = false) {
   return `${weight} ${size}px ${forceDisplay || shouldUseDisplayFont(text) ? DISPLAY_FONT_STACK : UI_FONT_STACK}`;
 }
-
-const forestBg = registerImageAsset("forest-background", "assets/magic-forest-bg-v2.png");
-const stageForestRuinsDayBg = registerImageAsset("stage-forest-ruins-day", "assets/backgrounds/stage_forest_ruins_day.png");
-const stageForestGateNightBg = registerImageAsset("stage-forest-gate-night", "assets/backgrounds/stage_forest_gate_night.png");
-const stageArcaneRuinsMidBg = registerImageAsset("stage-arcane-ruins-mid", "assets/backgrounds/stage_arcane_ruins_mid.png");
-const stageCorruptedForestLateBg = registerImageAsset("stage-corrupted-forest-late", "assets/backgrounds/stage_corrupted_forest_late.png");
-const stageRiftBossBg = registerImageAsset("stage-rift-boss", "assets/backgrounds/stage_rift_boss.png");
-const noaArt = registerImageAsset("noa-portrait", "assets/noa.png");
-const slimeArt = registerImageAsset("forest-slime", "assets/forest-slime.png");
-const rosterArt = registerImageAsset("character-roster", "assets/character-roster-v4-alpha.png");
-const heroIdleArt = registerImageAsset("hero-idle-concept", "assets/images/clean/ET_Character_alpha.png");
-const noaFeedbackBowArt = registerImageAsset("noa-feedback-bow", "assets/images/clean/noa_feedback_bow.png");
-const menuIdleCubeSheet = registerImageAsset("menu-idle-cube-sheet-16", "assets/images/clean/noa_menu_idle_cube_16.png");
-const menuIdleMeditateSheet = registerImageAsset("menu-idle-meditate-sheet-16", "assets/images/clean/noa_menu_idle_meditate_16.png");
-const heroMeleeSheet = registerImageAsset("hero-melee-sheet", "assets/images/clean/Knife_alpha.png");
-const heroMeleeSheetV2 = registerImageAsset("hero-melee-sheet-16", "assets/images/clean/hero_melee_16_spritesheet_alpha.png");
-const heroRangedSheet = registerImageAsset("hero-ranged-sheet", "assets/images/clean/Gun_alpha.png");
-const heroRangedSheetV2 = registerImageAsset("hero-ranged-sheet-16", "assets/images/clean/hero_ranged_16_spritesheet_alpha.png");
-const heroCombo1Sheet = registerImageAsset("hero-combo-1-sheet-16", "assets/images/clean/hero_combo_01_16_spritesheet_alpha.png");
-const heroCombo2Sheet = registerImageAsset("hero-combo-2-sheet-16", "assets/images/clean/hero_combo_02_16_spritesheet_alpha.png");
-const heroCombo3Sheet = registerImageAsset("hero-combo-3-sheet-16", "assets/images/clean/hero_combo_03_16_spritesheet_alpha.png");
-const heroUltimateSheet = registerImageAsset("hero-ultimate-sheet", "assets/images/clean/hero_perfect_clear_ultimate_alpha.png");
-const enemyConceptSheetA = registerImageAsset("enemy-concept-sheet-a", "assets/images/clean/Enemy01_alpha.png");
-const enemyConceptSheetB = registerImageAsset("enemy-concept-sheet-b", "assets/images/clean/Enemy02_alpha.png");
-const upgradeCardFrames = {
-  common: registerImageAsset("upgrade-card-frame-common", "assets/ui/relic_cards/upgrade_card_common.png"),
-  rare: registerImageAsset("upgrade-card-frame-rare", "assets/ui/relic_cards/upgrade_card_rare.png"),
-  relic: registerImageAsset("upgrade-card-frame-relic", "assets/ui/relic_cards/upgrade_card_relic.png"),
-  legendary: registerImageAsset("upgrade-card-frame-legendary", "assets/ui/relic_cards/upgrade_card_legendary.png"),
-};
-const legendaryUpgradeEmblems = {
-  singularity_spin_core: registerImageAsset("upgrade-emblem-singularity-spin-core", "assets/ui/relic_cards/upgrade_emblem_singularity_spin_core.png"),
-  combo_constellation: registerImageAsset("upgrade-emblem-combo-constellation", "assets/ui/relic_cards/upgrade_emblem_combo_constellation.png"),
-  aegis_star_mirror: registerImageAsset("upgrade-emblem-aegis-star-mirror", "assets/ui/relic_cards/upgrade_emblem_aegis_star_mirror.png"),
-  garbage_alchemy_core: registerImageAsset("upgrade-emblem-garbage-alchemy-core", "assets/ui/relic_cards/upgrade_emblem_garbage_alchemy_core.png"),
-  perfect_rift_crown: registerImageAsset("upgrade-emblem-perfect-rift-crown", "assets/ui/relic_cards/upgrade_emblem_perfect_rift_crown.png"),
-};
-const enemyAttackSheets = {
-  slime: registerImageAsset("enemy-attack-slime", "assets/images/clean/enemy_attack_slime_redesign.png"),
-  slime16: registerImageAsset("enemy-attack-slime-16", "assets/images/clean/enemy_attack_slime_16.png"),
-  vine: registerImageAsset("enemy-attack-vine", "assets/images/clean/enemy_attack_vine_redesign.png"),
-  vine16: registerImageAsset("enemy-attack-vine-16", "assets/images/clean/enemy_attack_vine_16.png"),
-  mushroom: registerImageAsset("enemy-attack-mushroom", "assets/images/clean/enemy_attack_mushroom_redesign.png"),
-  mushroom16: registerImageAsset("enemy-attack-mushroom-16", "assets/images/clean/enemy_attack_mushroom_16.png"),
-  beetle: registerImageAsset("enemy-attack-beetle", "assets/images/clean/enemy_attack_beetle_redesign.png"),
-  beetle16: registerImageAsset("enemy-attack-beetle-16", "assets/images/clean/enemy_attack_beetle_16.png"),
-  mist: registerImageAsset("enemy-attack-mist", "assets/images/clean/enemy_attack_mist_redesign.png"),
-  mist16: registerImageAsset("enemy-attack-mist-16", "assets/images/clean/enemy_attack_mist_16.png"),
-  thorn: registerImageAsset("enemy-attack-thorn-prowler", "assets/images/clean/enemy_attack_thorn_prowler.png"),
-  thorn16: registerImageAsset("enemy-attack-thorn-prowler-16", "assets/images/clean/enemy_attack_thorn_prowler_16.png"),
-  wisp: registerImageAsset("enemy-attack-wisp-moth", "assets/images/clean/enemy_attack_wisp_moth.png"),
-  wisp16: registerImageAsset("enemy-attack-wisp-moth-16", "assets/images/clean/enemy_attack_wisp_moth_16.png"),
-  sentinel: registerImageAsset("enemy-attack-ruin-sentinel", "assets/images/clean/enemy_attack_ruin_sentinel.png"),
-  sentinel16: registerImageAsset("enemy-attack-ruin-sentinel-16", "assets/images/clean/enemy_attack_ruin_sentinel_16.png"),
-  king: registerImageAsset("enemy-attack-king", "assets/images/clean/enemy_attack_king_redesign.png"),
-  king16: registerImageAsset("enemy-attack-king-16", "assets/images/clean/enemy_attack_king_16.png"),
-};
-const musicLoopAssets = {
-  menuA: registerAudioAsset("music-loop-menu-a", "assets/audio/music_menu_loop.wav", { loop: true }),
-  menuB: registerAudioAsset("music-loop-menu-b", "assets/audio/music_menu_loop_b.wav", { loop: true }),
-  menuC: registerAudioAsset("music-loop-menu-c", "assets/audio/music_menu_loop_c.wav", { loop: true }),
-  menuD: registerAudioAsset("music-loop-menu-d", "assets/audio/music_menu_loop_d.wav", { loop: true }),
-  forestA: registerAudioAsset("music-loop-forest-a", "assets/audio/music_forest_loop.wav", { loop: true }),
-  forestB: registerAudioAsset("music-loop-forest-b", "assets/audio/music_forest_loop_b.wav", { loop: true }),
-  forestC: registerAudioAsset("music-loop-forest-c", "assets/audio/music_forest_loop_c.wav", { loop: true }),
-  forestD: registerAudioAsset("music-loop-forest-d", "assets/audio/music_forest_loop_d.wav", { loop: true }),
-  ruinsA: registerAudioAsset("music-loop-ruins-a", "assets/audio/music_ruins_loop.wav", { loop: true }),
-  ruinsB: registerAudioAsset("music-loop-ruins-b", "assets/audio/music_ruins_loop_b.wav", { loop: true }),
-  ruinsC: registerAudioAsset("music-loop-ruins-c", "assets/audio/music_ruins_loop_c.wav", { loop: true }),
-  ruinsD: registerAudioAsset("music-loop-ruins-d", "assets/audio/music_ruins_loop_d.wav", { loop: true }),
-  riftA: registerAudioAsset("music-loop-rift-a", "assets/audio/music_rift_loop.wav", { loop: true }),
-  riftB: registerAudioAsset("music-loop-rift-b", "assets/audio/music_rift_loop_b.wav", { loop: true }),
-  riftC: registerAudioAsset("music-loop-rift-c", "assets/audio/music_rift_loop_c.wav", { loop: true }),
-  riftD: registerAudioAsset("music-loop-rift-d", "assets/audio/music_rift_loop_d.wav", { loop: true }),
-  bossA: registerAudioAsset("music-loop-boss-a", "assets/audio/music_boss_loop.wav", { loop: true }),
-  bossB: registerAudioAsset("music-loop-boss-b", "assets/audio/music_boss_loop_b.wav", { loop: true }),
-  bossC: registerAudioAsset("music-loop-boss-c", "assets/audio/music_boss_loop_c.wav", { loop: true }),
-  bossD: registerAudioAsset("music-loop-boss-d", "assets/audio/music_boss_loop_d.wav", { loop: true }),
-};
-
-const BACKGROUND_STAGES = [
-  {
-    id: "forest-ruins-day",
-    startWave: 1,
-    image: stageForestRuinsDayBg,
-    fallback: forestBg,
-    dim: 0.22,
-    vignette: 0.48,
-    tint: "rgba(52, 124, 148, 0.05)",
-  },
-  {
-    id: "forest-gate-night",
-    startWave: 5,
-    image: stageForestGateNightBg,
-    fallback: forestBg,
-    dim: 0.25,
-    vignette: 0.54,
-    tint: "rgba(38, 96, 145, 0.09)",
-  },
-  {
-    id: "arcane-ruins-mid",
-    startWave: 10,
-    image: stageArcaneRuinsMidBg,
-    fallback: forestBg,
-    dim: 0.34,
-    vignette: 0.6,
-    centerDim: 0.12,
-    tint: "rgba(72, 86, 188, 0.08)",
-  },
-  {
-    id: "corrupted-forest-late",
-    startWave: 15,
-    image: stageCorruptedForestLateBg,
-    fallback: forestBg,
-    dim: 0.46,
-    vignette: 0.68,
-    tint: "rgba(100, 52, 184, 0.14)",
-  },
-];
-
-const BOSS_BACKGROUND_STAGE = {
-  id: "rift-boss",
-  bossOnly: true,
-  image: stageRiftBossBg,
-  fallback: forestBg,
-  dim: 0.5,
-  vignette: 0.74,
-  centerDim: 0.24,
-  tint: "rgba(88, 54, 190, 0.16)",
-};
 
 const HERO_FRAME_RECTS = [
   { x: 0, y: 58, w: 362, h: 386 },
@@ -281,7 +98,7 @@ const HERO_ANIMATIONS = {
     timing: [82, 72, 70, 64, 58, 52, 48, 48, 58, 82, 72, 66, 70, 78, 86, 90],
     hitFrame: 8,
     label: "Tetr Blade",
-    draw: { x: -174, y: -252, w: 348, h: 486 },
+    draw: { x: -160, y: -232, w: 320, h: 448 },
     noKeying: true,
   },
   ranged: {
@@ -294,7 +111,7 @@ const HERO_ANIMATIONS = {
     timing: [72, 68, 64, 60, 56, 52, 48, 48, 68, 78, 62, 58, 66, 76, 84, 88],
     hitFrame: 8,
     label: "Tetr Pistol",
-    draw: { x: -174, y: -252, w: 348, h: 486 },
+    draw: { x: -160, y: -232, w: 320, h: 448 },
     noKeying: true,
   },
   combo1: {
@@ -307,7 +124,7 @@ const HERO_ANIMATIONS = {
     timing: [74, 70, 66, 60, 54, 50, 48, 58, 74, 70, 64, 64, 70, 76, 82, 86],
     hitFrame: 7,
     label: "Combo Blade I",
-    draw: { x: -174, y: -252, w: 348, h: 486 },
+    draw: { x: -160, y: -232, w: 320, h: 448 },
     noKeying: true,
   },
   combo2: {
@@ -320,7 +137,7 @@ const HERO_ANIMATIONS = {
     timing: [72, 68, 64, 58, 52, 48, 46, 56, 70, 68, 62, 62, 68, 74, 80, 84],
     hitFrame: 7,
     label: "Combo Blade II",
-    draw: { x: -174, y: -252, w: 348, h: 486 },
+    draw: { x: -160, y: -232, w: 320, h: 448 },
     noKeying: true,
   },
   combo3: {
@@ -333,7 +150,7 @@ const HERO_ANIMATIONS = {
     timing: [70, 66, 62, 56, 50, 46, 44, 52, 68, 66, 60, 60, 66, 72, 78, 82],
     hitFrame: 8,
     label: "Combo Blade III",
-    draw: { x: -174, y: -252, w: 348, h: 486 },
+    draw: { x: -160, y: -232, w: 320, h: 448 },
     noKeying: true,
   },
   ultimate: {
@@ -499,6 +316,8 @@ const SOFT_DROP_MS = 12;
 const LOCK_DELAY_MS = 500;
 const DAS_MS = 128;
 const ARR_MS = 28;
+const ASSET_LOADING_MIN_MS = 450;
+const ASSET_LOADING_MAX_MS = 2600;
 const PLAYER_MAX_HP = 100;
 const ENEMY_DEFEAT_HEAL = 15;
 const PERFECT_CLEAR_BASE_DAMAGE = 90;
@@ -708,64 +527,7 @@ const TUNING_SLIDERS = {
   lockDelay: { min: 200, max: 900, unit: "ms" },
 };
 
-const RARITY = {
-  common: {
-    tier: "common",
-    label: "Common",
-    color: "#aeb8c4",
-    titleColor: "#eef3f5",
-    border: "#aeb8c4",
-    fillTop: "rgba(28, 35, 42, 0.84)",
-    fillBottom: "rgba(8, 12, 18, 0.82)",
-    glow: "rgba(174, 184, 196, 0.18)",
-    badgeFill: "rgba(174, 184, 196, 0.16)",
-    badgeText: "#dce4e8",
-    lineWidth: 1.8,
-    emblemAlpha: 0.44,
-  },
-  rare: {
-    tier: "rare",
-    label: "Rare",
-    color: "#70c8ff",
-    titleColor: "#dff7ff",
-    border: "#70c8ff",
-    fillTop: "rgba(18, 37, 58, 0.88)",
-    fillBottom: "rgba(7, 14, 25, 0.84)",
-    glow: "rgba(112, 200, 255, 0.34)",
-    badgeFill: "rgba(112, 200, 255, 0.2)",
-    badgeText: "#cdefff",
-    lineWidth: 2.2,
-    emblemAlpha: 0.62,
-  },
-  relic: {
-    tier: "relic",
-    label: "Relic",
-    color: "#fff0a6",
-    titleColor: "#fff7d2",
-    border: "#fff0a6",
-    fillTop: "rgba(66, 47, 18, 0.88)",
-    fillBottom: "rgba(20, 13, 8, 0.86)",
-    glow: "rgba(255, 224, 122, 0.42)",
-    badgeFill: "rgba(255, 224, 122, 0.22)",
-    badgeText: "#fff7d2",
-    lineWidth: 2.8,
-    emblemAlpha: 0.82,
-  },
-  legendary: {
-    tier: "legendary",
-    label: "Legendary",
-    color: "#ff6f7c",
-    titleColor: "#ffe6e8",
-    border: "#ff6f7c",
-    fillTop: "rgba(82, 18, 31, 0.9)",
-    fillBottom: "rgba(24, 8, 14, 0.88)",
-    glow: "rgba(255, 84, 104, 0.48)",
-    badgeFill: "rgba(255, 84, 104, 0.24)",
-    badgeText: "#ffe6e8",
-    lineWidth: 3,
-    emblemAlpha: 0.9,
-  },
-};
+
 
 const BUILD_FAMILY = {
   spin: { labelKey: "family.spin", color: "#d7c2ff" },
@@ -776,31 +538,9 @@ const BUILD_FAMILY = {
   perfect: { labelKey: "family.perfect", color: "#fff0a6" },
 };
 
-const BUILD_TAGS = {
-  Spin: { labelKey: "tag.spin", color: "#d7c2ff", family: "spin" },
-  Combo: { labelKey: "tag.combo", color: "#7ef7ff", family: "combo" },
-  Defense: { labelKey: "tag.defense", color: "#9df7da", family: "defense" },
-  Burst: { labelKey: "tag.burst", color: "#fff0a6", family: "burst" },
-  Survival: { labelKey: "tag.survival", color: "#98f07e", family: "defense" },
-  Garbage: { labelKey: "tag.garbage", color: "#79e2a7", family: "garbage" },
-  Utility: { labelKey: "tag.utility", color: "#9fb4ff", family: "burst" },
-  Perfect: { labelKey: "tag.perfect", color: "#fff0a6", family: "perfect" },
-  B2B: { labelKey: "tag.b2b", color: "#ffdf8a", family: "burst" },
-  "Boss Killer": { labelKey: "tag.bossKiller", color: "#ff8f98", family: "burst" },
-};
 
-const TRAIT_DEFS = {
-  Defense: { category: "common", breakpoints: [3, 5, 7], icon: "◆", effectKeys: ["traitEffect.defense.1", "traitEffect.defense.2", "traitEffect.defense.3"] },
-  Burst: { category: "common", breakpoints: [3, 5, 7], icon: "✦", effectKeys: ["traitEffect.burst.1", "traitEffect.burst.2", "traitEffect.burst.3"] },
-  Spin: { category: "uncommon", breakpoints: [2, 4, 6], icon: "↻", effectKeys: ["traitEffect.spin.1", "traitEffect.spin.2", "traitEffect.spin.3"] },
-  Utility: { category: "uncommon", breakpoints: [2, 4, 6], icon: "◇", effectKeys: ["traitEffect.utility.1", "traitEffect.utility.2", "traitEffect.utility.3"] },
-  Survival: { category: "uncommon", breakpoints: [2, 4, 6], icon: "✚", effectKeys: ["traitEffect.survival.1", "traitEffect.survival.2", "traitEffect.survival.3"] },
-  Combo: { category: "uncommon", breakpoints: [2, 4, 6], icon: "×", effectKeys: ["traitEffect.combo.1", "traitEffect.combo.2", "traitEffect.combo.3"] },
-  Garbage: { category: "uncommon", breakpoints: [2, 4, 6], icon: "▦", effectKeys: ["traitEffect.garbage.1", "traitEffect.garbage.2", "traitEffect.garbage.3"] },
-  B2B: { category: "rare", breakpoints: [2, 3, 4], icon: "⇄", effectKeys: ["traitEffect.b2b.1", "traitEffect.b2b.2", "traitEffect.b2b.3"] },
-  Perfect: { category: "rare", breakpoints: [2, 3], icon: "★", effectKeys: ["traitEffect.perfect.1", "traitEffect.perfect.2"] },
-  "Boss Killer": { category: "rare", breakpoints: [1, 2], icon: "☄", effectKeys: ["traitEffect.bossKiller.1", "traitEffect.bossKiller.2"] },
-};
+
+
 
 const COLORS = {
   I: "#5fd7f4",
@@ -841,7 +581,7 @@ const UI_LAYOUT = {
   playerStage: { x: 18, y: 188, w: 380, h: 392 },
   enemyStage: { x: 858, y: 246, w: 410, h: 320 },
   boardFrame: { x: BOARD_X - 18, y: BOARD_Y - 18, w: COLS * TILE + 36, h: ROWS * TILE + 36 },
-  menuHero: { x: 392, y: 450, scale: 1.2 },
+  menuHero: { x: 430, y: 456, scale: 1.0 },
   menu: {
     x: 804,
     y: 96,
@@ -964,1142 +704,7 @@ function allControlKeys() {
   return CONTROL_ACTIONS.flatMap(({ id }) => getControlKeys(id));
 }
 
-const translations = {
-  zh: {
-    startTitle: "T-Spin Traveler",
-    startSubtitle: "用消行、Spin 與 Combo 把方塊轉化成符文攻擊。",
-    startTagline: "方塊消除 × 奇幻戰鬥",
-    startWorldHint: "Noa 穿過魔法裂隙，把每一次消行變成戰鬥指令。",
-    startPanelHint: "先進無盡模式。教學可選，不會強制。",
-    endless: "無盡模式",
-    startGame: "開始遊戲",
-    tutorialHintShort: "建議",
-    settings: "設定",
-    moveGuide: "招式圖鑑",
-    moreOptions: "更多",
-    startHint: "Enter 開始無盡模式",
-    paused: "暫停",
-    pauseMenu: "暫停選單",
-    pauseMenuHint: "戰鬥已停止。調整設定或回到主選單。",
-    settingsBack: "返回暫停",
-    settingsBackMenu: "返回主選單",
-    settingsTabControls: "操作",
-    settingsTabHandling: "手感",
-    settingsTabAudio: "音訊",
-    settingsTabLanguage: "語言",
-    settingsTabFeedback: "回饋",
-    audioSettingsTitle: "音樂與音效",
-    controlsSettingsTitle: "操作設定",
-    handlingSettingsTitle: "手感設定",
-    resetKeybinds: "恢復預設按鍵",
-    resetHandling: "恢復預設手感",
-    controlListTitle: "完整操作鍵位",
-    languageSettingsTitle: "語言設定",
-    languageHelp: "切換後會立即刷新遊戲介面文字。B2B、T-Spin 等招式名稱保留英文。",
-    feedbackTitle: "回饋與建議",
-    feedbackHelp: "遇到 Bug 或有改進想法？歡迎到 GitHub 留下回報，NOA 會感謝你的協助。",
-    feedbackOpenGithub: "前往 GitHub 回饋",
-    countdownStart: "START",
-    resume: "繼續",
-    restart: "重新開始",
-    menu: "主選單",
-    retry: "再打一場",
-    defeat: "失敗",
-    victory: "勝利",
-    audio: "音量",
-    master: "主音量",
-    music: "音樂",
-    sfx: "音效",
-    mute: "靜音",
-    language: "語言",
-    controls: "按鍵設定",
-    feel: "操作手感",
-    das: "DAS 延遲",
-    arr: "ARR 連移",
-    softDropMs: "軟降速度",
-    lockDelayMs: "鎖定延遲",
-    bindHelp: "點擊任一按鍵欄位後按下新按鍵，會取代該動作目前鍵位。Esc 取消。",
-    binding: "請按下新按鍵，Esc 取消",
-    closeHint: "Esc / 齒輪關閉設定",
-    back: "返回",
-    hold: "保留",
-    pauseSettingsTitle: "暫停與設定",
-    menuActions: "選單",
-    battleStats: "戰鬥紀錄",
-    waveLabel: "波次",
-    bestLabel: "最佳",
-    piecesLabel: "方塊",
-    nextBossLabel: "下一個 Boss",
-    incomingHelp: "消行可抵銷",
-    noUpgrades: "尚無強化",
-    chooseUpgrade: "選擇導航強化",
-    upgradeHelp: "按 1 / 2 / 3 或點擊卡片",
-    endlessDescription: "無限波次，敵人會逐步變強。",
-    ally: "我方",
-    enemy: "敵人",
-    hp: "HP",
-    traveler: "旅人",
-    travelerNote: "冷靜的外星旅人",
-    build: "Build",
-    navigationCore: "導航核心：森林邊境",
-    topQuest: "祕法導航裂隙",
-    next: "下一個",
-    hex: "干擾",
-    attackPanel: "攻擊",
-    upgradeMeterShort: "升級",
-    relicProgress: "升級進度",
-    relicDraftReady: "即將進入升級選擇",
-    ultimateShort: "大招",
-    ultimate4Wide: "4-WIDE 爆發",
-    ultimateEnd: "4-WIDE 結束",
-    ultimateBurstTimed: "4-WIDE 爆發 {seconds}s",
-    ultimateComboExtend: "Combo 延長 +{seconds}s",
-    incomingShort: "垃圾",
-    enemyStrike: "敵人攻擊",
-    enemyIntent: "意圖",
-    intentAttackLabel: "攻擊",
-    intentGarbageLabel: "垃圾",
-    intentCountdownLabel: "倒數",
-    turnsLater: "{count} 回合後",
-    kos: "擊破",
-    bossPhase: "Boss 階段 {phase}",
-    bossPhaseShift: "Boss 階段 {phase}",
-    bossRiftWindup: "裂隙重擊蓄力",
-    heavyAttackIncoming: "強力攻擊即將來襲",
-    miniBoss: "小 Boss",
-    comboLabel: "Combo",
-    incomingLabel: "垃圾預告",
-    on: "開",
-    off: "關",
-    pcShort: "PC",
-    dmgShort: "DMG",
-    guardLabel: "護盾",
-    guardBlocked: "護盾抵擋",
-    floaterGuard: "護盾 +{amount}",
-    floaterB2BGuard: "B2B 保護",
-    b2bReady: "B2B Ready",
-    b2bBroken: "B2B Broken",
-    b2bChain: "B2B Chain {count}",
-    enemyInfoCancel: "抵銷",
-    enemyCancelable: "可抵銷",
-    enemyUncancelable: "不可抵銷",
-    bossPhaseBar: "階段壓力",
-    firstWaveCombatHint: "消行會攻擊敵人，T-Spin 會造成重擊。",
-    firstRunHint: "首次遊玩建議先完成 3 分鐘教學。",
-    nextRunHook: "下一局目標：撐到第 20 波並擊破 Boss。",
-    nextRunHookDynamic: "下一局目標：撐到第 {wave} 波並擊破 Boss。",
-    damageEquationHint: "消行 + 技術 + Combo + 弱點 + 升級 = 總傷害",
-    damageDetailHint: "暫停可看完整來源",
-    hitSingle: "消 1 行",
-    hitDouble: "消 2 行",
-    hitTriple: "消 3 行",
-    hitTetris: "TETRIS",
-    hitCombo: "COMBO",
-    hitB2B: "B2B",
-    hitTSpin: "T-SPIN",
-    hitTSpinMini: "T-SPIN MINI",
-    hitPerfect: "PERFECT CLEAR",
-    linesShort: "行",
-    lastHit: "最後命中",
-    detailPauseHint: "P 暫停看完整公式",
-    buildCompact: "流派",
-    buildDetailPause: "詳細 Build 在暫停",
-    threatShort: "威脅",
-    boardEffectShort: "盤面",
-    weakShort: "弱點",
-    relicDraft: "升級選擇",
-    currentBuild: "已升級",
-    currentBuildTitle: "已升級列表",
-    currentBuildEmpty: "尚未獲得升級",
-    currentBuildStats: "升級標籤統計",
-    currentBuildList: "已升級項目",
-    currentBuildStrongest: "最強流派",
-    currentBuildTraits: "已啟動羈絆",
-    currentBuildDirection: "目前偏向：{families}",
-    currentBuildNoDirection: "尚未形成明顯流派",
-    currentBuildClose: "關閉",
-    traitListTitle: "羈絆",
-    traitActive: "已啟動",
-    traitNext: "下一階",
-    traitActivated: "將啟動羈絆",
-    traitUpgrade: "羈絆升級",
-    traitProgressActivate: "{tag} +1，距離啟動還差 {remain}",
-    traitProgressUpgrade: "{tag} +1，距離升級還差 {remain}",
-    traitEffectNone: "尚未啟動效果",
-    "traitEffect.spin.1": "Spin 傷害 +6，Spin 額外 Guard +1。",
-    "traitEffect.spin.2": "Spin 傷害 +12，Spin 額外 Guard +2。",
-    "traitEffect.spin.3": "Spin 傷害 +20，Spin 額外 Guard +4。",
-    "traitEffect.combo.1": "Combo 額外傷害 +2 / Combo。",
-    "traitEffect.combo.2": "Combo 額外傷害 +4 / Combo，4+ Combo 延後 +1。",
-    "traitEffect.combo.3": "Combo 額外傷害 +7 / Combo，4+ Combo 延後 +1。",
-    "traitEffect.defense.1": "Guard 上限 +4，消行 Guard +1。",
-    "traitEffect.defense.2": "Guard 上限 +8，消行 Guard +2。",
-    "traitEffect.defense.3": "Guard 上限 +14，消行 Guard +3，格擋反擊。",
-    "traitEffect.burst.1": "高價值消行傷害 +8。",
-    "traitEffect.burst.2": "高價值消行傷害 +16。",
-    "traitEffect.burst.3": "高價值消行傷害 +28。",
-    "traitEffect.survival.1": "每波額外回復 +4 HP。",
-    "traitEffect.survival.2": "每波額外回復 +8 HP。",
-    "traitEffect.survival.3": "每波額外回復 +14 HP。",
-    "traitEffect.garbage.1": "抵銷垃圾每行追加 +5 傷害。",
-    "traitEffect.garbage.2": "抵銷垃圾每行追加 +10 傷害，3+ 行給 Guard。",
-    "traitEffect.garbage.3": "抵銷垃圾每行追加 +16 傷害，3+ 行給更多 Guard。",
-    "traitEffect.utility.1": "高價值消行 Ultimate 充能 +1。",
-    "traitEffect.utility.2": "高價值消行 Ultimate 充能 +2。",
-    "traitEffect.utility.3": "高價值消行 Ultimate 充能 +3。",
-    "traitEffect.perfect.1": "Perfect Clear 額外 +30 傷害並延後 +1。",
-    "traitEffect.perfect.2": "Perfect Clear 額外 +60 傷害並延後 +2。",
-    "traitEffect.b2b.1": "B2B 額外傷害 +6。",
-    "traitEffect.b2b.2": "B2B 額外傷害 +12。",
-    "traitEffect.b2b.3": "B2B 額外傷害 +20。",
-    "traitEffect.bossKiller.1": "對 Boss 高價值消行 +18 傷害。",
-    "traitEffect.bossKiller.2": "對 Boss 高價值消行 +40 傷害。",
-    safeNodeDraft: "安全節點，不打斷操作",
-    damageRuleLine: "Single 10 / Double 25 / Triple 45 / Tetris 70 / Spin 30-140 / B2B +15 / Weak x1.35",
-    upgradeReadyShort: "升級待命",
-    upgradeReadyHint: "下一波選強化",
-    floaterUpgradeReady: "升級待命：下一波安全選擇",
-    ultimateExtend: "4-Wide +{seconds}s",
-    practice: "練習挑戰",
-    practiceHint: "從右側挑戰開始，完成目標即可獲得獎勵並學會招式。",
-    audioMixHelp: "混音：操作低音量，消行/命中突出，Perfect Clear 會壓低 BGM 後爆發。",
-    effectTierTitle: "特效分級",
-    effectTierText: "Single 低調，Tetris/Spin 強化，B2B 金光，Perfect Clear 霸屏。",
-    noaRole: "Tetr 能量劍士 / 導航術士",
-    dasHelp: "按住左右後，開始自動連移前的等待時間。",
-    arrHelp: "自動連移的間隔；0ms 代表貼牆瞬移。",
-    softDropHelp: "按住軟降時每格下降間隔；越低越快。",
-    lockDelayHelp: "方塊碰地後可微調的鎖定時間。",
-    gravityCurveHelp: "難度曲線：每 5 波重力提升；第 10 波後垃圾延遲逐步縮短。",
-    challengePanel: "互動挑戰",
-    challengeStart: "挑戰開始",
-    clickToStart: "點擊開始挑戰",
-    moveGuideSubtitle: "把進階消行當成戰鬥招式。規則保持短，方便邊玩邊查。",
-    waveClearPick: "波次 {wave} 已清除。選一個強化後進入下一波。",
-    runMaxCombo: "最高 Combo",
-    runB2BCount: "B2B 次數",
-    runPerfectClear: "Perfect Clear",
-    runSpinCount: "Spin 次數",
-    allSpinShort: "All",
-    "build.maxHp": "最大 HP +{value}",
-    "build.damage": "傷害 x{value}",
-    "build.lineDmg": "消行傷害 +{value}",
-    "build.tCore": "T-Core +{value}",
-    "build.garbageCancel": "垃圾抵銷 +{value}",
-    "build.comboDelay": "Combo 延後 +{value}",
-    "build.b2bBlade": "B2B Blade +{value}",
-    "build.waveHeal": "波次回血 +{value}",
-    "build.spinFlow": "Spin Flow +{value}",
-    "build.comboFlow": "Combo Flow +{value}",
-    "build.guard": "防禦 -{value}",
-    "build.bossbreaker": "Bossbreaker +{value}",
-    "build.clearHeal": "消行回血 +{value}",
-    "build.spinHeal": "Spin 回血 +{value}",
-    "build.spinGuardStrike": "Spin 護盾轉攻擊 x{value}",
-    "build.comboEcho": "Combo Echo +{value}",
-    "build.guardReflect": "反射護盾 x{value}",
-    "build.garbageCounter": "垃圾反擊 +{value}",
-    "build.burstCharge": "爆發充能 +{value}",
-    "build.perfectBossDelay": "Boss 延後 +{value}",
-    "family.spin": "Spin 流派",
-    "family.combo": "Combo 流派",
-    "family.defense": "防禦流派",
-    "family.garbage": "垃圾控制",
-    "family.burst": "爆發流派",
-    "family.perfect": "Perfect 流派",
-    "familyShort.spin": "Spin",
-    "familyShort.combo": "Combo",
-    "familyShort.defense": "防禦",
-    "familyShort.garbage": "垃圾",
-    "familyShort.burst": "爆發",
-    "familyShort.perfect": "Perfect",
-    "tag.spin": "Spin",
-    "tag.combo": "Combo",
-    "tag.defense": "防禦",
-    "tag.burst": "爆發",
-    "tag.survival": "生存",
-    "tag.garbage": "垃圾",
-    "tag.utility": "輔助",
-    "tag.perfect": "Perfect",
-    "tag.b2b": "B2B",
-    "tag.bossKiller": "Boss Killer",
-    "stack.stackable": "可疊",
-    "stack.unique": "唯一",
-    "stack.capped": "上限",
-    "stack.scaling": "成長",
-    "upgradeShort.rift_battery": "Tetris / Spin 更快累積 4-WIDE 爆發。",
-    "upgradeShort.perfect_anchor": "Perfect Clear 打中 Boss 時延後 Boss 攻擊。",
-    "upgradeShort.spin_guard_reactor": "Spin 消耗 Guard，轉成額外爆發傷害。",
-    "upgradeShort.aegis_reprisal": "Guard 擋下傷害時反射給敵人。",
-    "upgradeShort.bossbreaker_relic": "Spin / B2B 對 Boss 追加傷害。",
-    "upgradeShort.singularity_spin_core": "每 3 次 Spin 引爆一次奇點。",
-    "upgradeShort.combo_constellation": "高 Combo 會延後敵人攻擊。",
-    "upgradeShort.aegis_star_mirror": "完全格擋時觸發反擊。",
-    "upgradeShort.garbage_alchemy_core": "抵銷垃圾轉為傷害與 Guard。",
-    "upgradeShort.perfect_rift_crown": "Perfect Clear 重創 Boss。",
-    "upgradeShort.spin_starter": "每波前 2 次 Spin 額外傷害並獲得 Guard。",
-    "upgradeShort.b2b_compass": "B2B 鏈越長，額外傷害越高。",
-    "upgradeShort.combo_safety_net": "每波首次高 Combo 獲得 Guard 並延後敵人。",
-    "upgradeShort.emergency_rift_shield": "低血量時每波一次啟動裂隙護盾。",
-    "upgradeShort.garbage_transmuter": "抵銷垃圾會轉化為額外傷害。",
-    "upgradeShort.perfect_echo": "Perfect Clear 讓下一次消行追加回聲傷害。",
-    "upgradeShort.rift_overdrive": "Boss 戰中高價值消行累積超載爆發。",
-    "upgradeShort.last_star_protocol": "低血量時啟動翻盤協議，強化下一擊。",
-    "tutorial": "新手教學",
-    "tutorialTitle": "3 分鐘戰鬥教學",
-    "tutorialSubtitle": "用最短流程理解消行、HOLD、Combo、Spin 與垃圾抵銷。",
-    "tutorialStart": "開始教學",
-    "tutorialSkip": "跳過教學",
-    "tutorialActive": "教學",
-    "tutorialDone": "教學完成",
-    "tutorialStep.line": "先消除任意 1 行，確認攻擊會如何產生。",
-    "tutorialStep.hold": "使用 HOLD 保留方塊，理解保留限制。",
-    "tutorialStep.combo": "連續消行達到 2 Combo，觀察傷害提升。",
-    "tutorialStep.spin": "打出任意 Spin 消行，觸發技術加成。",
-    "tutorialStep.cancel": "抵銷 1 行 Incoming Garbage，理解防禦節奏。",
-    "tutorialPrompt.line": "教學 1/5：消除任意 1 行",
-    "tutorialPrompt.hold": "教學 2/5：使用 HOLD 一次",
-    "tutorialPrompt.combo": "教學 3/5：達到 2 Combo",
-    "tutorialPrompt.spin": "教學 4/5：打出任意 Spin 消行",
-    "tutorialPrompt.cancel": "教學 5/5：消行抵銷垃圾",
-    "damageFormula": "傷害公式",
-    "damageTotal": "總傷害",
-    "damageBase": "基礎",
-    "damageLineBonus": "消行強化",
-    "damageTBonus": "T 方塊加成",
-    "damageSpinBonus": "Spin 強化",
-    "damageAllSpinBonus": "All-Spin 強化",
-    "damageCombo": "Combo",
-    "damageComboBurst": "Combo 爆發",
-    "damageB2B": "B2B",
-    "damageBoss": "Bossbreaker",
-    "damagePerfect": "Perfect Clear",
-    "damagePerfectBoss": "Boss 35%",
-    "damageGuardStrike": "護盾轉攻擊",
-    "damageComboEcho": "Combo Echo",
-    "damageGarbageCounter": "垃圾反擊",
-    "damageSingularity": "奇點爆發",
-    "damageAegisStar": "星盾爆發",
-    "damageGarbageAlchemy": "垃圾鍊成",
-    "damagePerfectCrown": "裂隙王冠",
-    "damageSpinStarter": "旋轉起勢",
-    "damageB2BCompass": "B2B 羅盤",
-    "damageGarbageTransmuter": "垃圾轉化",
-    "damagePerfectEcho": "Perfect 回聲",
-    "damageRiftOverdrive": "裂隙超載",
-    "damageLastStar": "最後星協議",
-    "damageMultiplier": "倍率",
-    "damageWeakness": "弱點倍率",
-    "damageExecute": "處決補正",
-    "enemyInfoDamage": "傷害",
-    "enemyInfoGarbage": "垃圾",
-    "enemyInfoSpecial": "特性",
-    "enemyInfoWeakness": "弱點",
-    "special.none": "無特殊",
-    "special.slime": "基礎攻擊",
-    "special.vine": "施加藤蔓壓力",
-    "special.mushroom": "干擾 Next",
-    "special.beetle": "單行傷害減半",
-    "special.mist": "垃圾洞漂移",
-    "special.thorn": "突襲斬擊",
-    "special.wisp": "追蹤光彈",
-    "special.sentinel": "地裂重擊",
-    "special.king": "分階段壓迫",
-    "summaryDamage": "總傷害",
-    "summaryBestHit": "最高單擊",
-    "summaryDamageSources": "傷害來源",
-    "summaryUpgradeSource": "強化",
-    rating: "評級 {rating}",
-    settingPressKey: "按新鍵",
-    languageZhShort: "中文",
-    languageEnShort: "EN",
-    screenLeft: "← 左移",
-    screenRight: "→ 右移",
-    screenMove: "← → 移動",
-    screenSoftDrop: "↓ 軟降",
-    screenHardDrop: "Space 硬降",
-    screenRotate: "↑/X/Z 旋轉",
-    screenRotateCCW: "Z 逆轉",
-    screenRotate180: "A 180°",
-    screenHold: "Shift/C 保留",
-    screenPause: "P/Esc 暫停",
-    screenMute: "M 靜音",
-    screenMusic: "M 音樂",
-    ariaPrototype: "T-Spin Traveler 可玩原型",
-    "control.left": "左移",
-    "control.right": "右移",
-    "control.softDrop": "軟降",
-    "control.hardDrop": "硬降",
-    "control.rotateCW": "順時針旋轉",
-    "control.rotateCCW": "逆時針旋轉",
-    "control.rotate180": "180 度旋轉",
-    "control.hold": "保留方塊",
-    "control.pause": "暫停",
-    "control.mute": "靜音／音樂",
-    messageSpawnTop: "方塊堆到盤面頂端",
-    messageHoldBlocked: "保留方塊交換後無法生成",
-    messageLockAbove: "方塊鎖定在盤面上方",
-    messagePlayerDefeat: "Noa 失去戰鬥能力",
-    messageVictory: "Noa 取得導航核心碎片，森林邊境航道已重新點亮。",
-    messageGarbageTop: "垃圾行把盤面推到頂端",
-    floaterComboDelay: "Combo {combo}: 延後 +{delay}",
-    floaterCancelGarbage: "抵銷 {count} 行垃圾",
-    floaterArmored: "護甲減傷",
-    floaterSpinGuardStrike: "護盾轉攻擊 +{damage}",
-    floaterGuardReflect: "護盾反射 -{damage}",
-    floaterPerfectBossDelay: "Boss 延後 +{turns}",
-    floaterSingularityCharge: "奇點 {count}/3",
-    floaterSingularityBurst: "奇點爆發 +{damage}",
-    floaterComboConstellation: "星圖延後 +{turns}",
-    floaterAegisStar: "星盾爆發 -{damage}",
-    floaterGarbageAlchemy: "垃圾鍊成 +{damage}",
-    floaterGarbageAlchemyGuard: "鍊成護盾 +{guard}",
-    floaterPerfectCrown: "裂隙王冠 +{damage}",
-    floaterSpinStarter: "旋轉起勢 +{damage} / Guard +{guard}",
-    floaterB2BCompass: "B2B 羅盤 +{damage}",
-    floaterComboSafety: "安全網：Guard +{guard} / 延後 +{turns}",
-    floaterEmergencyShield: "裂隙急救盾 +{guard}",
-    floaterGarbageTransmuter: "垃圾轉化 +{damage}",
-    floaterPerfectEchoReady: "Perfect 回聲待命",
-    floaterPerfectEcho: "Perfect 回聲 +{damage}",
-    floaterRiftOverdriveCharge: "裂隙超載 {count}/3",
-    floaterRiftOverdrive: "裂隙超載 +{damage}",
-    floaterLastStarReady: "最後星協議啟動",
-    floaterLastStarGuard: "最後星護盾 +{guard}",
-    floaterLastStar: "最後星協議 +{damage}",
-    floaterFullHp: "HP 全滿",
-    floaterTBonus: "T 加成",
-    floaterB2BRow: "B2B +{rows} 行",
-    floaterComboRow: "Combo +{rows} 行",
-    floaterComboBurst: "Combo 爆發 +{damage}",
-    floaterPerfectClear: "Perfect Clear",
-    floaterFullRecovery: "完全回復",
-    floaterCombo: "{combo} Combo",
-    floaterGarbageRise: "垃圾上升 +{count}",
-    floaterChallengeClear: "挑戰完成：{title}",
-    floaterReward: "獎勵：{name}",
-    floaterIncoming: "垃圾預告 +{count}",
-    floaterRootPressure: "藤蔓壓迫",
-    floaterMistHolesDrift: "霧洞漂移",
-    floaterBossPressure: "Boss 壓迫 +1",
-    floaterQueueHex: "Next 干擾",
-    floaterVineBlocksRemoved: "藤蔓障礙清除",
-    floaterRelicWave: "Relic 波次 {wave}",
-    floaterMiniBossClear: "小 Boss 擊破",
-    floaterWave: "波次 {wave}",
-    floaterWaveHeal: "+{amount} HP",
-    floaterUpgrade: "升級 {tier}",
-    intentSporeHex: "孢子干擾",
-    intentSporeHexDetail: "{damage} 傷害 / 28% +1 垃圾",
-    intentArmorCrush: "甲殼重擊",
-    intentArmorCrushDetail: "{damage} 傷害 / +{garbage} 垃圾",
-    intentDashSlash: "突襲斬擊",
-    intentDashSlashDetail: "{damage} 傷害 / +{garbage} 垃圾",
-    intentHomingBolt: "追蹤光彈",
-    intentHomingBoltDetail: "{damage} 傷害",
-    intentGroundSlam: "地裂重擊",
-    intentGroundSlamDetail: "{damage} 傷害 / +{garbage} 垃圾",
-    intentBossPhase: "階段 {phase}",
-    intentBossPhaseDetail: "{damage} 傷害 / Next 干擾 + 垃圾",
-    intentGarbageSurge: "垃圾湧升",
-    intentGarbageSurgeDetail: "{damage} 傷害 / +{garbage} 垃圾",
-    intentStrike: "攻擊",
-    intentStrikeDetail: "{damage} 傷害",
-    weaknessNone: "無弱點",
-    weaknessCombo: "弱點：Combo",
-    weaknessPerfect: "弱點：Perfect Clear",
-    weaknessSpin: "弱點：Spin",
-    weaknessAllSpin: "弱點：All-Spin",
-    weaknessB2B: "弱點：B2B",
-    weaknessHit: "弱點 x1.35",
-    perfectClearTitle: "PERFECT CLEAR",
-    perfectClearSubtitle: "祕法導航裂隙",
-    perfectClearDamage: "虛空處決  -{damage}",
-    guideTSpinText: "T 方塊旋轉卡洞並消行。高傷害，吃 T-Core 強化。",
-    guideTSpinMiniText: "T 方塊小型卡洞消行。傷害較低，但仍可觸發 Spin 系統。",
-    guideAllSpinMiniText: "I/J/L/S/Z 旋轉卡進洞中消行。用於觸發非 T 方塊 Spin。",
-    guideB2BText: "連續 Tetris 或 Spin 消行，中間不能用普通消行打斷。",
-    guidePerfectClearText: "消行後整個盤面清空。高爆發並回血。",
-    guideIncomingCancelText: "敵人垃圾先進預告池；你消行會先抵銷垃圾。",
-    "challenge.tspinMini": "完成 1 次 T-Spin Mini 消行",
-    "challenge.cancel3": "累積抵銷 3 行垃圾",
-    "challenge.b2b2": "維持 Back-to-Back 2 次",
-    "line.single": "一行",
-    "line.double": "兩行",
-    "line.triple": "三行",
-    "line.tetris": "四行",
-    "line.generic": "{lines} 行",
-    "upgrade.tspin_amp": "T-Spin / T-Spin Mini 額外 +10 傷害。",
-    "upgrade.garbage_guard": "每次消行抵銷 Incoming Garbage 額外 +1。",
-    "upgrade.combo_clock": "3 Combo 以上延後敵人攻擊額外 +1 回合。",
-    "upgrade.b2b_blade": "Back-to-Back 額外 +8 傷害。",
-    "upgrade.star_mender": "每波勝利額外回復 +12 HP。",
-    "upgrade.vital_core": "最大 HP +15，並立刻回復 +15 HP。",
-    "upgrade.blade_polish": "所有消行攻擊額外 +5 傷害。",
-    "upgrade.recovery_glyph": "每次有消行時額外回復 +3 HP。",
-    "upgrade.spin_circuit": "Spin 類招式額外 +8 傷害，All-Spin 也吃加成。",
-    "upgrade.combo_resonator": "2 Combo 以上，每段 Combo 額外 +3 傷害。",
-    "upgrade.aegis_shell": "敵人每次攻擊傷害 -2。",
-    "upgrade.all_spin_codex": "All-Spin Mini 額外 +18 傷害，並多抵銷 1 垃圾。",
-    "upgrade.tempo_engine": "Combo 延後敵人攻擊 +1，Combo 傷害再 +4。",
-    "upgrade.null_barrier": "敵人攻擊傷害 -3，垃圾預告上升前多等 1 回合。",
-    "upgrade.void_carapace": "最大 HP +25，敵人每次攻擊傷害 -1。",
-    "upgrade.stellar_caliber": "所有造成的傷害提高 12%。",
-    "upgrade.arcane_suture": "最大 HP +10，Spin 類招式命中時額外回復 +5 HP。",
-    "upgrade.bossbreaker_relic": "B2B 與 Spin 對 Boss 額外 +20 傷害。",
-    "upgrade.grey_star_reactor": "最大 HP +40，所有傷害提高 10%。",
-    "upgrade.guard_lattice": "護盾上限 +8，每次消行額外獲得 +1 護盾。",
-    "upgrade.b2b_preserver": "獲得 2 層 B2B 保護；普通消行不會立刻打斷 B2B。",
-    "upgrade.spin_vamp": "Spin 命中額外回復 +6 HP，並額外獲得護盾。",
-    "upgrade.combo_aegis": "3 Combo 以上時，每次消行額外獲得 +2 護盾。",
-    "upgrade.spin_guard_reactor": "Spin 命中時消耗最多 24 護盾，轉化為 2 倍額外傷害。",
-    "upgrade.combo_echo_matrix": "4 Combo 以上會觸發 Echo 追加傷害。",
-    "upgrade.aegis_reprisal": "護盾抵擋敵人傷害時，將抵擋量 1.5 倍反射給敵人。",
-    "upgrade.garbage_furnace": "抵銷垃圾時，每抵銷 1 行額外造成 10 傷害。",
-    "upgrade.rift_battery": "Tetris 或 Spin 會額外為終極模式充能。",
-    "upgrade.perfect_anchor": "Perfect Clear 命中 Boss 時，額外延後 Boss 攻擊 2 回合。",
-    "upgrade.singularity_spin_core": "每第 3 次 Spin 觸發奇點爆發，造成額外高傷害。",
-    "upgrade.combo_constellation": "每波首次達 4 / 8 Combo 時，延後敵人攻擊。",
-    "upgrade.aegis_star_mirror": "Guard 完全擋下敵人攻擊時，觸發星盾反擊。",
-    "upgrade.garbage_alchemy_core": "抵銷垃圾會轉化為額外傷害；大量抵銷時獲得 Guard。",
-    "upgrade.perfect_rift_crown": "Perfect Clear 對 Boss 的最低傷害提高到 Boss 最大 HP 50%。",
-    "upgrade.spin_starter": "每波前 2 次 Spin 命中時，額外造成 12 傷害並獲得 4 Guard。",
-    "upgrade.b2b_compass": "每次高價值消行依 B2B 鏈長追加傷害，最高 +32。",
-    "upgrade.combo_safety_net": "每波首次達 4 Combo 以上時，獲得 7 Guard 並延後敵人攻擊 1 回合。",
-    "upgrade.emergency_rift_shield": "HP 降至 30% 以下時，每波一次獲得 14 Guard，可在受擊時立即抵擋。",
-    "upgrade.garbage_transmuter": "抵銷垃圾時，每行追加 12 傷害；一次抵銷 3 行以上再追加 24 傷害。",
-    "upgrade.perfect_echo": "Perfect Clear 會儲存 1 層回聲；下一次非 Perfect 消行追加 45 傷害。",
-    "upgrade.rift_overdrive": "Boss 戰中，Tetris、Spin 或 Perfect Clear 累積超載；第 3 次造成 110 額外傷害。",
-    "upgrade.last_star_protocol": "HP 降至 30% 以下時，每波一次獲得 8 Guard，且下一次消行追加 35% 傷害。",
-    "upgradeName.tspin_amp": "T-Core 增幅器",
-    "upgradeName.garbage_guard": "重力濾鏡",
-    "upgradeName.combo_clock": "節奏錨點",
-    "upgradeName.b2b_blade": "Back-to-Back 刃",
-    "upgradeName.star_mender": "星光修補",
-    "upgradeName.vital_core": "生命核心",
-    "upgradeName.blade_polish": "Tetr 刃研磨",
-    "upgradeName.recovery_glyph": "回復符文",
-    "upgradeName.spin_circuit": "Spin 迴路",
-    "upgradeName.combo_resonator": "Combo 共鳴器",
-    "upgradeName.aegis_shell": "守護甲殼",
-    "upgradeName.all_spin_codex": "All-Spin 法典",
-    "upgradeName.tempo_engine": "節奏引擎",
-    "upgradeName.null_barrier": "虛無屏障",
-    "upgradeName.void_carapace": "虛空甲殼",
-    "upgradeName.stellar_caliber": "星核校準",
-    "upgradeName.arcane_suture": "祕法縫合",
-    "upgradeName.bossbreaker_relic": "Bossbreaker 遺物",
-    "upgradeName.grey_star_reactor": "灰星反應爐",
-    "upgradeName.guard_lattice": "導航護盾格",
-    "upgradeName.b2b_preserver": "B2B 記憶護符",
-    "upgradeName.spin_vamp": "Spin 吸能刃",
-    "upgradeName.combo_aegis": "Combo 守勢",
-    "upgradeName.spin_guard_reactor": "Spin 護盾反應爐",
-    "upgradeName.combo_echo_matrix": "Combo 回聲矩陣",
-    "upgradeName.aegis_reprisal": "守勢反擊鏡",
-    "upgradeName.garbage_furnace": "垃圾熔爐",
-    "upgradeName.rift_battery": "裂隙電池",
-    "upgradeName.perfect_anchor": "Perfect 錨點",
-    "upgradeName.singularity_spin_core": "奇點旋轉核心",
-    "upgradeName.combo_constellation": "連鎖星圖",
-    "upgradeName.aegis_star_mirror": "星盾反射鏡",
-    "upgradeName.garbage_alchemy_core": "垃圾鍊成核心",
-    "upgradeName.perfect_rift_crown": "完美裂隙王冠",
-    "upgradeName.spin_starter": "旋轉起勢",
-    "upgradeName.b2b_compass": "B2B 羅盤",
-    "upgradeName.combo_safety_net": "連鎖安全網",
-    "upgradeName.emergency_rift_shield": "裂隙急救盾",
-    "upgradeName.garbage_transmuter": "垃圾轉化器",
-    "upgradeName.perfect_echo": "Perfect 回聲",
-    "upgradeName.rift_overdrive": "裂隙超載",
-    "upgradeName.last_star_protocol": "最後星協議",
-    "enemy.slime.name": "森林黏液幼體",
-    "enemy.slime.trait": "基礎打擊",
-    "enemy.vine.name": "藤蔓跳躍獸",
-    "enemy.vine.trait": "跳躍種彈",
-    "enemy.mushroom.name": "花冠薩滿",
-    "enemy.mushroom.trait": "花瓣干擾",
-    "enemy.beetle.name": "荊棘甲蟲",
-    "enemy.beetle.trait": "甲殼衝撞",
-    "enemy.mist.name": "迷霧燈靈",
-    "enemy.mist.trait": "幽光護盾",
-    "enemy.thorn.name": "荊刺潛獵獸",
-    "enemy.thorn.trait": "突襲斬擊",
-    "enemy.wisp.name": "幽光蛾",
-    "enemy.wisp.trait": "追蹤光彈",
-    "enemy.sentinel.name": "遺跡守衛",
-    "enemy.sentinel.trait": "菁英：地裂重擊",
-    "enemy.king.name": "古樹巨像",
-    "enemy.king.trait": "Boss：大地重擊",
-  },
-  en: {
-    startTitle: "T-Spin Traveler",
-    startSubtitle: "Turn clears, Spins, and Combos into rune attacks.",
-    startTagline: "Falling Blocks x Fantasy Combat",
-    startWorldHint: "Noa crosses the magic rift and turns every line clear into a battle command.",
-    startPanelHint: "Start Endless first. Tutorial is optional.",
-    endless: "Endless",
-    startGame: "Start Game",
-    tutorialHintShort: "Optional",
-    settings: "Settings",
-    moveGuide: "Move Guide",
-    moreOptions: "More",
-    startHint: "Enter starts Endless",
-    paused: "Paused",
-    pauseMenu: "Pause Menu",
-    pauseMenuHint: "Battle is stopped. Adjust settings or return to the main menu.",
-    settingsBack: "Back to Pause",
-    settingsBackMenu: "Back to Menu",
-    settingsTabControls: "Controls",
-    settingsTabHandling: "Handling",
-    settingsTabAudio: "Audio",
-    settingsTabLanguage: "Language",
-    settingsTabFeedback: "Feedback",
-    audioSettingsTitle: "Music & Sound",
-    controlsSettingsTitle: "Control Settings",
-    handlingSettingsTitle: "Handling Settings",
-    resetKeybinds: "Reset Keybinds",
-    resetHandling: "Reset Handling",
-    controlListTitle: "Full Controls",
-    languageSettingsTitle: "Language",
-    languageHelp: "Text updates immediately. B2B, T-Spin, and move names stay in English.",
-    feedbackTitle: "Feedback",
-    feedbackHelp: "Found a bug or have an idea? Leave feedback on GitHub. NOA appreciates your help.",
-    feedbackOpenGithub: "Open GitHub Feedback",
-    countdownStart: "START",
-    resume: "Resume",
-    restart: "Restart",
-    menu: "Menu",
-    retry: "Retry",
-    defeat: "Defeat",
-    victory: "Victory",
-    audio: "Audio",
-    master: "Master",
-    music: "Music",
-    sfx: "SFX",
-    mute: "Mute",
-    language: "Language",
-    controls: "Controls",
-    feel: "Handling",
-    das: "DAS Delay",
-    arr: "ARR Repeat",
-    softDropMs: "Soft Drop",
-    lockDelayMs: "Lock Delay",
-    bindHelp: "Click a key field, then press a new key to replace that action. Esc cancels.",
-    binding: "Press a new key. Esc cancels",
-    closeHint: "Esc / gear closes settings",
-    back: "Back",
-    hold: "Hold",
-    pauseSettingsTitle: "Pause & Settings",
-    menuActions: "Menu",
-    battleStats: "Run Stats",
-    waveLabel: "Wave",
-    bestLabel: "Best",
-    piecesLabel: "Pieces",
-    nextBossLabel: "Next Boss",
-    incomingHelp: "clear lines to cancel",
-    noUpgrades: "No upgrades yet",
-    chooseUpgrade: "Choose A Navigation Upgrade",
-    upgradeHelp: "Press 1 / 2 / 3 or click a card",
-    endlessDescription: "Endless waves. Enemies grow stronger over time.",
-    ally: "Ally",
-    enemy: "Enemy",
-    hp: "HP",
-    traveler: "Traveler",
-    travelerNote: "Calm alien traveler",
-    build: "Build",
-    navigationCore: "Navigation Core: Forest Border",
-    topQuest: "Arcane Navigation Rift",
-    next: "Next",
-    hex: "Hex",
-    attackPanel: "Attack",
-    upgradeMeterShort: "UP",
-    relicProgress: "Upgrade Progress",
-    relicDraftReady: "Upgrade Draft Ready",
-    ultimateShort: "ULT",
-    ultimate4Wide: "4-WIDE Burst",
-    ultimateEnd: "4-WIDE End",
-    ultimateBurstTimed: "4-WIDE Burst {seconds}s",
-    ultimateComboExtend: "Combo Extend +{seconds}s",
-    incomingShort: "INC",
-    enemyStrike: "Enemy Strike",
-    enemyIntent: "Intent",
-    intentAttackLabel: "Attack",
-    intentGarbageLabel: "Garbage",
-    intentCountdownLabel: "Countdown",
-    turnsLater: "in {count} turns",
-    kos: "KOs",
-    bossPhase: "Boss Phase {phase}",
-    bossPhaseShift: "Boss Phase {phase}",
-    bossRiftWindup: "Rift Slam Charging",
-    heavyAttackIncoming: "Heavy Attack Incoming",
-    miniBoss: "Mini Boss",
-    comboLabel: "Combo",
-    incomingLabel: "Incoming",
-    on: "ON",
-    off: "OFF",
-    pcShort: "PC",
-    dmgShort: "DMG",
-    guardLabel: "Guard",
-    guardBlocked: "Guard blocked",
-    floaterGuard: "Guard +{amount}",
-    floaterB2BGuard: "B2B Preserved",
-    b2bReady: "B2B Ready",
-    b2bBroken: "B2B Broken",
-    b2bChain: "B2B Chain {count}",
-    enemyInfoCancel: "Cancel",
-    enemyCancelable: "Cancelable",
-    enemyUncancelable: "Uncancelable",
-    bossPhaseBar: "Phase Pressure",
-    firstWaveCombatHint: "Clear lines to attack. T-Spins deal heavy damage.",
-    firstRunHint: "Suggested first run: try the 3-minute tutorial.",
-    nextRunHook: "Next run goal: reach Wave 20 and defeat the Boss.",
-    nextRunHookDynamic: "Next run goal: reach Wave {wave} and defeat the Boss.",
-    damageEquationHint: "Clear + Technique + Combo + Weakness + Upgrade = Total Damage",
-    damageDetailHint: "Pause for full source details",
-    hitSingle: "SINGLE",
-    hitDouble: "DOUBLE",
-    hitTriple: "TRIPLE",
-    hitTetris: "TETRIS",
-    hitCombo: "COMBO",
-    hitB2B: "B2B",
-    hitTSpin: "T-SPIN",
-    hitTSpinMini: "T-SPIN MINI",
-    hitPerfect: "PERFECT CLEAR",
-    linesShort: "LINES",
-    lastHit: "Last Hit",
-    detailPauseHint: "Press P for full formula",
-    buildCompact: "Build",
-    buildDetailPause: "Build details in pause",
-    threatShort: "Threat",
-    boardEffectShort: "Board",
-    weakShort: "Weak",
-    relicDraft: "Upgrade Draft",
-    currentBuild: "Upgrades",
-    currentBuildTitle: "Acquired Upgrades",
-    currentBuildEmpty: "No upgrades acquired yet.",
-    currentBuildStats: "Upgrade Tags",
-    currentBuildList: "Acquired Upgrades",
-    currentBuildStrongest: "Strongest Build",
-    currentBuildTraits: "Active Traits",
-    currentBuildDirection: "Upgrade direction: {families}",
-    currentBuildNoDirection: "No clear build direction yet",
-    currentBuildClose: "Close",
-    traitListTitle: "Traits",
-    traitActive: "Active",
-    traitNext: "Next",
-    traitActivated: "Trait Activated",
-    traitUpgrade: "Trait Upgrade",
-    traitProgressActivate: "{tag} +1, {remain} more to activate",
-    traitProgressUpgrade: "{tag} +1, {remain} more to upgrade",
-    traitEffectNone: "No active trait effect yet",
-    "traitEffect.spin.1": "Spin damage +6. Spin grants +1 extra Guard.",
-    "traitEffect.spin.2": "Spin damage +12. Spin grants +2 extra Guard.",
-    "traitEffect.spin.3": "Spin damage +20. Spin grants +4 extra Guard.",
-    "traitEffect.combo.1": "Combo bonus damage +2 per Combo.",
-    "traitEffect.combo.2": "Combo bonus damage +4 per Combo. 4+ Combo delays +1.",
-    "traitEffect.combo.3": "Combo bonus damage +7 per Combo. 4+ Combo delays +1.",
-    "traitEffect.defense.1": "Guard cap +4. Line clears grant +1 Guard.",
-    "traitEffect.defense.2": "Guard cap +8. Line clears grant +2 Guard.",
-    "traitEffect.defense.3": "Guard cap +14. Line clears grant +3 Guard and counter on block.",
-    "traitEffect.burst.1": "High-value clears deal +8 damage.",
-    "traitEffect.burst.2": "High-value clears deal +16 damage.",
-    "traitEffect.burst.3": "High-value clears deal +28 damage.",
-    "traitEffect.survival.1": "Recover +4 extra HP each wave.",
-    "traitEffect.survival.2": "Recover +8 extra HP each wave.",
-    "traitEffect.survival.3": "Recover +14 extra HP each wave.",
-    "traitEffect.garbage.1": "Canceled garbage deals +5 damage per row.",
-    "traitEffect.garbage.2": "Canceled garbage deals +10 damage per row. 3+ rows grant Guard.",
-    "traitEffect.garbage.3": "Canceled garbage deals +16 damage per row. 3+ rows grant more Guard.",
-    "traitEffect.utility.1": "High-value clears charge Ultimate +1.",
-    "traitEffect.utility.2": "High-value clears charge Ultimate +2.",
-    "traitEffect.utility.3": "High-value clears charge Ultimate +3.",
-    "traitEffect.perfect.1": "Perfect Clear deals +30 damage and delays +1.",
-    "traitEffect.perfect.2": "Perfect Clear deals +60 damage and delays +2.",
-    "traitEffect.b2b.1": "B2B bonus damage +6.",
-    "traitEffect.b2b.2": "B2B bonus damage +12.",
-    "traitEffect.b2b.3": "B2B bonus damage +20.",
-    "traitEffect.bossKiller.1": "Boss high-value clears deal +18 damage.",
-    "traitEffect.bossKiller.2": "Boss high-value clears deal +40 damage.",
-    safeNodeDraft: "Safe node, never interrupts play",
-    damageRuleLine: "Single 10 / Double 25 / Triple 45 / Tetris 70 / Spin 30-140 / B2B +15 / Weak x1.35",
-    upgradeReadyShort: "Upgrade Ready",
-    upgradeReadyHint: "Pick after wave",
-    floaterUpgradeReady: "UPGRADE READY: PICK AFTER WAVE",
-    ultimateExtend: "4-Wide +{seconds}s",
-    practice: "Practice Challenges",
-    practiceHint: "Start a challenge on the right. Complete the goal to learn the technique and earn a reward.",
-    audioMixHelp: "Mix: quiet inputs, clear hits, and Perfect Clear ducks BGM before impact.",
-    effectTierTitle: "Effect Tiers",
-    effectTierText: "Single is restrained, Tetris/Spin hit harder, B2B glows gold, Perfect Clear takes over the screen.",
-    noaRole: "Tetr energy swordsman / navigator",
-    dasHelp: "Delay before held left/right starts repeating.",
-    arrHelp: "Repeat interval after DAS; 0ms means instant wall movement.",
-    softDropHelp: "Cell interval while holding Soft Drop; lower is faster.",
-    lockDelayHelp: "Time to adjust a grounded piece before it locks.",
-    gravityCurveHelp: "Curve: gravity rises every 5 waves; garbage delay shrinks after Wave 10.",
-    challengePanel: "Challenges",
-    challengeStart: "Challenge Start",
-    clickToStart: "Click to start",
-    moveGuideSubtitle: "Use advanced clears as combat moves. Kept short for mid-run reference.",
-    waveClearPick: "Wave {wave} clear. Pick one before the next enemy appears.",
-    runMaxCombo: "Max Combo",
-    runB2BCount: "B2B Count",
-    runPerfectClear: "Perfect Clear",
-    runSpinCount: "Spin Count",
-    allSpinShort: "All",
-    "build.maxHp": "Max HP +{value}",
-    "build.damage": "Damage x{value}",
-    "build.lineDmg": "Line DMG +{value}",
-    "build.tCore": "T-Core +{value}",
-    "build.garbageCancel": "Garbage Cancel +{value}",
-    "build.comboDelay": "Combo Delay +{value}",
-    "build.b2bBlade": "B2B Blade +{value}",
-    "build.waveHeal": "Wave Heal +{value}",
-    "build.spinFlow": "Spin Flow +{value}",
-    "build.comboFlow": "Combo Flow +{value}",
-    "build.guard": "Guard -{value}",
-    "build.bossbreaker": "Bossbreaker +{value}",
-    "build.clearHeal": "Clear Heal +{value}",
-    "build.spinHeal": "Spin Heal +{value}",
-    "build.spinGuardStrike": "Spin Guard Strike x{value}",
-    "build.comboEcho": "Combo Echo +{value}",
-    "build.guardReflect": "Guard Reflect x{value}",
-    "build.garbageCounter": "Garbage Counter +{value}",
-    "build.burstCharge": "Burst Charge +{value}",
-    "build.perfectBossDelay": "Boss Delay +{value}",
-    "family.spin": "Spin Flow",
-    "family.combo": "Combo Flow",
-    "family.defense": "Defense Flow",
-    "family.garbage": "Garbage Control",
-    "family.burst": "Burst Flow",
-    "family.perfect": "Perfect Flow",
-    "familyShort.spin": "Spin",
-    "familyShort.combo": "Combo",
-    "familyShort.defense": "Defense",
-    "familyShort.garbage": "Garbage",
-    "familyShort.burst": "Burst",
-    "familyShort.perfect": "Perfect",
-    "tag.spin": "Spin",
-    "tag.combo": "Combo",
-    "tag.defense": "Defense",
-    "tag.burst": "Burst",
-    "tag.survival": "Survival",
-    "tag.garbage": "Garbage",
-    "tag.utility": "Utility",
-    "tag.perfect": "Perfect",
-    "tag.b2b": "B2B",
-    "tag.bossKiller": "Boss Killer",
-    "stack.stackable": "Stack",
-    "stack.unique": "Unique",
-    "stack.capped": "Cap",
-    "stack.scaling": "Scale",
-    "upgradeShort.rift_battery": "Tetris / Spin charge 4-WIDE Burst faster.",
-    "upgradeShort.perfect_anchor": "Perfect Clear delays Boss attacks on hit.",
-    "upgradeShort.spin_guard_reactor": "Spin spends Guard for burst damage.",
-    "upgradeShort.aegis_reprisal": "Reflect blocked Guard damage to the enemy.",
-    "upgradeShort.bossbreaker_relic": "Spin / B2B deal extra Boss damage.",
-    "upgradeShort.singularity_spin_core": "Every 3 Spin hits detonates a singularity.",
-    "upgradeShort.combo_constellation": "High Combo delays enemy attacks.",
-    "upgradeShort.aegis_star_mirror": "Full Guard blocks trigger a counter.",
-    "upgradeShort.garbage_alchemy_core": "Cancel garbage into damage and Guard.",
-    "upgradeShort.perfect_rift_crown": "Perfect Clear crushes Bosses.",
-    "upgradeShort.spin_starter": "The first 2 Spin hits each wave deal bonus damage and Guard.",
-    "upgradeShort.b2b_compass": "Longer B2B chains add more bonus damage.",
-    "upgradeShort.combo_safety_net": "First high Combo each wave grants Guard and delays enemies.",
-    "upgradeShort.emergency_rift_shield": "Low HP triggers a rift shield once per wave.",
-    "upgradeShort.garbage_transmuter": "Canceled garbage converts into bonus damage.",
-    "upgradeShort.perfect_echo": "Perfect Clear empowers your next line clear.",
-    "upgradeShort.rift_overdrive": "High-value Boss clears charge an overload burst.",
-    "upgradeShort.last_star_protocol": "Low HP arms a comeback boost for your next hit.",
-    "tutorial": "Tutorial",
-    "tutorialTitle": "3-Minute Combat Tutorial",
-    "tutorialSubtitle": "Learn line clears, HOLD, Combo, Spin, and garbage canceling in one short run.",
-    "tutorialStart": "Start Tutorial",
-    "tutorialSkip": "Skip Tutorial",
-    "tutorialActive": "Tutorial",
-    "tutorialDone": "Tutorial Complete",
-    "tutorialStep.line": "Clear any 1 line to see how attacks are generated.",
-    "tutorialStep.hold": "Use HOLD once and learn the hold restriction.",
-    "tutorialStep.combo": "Reach 2 Combo and watch damage scale up.",
-    "tutorialStep.spin": "Clear with any Spin to trigger a technique bonus.",
-    "tutorialStep.cancel": "Cancel 1 Incoming Garbage to learn defense timing.",
-    "tutorialPrompt.line": "Tutorial 1/5: Clear any 1 line",
-    "tutorialPrompt.hold": "Tutorial 2/5: Use HOLD once",
-    "tutorialPrompt.combo": "Tutorial 3/5: Reach 2 Combo",
-    "tutorialPrompt.spin": "Tutorial 4/5: Clear with any Spin",
-    "tutorialPrompt.cancel": "Tutorial 5/5: Cancel incoming garbage",
-    "damageFormula": "Damage Formula",
-    "damageTotal": "Total Damage",
-    "damageBase": "Base",
-    "damageLineBonus": "Line Upgrade",
-    "damageTBonus": "T Piece Bonus",
-    "damageSpinBonus": "Spin Upgrade",
-    "damageAllSpinBonus": "All-Spin Upgrade",
-    "damageCombo": "Combo",
-    "damageComboBurst": "Combo Burst",
-    "damageB2B": "B2B",
-    "damageBoss": "Bossbreaker",
-    "damagePerfect": "Perfect Clear",
-    "damagePerfectBoss": "Boss 35%",
-    "damageGuardStrike": "Guard Strike",
-    "damageComboEcho": "Combo Echo",
-    "damageGarbageCounter": "Garbage Counter",
-    "damageSingularity": "Singularity",
-    "damageAegisStar": "Aegis Star",
-    "damageGarbageAlchemy": "Garbage Alchemy",
-    "damagePerfectCrown": "Rift Crown",
-    "damageSpinStarter": "Spin Starter",
-    "damageB2BCompass": "B2B Compass",
-    "damageGarbageTransmuter": "Garbage Transmute",
-    "damagePerfectEcho": "Perfect Echo",
-    "damageRiftOverdrive": "Rift Overdrive",
-    "damageLastStar": "Last Star",
-    "damageMultiplier": "Multiplier",
-    "damageWeakness": "Weakness Multiplier",
-    "damageExecute": "Execute Adjustment",
-    "enemyInfoDamage": "Damage",
-    "enemyInfoGarbage": "Garbage",
-    "enemyInfoSpecial": "Special",
-    "enemyInfoWeakness": "Weakness",
-    "special.none": "No special",
-    "special.slime": "Basic strike",
-    "special.vine": "Applies root pressure",
-    "special.mushroom": "Scrambles Next",
-    "special.beetle": "Halves Single damage",
-    "special.mist": "Garbage hole drift",
-    "special.thorn": "Dash slash",
-    "special.wisp": "Homing bolt",
-    "special.sentinel": "Ground slam",
-    "special.king": "Phase pressure",
-    "summaryDamage": "Total Damage",
-    "summaryBestHit": "Best Hit",
-    "summaryDamageSources": "Damage Sources",
-    "summaryUpgradeSource": "Upgrade",
-    rating: "Rating {rating}",
-    settingPressKey: "PRESS KEY",
-    languageZhShort: "ZH",
-    languageEnShort: "EN",
-    screenLeft: "← Left",
-    screenRight: "→ Right",
-    screenMove: "← → Move",
-    screenSoftDrop: "↓ Soft",
-    screenHardDrop: "Space Drop",
-    screenRotate: "↑/X/Z Rotate",
-    screenRotateCCW: "Z Rotate CCW",
-    screenRotate180: "A 180°",
-    screenHold: "Shift/C Hold",
-    screenPause: "P/Esc Pause",
-    screenMute: "M Mute",
-    screenMusic: "M Music",
-    ariaPrototype: "T-Spin Traveler playable prototype",
-    "control.left": "Move Left",
-    "control.right": "Move Right",
-    "control.softDrop": "Soft Drop",
-    "control.hardDrop": "Hard Drop",
-    "control.rotateCW": "Rotate CW",
-    "control.rotateCCW": "Rotate CCW",
-    "control.rotate180": "Rotate 180",
-    "control.hold": "Hold Piece",
-    "control.pause": "Pause",
-    "control.mute": "Mute / Music",
-    messageSpawnTop: "Blocks reached the top of the board.",
-    messageHoldBlocked: "Hold swap could not spawn a valid piece.",
-    messageLockAbove: "A piece locked above the playfield.",
-    messagePlayerDefeat: "Noa can no longer fight.",
-    messageVictory: "Noa recovered a navigation core shard. The Forest Border route is lit again.",
-    messageGarbageTop: "Garbage pushed the board to the top.",
-    floaterComboDelay: "COMBO {combo}: DELAY +{delay}",
-    floaterCancelGarbage: "CANCEL {count} GARBAGE",
-    floaterArmored: "ARMORED",
-    floaterSpinGuardStrike: "GUARD STRIKE +{damage}",
-    floaterGuardReflect: "GUARD REFLECT -{damage}",
-    floaterPerfectBossDelay: "BOSS DELAY +{turns}",
-    floaterSingularityCharge: "SINGULARITY {count}/3",
-    floaterSingularityBurst: "SINGULARITY +{damage}",
-    floaterComboConstellation: "CONSTELLATION DELAY +{turns}",
-    floaterAegisStar: "AEGIS STAR -{damage}",
-    floaterGarbageAlchemy: "ALCHEMY +{damage}",
-    floaterGarbageAlchemyGuard: "ALCHEMY GUARD +{guard}",
-    floaterPerfectCrown: "RIFT CROWN +{damage}",
-    floaterSpinStarter: "SPIN START +{damage} / GUARD +{guard}",
-    floaterB2BCompass: "B2B COMPASS +{damage}",
-    floaterComboSafety: "SAFETY NET: GUARD +{guard} / DELAY +{turns}",
-    floaterEmergencyShield: "RIFT SHIELD +{guard}",
-    floaterGarbageTransmuter: "TRANSMUTE +{damage}",
-    floaterPerfectEchoReady: "PERFECT ECHO READY",
-    floaterPerfectEcho: "PERFECT ECHO +{damage}",
-    floaterRiftOverdriveCharge: "OVERDRIVE {count}/3",
-    floaterRiftOverdrive: "OVERDRIVE +{damage}",
-    floaterLastStarReady: "LAST STAR ARMED",
-    floaterLastStarGuard: "LAST STAR GUARD +{guard}",
-    floaterLastStar: "LAST STAR +{damage}",
-    floaterFullHp: "FULL HP",
-    floaterTBonus: "T BONUS",
-    floaterB2BRow: "B2B +{rows} ROW",
-    floaterComboRow: "COMBO +{rows} ROW",
-    floaterComboBurst: "COMBO BURST +{damage}",
-    floaterPerfectClear: "PERFECT CLEAR",
-    floaterFullRecovery: "FULL RECOVERY",
-    floaterCombo: "{combo} COMBO",
-    floaterGarbageRise: "GARBAGE RISE +{count}",
-    floaterChallengeClear: "CHALLENGE CLEAR: {title}",
-    floaterReward: "REWARD: {name}",
-    floaterIncoming: "INCOMING +{count}",
-    floaterRootPressure: "ROOT PRESSURE",
-    floaterMistHolesDrift: "MIST HOLES DRIFT",
-    floaterBossPressure: "BOSS PRESSURE +1",
-    floaterQueueHex: "QUEUE HEX",
-    floaterVineBlocksRemoved: "VINE BLOCKS REMOVED",
-    floaterRelicWave: "RELIC WAVE {wave}",
-    floaterMiniBossClear: "MINI BOSS CLEAR",
-    floaterWave: "WAVE {wave}",
-    floaterWaveHeal: "+{amount} HP",
-    floaterUpgrade: "UPGRADE {tier}",
-    intentSporeHex: "Spore Hex",
-    intentSporeHexDetail: "{damage} dmg / 28% +1 incoming",
-    intentArmorCrush: "Armor Crush",
-    intentArmorCrushDetail: "{damage} dmg / +{garbage} incoming",
-    intentDashSlash: "Dash Slash",
-    intentDashSlashDetail: "{damage} dmg / +{garbage} incoming",
-    intentHomingBolt: "Homing Bolt",
-    intentHomingBoltDetail: "{damage} damage",
-    intentGroundSlam: "Ground Slam",
-    intentGroundSlamDetail: "{damage} dmg / +{garbage} incoming",
-    intentBossPhase: "Phase {phase}",
-    intentBossPhaseDetail: "{damage} dmg / queue + incoming",
-    intentGarbageSurge: "Garbage Surge",
-    intentGarbageSurgeDetail: "{damage} dmg / +{garbage} incoming",
-    intentStrike: "Strike",
-    intentStrikeDetail: "{damage} damage",
-    weaknessNone: "No weakness",
-    weaknessCombo: "Weak: Combo",
-    weaknessPerfect: "Weak: Perfect Clear",
-    weaknessSpin: "Weak: Spin",
-    weaknessAllSpin: "Weak: All-Spin",
-    weaknessB2B: "Weak: B2B",
-    weaknessHit: "WEAKNESS x1.35",
-    perfectClearTitle: "PERFECT CLEAR",
-    perfectClearSubtitle: "ARCANE NAVIGATION RIFT",
-    perfectClearDamage: "VOID EXECUTION  -{damage}",
-    guideTSpinText: "Rotate a T into a slot and clear lines. High damage.",
-    guideTSpinMiniText: "A smaller T slot clear. Lower damage, still counts as Spin.",
-    guideAllSpinMiniText: "I/J/L/S/Z rotate into a tight slot and clear lines.",
-    guideB2BText: "Chain Tetris or Spin clears without a normal clear between.",
-    guidePerfectClearText: "Clear lines and leave the board empty. Burst damage and heal.",
-    guideIncomingCancelText: "Enemy garbage waits in preview; line clears cancel it first.",
-    "challenge.tspinMini": "Clear once with T-Spin Mini",
-    "challenge.cancel3": "Cancel 3 incoming garbage",
-    "challenge.b2b2": "Reach a 2-chain Back-to-Back",
-    "line.single": "SINGLE",
-    "line.double": "DOUBLE",
-    "line.triple": "TRIPLE",
-    "line.tetris": "TETRIS",
-    "line.generic": "{lines} LINE",
-    "upgrade.tspin_amp": "T-Spin / T-Spin Mini deal +10 damage.",
-    "upgrade.garbage_guard": "Line clears cancel +1 additional Incoming Garbage.",
-    "upgrade.combo_clock": "At 3+ Combo, delay enemy attacks by +1 extra turn.",
-    "upgrade.b2b_blade": "Back-to-Back deals +8 damage.",
-    "upgrade.star_mender": "After each wave, recover +12 HP.",
-    "upgrade.vital_core": "Max HP +15 and immediately recover +15 HP.",
-    "upgrade.blade_polish": "All line-clear attacks deal +5 damage.",
-    "upgrade.recovery_glyph": "Whenever you clear lines, recover +3 HP.",
-    "upgrade.spin_circuit": "Spin moves deal +8 damage. All-Spin also benefits.",
-    "upgrade.combo_resonator": "At 2+ Combo, each Combo segment deals +3 damage.",
-    "upgrade.aegis_shell": "Enemy attack damage -2.",
-    "upgrade.all_spin_codex": "All-Spin Mini deals +18 damage and cancels +1 more garbage.",
-    "upgrade.tempo_engine": "Combo delays enemy attacks by +1 and Combo damage +4.",
-    "upgrade.null_barrier": "Enemy attack damage -3. Incoming garbage waits +1 extra turn.",
-    "upgrade.void_carapace": "Max HP +25. Enemy attack damage -1.",
-    "upgrade.stellar_caliber": "All damage dealt increases by 12%.",
-    "upgrade.arcane_suture": "Max HP +10. Spin hits recover +5 extra HP.",
-    "upgrade.bossbreaker_relic": "B2B and Spin deal +20 extra damage to Bosses.",
-    "upgrade.grey_star_reactor": "Max HP +40. All damage dealt increases by 10%.",
-    "upgrade.guard_lattice": "Guard cap +8. Every line clear grants +1 extra Guard.",
-    "upgrade.b2b_preserver": "Gain 2 B2B preserves. Normal clears do not immediately break B2B.",
-    "upgrade.spin_vamp": "Spin hits recover +6 extra HP and gain extra Guard.",
-    "upgrade.combo_aegis": "At 3+ Combo, each line clear grants +2 extra Guard.",
-    "upgrade.spin_guard_reactor": "Spin hits spend up to 24 Guard and convert it into 2x bonus damage.",
-    "upgrade.combo_echo_matrix": "At 4+ Combo, trigger Echo bonus damage.",
-    "upgrade.aegis_reprisal": "When Guard blocks enemy damage, reflect 1.5x the blocked amount back to the enemy.",
-    "upgrade.garbage_furnace": "When you cancel garbage, deal +10 damage per canceled row.",
-    "upgrade.rift_battery": "Tetris or Spin clears charge the ultimate mode faster.",
-    "upgrade.perfect_anchor": "Perfect Clear against a Boss delays the Boss attack by 2 turns.",
-    "upgrade.singularity_spin_core": "Every 3rd Spin hit detonates a singularity for heavy bonus damage.",
-    "upgrade.combo_constellation": "Once per wave at 4 / 8 Combo, delay enemy attacks.",
-    "upgrade.aegis_star_mirror": "When Guard fully blocks an enemy attack, trigger a star-shield counter.",
-    "upgrade.garbage_alchemy_core": "Canceled garbage becomes bonus damage. Large cancels also grant Guard.",
-    "upgrade.perfect_rift_crown": "Perfect Clear against a Boss raises minimum damage to 50% Boss Max HP.",
-    "upgrade.spin_starter": "The first 2 Spin hits each wave deal +12 damage and grant 4 Guard.",
-    "upgrade.b2b_compass": "High-value clears add damage based on your B2B chain, up to +32.",
-    "upgrade.combo_safety_net": "Once per wave at 4+ Combo, gain 7 Guard and delay the enemy by 1 turn.",
-    "upgrade.emergency_rift_shield": "When HP falls below 30%, gain 14 Guard once per wave. It can block the incoming hit.",
-    "upgrade.garbage_transmuter": "Canceled garbage deals +12 damage per row. Cancel 3+ rows to add +24 more.",
-    "upgrade.perfect_echo": "Perfect Clear stores 1 Echo. Your next non-Perfect line clear deals +45 damage.",
-    "upgrade.rift_overdrive": "During Boss waves, Tetris, Spin, or Perfect Clear charges Overdrive. The 3rd charge deals +110 damage.",
-    "upgrade.last_star_protocol": "When HP falls below 30%, gain 8 Guard once per wave and empower your next line clear with +35% damage.",
-    "upgradeName.tspin_amp": "T-Core Amplifier",
-    "upgradeName.garbage_guard": "Gravity Filter",
-    "upgradeName.combo_clock": "Tempo Anchor",
-    "upgradeName.b2b_blade": "Back-to-Back Blade",
-    "upgradeName.star_mender": "Star Mender",
-    "upgradeName.vital_core": "Vital Core",
-    "upgradeName.blade_polish": "Tetr Blade Polish",
-    "upgradeName.recovery_glyph": "Recovery Glyph",
-    "upgradeName.spin_circuit": "Spin Circuit",
-    "upgradeName.combo_resonator": "Combo Resonator",
-    "upgradeName.aegis_shell": "Aegis Shell",
-    "upgradeName.all_spin_codex": "All-Spin Codex",
-    "upgradeName.tempo_engine": "Tempo Engine",
-    "upgradeName.null_barrier": "Null Barrier",
-    "upgradeName.void_carapace": "Void Carapace",
-    "upgradeName.stellar_caliber": "Stellar Caliber",
-    "upgradeName.arcane_suture": "Arcane Suture",
-    "upgradeName.bossbreaker_relic": "Bossbreaker Relic",
-    "upgradeName.grey_star_reactor": "Grey Star Reactor",
-    "upgradeName.guard_lattice": "Navigation Guard Lattice",
-    "upgradeName.b2b_preserver": "B2B Memory Charm",
-    "upgradeName.spin_vamp": "Spin Siphon Blade",
-    "upgradeName.combo_aegis": "Combo Aegis",
-    "upgradeName.spin_guard_reactor": "Spin Guard Reactor",
-    "upgradeName.combo_echo_matrix": "Combo Echo Matrix",
-    "upgradeName.aegis_reprisal": "Aegis Reprisal Mirror",
-    "upgradeName.garbage_furnace": "Garbage Furnace",
-    "upgradeName.rift_battery": "Rift Battery",
-    "upgradeName.perfect_anchor": "Perfect Anchor",
-    "upgradeName.singularity_spin_core": "Singularity Spin Core",
-    "upgradeName.combo_constellation": "Combo Constellation",
-    "upgradeName.aegis_star_mirror": "Aegis Star Mirror",
-    "upgradeName.garbage_alchemy_core": "Garbage Alchemy Core",
-    "upgradeName.perfect_rift_crown": "Perfect Rift Crown",
-    "upgradeName.spin_starter": "Spin Starter",
-    "upgradeName.b2b_compass": "B2B Compass",
-    "upgradeName.combo_safety_net": "Combo Safety Net",
-    "upgradeName.emergency_rift_shield": "Emergency Rift Shield",
-    "upgradeName.garbage_transmuter": "Garbage Transmuter",
-    "upgradeName.perfect_echo": "Perfect Echo",
-    "upgradeName.rift_overdrive": "Rift Overdrive",
-    "upgradeName.last_star_protocol": "Last Star Protocol",
-    "enemy.slime.name": "FOREST SLIME HATCHLING",
-    "enemy.slime.trait": "BASIC STRIKE",
-    "enemy.vine.name": "VINE HOPPER",
-    "enemy.vine.trait": "LEAP SEED",
-    "enemy.mushroom.name": "BLOOM SHAMAN",
-    "enemy.mushroom.trait": "PETAL HEX",
-    "enemy.beetle.name": "BRAMBLE BEETLE",
-    "enemy.beetle.trait": "ARMORED CHARGE",
-    "enemy.mist.name": "MIST LANTERN SPRITE",
-    "enemy.mist.trait": "WISP SHIELD",
-    "enemy.thorn.name": "THORN PROWLER",
-    "enemy.thorn.trait": "DASH SLASH",
-    "enemy.wisp.name": "WISP MOTH",
-    "enemy.wisp.trait": "HOMING BOLT",
-    "enemy.sentinel.name": "RUIN SENTINEL",
-    "enemy.sentinel.trait": "ELITE: GROUND SLAM",
-    "enemy.king.name": "ANCIENT BARK COLOSSUS",
-    "enemy.king.trait": "BOSS: EARTH SLAM",
-  },
-};
+
 
 const TEXT = translations;
 
@@ -2144,655 +749,9 @@ const CHALLENGE_REWARDS = {
   b2b2: "Back-to-Back Blade",
 };
 
-const UPGRADES = [
-  {
-    id: "tspin_amp",
-    name: "T-Core Amplifier",
-    rarity: "rare",
-    tags: ["Spin"],
-    stackRule: "stackable",
-    textKey: "upgrade.tspin_amp",
-    apply: () => {
-      state.upgrades.tspinBonus += 10;
-    },
-  },
-  {
-    id: "garbage_guard",
-    name: "Gravity Filter",
-    rarity: "common",
-    tags: ["Garbage", "Utility"],
-    stackRule: "stackable",
-    textKey: "upgrade.garbage_guard",
-    apply: () => {
-      state.upgrades.garbageCancel += 1;
-    },
-  },
-  {
-    id: "combo_clock",
-    name: "Tempo Anchor",
-    rarity: "common",
-    tags: ["Combo", "Utility"],
-    stackRule: "stackable",
-    textKey: "upgrade.combo_clock",
-    apply: () => {
-      state.upgrades.comboDelay += 1;
-    },
-  },
-  {
-    id: "b2b_blade",
-    name: "Back-to-Back Blade",
-    rarity: "rare",
-    tags: ["B2B", "Burst"],
-    stackRule: "stackable",
-    textKey: "upgrade.b2b_blade",
-    apply: () => {
-      state.upgrades.b2bBonus += 8;
-    },
-  },
-  {
-    id: "star_mender",
-    name: "Star Mender",
-    rarity: "common",
-    tags: ["Survival", "Defense"],
-    stackRule: "stackable",
-    textKey: "upgrade.star_mender",
-    apply: () => {
-      state.upgrades.waveHeal += 12;
-    },
-  },
-  {
-    id: "vital_core",
-    name: "Vital Core",
-    rarity: "common",
-    tags: ["Survival", "Defense"],
-    stackRule: "stackable",
-    textKey: "upgrade.vital_core",
-    apply: () => {
-      increasePlayerMaxHp(15, 15);
-    },
-  },
-  {
-    id: "blade_polish",
-    name: "Tetr Blade Polish",
-    rarity: "common",
-    tags: ["Burst"],
-    stackRule: "stackable",
-    textKey: "upgrade.blade_polish",
-    apply: () => {
-      state.upgrades.lineDamage += 5;
-    },
-  },
-  {
-    id: "recovery_glyph",
-    name: "Recovery Glyph",
-    rarity: "common",
-    tags: ["Survival", "Defense"],
-    stackRule: "stackable",
-    textKey: "upgrade.recovery_glyph",
-    apply: () => {
-      state.upgrades.clearHeal += 3;
-    },
-  },
-  {
-    id: "spin_circuit",
-    name: "Spin Circuit",
-    rarity: "common",
-    tags: ["Spin"],
-    stackRule: "stackable",
-    textKey: "upgrade.spin_circuit",
-    apply: () => {
-      state.upgrades.spinBonus += 8;
-    },
-  },
-  {
-    id: "spin_guard_reactor",
-    name: "Spin Guard Reactor",
-    rarity: "rare",
-    tags: ["Spin", "Defense", "Burst"],
-    stackRule: "capped",
-    shortTextKey: "upgradeShort.spin_guard_reactor",
-    textKey: "upgrade.spin_guard_reactor",
-    apply: () => {
-      state.upgrades.spinGuardStrike = Math.max(state.upgrades.spinGuardStrike, 2);
-    },
-  },
-  {
-    id: "combo_resonator",
-    name: "Combo Resonator",
-    rarity: "common",
-    tags: ["Combo"],
-    stackRule: "stackable",
-    textKey: "upgrade.combo_resonator",
-    apply: () => {
-      state.upgrades.comboDamage += 3;
-    },
-  },
-  {
-    id: "combo_echo_matrix",
-    name: "Combo Echo Matrix",
-    rarity: "rare",
-    tags: ["Combo", "Burst"],
-    stackRule: "scaling",
-    textKey: "upgrade.combo_echo_matrix",
-    apply: () => {
-      state.upgrades.comboEchoDamage += 6;
-    },
-  },
-  {
-    id: "aegis_shell",
-    name: "Aegis Shell",
-    rarity: "common",
-    tags: ["Defense"],
-    stackRule: "stackable",
-    textKey: "upgrade.aegis_shell",
-    apply: () => {
-      state.upgrades.defense += 2;
-    },
-  },
-  {
-    id: "guard_lattice",
-    name: "Navigation Guard Lattice",
-    rarity: "common",
-    tags: ["Defense"],
-    stackRule: "stackable",
-    textKey: "upgrade.guard_lattice",
-    apply: () => {
-      state.maxGuard += 8;
-      state.upgrades.guardGain += 1;
-      state.guard = Math.min(getEffectiveMaxGuard(), state.guard + 8);
-    },
-  },
-  {
-    id: "combo_aegis",
-    name: "Combo Aegis",
-    rarity: "rare",
-    tags: ["Combo", "Defense"],
-    stackRule: "stackable",
-    textKey: "upgrade.combo_aegis",
-    apply: () => {
-      state.upgrades.comboGuardGain += 2;
-    },
-  },
-  {
-    id: "aegis_reprisal",
-    name: "Aegis Reprisal Mirror",
-    rarity: "relic",
-    tags: ["Defense", "Burst"],
-    stackRule: "capped",
-    shortTextKey: "upgradeShort.aegis_reprisal",
-    textKey: "upgrade.aegis_reprisal",
-    apply: () => {
-      state.upgrades.guardReflect = Math.max(state.upgrades.guardReflect, 1.5);
-    },
-  },
-  {
-    id: "b2b_preserver",
-    name: "B2B Memory Charm",
-    rarity: "rare",
-    tags: ["B2B", "Defense", "Utility"],
-    stackRule: "stackable",
-    textKey: "upgrade.b2b_preserver",
-    apply: () => {
-      state.upgrades.b2bShield += 2;
-    },
-  },
-  {
-    id: "all_spin_codex",
-    name: "All-Spin Codex",
-    rarity: "rare",
-    tags: ["Spin", "Garbage"],
-    stackRule: "stackable",
-    textKey: "upgrade.all_spin_codex",
-    apply: () => {
-      state.upgrades.allSpinBonus += 18;
-      state.upgrades.garbageCancel += 1;
-    },
-  },
-  {
-    id: "garbage_furnace",
-    name: "Garbage Furnace",
-    rarity: "rare",
-    tags: ["Garbage", "Burst"],
-    stackRule: "stackable",
-    textKey: "upgrade.garbage_furnace",
-    apply: () => {
-      state.upgrades.garbageCounterDamage += 10;
-    },
-  },
-  {
-    id: "tempo_engine",
-    name: "Tempo Engine",
-    rarity: "rare",
-    tags: ["Combo", "Utility"],
-    stackRule: "stackable",
-    textKey: "upgrade.tempo_engine",
-    apply: () => {
-      state.upgrades.comboDelay += 1;
-      state.upgrades.comboDamage += 4;
-    },
-  },
-  {
-    id: "null_barrier",
-    name: "Null Barrier",
-    rarity: "rare",
-    tags: ["Defense", "Garbage", "Utility"],
-    stackRule: "stackable",
-    textKey: "upgrade.null_barrier",
-    apply: () => {
-      state.upgrades.defense += 3;
-      state.upgrades.garbageGrace += 1;
-    },
-  },
-  {
-    id: "void_carapace",
-    name: "Void Carapace",
-    rarity: "rare",
-    tags: ["Survival", "Defense"],
-    stackRule: "stackable",
-    textKey: "upgrade.void_carapace",
-    apply: () => {
-      increasePlayerMaxHp(25, 20);
-      state.upgrades.defense += 1;
-    },
-  },
-  {
-    id: "stellar_caliber",
-    name: "Stellar Caliber",
-    rarity: "rare",
-    tags: ["Burst"],
-    stackRule: "scaling",
-    textKey: "upgrade.stellar_caliber",
-    apply: () => {
-      state.upgrades.damageMultiplier += 0.12;
-    },
-  },
-  {
-    id: "arcane_suture",
-    name: "Arcane Suture",
-    rarity: "rare",
-    tags: ["Spin", "Survival", "Defense"],
-    stackRule: "stackable",
-    textKey: "upgrade.arcane_suture",
-    apply: () => {
-      increasePlayerMaxHp(10, 10);
-      state.upgrades.spinHeal += 5;
-    },
-  },
-  {
-    id: "spin_vamp",
-    name: "Spin Siphon Blade",
-    rarity: "rare",
-    tags: ["Spin", "Survival", "Defense"],
-    stackRule: "stackable",
-    textKey: "upgrade.spin_vamp",
-    apply: () => {
-      state.upgrades.spinHeal += 6;
-      state.upgrades.guardGain += 1;
-    },
-  },
-  {
-    id: "rift_battery",
-    name: "Rift Battery",
-    rarity: "rare",
-    tags: ["Burst", "Utility"],
-    stackRule: "stackable",
-    shortTextKey: "upgradeShort.rift_battery",
-    textKey: "upgrade.rift_battery",
-    apply: () => {
-      state.upgrades.burstCharge += 2;
-    },
-  },
-  {
-    id: "perfect_anchor",
-    name: "Perfect Anchor",
-    rarity: "relic",
-    tags: ["Perfect", "Utility"],
-    stackRule: "stackable",
-    shortTextKey: "upgradeShort.perfect_anchor",
-    textKey: "upgrade.perfect_anchor",
-    apply: () => {
-      state.upgrades.perfectBossDelay += 2;
-    },
-  },
-  {
-    id: "bossbreaker_relic",
-    name: "Bossbreaker Relic",
-    rarity: "relic",
-    tags: ["B2B", "Spin", "Burst"],
-    stackRule: "stackable",
-    shortTextKey: "upgradeShort.bossbreaker_relic",
-    textKey: "upgrade.bossbreaker_relic",
-    apply: () => {
-      state.upgrades.bossDamage += 20;
-    },
-  },
-  {
-    id: "grey_star_reactor",
-    name: "Grey Star Reactor",
-    rarity: "relic",
-    tags: ["Survival", "Defense", "Burst"],
-    stackRule: "scaling",
-    textKey: "upgrade.grey_star_reactor",
-    apply: () => {
-      increasePlayerMaxHp(40, 30);
-      state.upgrades.damageMultiplier += 0.1;
-    },
-  },
-  {
-    id: "spin_starter",
-    name: "Spin Starter",
-    rarity: "rare",
-    tags: ["Spin", "Defense"],
-    stackRule: "stackable",
-    shortTextKey: "upgradeShort.spin_starter",
-    textKey: "upgrade.spin_starter",
-    apply: () => {
-      state.upgrades.spinStarter += 1;
-    },
-  },
-  {
-    id: "b2b_compass",
-    name: "B2B Compass",
-    rarity: "rare",
-    tags: ["B2B", "Burst"],
-    stackRule: "stackable",
-    shortTextKey: "upgradeShort.b2b_compass",
-    textKey: "upgrade.b2b_compass",
-    apply: () => {
-      state.upgrades.b2bCompass += 4;
-    },
-  },
-  {
-    id: "combo_safety_net",
-    name: "Combo Safety Net",
-    rarity: "rare",
-    tags: ["Combo", "Defense"],
-    stackRule: "stackable",
-    shortTextKey: "upgradeShort.combo_safety_net",
-    textKey: "upgrade.combo_safety_net",
-    apply: () => {
-      state.upgrades.comboSafetyNet += 1;
-    },
-  },
-  {
-    id: "emergency_rift_shield",
-    name: "Emergency Rift Shield",
-    rarity: "relic",
-    tags: ["Survival", "Defense"],
-    stackRule: "stackable",
-    shortTextKey: "upgradeShort.emergency_rift_shield",
-    textKey: "upgrade.emergency_rift_shield",
-    apply: () => {
-      state.upgrades.emergencyRiftShield += 1;
-    },
-  },
-  {
-    id: "garbage_transmuter",
-    name: "Garbage Transmuter",
-    rarity: "relic",
-    tags: ["Garbage", "Burst"],
-    stackRule: "stackable",
-    shortTextKey: "upgradeShort.garbage_transmuter",
-    textKey: "upgrade.garbage_transmuter",
-    apply: () => {
-      state.upgrades.garbageTransmuter += 1;
-    },
-  },
-  {
-    id: "perfect_echo",
-    name: "Perfect Echo",
-    rarity: "relic",
-    tags: ["Perfect", "Utility"],
-    stackRule: "stackable",
-    shortTextKey: "upgradeShort.perfect_echo",
-    textKey: "upgrade.perfect_echo",
-    apply: () => {
-      state.upgrades.perfectEcho += 1;
-    },
-  },
-  {
-    id: "rift_overdrive",
-    name: "Rift Overdrive",
-    rarity: "legendary",
-    tags: ["Burst", "Boss Killer"],
-    stackRule: "unique",
-    shortTextKey: "upgradeShort.rift_overdrive",
-    textKey: "upgrade.rift_overdrive",
-    apply: () => {
-      state.upgrades.riftOverdrive = 1;
-    },
-  },
-  {
-    id: "last_star_protocol",
-    name: "Last Star Protocol",
-    rarity: "legendary",
-    tags: ["Survival", "Burst"],
-    stackRule: "unique",
-    shortTextKey: "upgradeShort.last_star_protocol",
-    textKey: "upgrade.last_star_protocol",
-    apply: () => {
-      state.upgrades.lastStarProtocol = 1;
-    },
-  },
-  {
-    id: "singularity_spin_core",
-    name: "Singularity Spin Core",
-    rarity: "legendary",
-    tags: ["Spin", "Burst"],
-    stackRule: "unique",
-    shortTextKey: "upgradeShort.singularity_spin_core",
-    textKey: "upgrade.singularity_spin_core",
-    apply: () => {
-      state.upgrades.singularitySpinCore = 1;
-    },
-  },
-  {
-    id: "combo_constellation",
-    name: "Combo Constellation",
-    rarity: "legendary",
-    tags: ["Combo", "Utility"],
-    stackRule: "unique",
-    shortTextKey: "upgradeShort.combo_constellation",
-    textKey: "upgrade.combo_constellation",
-    apply: () => {
-      state.upgrades.comboConstellation = 1;
-    },
-  },
-  {
-    id: "aegis_star_mirror",
-    name: "Aegis Star Mirror",
-    rarity: "legendary",
-    tags: ["Defense", "Burst"],
-    stackRule: "unique",
-    shortTextKey: "upgradeShort.aegis_star_mirror",
-    textKey: "upgrade.aegis_star_mirror",
-    apply: () => {
-      state.upgrades.aegisStarMirror = 1;
-    },
-  },
-  {
-    id: "garbage_alchemy_core",
-    name: "Garbage Alchemy Core",
-    rarity: "legendary",
-    tags: ["Garbage", "Burst"],
-    stackRule: "unique",
-    shortTextKey: "upgradeShort.garbage_alchemy_core",
-    textKey: "upgrade.garbage_alchemy_core",
-    apply: () => {
-      state.upgrades.garbageAlchemyCore = 1;
-    },
-  },
-  {
-    id: "perfect_rift_crown",
-    name: "Perfect Rift Crown",
-    rarity: "legendary",
-    tags: ["Perfect", "Boss Killer"],
-    stackRule: "unique",
-    shortTextKey: "upgradeShort.perfect_rift_crown",
-    textKey: "upgrade.perfect_rift_crown",
-    apply: () => {
-      state.upgrades.perfectRiftCrown = 1;
-    },
-  },
-];
 
-const ENEMIES = [
-  {
-    id: "slime",
-    name: "FOREST SLIME HATCHLING",
-    trait: "BASIC STRIKE",
-    hp: 120,
-    hpScale: 24,
-    damage: 8,
-    countdown: 7,
-    garbage: 0,
-    color: "#86ef8f",
-    weakness: "none",
-    filter: "none",
-    artSheet: "enemy01",
-    artRect: { x: 235, y: 128, w: 335, h: 240 },
-    artDraw: { x: -132, y: -146, w: 264, h: 238 },
-    artKey: "forest-slime-hatchling",
-  },
-  {
-    id: "vine",
-    name: "VINE HOPPER",
-    trait: "LEAP SEED",
-    hp: 150,
-    hpScale: 30,
-    damage: 7,
-    countdown: 7,
-    garbage: 1,
-    color: "#9de06c",
-    weakness: "combo",
-    filter: "hue-rotate(42deg) saturate(1.05)",
-    artSheet: "enemy02",
-    artRect: { x: 118, y: 118, w: 360, h: 230 },
-    artDraw: { x: -144, y: -150, w: 288, h: 236 },
-    artKey: "vine-hopper",
-  },
-  {
-    id: "mushroom",
-    name: "BLOOM SHAMAN",
-    trait: "PETAL HEX",
-    hp: 110,
-    hpScale: 22,
-    damage: 6,
-    countdown: 5,
-    garbage: 0,
-    color: "#77e8ff",
-    weakness: "perfect",
-    filter: "hue-rotate(118deg) saturate(1.25) brightness(1.06)",
-    artSheet: "enemy02",
-    artRect: { x: 116, y: 715, w: 350, h: 250 },
-    artDraw: { x: -140, y: -170, w: 280, h: 264 },
-    artKey: "bloom-shaman",
-  },
-  {
-    id: "beetle",
-    name: "BRAMBLE BEETLE",
-    trait: "ARMORED CHARGE",
-    hp: 210,
-    hpScale: 42,
-    damage: 10,
-    countdown: 8,
-    garbage: 1,
-    color: "#c6b38a",
-    weakness: "spin",
-    filter: "grayscale(0.65) sepia(0.28) brightness(0.82) saturate(0.9)",
-    armorSingle: 0.5,
-    artSheet: "enemy02",
-    artRect: { x: 770, y: 132, w: 380, h: 235 },
-    artDraw: { x: -150, y: -138, w: 300, h: 226 },
-    artKey: "bramble-beetle",
-  },
-  {
-    id: "mist",
-    name: "MIST LANTERN SPRITE",
-    trait: "WISP SHIELD",
-    hp: 145,
-    hpScale: 28,
-    damage: 8,
-    countdown: 6,
-    garbage: 1,
-    color: "#d2ceff",
-    weakness: "allspin",
-    filter: "hue-rotate(220deg) saturate(0.9) brightness(1.12)",
-    artSheet: "enemy02",
-    artRect: { x: 195, y: 455, w: 255, h: 250 },
-    artDraw: { x: -122, y: -170, w: 244, h: 270 },
-    artKey: "mist-lantern-sprite",
-  },
-  {
-    id: "thorn",
-    name: "THORN PROWLER",
-    trait: "DASH SLASH",
-    hp: 165,
-    hpScale: 32,
-    damage: 9,
-    countdown: 6,
-    garbage: 1,
-    color: "#b174ff",
-    weakness: "combo",
-    filter: "hue-rotate(248deg) saturate(1.12) brightness(0.96)",
-    artSheet: "enemy01",
-    artRect: { x: 895, y: 126, w: 360, h: 246 },
-    artDraw: { x: -154, y: -154, w: 308, h: 232 },
-    artKey: "thorn-prowler",
-  },
-  {
-    id: "wisp",
-    name: "WISP MOTH",
-    trait: "HOMING BOLT",
-    hp: 130,
-    hpScale: 26,
-    damage: 8,
-    countdown: 5,
-    garbage: 0,
-    color: "#c7a7ff",
-    weakness: "b2b",
-    filter: "hue-rotate(214deg) saturate(1.08) brightness(1.1)",
-    artSheet: "enemy01",
-    artRect: { x: 205, y: 498, w: 365, h: 240 },
-    artDraw: { x: -148, y: -180, w: 296, h: 266 },
-    artKey: "wisp-moth",
-  },
-  {
-    id: "sentinel",
-    name: "RUIN SENTINEL",
-    trait: "ELITE: GROUND SLAM",
-    hp: 245,
-    hpScale: 48,
-    damage: 11,
-    countdown: 8,
-    garbage: 1,
-    color: "#d7c28f",
-    weakness: "spin",
-    filter: "grayscale(0.22) sepia(0.22) saturate(0.95) brightness(0.9)",
-    armorSingle: 0.65,
-    artSheet: "enemy01",
-    artRect: { x: 892, y: 508, w: 385, h: 284 },
-    artDraw: { x: -160, y: -184, w: 320, h: 292 },
-    artKey: "ruin-sentinel",
-  },
-  {
-    id: "king",
-    name: "ANCIENT BARK COLOSSUS",
-    trait: "BOSS: EARTH SLAM",
-    hp: 360,
-    hpScale: 55,
-    damage: 14,
-    countdown: 7,
-    garbage: 1,
-    color: "#f1d36b",
-    weakness: "b2b",
-    filter: "hue-rotate(18deg) saturate(1.25) brightness(1.08)",
-    artSheet: "enemy02",
-    artRect: { x: 825, y: 690, w: 365, h: 260 },
-    artDraw: { x: -156, y: -176, w: 312, h: 278 },
-    artKey: "ancient-bark-colossus",
-  },
-];
+
+
 
 const ENEMY_ATTACK_ANIMATIONS = {
   slime: {
@@ -2903,162 +862,6 @@ const ENEMY_ATTACK_ANIMATIONS = {
     hitFrame: 9,
     noKeying: true,
   },
-};
-
-const PIECES = {
-  I: [
-    [0, 0, 0, 0],
-    [1, 1, 1, 1],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ],
-  O: [
-    [1, 1],
-    [1, 1],
-  ],
-  T: [
-    [0, 1, 0],
-    [1, 1, 1],
-    [0, 0, 0],
-  ],
-  S: [
-    [0, 1, 1],
-    [1, 1, 0],
-    [0, 0, 0],
-  ],
-  Z: [
-    [1, 1, 0],
-    [0, 1, 1],
-    [0, 0, 0],
-  ],
-  J: [
-    [1, 0, 0],
-    [1, 1, 1],
-    [0, 0, 0],
-  ],
-  L: [
-    [0, 0, 1],
-    [1, 1, 1],
-    [0, 0, 0],
-  ],
-};
-
-const JLSTZ_KICKS = {
-  "0>1": [
-    [0, 0],
-    [-1, 0],
-    [-1, 1],
-    [0, -2],
-    [-1, -2],
-  ],
-  "1>0": [
-    [0, 0],
-    [1, 0],
-    [1, -1],
-    [0, 2],
-    [1, 2],
-  ],
-  "1>2": [
-    [0, 0],
-    [1, 0],
-    [1, -1],
-    [0, 2],
-    [1, 2],
-  ],
-  "2>1": [
-    [0, 0],
-    [-1, 0],
-    [-1, 1],
-    [0, -2],
-    [-1, -2],
-  ],
-  "2>3": [
-    [0, 0],
-    [1, 0],
-    [1, 1],
-    [0, -2],
-    [1, -2],
-  ],
-  "3>2": [
-    [0, 0],
-    [-1, 0],
-    [-1, -1],
-    [0, 2],
-    [-1, 2],
-  ],
-  "3>0": [
-    [0, 0],
-    [-1, 0],
-    [-1, -1],
-    [0, 2],
-    [-1, 2],
-  ],
-  "0>3": [
-    [0, 0],
-    [1, 0],
-    [1, 1],
-    [0, -2],
-    [1, -2],
-  ],
-};
-
-const I_KICKS = {
-  "0>1": [
-    [0, 0],
-    [-2, 0],
-    [1, 0],
-    [-2, -1],
-    [1, 2],
-  ],
-  "1>0": [
-    [0, 0],
-    [2, 0],
-    [-1, 0],
-    [2, 1],
-    [-1, -2],
-  ],
-  "1>2": [
-    [0, 0],
-    [-1, 0],
-    [2, 0],
-    [-1, 2],
-    [2, -1],
-  ],
-  "2>1": [
-    [0, 0],
-    [1, 0],
-    [-2, 0],
-    [1, -2],
-    [-2, 1],
-  ],
-  "2>3": [
-    [0, 0],
-    [2, 0],
-    [-1, 0],
-    [2, 1],
-    [-1, -2],
-  ],
-  "3>2": [
-    [0, 0],
-    [-2, 0],
-    [1, 0],
-    [-2, -1],
-    [1, 2],
-  ],
-  "3>0": [
-    [0, 0],
-    [1, 0],
-    [-2, 0],
-    [1, -2],
-    [-2, 1],
-  ],
-  "0>3": [
-    [0, 0],
-    [-1, 0],
-    [2, 0],
-    [-1, 2],
-    [2, -1],
-  ],
 };
 
 const state = {
@@ -3207,8 +1010,11 @@ const state = {
   bossWindup: null,
   lastBossPhase: 1,
   hitStopMs: 0,
+  assetLoadingStartedAt: performance.now(),
+  assetLoadingDone: false,
   lastMoveWasRotate: false,
   lastRotationKind: null,
+  lastKickIndex: null,
   input: {
     left: false,
     right: false,
@@ -3221,7 +1027,7 @@ const state = {
 };
 
 function makeBoard() {
-  return Array.from({ length: ROWS + HIDDEN }, () => Array(COLS).fill(null));
+  return makeEmptyBoard({ cols: COLS, rows: ROWS, hidden: HIDDEN });
 }
 
 function isUltimateWellColumn(x) {
@@ -3247,10 +1053,6 @@ function applyUltimateWalls() {
 
 function rowHasPlayableCells(row) {
   return row.some((cell) => cell && cell !== ULTIMATE_WALL);
-}
-
-function cloneMatrix(matrix) {
-  return matrix.map((row) => row.slice());
 }
 
 function makeStats() {
@@ -3332,11 +1134,7 @@ function applySavedSettings() {
 function refillQueue() {
   while (state.queue.length < 7) {
     if (state.bag.length === 0) {
-      state.bag = Object.keys(PIECES);
-      for (let i = state.bag.length - 1; i > 0; i -= 1) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [state.bag[i], state.bag[j]] = [state.bag[j], state.bag[i]];
-      }
+      state.bag = createSevenBag(Math.random);
     }
     state.queue.push(state.bag.pop());
   }
@@ -3362,6 +1160,7 @@ function spawnPiece() {
   state.lockTimer = null;
   state.lastMoveWasRotate = false;
   state.lastRotationKind = null;
+  state.lastKickIndex = null;
   if (collides(state.active, state.active.x, state.active.y, state.active.shape)) {
     triggerDefeat("messageSpawnTop");
   }
@@ -3507,6 +1306,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.messageVars = {};
   state.lastMoveWasRotate = false;
   state.lastRotationKind = null;
+  state.lastKickIndex = null;
   state.input.left = false;
   state.input.right = false;
   state.input.softDrop = false;
@@ -3598,29 +1398,8 @@ function advanceTutorialStep(stepId) {
   });
 }
 
-function rotateMatrix(matrix, dir) {
-  const n = matrix.length;
-  const result = Array.from({ length: n }, () => Array(n).fill(0));
-  for (let y = 0; y < n; y += 1) {
-    for (let x = 0; x < n; x += 1) {
-      if (dir > 0) result[x][n - 1 - y] = matrix[y][x];
-      else result[n - 1 - x][y] = matrix[y][x];
-    }
-  }
-  return result;
-}
-
 function collides(piece, x, y, shape) {
-  for (let r = 0; r < shape.length; r += 1) {
-    for (let c = 0; c < shape[r].length; c += 1) {
-      if (!shape[r][c]) continue;
-      const bx = x + c;
-      const by = y + r;
-      if (bx < 0 || bx >= COLS || by >= ROWS + HIDDEN) return true;
-      if (by >= 0 && state.board[by][bx]) return true;
-    }
-  }
-  return false;
+  return collidesOnBoard(state.board, piece, x, y, shape, { cols: COLS, rows: ROWS, hidden: HIDDEN });
 }
 
 function move(dx, dy) {
@@ -3632,6 +1411,7 @@ function move(dx, dy) {
     if (dx !== 0 || dy !== 0) {
       state.lastMoveWasRotate = false;
       state.lastRotationKind = null;
+      state.lastKickIndex = null;
     }
     if (dy === 0 && touchingGround()) resetLockDelay();
     return true;
@@ -3652,7 +1432,7 @@ function rotate(dir) {
   const to = (piece.rotation + dir + 4) % 4;
   const table = piece.type === "I" ? I_KICKS : JLSTZ_KICKS;
   const kicks = table[`${from}>${to}`] || [[0, 0]];
-  for (const [dx, dy] of kicks) {
+  for (const [kickIndex, [dx, dy]] of kicks.entries()) {
     if (!collides(piece, piece.x + dx, piece.y - dy, next)) {
       piece.shape = next;
       piece.x += dx;
@@ -3660,6 +1440,7 @@ function rotate(dir) {
       piece.rotation = to;
       state.lastMoveWasRotate = true;
       state.lastRotationKind = dir > 0 ? "cw" : "ccw";
+      state.lastKickIndex = kickIndex;
       if (touchingGround()) resetLockDelay();
       playSfx(piece.type === "T" ? "rotateT" : "rotate");
       return;
@@ -3674,7 +1455,7 @@ function rotate180() {
   const next = rotateMatrix(rotateMatrix(piece.shape, 1), 1);
   const to = (piece.rotation + 2) % 4;
   const kicks = get180Kicks(piece.type);
-  for (const [dx, dy] of kicks) {
+  for (const [kickIndex, [dx, dy]] of kicks.entries()) {
     if (!collides(piece, piece.x + dx, piece.y + dy, next)) {
       piece.shape = next;
       piece.x += dx;
@@ -3682,40 +1463,12 @@ function rotate180() {
       piece.rotation = to;
       state.lastMoveWasRotate = true;
       state.lastRotationKind = "180";
+      state.lastKickIndex = kickIndex;
       if (touchingGround()) resetLockDelay();
       playSfx(piece.type === "T" ? "rotateT" : "rotate");
       return;
     }
   }
-}
-
-function get180Kicks(type) {
-  if (type === "I") {
-    return [
-      [0, 0],
-      [1, 0],
-      [-1, 0],
-      [2, 0],
-      [-2, 0],
-      [0, -1],
-      [0, 1],
-      [1, -1],
-      [-1, -1],
-      [1, 1],
-      [-1, 1],
-    ];
-  }
-  return [
-    [0, 0],
-    [1, 0],
-    [-1, 0],
-    [0, -1],
-    [0, 1],
-    [1, -1],
-    [-1, -1],
-    [1, 1],
-    [-1, 1],
-  ];
 }
 
 function touchingGround() {
@@ -3727,9 +1480,11 @@ function hardDrop() {
   if (state.mode !== "playing" || !state.active) return;
   const wasRotate = state.lastMoveWasRotate;
   const rotationKind = state.lastRotationKind;
+  const kickIndex = state.lastKickIndex;
   while (move(0, 1)) {}
   state.lastMoveWasRotate = wasRotate;
   state.lastRotationKind = rotationKind;
+  state.lastKickIndex = kickIndex;
   playSfx("drop");
   lockPiece(true);
 }
@@ -3751,6 +1506,7 @@ function holdPiece() {
   state.canHold = false;
   state.lastMoveWasRotate = false;
   state.lastRotationKind = null;
+  state.lastKickIndex = null;
   resetInputRepeat();
   state.dropTimer = 0;
   playSfx("hold");
@@ -3787,60 +1543,54 @@ function lockPiece(fromHardDrop = false) {
   state.queueHex = Math.max(0, state.queueHex - 1);
   state.lastMoveWasRotate = false;
   state.lastRotationKind = null;
+  state.lastKickIndex = null;
   state.active = null;
   if (state.mode === "playing") spawnPiece();
 }
 
 function detectSpin(piece) {
-  if (!state.lastMoveWasRotate) return null;
-  if (piece.type !== "T") return isImmobileSpin(piece) ? "all-mini" : null;
-  const cx = piece.x + 1;
-  const cy = piece.y + 1;
-  const corners = [
-    [cx - 1, cy - 1],
-    [cx + 1, cy - 1],
-    [cx - 1, cy + 1],
-    [cx + 1, cy + 1],
-  ];
-  let blocked = 0;
-  for (const [x, y] of corners) {
-    if (x < 0 || x >= COLS || y >= ROWS + HIDDEN) blocked += 1;
-    else if (y >= 0 && state.board[y][x]) blocked += 1;
-  }
-  if (blocked >= 3) return "full";
-  if (blocked === 2 || isImmobileSpin(piece)) return "mini";
-  return null;
+  return detectSpinCore({
+    board: state.board,
+    piece,
+    lastMoveWasRotate: state.lastMoveWasRotate,
+    lastRotationKind: state.lastRotationKind,
+    lastKickIndex: state.lastKickIndex,
+    cols: COLS,
+    rows: ROWS,
+    hidden: HIDDEN,
+  });
 }
 
 function isImmobileSpin(piece) {
-  if (piece.type === "O") return false;
-  return collides(piece, piece.x, piece.y - 1, piece.shape);
+  return isPieceImmobileCore({ board: state.board, piece, cols: COLS, rows: ROWS, hidden: HIDDEN });
 }
 
 function clearLines() {
   state.lastPerfectClear = false;
-  const lines = [];
-  for (let y = 0; y < state.board.length; y += 1) {
-    if (state.board[y].every(Boolean)) lines.push(y);
-  }
-  if (lines.length === 0) {
+  const result = clearFullLines(state.board, {
+    cols: COLS,
+    rows: ROWS,
+    hidden: HIDDEN,
+    ignoredCell: ULTIMATE_WALL,
+    emptyRowFactory: () => (state.ultimateActive ? makeUltimateRow(null) : Array(COLS).fill(null)),
+  });
+  if (result.cleared === 0) {
     state.combo = 0;
     return 0;
   }
   state.combo += 1;
-  state.lineFlash = lines.map((y) => ({ y, life: 190 }));
-  spawnLineParticles(lines);
-  spawnClearBurst(lines.length, state.combo);
-  state.board = state.board.filter((_, y) => !lines.includes(y));
-  while (state.board.length < ROWS + HIDDEN) state.board.unshift(state.ultimateActive ? makeUltimateRow(null) : Array(COLS).fill(null));
+  state.lineFlash = result.lines.map((y) => ({ y, life: 190 }));
+  spawnLineParticles(result.lines);
+  spawnClearBurst(result.cleared, state.combo);
+  state.board = result.board;
   applyUltimateWalls();
   state.lastPerfectClear = isBoardEmpty();
   if (state.lastPerfectClear) state.perfectClears += 1;
-  return lines.length;
+  return result.cleared;
 }
 
 function isBoardEmpty() {
-  return state.board.every((row) => row.every((cell) => !cell || cell === ULTIMATE_WALL));
+  return isBoardEmptyCore(state.board, { ignoredCell: ULTIMATE_WALL });
 }
 
 function spawnLineParticles(lines) {
@@ -4303,6 +2053,41 @@ function applyEnemyHit(hit) {
 }
 
 function applyBattle(lines, pieceType, spinType) {
+  const result = calculateDamage(
+    { lines, pieceType, spinType },
+    createBattleSnapshot(),
+  );
+  if (applyDamageResult(result)) playDamageFeedback(result);
+}
+
+function createBattleSnapshot() {
+  return {
+    combo: state.combo,
+    b2bActive: state.b2bActive,
+    b2bChain: state.b2bChain,
+    lastPerfectClear: state.lastPerfectClear,
+    enemy: state.enemyType,
+    upgrades: state.upgrades,
+    traits: getTraitSnapshot(),
+    rotationKind: state.lastRotationKind,
+    pendingGarbage: state.pendingGarbage,
+  };
+}
+
+function getTraitSnapshot() {
+  return getTraitEntries().map(({ tag, count, stage }) => ({ tag, count, stage }));
+}
+
+function calculateDamage(context, snapshot) {
+  const { lines, pieceType, spinType } = context;
+  const basePreview = calculateBaseDamage(context, {
+    combo: snapshot.combo,
+    b2bActive: snapshot.b2bActive,
+    perfect: snapshot.lastPerfectClear,
+    enemy: snapshot.enemy,
+    upgrades: snapshot.upgrades,
+    balance: BALANCE,
+  });
   const isTSpin = spinType === "full";
   const isTSpinMini = spinType === "mini";
   const isAllSpinMini = spinType === "all-mini";
@@ -4758,15 +2543,6 @@ function applyBattle(lines, pieceType, spinType) {
     weakness: weaknessBonus.multiplier > 1,
     effectiveLines,
   };
-  if (damage > 0) state.lastDamageBreakdown = breakdown;
-  pushOperationReadout(lines, pieceType, spinType, {
-    combo: state.combo,
-    b2b: b2bAttackRows > 0,
-    effectiveLines,
-    perfect: state.lastPerfectClear,
-    damage,
-    breakdown,
-  });
 
   let heal = [0, 2, 4, 6, 10][lines] || 0;
   if (isTSpin) heal += lines >= 2 ? 10 : 6;
@@ -4776,21 +2552,38 @@ function applyBattle(lines, pieceType, spinType) {
   if (spinType) heal += state.upgrades.spinHeal;
   if (state.lastPerfectClear) heal = state.playerMaxHp;
 
-  const context = {
+  const hitContext = {
     lines,
     combo: state.combo,
     spinType,
     perfect: state.lastPerfectClear,
   };
-  if (damage <= 0) {
-    finishPlayerTurnAfterHit(context);
-    return;
-  }
-
   const comboAttackStyle = getComboAttackStyle(state.combo);
   const attackStyle = getHeroAttackStyle(lines, spinType, state.lastPerfectClear, b2bBonus, comboAttackStyle);
   const attackDuration = getHeroAnimationDuration(attackStyle);
   const special = state.lastPerfectClear ? "perfect" : comboAttackStyle ? "combo" : spinType ? "spin" : b2bBonus > 0 ? "b2b" : lines >= 4 ? "tetris" : "clear";
+  if (damage <= 0) {
+    return {
+      lines,
+      pieceType,
+      spinType,
+      damage,
+      heal,
+      context: hitContext,
+      breakdown,
+      effectiveLines,
+      b2bHit: b2bAttackRows > 0,
+      comboBurst: comboMilestoneBonus > 0 || state.combo >= 3,
+      rotationBonus,
+      weaknessBonus,
+      comboAttackStyle,
+      attackStyle,
+      attackDuration,
+      special,
+      basePreview,
+    };
+  }
+
   const floaters = [
     { x: 930, y: 246, text: `-${damage}`, color: pieceType === "T" && lines > 0 ? "#c7a7ff" : "#f8f3cf", life: 900 },
   ];
@@ -4800,39 +2593,80 @@ function applyBattle(lines, pieceType, spinType) {
     floaters.push({ x: 930, y: 476, text: t("floaterFullRecovery"), color: "#8ff7ff", life: 1250 });
   }
 
-  startHeroAttackAnimation(attackStyle);
+  return {
+    lines,
+    pieceType,
+    spinType,
+    damage,
+    heal,
+    context: hitContext,
+    breakdown,
+    effectiveLines,
+    b2bHit: b2bAttackRows > 0,
+    comboBurst: comboMilestoneBonus > 0 || state.combo >= 3,
+    rotationBonus,
+    weaknessBonus,
+    comboAttackStyle,
+    attackStyle,
+    attackDuration,
+    special,
+    floaters,
+    isTSpin,
+    basePreview,
+  };
+}
+
+function applyDamageResult(result) {
+  if (result.damage > 0) state.lastDamageBreakdown = result.breakdown;
+  pushOperationReadout(result.lines, result.pieceType, result.spinType, {
+    combo: result.context.combo,
+    b2b: result.b2bHit,
+    effectiveLines: result.effectiveLines,
+    perfect: result.context.perfect,
+    damage: result.damage,
+    breakdown: result.breakdown,
+  });
+  if (result.damage <= 0) {
+    finishPlayerTurnAfterHit(result.context);
+    return false;
+  }
+  return true;
+}
+
+function playDamageFeedback(result) {
+  startHeroAttackAnimation(result.attackStyle);
   state.attacks.push({
     type: "player",
     x0: 244,
     y0: 358,
     x1: 994,
     y1: 346,
-    life: attackDuration,
-    duration: attackDuration,
-    damage,
-    spin: isTSpin,
-    heroStyle: attackStyle,
-    special,
-    lines,
+    life: result.attackDuration,
+    duration: result.attackDuration,
+    damage: result.damage,
+    spin: result.isTSpin,
+    heroStyle: result.attackStyle,
+    special: result.special,
+    lines: result.lines,
   });
   schedulePendingHit({
     type: "player",
-    delay: getHeroHitDelay(attackStyle),
-    damage,
-    heal,
-    context,
-    breakdown,
-    floaters,
-    weaknessHit: weaknessBonus.multiplier > 1,
-    b2bHit: b2bBonus > 0,
-    comboBurst: comboMilestoneBonus > 0 || state.combo >= 3,
-    sfx: state.lastPerfectClear ? "perfect" : spinType ? "tspin" : lines >= 4 ? "bigClear" : lines === 3 ? "tripleClear" : lines === 2 ? "doubleClear" : "clear",
-    shake: state.lastPerfectClear ? 12 : Math.max(4 + lines * 1.8 + Math.min(4, state.combo * 0.7), spinType || lines >= 4 ? 8 : 0),
-    burst: spinType || lines >= 4 || state.lastPerfectClear ? {
+    delay: getHeroHitDelay(result.attackStyle),
+    damage: result.damage,
+    heal: result.heal,
+    context: result.context,
+    breakdown: result.breakdown,
+    floaters: result.floaters,
+    weaknessHit: result.weaknessBonus.multiplier > 1,
+    b2bHit: result.b2bHit,
+    comboBurst: result.comboBurst,
+    sfx: state.lastPerfectClear ? "perfect" : result.spinType ? "tspin" : result.lines >= 4 ? "bigClear" : result.lines === 3 ? "tripleClear" : result.lines === 2 ? "doubleClear" : "clear",
+    shake: state.lastPerfectClear ? 12 : Math.max(4 + result.lines * 1.8 + Math.min(4, state.combo * 0.7), result.spinType || result.lines >= 4 ? 8 : 0),
+    burst: result.spinType || result.lines >= 4 || state.lastPerfectClear ? {
       x: 994,
       y: 346,
       radius: 18,
-      color: state.lastPerfectClear ? "#fff0a6" : spinType ? "#d7c2ff" : "#9df7da",
+      color: state.lastPerfectClear ? "#fff0a6" : result.spinType ? "#d7c2ff" : "#9df7da",
       life: state.lastPerfectClear ? 620 : 440,
       duration: state.lastPerfectClear ? 620 : 440,
       intensity: state.lastPerfectClear ? 2.2 : 1.65,
@@ -5421,7 +3255,7 @@ function completeChallenge(config) {
   const rewardName = CHALLENGE_REWARDS[config.id];
   const reward = UPGRADES.find((upgrade) => upgrade.name === rewardName);
   if (reward) {
-    reward.apply();
+    applyUpgrade(reward);
     recordAcquiredRelic(reward);
   }
   state.playerHp = Math.min(state.playerMaxHp, state.playerHp + 18);
@@ -5718,17 +3552,19 @@ function triggerUpgradeIfReady(forceRelic = false, forceRare = false) {
   return true;
 }
 
-function increasePlayerMaxHp(amount, healAmount = amount) {
-  state.upgrades.maxHpBonus += amount;
-  state.playerMaxHp = PLAYER_MAX_HP + state.upgrades.maxHpBonus;
-  state.playerHp = Math.min(state.playerMaxHp, state.playerHp + healAmount);
+function applyUpgrade(upgrade) {
+  applyUpgradeEffect(upgrade, {
+    state,
+    basePlayerMaxHp: PLAYER_MAX_HP,
+    getEffectiveMaxGuard,
+  });
 }
 
 function chooseUpgrade(index) {
   if (state.upgradePickConfirm) return;
   const upgrade = state.upgradeChoices[index];
   if (!upgrade) return;
-  upgrade.apply();
+  applyUpgrade(upgrade);
   recordAcquiredRelic(upgrade);
   state.floaters.push({
     x: 454,
@@ -5944,6 +3780,7 @@ function update(time) {
   state.lastTime = time;
 
   try {
+    updateAssetLoading(time);
     if (state.mode === "playing") {
       purgeLegacyVineBlocks();
       if (isBattleCountdownActive()) {
@@ -5985,6 +3822,27 @@ function update(time) {
     console.error("T-Spin Traveler update failed:", error);
   }
   requestAnimationFrame(update);
+}
+
+function updateAssetLoading(now = performance.now()) {
+  if (state.assetLoadingDone) return;
+  const summary = window.TST_ASSETS?.getSummary?.();
+  const loading = summary?.counts?.loading || 0;
+  const elapsed = now - state.assetLoadingStartedAt;
+  if ((loading === 0 && elapsed >= ASSET_LOADING_MIN_MS) || elapsed >= ASSET_LOADING_MAX_MS) {
+    state.assetLoadingDone = true;
+  }
+}
+
+function getAssetLoadingSummary() {
+  const summary = window.TST_ASSETS?.getSummary?.();
+  const counts = summary?.counts || {};
+  return {
+    loading: counts.loading || 0,
+    error: counts.error || 0,
+    loaded: counts.loaded || 0,
+    total: summary?.images?.length || 0,
+  };
 }
 
 function isBattleCountdownActive() {
@@ -7329,13 +5187,13 @@ function drawPlayer() {
   ctx.save();
   drawStageGlow(stage.x + stage.w / 2, stage.y + 322, 164, "#6de8ff");
   drawPresentationSigil(stage.x + stage.w / 2, stage.y + 318, 128, "#6de8ff");
-  ctx.translate(stage.x + stage.w / 2, stage.y + 236);
+  ctx.translate(stage.x + stage.w / 2, stage.y + 228);
   if (hit) ctx.translate(-10, 0);
   const bob = Math.sin(performance.now() * 0.0025) * 4;
   const attackMotion = playerAttack ? Math.sin((playerAttack.life / playerAttack.duration) * Math.PI) * 10 : 0;
   ctx.translate(attackMotion, bob);
   if (hit) ctx.scale(1.08, 0.92);
-  ctx.scale(1.28, 1.28);
+  ctx.scale(1.1, 1.1);
   drawCharacterShadow(0, 170, 128, "#6de8ff");
   drawHeroSprite(hit);
   if (playerAttack) drawNoaAttackPose(playerAttack);
@@ -7423,9 +5281,18 @@ function drawHeroSprite(hit) {
   ctx.restore();
 }
 
-function drawHeroIdleBase() {
-  if (isImageReady(HERO_ANIMATIONS.melee.image)) {
-    drawSpriteSheetFrame(HERO_ANIMATIONS.melee, 0, -158, -252, 316, 472);
+function drawHeroIdleBase(context = "battle") {
+  if (context === "menu" && isImageReady(noaMenuShowcaseArt)) {
+    drawImageContain(noaMenuShowcaseArt, -170, -328, 340, 510);
+  } else if (context !== "menu" && isImageReady(noaBattleIdleArt)) {
+    drawImageContain(noaBattleIdleArt, -138, -236, 276, 414);
+  } else if (isImageReady(rosterArt)) {
+    drawRosterSprite("noa", -118, -214, 236, 402);
+  } else if (isImageReady(heroIdleArt)) {
+    // Concept sheet fallback: crop the clearest full-body pose from the lower stance strip.
+    drawKeyedImageCropContain(heroIdleArt, 820, 1198, 178, 312, -114, -206, 228, 390, "idle-concept");
+  } else if (isImageReady(HERO_ANIMATIONS.melee.image)) {
+    drawSpriteSheetFrame(HERO_ANIMATIONS.melee, 0, -132, -222, 264, 410);
   } else if (isImageReady(heroMeleeSheet)) {
     drawSpriteSheetFrame({
       id: "melee-fallback",
@@ -7436,11 +5303,6 @@ function drawHeroIdleBase() {
       frames: [0, 1, 2, 3, 4, 5, 6],
       frameMs: 120,
     }, 0, -132, -222, 264, 410);
-  } else if (isImageReady(heroIdleArt)) {
-    // Concept sheet fallback: crop the clearest full-body pose from the lower stance strip.
-    drawKeyedImageCropContain(heroIdleArt, 820, 1198, 178, 312, -114, -206, 228, 390, "idle-concept");
-  } else if (isImageReady(rosterArt)) {
-    drawRosterSprite("noa", -118, -214, 236, 402);
   } else if (isImageReady(noaArt)) {
     drawImageContain(noaArt, -112, -210, 224, 392);
   } else {
@@ -9797,6 +7659,71 @@ function getMainMenuButtonRects() {
   };
 }
 
+function drawAssetLoadingScreen() {
+  const summary = getAssetLoadingSummary();
+  const now = performance.now();
+  const pulse = 0.5 + Math.sin(now * 0.006) * 0.5;
+  const progress = summary.total > 0 ? clamp((summary.loaded + summary.error) / summary.total, 0, 1) : 0;
+  const message = summary.error > 0
+    ? "Some assets failed to load. The game will use fallback visuals."
+    : "Loading assets...";
+
+  drawDimOverlay(0.76);
+  ctx.save();
+  const x = 378;
+  const y = 214;
+  const w = 524;
+  const h = 220;
+  const glow = ctx.createLinearGradient(x, y, x + w, y + h);
+  glow.addColorStop(0, "rgba(126, 231, 255, 0.16)");
+  glow.addColorStop(0.48, "rgba(184, 141, 255, 0.18)");
+  glow.addColorStop(1, "rgba(255, 224, 162, 0.16)");
+  ctx.fillStyle = "rgba(4, 7, 14, 0.88)";
+  ctx.shadowColor = "rgba(184, 141, 255, 0.34)";
+  ctx.shadowBlur = 28;
+  roundedRect(x, y, w, h, 10, true, false);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = glow;
+  roundedRect(x + 8, y + 8, w - 16, h - 16, 8, true, false);
+  ctx.strokeStyle = "rgba(255, 240, 166, 0.38)";
+  ctx.lineWidth = 1.8;
+  roundedRect(x, y, w, h, 10, false, true);
+  drawCornerGlyph(x + w / 2, y + 22, "#fff0a6");
+  ctx.textAlign = "center";
+  ctx.font = canvasFont("900", 26, message, true);
+  ctx.fillStyle = summary.error > 0 ? "#ffb7bd" : "#f8f3cf";
+  ctx.fillText(message, x + w / 2, y + 92);
+  ctx.fillStyle = "rgba(238,244,252,0.68)";
+  ctx.font = canvasFont("800", 13, "ASSETS", true);
+  ctx.fillText(`${summary.loaded + summary.error}/${summary.total || "..."}`, x + w / 2, y + 124);
+  const barX = x + 88;
+  const barY = y + 150;
+  const barW = w - 176;
+  ctx.fillStyle = "rgba(8, 13, 20, 0.68)";
+  roundedRect(barX, barY, barW, 12, 6, true, false);
+  const fillW = Math.max(18, barW * progress);
+  const bar = ctx.createLinearGradient(barX, barY, barX + barW, barY);
+  bar.addColorStop(0, "#7ef7ff");
+  bar.addColorStop(0.5, "#d7c2ff");
+  bar.addColorStop(1, "#fff0a6");
+  ctx.globalAlpha = 0.76 + pulse * 0.24;
+  ctx.fillStyle = bar;
+  roundedRect(barX, barY, fillW, 12, 6, true, false);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = "rgba(238,244,252,0.18)";
+  roundedRect(barX, barY, barW, 12, 6, false, true);
+  for (let i = 0; i < 14; i += 1) {
+    const a = now * 0.0018 + i * 0.55;
+    const r = 72 + (i % 4) * 11;
+    const sx = x + w / 2 + Math.cos(a) * r;
+    const sy = y + 112 + Math.sin(a * 1.4) * 42;
+    ctx.globalAlpha = 0.2 + pulse * 0.26;
+    ctx.fillStyle = i % 3 === 0 ? "#7ef7ff" : i % 3 === 1 ? "#d7c2ff" : "#fff0a6";
+    ctx.fillRect(sx, sy, 2.5, 2.5);
+  }
+  ctx.restore();
+}
+
 function drawStartMenuOverlay() {
   const m = UI_LAYOUT.menu;
   const pad = m.padding || 36;
@@ -9920,7 +7847,7 @@ function drawMenuHeroShowcase() {
   const now = performance.now();
   const pose = getMenuIdlePose(now);
   const motion = getMenuIdleMotion(pose, now);
-  const specialIdle = getMenuSpecialIdle(now);
+  const specialIdle = null;
   const hero = UI_LAYOUT.menuHero;
   const anchorX = hero.x;
   const anchorY = hero.y;
@@ -9939,10 +7866,10 @@ function drawMenuHeroShowcase() {
       ctx.globalAlpha = motion.afterimage;
       ctx.translate(-motion.x * 0.55 - 3, 2);
       ctx.scale(1.01, 1);
-      drawHeroIdleBase();
+      drawHeroIdleBase("menu");
       ctx.restore();
     }
-    drawHeroIdleBase();
+    drawHeroIdleBase("menu");
     drawMenuCloakSway(motion, now);
     drawMenuWeaponPulse(motion, now);
     drawMenuEyeGlow(motion, now);
@@ -9976,7 +7903,7 @@ function drawMenuSpecialIdleFrame(specialIdle) {
   if (alpha < 0.98) {
     ctx.save();
     ctx.globalAlpha *= 1 - alpha;
-    drawHeroIdleBase();
+    drawHeroIdleBase("menu");
     ctx.restore();
   }
   ctx.save();
@@ -10175,6 +8102,10 @@ function drawOverlay() {
     return;
   }
   if (state.mode === "start") {
+    if (!state.assetLoadingDone) {
+      drawAssetLoadingScreen();
+      return;
+    }
     drawStartMenuOverlay();
     if (state.settingsOpen) drawSettingsOverlay("start");
     return;
@@ -11847,7 +9778,7 @@ window.addEventListener("keydown", (event) => {
   }
   if (key === "Enter" && state.mode !== "playing") {
     if (state.mode === "upgrade") chooseUpgrade(0);
-    else if (state.mode === "start" && !state.settingsOpen) resetGame("endless");
+    else if (state.mode === "start" && state.assetLoadingDone && !state.settingsOpen) resetGame("endless");
     return;
   }
   if (normalized === "r" && (state.mode === "victory" || state.mode === "defeat")) {
@@ -11878,7 +9809,7 @@ window.addEventListener("keydown", (event) => {
       state.pauseView = "menu";
       state.settingsOpen = false;
     }
-    else if (state.mode === "start") {
+    else if (state.mode === "start" && state.assetLoadingDone) {
       state.settingsOpen = !state.settingsOpen;
       if (state.settingsOpen) state.settingsTab = "controls";
     }
@@ -12011,7 +9942,7 @@ canvas.addEventListener("mousedown", (event) => {
         }
       }
     }
-    if (state.mode === "start") {
+    if (state.mode === "start" && state.assetLoadingDone) {
       const buttons = getMainMenuButtonRects();
       if (pointInRect(p.x, p.y, buttons.start.x, buttons.start.y, buttons.start.w, buttons.start.h)) resetGame("endless");
       else if (pointInRect(p.x, p.y, buttons.tutorial.x, buttons.tutorial.y, buttons.tutorial.w, buttons.tutorial.h)) startTutorial();

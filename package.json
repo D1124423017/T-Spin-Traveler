@@ -1,0 +1,10 @@
+{
+  "type": "module",
+  "scripts": {
+    "check": "node --check game.js",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "latest"
+  }
+}
