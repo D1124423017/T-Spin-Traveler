@@ -287,5 +287,8 @@ Instead of treating line clears as simple scoring actions, this project connects
 ---
 
 ## Author｜作者
-
-D1124423017
+身體健康
+Game planning, gameplay design, visual direction, testing, and overall development direction by the author.
+遊戲企劃、玩法設計、視覺方向、測試與整體開發方向由作者負責。
+AI tools and Codex were used as development assistance for programming, refactoring, debugging, testing, and documentation.
+AI 工具與 Codex 用於輔助程式開發、架構整理、錯誤修正、測試補強與文件撰寫。
