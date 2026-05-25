@@ -36,10 +36,9 @@ export function canSpawnPiece(board, piece, options = {}) {
 }
 
 export function isBoardTopOut(board, options = {}) {
-  const hidden = Math.min(options.hidden ?? DEFAULT_HIDDEN, board.length);
-  const ignoredCell = options.ignoredCell;
-  for (let y = 0; y < hidden; y += 1) {
-    if (board[y].some((cell) => isOccupiedCell(cell, ignoredCell))) return true;
+  if (options.spawnPiece) return isSpawnBlocked(board, options.spawnPiece, options);
+  if (Array.isArray(options.spawnPieces) && options.spawnPieces.length > 0) {
+    return options.spawnPieces.every((piece) => isSpawnBlocked(board, piece, options));
   }
   return false;
 }

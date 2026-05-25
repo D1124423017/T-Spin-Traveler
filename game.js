@@ -1213,7 +1213,8 @@ function getBoardCollisionOptions() {
 }
 
 function isBoardTopOut() {
-  return isBoardTopOutCore(state.board, getBoardCollisionOptions());
+  const nextType = state.queue[0];
+  return nextType ? isBoardTopOutCore(state.board, { ...getBoardCollisionOptions(), spawnPiece: newPiece(nextType) }) : false;
 }
 
 function isPieceSpawnBlocked(piece) {
@@ -1222,8 +1223,9 @@ function isPieceSpawnBlocked(piece) {
 
 function triggerDefeatIfBoardTopOut(messageKey = "messageLockAbove") {
   if (!isBoardTopOut()) return false;
+  const previousMode = state.mode;
   triggerDefeat(messageKey);
-  return true;
+  return previousMode !== "defeat" && state.mode === "defeat";
 }
 
 function makeStats() {
@@ -1739,26 +1741,26 @@ function lockPiece(fromHardDrop = false) {
   const piece = state.active;
   if (!piece) return;
   const spinType = detectSpin(piece);
-  let lockedAboveVisibleBoard = false;
+  let lockedOutsideBoard = false;
   for (let r = 0; r < piece.shape.length; r += 1) {
     for (let c = 0; c < piece.shape[r].length; c += 1) {
       if (!piece.shape[r][c]) continue;
       const y = piece.y + r;
       const x = piece.x + c;
-      if (y < HIDDEN) lockedAboveVisibleBoard = true;
+      if (y < 0) lockedOutsideBoard = true;
       if (y >= 0 && y < state.board.length && x >= 0 && x < COLS) state.board[y][x] = piece.type;
     }
   }
-  if (lockedAboveVisibleBoard) {
+  if (lockedOutsideBoard) {
     triggerDefeat("messageLockAbove");
     return;
   }
-  if (triggerDefeatIfBoardTopOut("messageLockAbove")) return;
 
   if (!fromHardDrop) playSfx("lock");
   const cleared = clearLines();
   recordRunClearStats(cleared, spinType);
   applyBattle(cleared, piece.type, spinType);
+  if (triggerDefeatIfBoardTopOut("messageSpawnTop")) return;
   state.placed += 1;
   state.queueHex = Math.max(0, state.queueHex - 1);
   state.lastMoveWasRotate = false;
@@ -3912,8 +3914,11 @@ function addGarbageLines(count) {
     spawnGarbageParticles(hole);
   }
   applyUltimateWalls();
-  if (triggerDefeatIfBoardTopOut("messageGarbageTop")) return;
-  if (state.active && isPieceSpawnBlocked(state.active)) triggerDefeat("messageGarbageTop");
+  if (state.active) {
+    if (isPieceSpawnBlocked(state.active)) triggerDefeat("messageGarbageTop");
+    return;
+  }
+  triggerDefeatIfBoardTopOut("messageGarbageTop");
 }
 
 function chooseGarbageHole(holeMin, holeMax) {
