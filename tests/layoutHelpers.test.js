@@ -108,11 +108,16 @@ describe("HUD and card layout helpers", () => {
   it("calculates upgrade card and current build rects", () => {
     const card = getUpgradeCardRect(2);
     const draftLayout = getUpgradeDraftLayout();
+    const cardLayout = getUpgradeCardContentLayout(card);
 
     expect(getUpgradeOverlayPanelRect()).toEqual({ x: 198, y: 118, w: 934, h: 548 });
-    expect(draftLayout.buildRail).toEqual({ x: 966, y: 324, w: 148, h: 312 });
-    expect(card).toEqual({ x: 730, y: 282, w: 214, h: 344 });
-    expect(getUpgradeCardContentLayout(card).trait).toEqual({ x: 750, y: 578, w: 174, h: 34 });
+    expect(draftLayout.buildRail).toBeUndefined();
+    expect(draftLayout.buildButton).toEqual({ x: 942, y: 170, w: 150, h: 36 });
+    expect(getUpgradeCardRect(0)).toEqual({ x: 282, y: 260, w: 226, h: 352 });
+    expect(card).toEqual({ x: 822, y: 260, w: 226, h: 352 });
+    expect(cardLayout.trait).toEqual({ x: 840, y: 558, w: 190, h: 38 });
+    expect(cardLayout.desc.y + cardLayout.desc.lineH * cardLayout.desc.maxLines).toBeLessThanOrEqual(cardLayout.trait.y - 8);
+    expect(cardLayout.icon.y + cardLayout.icon.size / 2).toBeLessThan(cardLayout.title.y);
     expect(getCurrentBuildPanelRect()).toEqual({ x: 190, y: 82, w: 900, h: 560 });
     expect(getCurrentBuildCloseRect()).toEqual({ x: 912, y: 116, w: 132, h: 38 });
   });

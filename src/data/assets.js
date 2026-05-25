@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-05-26-blue-slime-reference-attack";
+export const ASSET_VERSION = "2026-05-26-clean-enemy-portraits-upgrade-flow";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -143,16 +143,16 @@ export const enemyConceptSheetA = registerImageAsset("enemy-concept-sheet-a", "a
 export const enemyConceptSheetB = registerImageAsset("enemy-concept-sheet-b", "assets/images/clean/Enemy02_alpha.png");
 
 export const enemyBattlePortraits = {
-  slime: registerImageAsset("enemy-battle-slime-left", "assets/enemies/battle/slime_battle_left.png"),
+  slime: registerImageAsset("enemy-battle-slime-left", "assets/enemies/battle/slime_battle_clean_left.png"),
   blueSlime: registerImageAsset("enemy-battle-blue-slime-left", "assets/enemies/battle/blue_slime_battle_left.png"),
-  vine: registerImageAsset("enemy-battle-vine-left", "assets/enemies/battle/vine_battle_left.png"),
-  mushroom: registerImageAsset("enemy-battle-mushroom-left", "assets/enemies/battle/mushroom_battle_left.png"),
-  beetle: registerImageAsset("enemy-battle-beetle-left", "assets/enemies/battle/beetle_battle_left.png"),
-  mist: registerImageAsset("enemy-battle-mist-left", "assets/enemies/battle/mist_battle_left.png"),
-  thorn: registerImageAsset("enemy-battle-thorn-left", "assets/enemies/battle/thorn_battle_left.png"),
-  wisp: registerImageAsset("enemy-battle-wisp-left", "assets/enemies/battle/wisp_battle_left.png"),
-  sentinel: registerImageAsset("enemy-battle-sentinel-left", "assets/enemies/battle/sentinel_battle_left.png"),
-  king: registerImageAsset("enemy-battle-king-left", "assets/enemies/battle/king_battle_left.png"),
+  vine: registerImageAsset("enemy-battle-vine-left", "assets/enemies/battle/vine_battle_clean_left.png"),
+  mushroom: registerImageAsset("enemy-battle-mushroom-left", "assets/enemies/battle/mushroom_battle_clean_left.png"),
+  beetle: registerImageAsset("enemy-battle-beetle-left", "assets/enemies/battle/beetle_battle_clean_left.png"),
+  mist: registerImageAsset("enemy-battle-mist-left", "assets/enemies/battle/mist_battle_clean_left.png"),
+  thorn: registerImageAsset("enemy-battle-thorn-left", "assets/enemies/battle/thorn_battle_clean_left.png"),
+  wisp: registerImageAsset("enemy-battle-wisp-left", "assets/enemies/battle/wisp_battle_clean_left.png"),
+  sentinel: registerImageAsset("enemy-battle-sentinel-left", "assets/enemies/battle/sentinel_battle_clean_left.png"),
+  king: registerImageAsset("enemy-battle-king-left", "assets/enemies/battle/king_battle_clean_left.png"),
 };
 
 export const upgradeCardFrames = {

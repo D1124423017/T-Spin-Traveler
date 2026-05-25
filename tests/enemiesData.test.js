@@ -13,6 +13,7 @@ describe("enemy data", () => {
   it("includes the blue slime as a non-boss early enemy", () => {
     const blueSlime = ENEMIES.find((enemy) => enemy.id === "blue_slime");
 
+    expect(ENEMIES[0].id).toBe("blue_slime");
     expect(blueSlime).toMatchObject({
       name: "RIFT BLUE SLIME",
       trait: "GEL WAVE",

@@ -9091,7 +9091,6 @@ function drawUpgradeOverlay() {
   fitLabel(t("safeNodeDraft"), draftLayout.safeHint.x, draftLayout.safeHint.y, draftLayout.safeHint.w, draftLayout.safeHint.size, "#9df7da", 9, "900");
   const buildButton = draftLayout.buildButton;
   drawMenuButton(buildButton.x, buildButton.y, buildButton.w, buildButton.h, t("currentBuild"), "");
-  drawUpgradeBuildRail(getAcquiredRelicGroups(), draftLayout.buildRail);
   for (let i = 0; i < 3; i += 1) {
     const upgrade = state.upgradeChoices[i];
     if (!upgrade) continue;
@@ -9105,41 +9104,16 @@ function drawUpgradeOverlay() {
     drawUpgradeCardFrame(card.x, card.y, card.w, card.h, rarity, hovered || state.upgradePickConfirm?.index === i);
     drawRarityBadge(layout.badge.x, layout.badge.y, layout.badge.w, layout.badge.h, rarityLabel(upgrade.rarity).toUpperCase(), rarity);
     drawUpgradeEmblem(upgrade, layout.icon.x, layout.icon.y, rarity, layout.icon.size);
-    drawLimitedWrapText(upgradeName(upgrade), layout.title.x, layout.title.y, layout.title.w, layout.title.lineH, rarity.titleColor, layout.title.size, 2, "900", true);
-    drawUpgradeTagPills(getUpgradeTags(upgrade), layout.tags.x, layout.tags.y, layout.tags.w, 2, 0.84);
+    drawLimitedWrapText(upgradeName(upgrade), layout.title.x, layout.title.y, layout.title.w, layout.title.lineH, rarity.titleColor, layout.title.size, layout.title.maxLines || 2, "900", true);
+    drawUpgradeTagPills(getUpgradeTags(upgrade), layout.tags.x, layout.tags.y, layout.tags.w, layout.tags.maxTags || 2, 0.84);
     drawUpgradeDivider(layout.divider.x, layout.divider.y, layout.divider.w, rarity.color, hovered ? 0.58 : 0.34);
-    drawLimitedWrapText(upgradeShortText(upgrade), layout.desc.x, layout.desc.y, layout.desc.w, layout.desc.lineH, "rgba(238,244,252,0.78)", layout.desc.size, 3, "700");
+    drawLimitedWrapText(upgradeShortText(upgrade), layout.desc.x, layout.desc.y, layout.desc.w, layout.desc.lineH, "rgba(238,244,252,0.78)", layout.desc.size, layout.desc.maxLines || 3, "700");
     drawUpgradeTraitHint(upgrade, card);
     ctx.restore();
   }
   if (state.upgradePickConfirm) drawUpgradePickConfirmFx();
   fitLabel(t("upgradeHelp"), draftLayout.help.x, draftLayout.help.y, draftLayout.help.w, draftLayout.help.size, "rgba(159, 180, 255, 0.72)", 10, "800");
   if (state.currentBuildOpen) drawCurrentBuildPanel();
-  ctx.restore();
-}
-
-function drawUpgradeBuildRail(groups, rect) {
-  ctx.save();
-  ctx.fillStyle = OVERLAY_READABILITY.surface.fill;
-  roundedRect(rect.x, rect.y, rect.w, rect.h, 10, true, false);
-  ctx.strokeStyle = OVERLAY_READABILITY.surface.stroke;
-  ctx.lineWidth = 1.2;
-  roundedRect(rect.x, rect.y, rect.w, rect.h, 10, false, true);
-  label(t("currentBuildList").toUpperCase(), rect.x + 14, rect.y + 22, 10, "rgba(143, 232, 220, 0.72)");
-  if (!groups.length) {
-    drawLimitedWrapText(t("currentBuildEmpty"), rect.x + 14, rect.y + 54, rect.w - 28, 15, "rgba(238,244,252,0.58)", 11, 3, "700");
-    ctx.restore();
-    return;
-  }
-  const rowH = 46;
-  const gap = 8;
-  const maxRows = Math.max(1, Math.floor((rect.h - 48) / (rowH + gap)));
-  groups.slice(0, maxRows).forEach((group, index) => {
-    drawAcquiredRelicListRow(group, rect.x + 10, rect.y + 38 + index * (rowH + gap), rect.w - 20, rowH);
-  });
-  if (groups.length > maxRows) {
-    label(`+${groups.length - maxRows}`, rect.x + 14, rect.y + rect.h - 10, 11, "rgba(238,244,252,0.5)");
-  }
   ctx.restore();
 }
 

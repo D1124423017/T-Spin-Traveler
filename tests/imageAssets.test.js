@@ -106,16 +106,16 @@ const upgradeCardFrames = [
 ];
 
 const enemyBattlePortraits = [
-  { path: "assets/enemies/battle/slime_battle_left.png", width: 335, height: 240 },
+  { path: "assets/enemies/battle/slime_battle_clean_left.png", width: 335, height: 240 },
   { path: "assets/enemies/battle/blue_slime_battle_left.png", width: 380, height: 250 },
-  { path: "assets/enemies/battle/vine_battle_left.png", width: 360, height: 230 },
-  { path: "assets/enemies/battle/mushroom_battle_left.png", width: 350, height: 250 },
-  { path: "assets/enemies/battle/beetle_battle_left.png", width: 380, height: 235 },
-  { path: "assets/enemies/battle/mist_battle_left.png", width: 255, height: 250 },
-  { path: "assets/enemies/battle/thorn_battle_left.png", width: 360, height: 246 },
-  { path: "assets/enemies/battle/wisp_battle_left.png", width: 365, height: 240 },
-  { path: "assets/enemies/battle/sentinel_battle_left.png", width: 385, height: 284 },
-  { path: "assets/enemies/battle/king_battle_left.png", width: 365, height: 260 },
+  { path: "assets/enemies/battle/vine_battle_clean_left.png", width: 360, height: 230 },
+  { path: "assets/enemies/battle/mushroom_battle_clean_left.png", width: 350, height: 250 },
+  { path: "assets/enemies/battle/beetle_battle_clean_left.png", width: 380, height: 235 },
+  { path: "assets/enemies/battle/mist_battle_clean_left.png", width: 255, height: 250 },
+  { path: "assets/enemies/battle/thorn_battle_clean_left.png", width: 360, height: 246 },
+  { path: "assets/enemies/battle/wisp_battle_clean_left.png", width: 365, height: 240 },
+  { path: "assets/enemies/battle/sentinel_battle_clean_left.png", width: 385, height: 284 },
+  { path: "assets/enemies/battle/king_battle_clean_left.png", width: 365, height: 260 },
 ];
 
 describe("image assets", () => {
@@ -196,6 +196,25 @@ describe("image assets", () => {
     for (const portrait of enemyBattlePortraits) {
       expect(assetsSource).toContain(portrait.path);
       expect(readPngInfo(portrait.path)).toEqual({ width: portrait.width, height: portrait.height, colorType: 6 });
+    }
+  });
+
+  it("uses clean left-facing battle portrait assets for concept-sheet enemies", () => {
+    const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
+    const legacyPortraits = [
+      "slime_battle_left.png",
+      "vine_battle_left.png",
+      "mushroom_battle_left.png",
+      "beetle_battle_left.png",
+      "mist_battle_left.png",
+      "thorn_battle_left.png",
+      "wisp_battle_left.png",
+      "sentinel_battle_left.png",
+      "king_battle_left.png",
+    ];
+
+    for (const portrait of legacyPortraits) {
+      expect(assetsSource).not.toContain(`assets/enemies/battle/${portrait}`);
     }
   });
 
