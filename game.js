@@ -70,8 +70,23 @@ import {
   isPieceImmobile as isPieceImmobileCore,
 } from "./src/tetris/spinDetection.js";
 import {
+  ATTACK_ROW_DAMAGE,
+  DEFAULT_DAMAGE_SOURCE_KEYS as DAMAGE_SOURCE_KEYS,
+  LINE_DAMAGE,
+  PERFECT_CLEAR_BASE_DAMAGE,
+  SPIN_DAMAGE_BY_LINES,
+  addDamagePart,
   calculateDamage as calculateBaseDamage,
+  getComboAttackRows,
+  getEffectiveClearLines,
+  makeDamageSourceMap,
+  getComboMilestoneDamage as getComboMilestoneDamageBase,
 } from "./src/combat/damage.js";
+import {
+  getComboAttackStyle,
+  getHeroAttackStyle,
+  getRotationDamageBonus,
+} from "./src/combat/combatRules.js";
 import {
   applyUpgradeEffect,
   getB2BTraitBonus,
@@ -102,22 +117,63 @@ import {
   loadMetaProgress,
   saveMetaProgress,
 } from "./src/core/metaProgress.js";
+import {
+  animateNumber,
+  clamp,
+  drawRoundedRect,
+  getSpriteFrameRect,
+  hexToRgba,
+  insetSpriteFrameRect,
+  lerp,
+  pointInRect,
+  smoothstep,
+} from "./src/render/drawUtils.js";
+import {
+  createHudLayout,
+  getControlsResetButtonRect as getControlsResetButtonRectForLayout,
+  getHandlingResetButtonRect as getHandlingResetButtonRectForLayout,
+  getMainMenuButtonRects as getMainMenuButtonRectsForLayout,
+  getMetaUpgradeBackButtonRect,
+  getMetaUpgradeRowRects,
+  getResultButtonRects,
+  getSettingsBackButtonRect as getSettingsBackButtonRectForLayout,
+  getSettingsContentOrigin as getSettingsContentOriginForLayout,
+  getSettingsFeedbackCardRect as getSettingsFeedbackCardRectForLayout,
+  getSettingsFeedbackButtonRect,
+} from "./src/ui/hudLayout.js";
+import { getPiecePreviewLayout } from "./src/ui/piecePreview.js";
+import { buildDamageEquation } from "./src/ui/combatReadout.js";
+import { createCanvasFont, createTextLayout } from "./src/ui/textLayout.js";
+import {
+  getTraitDetailTitle as getTraitDetailTitleForPanel,
+  getTraitHudLabel as getTraitHudLabelForPanel,
+  getTraitProgressStatusText as getTraitProgressStatusTextForPanel,
+} from "./src/ui/traitPanel.js";
+import {
+  getCurrentBuildButtonRect,
+  getCurrentBuildCloseRect,
+  getCurrentBuildPanelRect,
+  getUpgradeCardContentLayout,
+  getUpgradeCardRect,
+  getUpgradeOverlayPanelRect,
+} from "./src/ui/upgradeCards.js";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 const DISPLAY_FONT_STACK = "'TSpin Traveler Display', 'Noto Sans TC', system-ui, sans-serif";
 const UI_FONT_STACK = "'Trebuchet MS', 'Noto Sans TC', system-ui, sans-serif";
-const DISPLAY_FONT_PATTERN = /^[A-Za-z0-9 .,!?:;()[\]+\-/%<>×]+$/;
-
-function shouldUseDisplayFont(text) {
-  const content = String(text ?? "").trim();
-  return content.length > 0 && content.length <= 30 && DISPLAY_FONT_PATTERN.test(content);
-}
-
-function canvasFont(weight, size, text = "", forceDisplay = false) {
-  return `${weight} ${size}px ${forceDisplay || shouldUseDisplayFont(text) ? DISPLAY_FONT_STACK : UI_FONT_STACK}`;
-}
+const canvasFont = createCanvasFont({
+  displayFontStack: DISPLAY_FONT_STACK,
+  uiFontStack: UI_FONT_STACK,
+});
+const {
+  label,
+  fitLabel,
+  wrapText,
+  drawLimitedWrapText,
+} = createTextLayout(ctx, { canvasFont, uiFontStack: UI_FONT_STACK });
+const roundedRect = (...args) => drawRoundedRect(ctx, ...args);
 
 const HERO_ANIMATIONS = {
   // Runtime character animations are standardized to 16 frames.
@@ -370,12 +426,9 @@ const ASSET_LOADING_MIN_MS = 450;
 const ASSET_LOADING_MAX_MS = 2600;
 const PLAYER_MAX_HP = 100;
 const ENEMY_DEFEAT_HEAL = 15;
-const PERFECT_CLEAR_BASE_DAMAGE = 90;
 const PERFECT_CROWN_BOSS_HP_RATIO = 0.5;
 const LEGENDARY_DRAFT_CHANCE = 0.12;
 const LEGENDARY_BOSS_DRAFT_CHANCE = 0.35;
-const SPIN_DAMAGE_BY_LINES = [0, 35, 85, 115, 150];
-const ATTACK_ROW_DAMAGE = 15;
 const ENEMY_ATTACK_DURATION_MS = 950;
 const ENEMY_ATTACK_FRAME_MS = ENEMY_ATTACK_DURATION_MS / 8;
 const SAVE_KEY = "tspin-traveler-save-v1";
@@ -559,8 +612,6 @@ const TUTORIAL_STEPS = [
   { id: "cancel", promptKey: "tutorialPrompt.cancel", detailKey: "tutorialStep.cancel" },
 ];
 
-const DAMAGE_SOURCE_KEYS = ["base", "spin", "combo", "b2b", "perfect", "weakness", "upgrade"];
-
 const DEFAULT_TUNING = {
   das: DAS_MS,
   arr: ARR_MS,
@@ -608,46 +659,13 @@ const DEFAULT_CONTROLS = {
   mute: ["m"],
 };
 
-const UI_LAYOUT = {
-  panelPadding: 24,
-  playerPanel: { x: 38, y: 84, w: 312, h: 190 },
-  enemyPanel: { x: 884, y: 84, w: 356, h: 254 },
-  playerStage: { x: 18, y: 188, w: 380, h: 392 },
-  enemyStage: { x: 858, y: 246, w: 410, h: 320 },
-  boardFrame: { x: BOARD_X - 18, y: BOARD_Y - 18, w: COLS * TILE + 36, h: ROWS * TILE + 36 },
-  menuHero: { x: 350, y: 540, scale: 0.68 },
-  menu: {
-    x: 804,
-    y: 96,
-    w: 390,
-    h: 548,
-    padding: 34,
-    titleY: 104,
-    subtitleY: 154,
-    primaryY: 250,
-    tutorialY: 330,
-    utilityY: 386,
-    primaryH: 64,
-    buttonH: 44,
-    buttonGap: 10,
-  },
-  countdown: { cardW: 236, cardH: 108, yOffset: -18, barGap: 16 },
-  pauseButton: { x: 1192, y: 24, w: 50, h: 38 },
-  pauseMenu: { x: 414, y: 122, w: 452, h: 462 },
-  settings: { x: 142, y: 58, w: 996, h: 604, tabX: 184, contentX: 388, contentY: 166 },
-  controlsGrid: { columns: 2, gapX: 360, rowH: 52, rowW: 332, keyW: 132, keyH: 36 },
-  ultimateMeter: { x: 0, y: ROWS * TILE + 10, w: COLS * TILE, h: 30 },
-  compactHints: [
-    "screenMove",
-    "screenSoftDrop",
-    "screenHardDrop",
-    "screenRotate",
-    "screenRotate180",
-    "screenHold",
-    "screenPause",
-    "screenMute",
-  ],
-};
+const UI_LAYOUT = createHudLayout({
+  boardX: BOARD_X,
+  boardY: BOARD_Y,
+  cols: COLS,
+  rows: ROWS,
+  tile: TILE,
+});
 
 const MENU_HERO_DIALOGUE_KEYS = {
   hover: ["menuHeroHover1", "menuHeroHover2", "menuHeroHover3"],
@@ -747,6 +765,17 @@ const CONTROL_ACTIONS = [
   { id: "pause", labelKey: "control.pause" },
   { id: "mute", labelKey: "control.mute" },
 ];
+
+const getMainMenuButtonRects = () => getMainMenuButtonRectsForLayout(UI_LAYOUT.menu);
+const getSettingsContentOrigin = () => getSettingsContentOriginForLayout(UI_LAYOUT.settings);
+const getSettingsBackButtonRect = () => getSettingsBackButtonRectForLayout(UI_LAYOUT.settings);
+const getSettingsFeedbackCardRect = () => getSettingsFeedbackCardRectForLayout(getSettingsContentOrigin());
+const getControlsResetButtonRect = () => getControlsResetButtonRectForLayout(
+  getSettingsContentOrigin(),
+  UI_LAYOUT.controlsGrid,
+  CONTROL_ACTIONS.length,
+);
+const getHandlingResetButtonRect = () => getHandlingResetButtonRectForLayout(getSettingsContentOrigin());
 
 function normalizeControlKeys(value) {
   const source = Array.isArray(value) ? value : (typeof value === "string" ? [value] : []);
@@ -1797,16 +1826,6 @@ function spawnClearBurst(lines, combo) {
   }
 }
 
-function makeDamageSourceMap() {
-  return Object.fromEntries(DAMAGE_SOURCE_KEYS.map((key) => [key, 0]));
-}
-
-function addDamagePart(parts, sources, key, value, source) {
-  if (!value) return;
-  parts.push({ key, value, source });
-  if (source && sources[source] !== undefined) sources[source] += value;
-}
-
 function damageEnemyFromUpgrade(amount, floaterKey, color, x = 920, y = 430) {
   const damage = Math.max(0, Math.floor(amount));
   if (damage <= 0 || state.enemyHp <= 0) return 0;
@@ -2261,7 +2280,7 @@ function calculateDamage(context, snapshot) {
   const comboBonus = comboAttackRows * ATTACK_ROW_DAMAGE;
   const parts = [];
   const sources = makeDamageSourceMap();
-  let damage = spinType && lines > 0 ? (SPIN_DAMAGE_BY_LINES[lines] || 0) : ([0, 10, 25, 45, 70][lines] || 0);
+  let damage = spinType && lines > 0 ? (SPIN_DAMAGE_BY_LINES[lines] || 0) : (LINE_DAMAGE[lines] || 0);
   addDamagePart(parts, sources, "damageBase", damage, spinType ? "spin" : "base");
   if (lines > 0) addDamagePart(parts, sources, "damageLineBonus", state.upgrades.lineDamage, "upgrade");
   damage += lines > 0 ? state.upgrades.lineDamage : 0;
@@ -2883,20 +2902,8 @@ function playDamageFeedback(result) {
   });
 }
 
-function getBaseAttackRows(lines, spinType) {
-  if (lines <= 0) return 0;
-  if (spinType) return [0, 2, 4, 6, 8][lines] || 0;
-  return [0, 0, 1, 2, 4][lines] || 0;
-}
-
-function getComboAttackRows(combo) {
-  if (combo < 3) return 0;
-  return Math.floor((combo - 1) / 2);
-}
-
 function getComboMilestoneDamage(combo) {
-  if (combo < BALANCE.comboMilestoneEvery) return 0;
-  return Math.floor(combo / BALANCE.comboMilestoneEvery) * BALANCE.comboMilestoneDamage;
+  return getComboMilestoneDamageBase(combo, BALANCE.comboMilestoneEvery, BALANCE.comboMilestoneDamage);
 }
 
 function gainGuardFromClear(lines, spinType) {
@@ -2995,24 +3002,6 @@ function endUltimateMode() {
   if (state.mode === "playing") spawnPiece();
 }
 
-function getEffectiveClearLines(lines, spinType) {
-  if (lines <= 0) return 0;
-  return lines * (spinType ? 2 : 1);
-}
-
-function getComboAttackStyle(combo) {
-  if (combo < 2) return "";
-  return `combo${((combo - 2) % 3) + 1}`;
-}
-
-function getHeroAttackStyle(lines, spinType, perfectClear, b2bBonus, comboAttackStyle = "") {
-  if (perfectClear) return "ultimate";
-  if (!perfectClear && comboAttackStyle) return comboAttackStyle;
-  if (spinType || b2bBonus > 0 || lines >= 4) return "melee";
-  if (lines > 0) return "ranged";
-  return "ranged";
-}
-
 function startPerfectClearFx(damage) {
   const now = performance.now();
   duckMusic(0.46, 1.05);
@@ -3107,25 +3096,6 @@ function startEnemyAttackAnimation(kind) {
   };
 }
 
-function getRotationDamageBonus(lines, pieceType, spinType, rotationKind) {
-  if (lines <= 0 || !rotationKind) return { multiplier: 1, label: "", color: "#f8f3cf" };
-  if (spinType === "full") {
-    return { multiplier: 1, label: `T-${formatRotationKind(rotationKind)} SPIN`, color: "#f2d36b" };
-  }
-  if (spinType === "mini") {
-    return { multiplier: 1, label: `MINI ${formatRotationKind(rotationKind)} SPIN`, color: "#d7c2ff" };
-  }
-  if (spinType === "all-mini") {
-    return { multiplier: 1, label: `${pieceType}-${formatRotationKind(rotationKind)} SPIN`, color: "#9df7da" };
-  }
-  if (pieceType === "T") {
-    return { multiplier: rotationKind === "180" ? 1.2 : rotationKind === "ccw" ? 1.14 : 1.1, label: `T ${formatRotationKind(rotationKind)} BONUS`, color: "#c7a7ff" };
-  }
-  if (rotationKind === "180") return { multiplier: 1.15, label: "180 STRIKE x1.15", color: "#fff0a6" };
-  if (rotationKind === "ccw") return { multiplier: 1.08, label: "Z ROT BONUS x1.08", color: "#9fb4ff" };
-  return { multiplier: 1.05, label: "ROT BONUS x1.05", color: "#9df7da" };
-}
-
 function getWeaknessBonus(lines, spinType) {
   if (lines <= 0) return { multiplier: 1, label: "" };
   const weakness = state.enemyType.weakness;
@@ -3136,14 +3106,6 @@ function getWeaknessBonus(lines, spinType) {
     (weakness === "perfect" && state.lastPerfectClear) ||
     (weakness === "b2b" && state.b2bActive);
   return hit ? { multiplier: 1.35, label: t("weaknessHit") } : { multiplier: 1, label: "" };
-}
-
-function getMoveRating(lines, spinType, perfect) {
-  if (perfect) return "PERFECT";
-  if (spinType === "full" || state.b2bActive) return "ARCANE";
-  if (lines >= 4 || spinType || state.combo >= 4) return "BRUTAL";
-  if (lines >= 2 || state.combo >= 2) return "CLEAN";
-  return "GOOD";
 }
 
 function pushOperationReadout(lines, pieceType, spinType, meta = {}) {
@@ -3161,7 +3123,7 @@ function pushOperationReadout(lines, pieceType, spinType, meta = {}) {
     b2b: Boolean(meta.b2b),
     effectiveLines: meta.effectiveLines || lines,
     damage: meta.damage || 0,
-    equation: meta.breakdown ? buildDamageEquation(meta.breakdown, true) : "",
+    equation: meta.breakdown ? buildDamageEquation(meta.breakdown, { translate: t, compact: true }) : "",
     color,
     life: 1650,
     duration: 1650,
@@ -3311,57 +3273,6 @@ function getLineClearPopupText(lines) {
   }[lines] || `${lines} Lines`;
 }
 
-function buildDamageEquation(breakdown, compact = false) {
-  if (!breakdown) return t("damageEquationHint");
-  const terms = getDamageEquationTerms(breakdown);
-  const addParts = terms.filter((term) => term.source !== "multiplier").map((term) => term.text);
-  const multiplierParts = terms.filter((term) => term.source === "multiplier").map((term) => term.text);
-  const parts = [...addParts, ...multiplierParts.map((part) => `× ${part}`)];
-  const maxParts = compact ? 5 : 9;
-  const shown = parts.slice(0, maxParts);
-  if (parts.length > maxParts) shown.push("+...");
-  return `${shown.join(" + ").replace(/\+ ×/g, "×")} = ${breakdown.total} ${t("dmgShort")}`;
-}
-
-function getDamageEquationTerms(breakdown) {
-  if (!breakdown) return [];
-  const terms = [];
-  for (const part of breakdown.parts || []) {
-    if (!part.value) continue;
-    terms.push({
-      text: `${t(part.key)} +${part.value}`,
-      label: t(part.key),
-      value: `+${part.value}`,
-      source: part.source || "base",
-      color: damageSourceColor(part.source || "base"),
-    });
-  }
-  for (const multi of breakdown.multipliers || []) {
-    const name = multi.key ? t(multi.key) : multi.label;
-    terms.push({
-      text: `${name} ${multi.value}`,
-      label: name,
-      value: multi.value,
-      source: "multiplier",
-      color: "#d7c2ff",
-    });
-  }
-  return terms;
-}
-
-function damageSourceColor(source) {
-  return {
-    base: "#b9c2ff",
-    spin: "#d7c2ff",
-    combo: "#7ef7ff",
-    b2b: "#fff0a6",
-    perfect: "#fff0a6",
-    weakness: "#ffdf8a",
-    upgrade: "#9df7da",
-    multiplier: "#d7c2ff",
-  }[source] || "#f5f1e6";
-}
-
 function getOperationTitle(lines, pieceType, spinType, perfect) {
   if (perfect) return t("perfectClearTitle");
   const lineName = {
@@ -3374,12 +3285,6 @@ function getOperationTitle(lines, pieceType, spinType, perfect) {
   if (spinType === "mini") return `T-SPIN MINI ${lineName}`;
   if (spinType === "all-mini") return `${pieceType}-SPIN ${lineName}`;
   return lineName;
-}
-
-function formatRotationKind(kind) {
-  if (kind === "180") return "180";
-  if (kind === "ccw") return "Z";
-  return "CW";
 }
 
 function cancelIncomingGarbage(lines) {
@@ -5379,46 +5284,15 @@ function drawTraitListRow(trait, x, y, w, h) {
   ctx.fillStyle = active ? color : "rgba(238,244,252,0.44)";
   ctx.fillText(trait.def.icon, x + 12, y + 14);
   ctx.textAlign = "left";
-  fitLabel(getTraitHudLabel(trait), x + 26, y + 14, 48, 10, active ? "#f5f1e6" : "rgba(238,244,252,0.48)", 8, "800", true);
+  fitLabel(getTraitHudLabelForPanel(trait, { translate: t }), x + 26, y + 14, 48, 10, active ? "#f5f1e6" : "rgba(238,244,252,0.48)", 8, "800", true);
   ctx.textAlign = "right";
-  fitLabel(getTraitProgressStatusText(trait), x + w - 56, y + 14, 52, 10, active ? color : "rgba(238,244,252,0.44)", 7, "900", true);
+  fitLabel(getTraitProgressStatusTextForPanel(trait, { format: fmt, getFullCount: getTraitFullCount }), x + w - 56, y + 14, 52, 10, active ? color : "rgba(238,244,252,0.44)", 7, "900", true);
   if (active) {
     ctx.fillStyle = color;
     ctx.globalAlpha = trait.isFull ? 0.9 : 0.64;
     ctx.fillRect(x + w - 26, y + h - 4, Math.min(20, 6 + trait.stage * 5), 2);
   }
   ctx.restore();
-}
-
-function getTraitProgressStatusText(trait) {
-  if (trait.overcap > 0) return fmt("traitOvercapCount", { count: trait.overcap });
-  if (trait.isFull) return t("traitFull");
-  const fullCount = trait.fullCount || getTraitFullCount(trait.tag);
-  return `${trait.count}/${fullCount}`;
-}
-
-function getTraitDetailTitle(trait) {
-  const fullCount = trait.fullCount || getTraitFullCount(trait.tag);
-  const countText = fullCount ? `${trait.count}/${fullCount}` : `${trait.count}`;
-  const statusText = getTraitProgressStatusText(trait);
-  return trait.isFull ? `${trait.label} ${countText} ${statusText}` : `${trait.label} ${countText}`;
-}
-
-function getTraitHudLabel(trait) {
-  const zh = state.language === "zh";
-  const labels = {
-    Spin: "Spin",
-    Combo: "Combo",
-    Defense: zh ? "防禦" : "Def",
-    Burst: zh ? "爆發" : "Burst",
-    Survival: zh ? "生存" : "Surv",
-    Garbage: zh ? "垃圾" : "Garbage",
-    Utility: zh ? "輔助" : "Util",
-    Perfect: "PC",
-    B2B: "B2B",
-    "Boss Killer": "Boss",
-  };
-  return labels[trait.tag] || trait.label;
 }
 
 function getRelicProgressInfo() {
@@ -5844,7 +5718,7 @@ function drawSpriteAnimationFrame(config, elapsed, x, y, w, h) {
 
 function drawSpriteSheetFrame(config, frame, x, y, w, h, alpha = 1) {
   const img = config.image;
-  const rect = insetSpriteFrameRect(getSpriteFrameRect(config, frame), img);
+  const rect = insetSpriteFrameRect(getSpriteFrameRect(config, frame), img, SPRITE_FRAME_CROP_INSET);
   const keyed = getKeyedSpriteFrame(config, frame, rect);
   ctx.save();
   ctx.globalAlpha *= alpha;
@@ -5854,37 +5728,6 @@ function drawSpriteSheetFrame(config, frame, x, y, w, h, alpha = 1) {
     drawImageCropContain(img, rect.x, rect.y, rect.w, rect.h, x, y, w, h);
   }
   ctx.restore();
-}
-
-function insetSpriteFrameRect(rect, img) {
-  const inset = Math.min(SPRITE_FRAME_CROP_INSET, rect.w / 8, rect.h / 8);
-  if (inset <= 0) return { ...rect };
-  const maxW = img?.naturalWidth || rect.x + rect.w;
-  const maxH = img?.naturalHeight || rect.y + rect.h;
-  const x = clamp(rect.x + inset, 0, Math.max(0, maxW - 1));
-  const y = clamp(rect.y + inset, 0, Math.max(0, maxH - 1));
-  const w = Math.max(1, Math.min(rect.w - inset * 2, maxW - x));
-  const h = Math.max(1, Math.min(rect.h - inset * 2, maxH - y));
-  return { x, y, w, h };
-}
-
-function getSpriteFrameRect(config, frame) {
-  if (config.frameRects && config.frameRects[frame]) return config.frameRects[frame];
-  const cols = config.columns;
-  const cellW = config.image.naturalWidth / cols;
-  const cellH = config.image.naturalHeight / config.rows;
-  const col = frame % cols;
-  const row = Math.floor(frame / cols);
-  const x0 = Math.round(col * cellW);
-  const y0 = Math.round(row * cellH);
-  const x1 = Math.round((col + 1) * cellW);
-  const y1 = Math.round((row + 1) * cellH);
-  return {
-    x: x0,
-    y: y0,
-    w: Math.max(1, x1 - x0),
-    h: Math.max(1, y1 - y0),
-  };
 }
 
 function getKeyedSpriteFrame(config, frame, rect) {
@@ -7805,8 +7648,7 @@ function drawMiniPiece(type, x, y, size = 14, boxW = 92, boxH = 58, options = {}
   roundedRect(x - 8, y - 8, boxW, boxH, 6, false, true);
   if (type) {
     const shape = PIECES[type];
-    const offX = x + (boxW - 16 - shape[0].length * size) / 2;
-    const offY = y + (boxH - 16 - shape.length * size) / 2;
+    const preview = getPiecePreviewLayout(shape, x, y, size, boxW, boxH);
     ctx.save();
     if (options.disabled) {
       ctx.globalAlpha *= 0.48;
@@ -7814,7 +7656,7 @@ function drawMiniPiece(type, x, y, size = 14, boxW = 92, boxH = 58, options = {}
     }
     for (let r = 0; r < shape.length; r += 1) {
       for (let c = 0; c < shape[r].length; c += 1) {
-        if (shape[r][c]) drawBlock(offX + c * size, offY + r * size, COLORS[type], false, size);
+        if (shape[r][c]) drawBlock(preview.offX + c * size, preview.offY + r * size, COLORS[type], false, size);
       }
     }
     ctx.restore();
@@ -8101,20 +7943,6 @@ function menuActionText(key) {
   if (key === "settings") return "SETTINGS";
   if (key === "moveGuide") return "MOVE GUIDE";
   return t(key).toUpperCase();
-}
-
-function getMainMenuButtonRects() {
-  const m = UI_LAYOUT.menu;
-  const pad = m.padding || 36;
-  const bx = m.x + pad;
-  const bw = m.w - pad * 2;
-  return {
-    start: { x: bx, y: m.primaryY, w: bw, h: m.primaryH },
-    tutorial: { x: bx, y: m.tutorialY, w: bw, h: m.buttonH },
-    metaUpgrade: { x: bx, y: m.utilityY, w: bw, h: m.buttonH },
-    guide: { x: bx, y: m.utilityY + m.buttonH + m.buttonGap, w: bw, h: m.buttonH },
-    settings: { x: bx, y: m.utilityY + (m.buttonH + m.buttonGap) * 2, w: bw, h: m.buttonH },
-  };
 }
 
 function drawAssetLoadingScreen() {
@@ -8833,15 +8661,6 @@ function drawResultOverlay() {
   ctx.restore();
 }
 
-function getResultButtonRects() {
-  const y = 528;
-  return {
-    retry: { x: 354, y, w: 172, h: 44 },
-    upgrade: { x: 554, y, w: 172, h: 44 },
-    menu: { x: 754, y, w: 172, h: 44 },
-  };
-}
-
 function drawPauseOverlay() {
   if (state.pauseView === "settings") {
     drawSettingsOverlay("pause");
@@ -8874,12 +8693,6 @@ function drawSettingsOverlay(source = "pause") {
   drawSettingsTabs(s.tabX, s.y + 112);
   drawSettingsContent(s.contentX, s.contentY);
   ctx.restore();
-}
-
-function getSettingsBackButtonRect() {
-  const s = UI_LAYOUT.settings;
-  const w = 274;
-  return { x: s.x + s.w - 42 - w, y: s.y + 26, w, h: 40 };
 }
 
 function drawSettingsTabs(x, y) {
@@ -8972,27 +8785,6 @@ function drawSettingsUtilityButton(rect, text) {
   ctx.restore();
 }
 
-function getSettingsFeedbackCardRect() {
-  const origin = getSettingsContentOrigin();
-  return { x: origin.x, y: origin.y + 58, w: 640, h: 292 };
-}
-
-function getControlsResetButtonRect() {
-  const origin = getSettingsContentOrigin();
-  const layout = UI_LAYOUT.controlsGrid;
-  const rows = Math.ceil(CONTROL_ACTIONS.length / layout.columns);
-  return { x: origin.x + 460, y: origin.y + 112 + rows * layout.rowH + 10, w: 220, h: 38 };
-}
-
-function getHandlingResetButtonRect() {
-  const origin = getSettingsContentOrigin();
-  return { x: origin.x + 420, y: origin.y + 430, w: 220, h: 38 };
-}
-
-function getSettingsFeedbackButtonRect(cardX, cardY, cardW, cardH = 292) {
-  return { x: cardX + 24, y: cardY + cardH - 62, w: 232, h: 40 };
-}
-
 function drawSettingsFeedbackNoa(x, y, w, h) {
   ctx.save();
   const glow = ctx.createRadialGradient(x + w / 2, y + h * 0.62, 10, x + w / 2, y + h * 0.62, w * 0.58);
@@ -9032,7 +8824,7 @@ function drawPauseDamageDetail(x, y, w, h) {
     return;
   }
   label(`${breakdown.title} = ${breakdown.total} ${t("dmgShort")}`, x + 14, y + 43, 13, "#f5f1e6");
-  wrapText(buildDamageEquation(breakdown), x + 14, y + 62, w - 28, 14, "rgba(238,244,252,0.64)", 10);
+  wrapText(buildDamageEquation(breakdown, { translate: t }), x + 14, y + 62, w - 28, 14, "rgba(238,244,252,0.64)", 10);
   ctx.restore();
 }
 
@@ -9158,23 +8950,6 @@ function drawRiftEnergyBadge(x, y, w, h, amount) {
   drawImageContain(riftEnergyIcon, x + 10, y + 5, 48, 48);
   fitLabel(fmt("riftEnergyAmount", { amount }), x + 66, y + 35, w - 82, 17, "#f8f3cf", 13, "900", true);
   ctx.restore();
-}
-
-function getMetaUpgradeRowRects() {
-  const x = 220;
-  const y = 228;
-  const w = 838;
-  const h = 92;
-  const gap = 18;
-  return {
-    hp: { x, y, w, h, buyX: x + w - 142, buyY: y + 25, buyW: 112, buyH: 42 },
-    attack: { x, y: y + h + gap, w, h, buyX: x + w - 142, buyY: y + h + gap + 25, buyW: 112, buyH: 42 },
-    guard: { x, y: y + (h + gap) * 2, w, h, buyX: x + w - 142, buyY: y + (h + gap) * 2 + 25, buyW: 112, buyH: 42 },
-  };
-}
-
-function getMetaUpgradeBackButtonRect() {
-  return { x: 812, y: 574, w: 240, h: 44 };
 }
 
 function drawMetaUpgradeRow(def, rect, progress) {
@@ -9323,32 +9098,6 @@ function drawUpgradeOverlay() {
   label(t("upgradeHelp"), panel.x + 64, 644, 14, "rgba(159, 180, 255, 0.72)");
   if (state.currentBuildOpen) drawCurrentBuildPanel();
   ctx.restore();
-}
-
-function getUpgradeOverlayPanelRect() {
-  return { x: 238, y: 126, w: 804, h: 546 };
-}
-
-function getUpgradeCardRect(index) {
-  const w = 232;
-  const gap = 28;
-  return { x: 280 + index * (w + gap), y: 262, w, h: 348 };
-}
-
-function getUpgradeCardContentLayout(card) {
-  return {
-    badge: { x: card.x + 25, y: card.y + 18, w: 88, h: 23 },
-    icon: { x: card.x + card.w / 2, y: card.y + 88, size: 68 },
-    title: { x: card.x + 28, y: card.y + 154, w: card.w - 56, lineH: 19, size: 16 },
-    tags: { x: card.x + 28, y: card.y + 203, w: card.w - 56 },
-    divider: { x: card.x + 28, y: card.y + 234, w: card.w - 56 },
-    desc: { x: card.x + 28, y: card.y + 252, w: card.w - 56, lineH: 15, size: 11 },
-    trait: { x: card.x + 24, y: card.y + card.h - 58, w: card.w - 48, h: 36 },
-  };
-}
-
-function getCurrentBuildButtonRect() {
-  return { x: 790, y: 216, w: 166, h: 36 };
 }
 
 function drawUpgradeCardFrame(x, y, w, h, rarity, hovered = false) {
@@ -9578,15 +9327,6 @@ function getRarityVisual(rarity) {
   return RARITY[key] || RARITY.common;
 }
 
-function getCurrentBuildPanelRect() {
-  return { x: 190, y: 82, w: 900, h: 560 };
-}
-
-function getCurrentBuildCloseRect() {
-  const panel = getCurrentBuildPanelRect();
-  return { x: panel.x + panel.w - 178, y: panel.y + 34, w: 132, h: 38 };
-}
-
 function drawCurrentBuildPanel() {
   const panel = getCurrentBuildPanelRect();
   const closeRect = getCurrentBuildCloseRect();
@@ -9667,7 +9407,7 @@ function drawCurrentBuildTraitDetails(traits, x, y, w, h) {
     roundedRect(xx, y, cardW, h, 8, true, false);
     ctx.strokeStyle = active ? hexToRgba(trait.color, 0.42) : "rgba(238,244,252,0.12)";
     roundedRect(xx, y, cardW, h, 8, false, true);
-    fitLabel(getTraitDetailTitle(trait), xx + 12, y + 18, cardW - 24, 12, active ? trait.color : "rgba(238,244,252,0.62)", 8, "900", true);
+    fitLabel(getTraitDetailTitleForPanel(trait, { format: fmt, getFullCount: getTraitFullCount }), xx + 12, y + 18, cardW - 24, 12, active ? trait.color : "rgba(238,244,252,0.62)", 8, "900", true);
     fitLabel(getTraitEffectText(trait), xx + 12, y + 39, cardW - 24, 12, "rgba(238,244,252,0.62)", 8, "700");
     ctx.restore();
   });
@@ -9841,55 +9581,6 @@ function drawUpgradeSigil(x, y, color, scale = 1, alpha = 1) {
   ctx.lineTo(-5, 0);
   ctx.closePath();
   ctx.stroke();
-  ctx.restore();
-}
-
-function drawLimitedWrapText(text, x, y, maxWidth, lineHeight, color, size, maxLines = 2, weight = "700", forceDisplay = false) {
-  ctx.save();
-  ctx.font = canvasFont(weight, size, text, forceDisplay);
-  ctx.fillStyle = color;
-  const tokens = tokenizeForWrap(String(text));
-  const lines = [];
-  let line = "";
-  let truncated = false;
-  for (const token of tokens) {
-    if (token === "\n") {
-      if (line.trim()) lines.push(line.trimEnd());
-      line = "";
-      if (lines.length >= maxLines) {
-        truncated = true;
-        break;
-      }
-      continue;
-    }
-    const next = line ? line + token : token.trimStart();
-    const test = next.trimStart();
-    if (ctx.measureText(test).width > maxWidth && line) {
-      lines.push(line.trimEnd());
-      line = token.trimStart();
-      if (lines.length >= maxLines) {
-        truncated = true;
-        break;
-      }
-    } else {
-      line = next;
-    }
-  }
-  if (lines.length < maxLines && line.trim()) lines.push(line.trimEnd());
-  const limited = lines.slice(0, maxLines);
-  if (truncated) {
-    const lastIndex = limited.length - 1;
-    if (lastIndex >= 0) {
-      let last = limited[lastIndex].replace(/\s+$/, "");
-      while (last.length > 1 && ctx.measureText(`${last}...`).width > maxWidth) {
-        last = last.slice(0, -1).trimEnd();
-      }
-      limited[lastIndex] = `${last}...`;
-    }
-  }
-  limited.forEach((lineText, index) => {
-    fitLabel(lineText, x, y + index * lineHeight, maxWidth, size, color, Math.max(8, size - 4), weight, forceDisplay);
-  });
   ctx.restore();
 }
 
@@ -10367,30 +10058,6 @@ function formatControlKey(key) {
   return key.toUpperCase();
 }
 
-function roundedRect(x, y, w, h, r, fill, stroke) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  if (fill) ctx.fill();
-  if (stroke) ctx.stroke();
-}
-
-function lerp(a, b, t) {
-  return a + (b - a) * t;
-}
-
-function smoothstep(edge0, edge1, value) {
-  const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
-  return t * t * (3 - 2 * t);
-}
-
 function drawImageContain(img, x, y, w, h) {
   if (!isImageReady(img)) {
     drawImageFallbackBox(x, y, w, h, getMissingImageLabel(img, "IMAGE"));
@@ -10456,112 +10123,6 @@ function drawImageFallbackBox(x, y, w, h, text = "MISSING IMAGE") {
   ctx.fillText(text, x + w / 2, y + h / 2);
   ctx.textBaseline = "alphabetic";
   ctx.restore();
-}
-
-function hexToRgba(hex, alpha) {
-  const clean = hex.replace("#", "");
-  const value = parseInt(clean.length === 3 ? clean.replace(/(.)/g, "$1$1") : clean, 16);
-  const r = (value >> 16) & 255;
-  const g = (value >> 8) & 255;
-  const b = value & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-function label(text, x, y, size, color) {
-  ctx.font = canvasFont("700", size, text);
-  ctx.fillStyle = color;
-  ctx.fillText(text, x, y);
-}
-
-function fitLabel(text, x, y, maxWidth, size, color, minSize = 12, weight = "700", forceDisplay = false) {
-  const content = String(text);
-  let fontSize = size;
-  ctx.fillStyle = color;
-  while (fontSize > minSize) {
-    ctx.font = canvasFont(weight, fontSize, content, forceDisplay);
-    if (ctx.measureText(content).width <= maxWidth) break;
-    fontSize -= 1;
-  }
-  ctx.fillText(content, x, y);
-}
-
-function wrapText(text, x, y, maxWidth, lineHeight, color, size) {
-  ctx.font = `700 ${size}px ${UI_FONT_STACK}`;
-  ctx.fillStyle = color;
-  const tokens = tokenizeForWrap(String(text));
-  let line = "";
-  let cy = y;
-  for (const token of tokens) {
-    if (token === "\n") {
-      if (line.trim()) ctx.fillText(line.trimEnd(), x, cy);
-      line = "";
-      cy += lineHeight;
-      continue;
-    }
-    const next = line ? line + token : token.trimStart();
-    const test = next.trimStart();
-    if (ctx.measureText(test).width > maxWidth && line) {
-      ctx.fillText(line.trimEnd(), x, cy);
-      line = token.trimStart();
-      cy += lineHeight;
-      if (ctx.measureText(line).width > maxWidth) {
-        const broken = breakOversizedToken(line, maxWidth);
-        for (let i = 0; i < broken.length - 1; i += 1) {
-          ctx.fillText(broken[i], x, cy);
-          cy += lineHeight;
-        }
-        line = broken[broken.length - 1] || "";
-      }
-    } else {
-      line = next;
-    }
-  }
-  if (line.trim()) ctx.fillText(line.trimEnd(), x, cy);
-}
-
-function tokenizeForWrap(text) {
-  const tokens = [];
-  let word = "";
-  const flush = () => {
-    if (word) tokens.push(word);
-    word = "";
-  };
-  for (const ch of [...text]) {
-    if (ch === "\n") {
-      flush();
-      tokens.push("\n");
-    } else if (/\s/.test(ch)) {
-      flush();
-      tokens.push(" ");
-    } else if (isCjkChar(ch)) {
-      flush();
-      tokens.push(ch);
-    } else {
-      word += ch;
-    }
-  }
-  flush();
-  return tokens;
-}
-
-function isCjkChar(ch) {
-  return /[\u3400-\u9fff\u3000-\u303f\uff00-\uffef]/.test(ch);
-}
-
-function breakOversizedToken(token, maxWidth) {
-  const parts = [];
-  let current = "";
-  for (const ch of [...token]) {
-    const test = current + ch;
-    if (ctx.measureText(test).width > maxWidth && current) {
-      parts.push(current);
-      current = ch;
-    } else {
-      current = test;
-    }
-  }
-  if (current) parts.push(current);
-  return parts;
 }
 
 window.addEventListener("keydown", (event) => {
@@ -10941,10 +10502,6 @@ function hitSettingsTab(x, y) {
   return null;
 }
 
-function getSettingsContentOrigin() {
-  return { x: UI_LAYOUT.settings.contentX, y: UI_LAYOUT.settings.contentY };
-}
-
 function hitSettingsResetButton(x, y) {
   if (state.settingsTab === "controls") {
     const rect = getControlsResetButtonRect();
@@ -11066,20 +10623,6 @@ function hitControlBind(x, y) {
     if (pointInRect(x, y, keyX, rowY + 3, layout.keyW, layout.keyH)) return CONTROL_ACTIONS[i].id;
   }
   return null;
-}
-
-function pointInRect(px, py, x, y, w, h) {
-  return px >= x && px <= x + w && py >= y && py <= y + h;
-}
-
-function animateNumber(current, target, dt, duration) {
-  if (typeof current !== "number") return target;
-  const next = lerp(current, target, clamp(dt / duration, 0, 1));
-  return Math.abs(next - target) < 0.08 ? target : next;
-}
-
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
 }
 
 applySavedSettings();
