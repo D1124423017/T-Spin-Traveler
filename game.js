@@ -62,8 +62,11 @@ import {
 } from "./src/tetris/pieces.js";
 import {
   clearFullLines,
+  canSpawnPiece,
   collides as collidesOnBoard,
+  isBoardTopOut as isBoardTopOutCore,
   isBoardEmpty as isBoardEmptyCore,
+  isSpawnBlocked as isSpawnBlockedCore,
   makeBoard as makeEmptyBoard,
 } from "./src/tetris/board.js";
 import {
@@ -87,6 +90,9 @@ import {
   getComboAttackStyle,
   getHeroAttackStyle,
   getRotationDamageBonus,
+  isPlayerHpDefeated,
+  shouldSettleRunRiftEnergy,
+  shouldTriggerDefeat,
 } from "./src/combat/combatRules.js";
 import {
   applyUpgradeEffect,
@@ -1202,6 +1208,24 @@ function rowHasPlayableCells(row) {
   return row.some((cell) => cell && cell !== ULTIMATE_WALL);
 }
 
+function getBoardCollisionOptions() {
+  return { cols: COLS, rows: ROWS, hidden: HIDDEN, ignoredCell: ULTIMATE_WALL };
+}
+
+function isBoardTopOut() {
+  return isBoardTopOutCore(state.board, getBoardCollisionOptions());
+}
+
+function isPieceSpawnBlocked(piece) {
+  return piece ? isSpawnBlockedCore(state.board, piece, getBoardCollisionOptions()) : false;
+}
+
+function triggerDefeatIfBoardTopOut(messageKey = "messageLockAbove") {
+  if (!isBoardTopOut()) return false;
+  triggerDefeat(messageKey);
+  return true;
+}
+
 function makeStats() {
   return {
     peakWave: 1,
@@ -1331,6 +1355,7 @@ function newPiece(type) {
 }
 
 function spawnPiece() {
+  if (state.mode === "defeat" || state.mode === "victory") return;
   refillQueue();
   state.active = newPiece(state.queue.shift());
   state.canHold = true;
@@ -1338,13 +1363,13 @@ function spawnPiece() {
   state.lastMoveWasRotate = false;
   state.lastRotationKind = null;
   state.lastKickIndex = null;
-  if (collides(state.active, state.active.x, state.active.y, state.active.shape)) {
+  if (!canSpawnPiece(state.board, state.active, getBoardCollisionOptions())) {
     triggerDefeat("messageSpawnTop");
   }
 }
 
 function triggerDefeat(messageKey) {
-  if (state.mode === "defeat") return;
+  if (!shouldTriggerDefeat(state)) return;
   state.mode = "defeat";
   setMessage(messageKey);
   state.active = null;
@@ -1588,7 +1613,7 @@ function advanceTutorialStep(stepId) {
 }
 
 function collides(piece, x, y, shape) {
-  return collidesOnBoard(state.board, piece, x, y, shape, { cols: COLS, rows: ROWS, hidden: HIDDEN });
+  return collidesOnBoard(state.board, piece, x, y, shape, getBoardCollisionOptions());
 }
 
 function move(dx, dy) {
@@ -1684,12 +1709,14 @@ function holdPiece() {
   if (!state.hold) {
     state.hold = current;
     spawnPiece();
+    if (state.mode === "defeat") return;
   } else {
     const next = state.hold;
     state.hold = current;
     state.active = newPiece(next);
-    if (collides(state.active, state.active.x, state.active.y, state.active.shape)) {
+    if (isPieceSpawnBlocked(state.active)) {
       triggerDefeat("messageHoldBlocked");
+      return;
     }
   }
   state.canHold = false;
@@ -1712,18 +1739,21 @@ function lockPiece(fromHardDrop = false) {
   const piece = state.active;
   if (!piece) return;
   const spinType = detectSpin(piece);
+  let lockedAboveVisibleBoard = false;
   for (let r = 0; r < piece.shape.length; r += 1) {
     for (let c = 0; c < piece.shape[r].length; c += 1) {
       if (!piece.shape[r][c]) continue;
       const y = piece.y + r;
       const x = piece.x + c;
-      if (y < HIDDEN) {
-        triggerDefeat("messageLockAbove");
-        return;
-      }
-      state.board[y][x] = piece.type;
+      if (y < HIDDEN) lockedAboveVisibleBoard = true;
+      if (y >= 0 && y < state.board.length && x >= 0 && x < COLS) state.board[y][x] = piece.type;
     }
   }
+  if (lockedAboveVisibleBoard) {
+    triggerDefeat("messageLockAbove");
+    return;
+  }
+  if (triggerDefeatIfBoardTopOut("messageLockAbove")) return;
 
   if (!fromHardDrop) playSfx("lock");
   const cleared = clearLines();
@@ -2197,7 +2227,7 @@ function applyEnemyHit(hit) {
       life: 1100,
     });
   }
-  if (state.playerHp <= 0) {
+  if (isPlayerHpDefeated(state.playerHp)) {
     triggerDefeat("messagePlayerDefeat");
     return;
   }
@@ -3014,6 +3044,7 @@ function endUltimateMode() {
     color: "#d7c2ff",
     life: 1100,
   });
+  if (triggerDefeatIfBoardTopOut("messageSpawnTop")) return;
   if (state.mode === "playing") spawnPiece();
 }
 
@@ -3319,6 +3350,7 @@ function applyIncomingGarbage() {
   const count = Math.min(2, state.pendingGarbage);
   state.pendingGarbage -= count;
   addGarbageLines(count);
+  if (state.mode === "defeat") return;
   if (count > 0) {
     state.floaters.push({
       x: BOARD_X + COLS * TILE + 34,
@@ -3758,7 +3790,7 @@ function recordAcquiredRelic(upgrade) {
 
 function settleRunRiftEnergy() {
   if (!state.runStats) state.runStats = makeRunStats();
-  if (state.runStats.riftEnergySettled) return state.runStats.riftEnergyEarned || 0;
+  if (!shouldSettleRunRiftEnergy(state.runStats)) return state.runStats.riftEnergyEarned || 0;
   const settlementStats = getRunRiftEnergyStatsSnapshot();
   Object.assign(state.runStats, settlementStats);
   const earned = calculateRiftEnergyEarned(settlementStats);
@@ -3880,6 +3912,8 @@ function addGarbageLines(count) {
     spawnGarbageParticles(hole);
   }
   applyUltimateWalls();
+  if (triggerDefeatIfBoardTopOut("messageGarbageTop")) return;
+  if (state.active && isPieceSpawnBlocked(state.active)) triggerDefeat("messageGarbageTop");
 }
 
 function chooseGarbageHole(holeMin, holeMax) {

@@ -6,6 +6,9 @@ import {
   getHeroAttackStyle,
   getMoveRating,
   getRotationDamageBonus,
+  isPlayerHpDefeated,
+  shouldSettleRunRiftEnergy,
+  shouldTriggerDefeat,
 } from "../src/combat/combatRules.js";
 
 describe("combat rule helpers", () => {
@@ -42,5 +45,23 @@ describe("combat rule helpers", () => {
     expect(getMoveRating(2, null, false, { combo: 2 })).toBe("CLEAN");
     expect(getMoveRating(4, null, false)).toBe("BRUTAL");
     expect(getMoveRating(1, null, false, { b2bActive: true })).toBe("ARCANE");
+  });
+
+  it("keeps HP defeat checks explicit", () => {
+    expect(isPlayerHpDefeated(1)).toBe(false);
+    expect(isPlayerHpDefeated(0)).toBe(true);
+    expect(isPlayerHpDefeated(-4)).toBe(true);
+  });
+
+  it("allows defeat from pause or upgrade overlays but not after finalization", () => {
+    expect(shouldTriggerDefeat({ mode: "pause", runFinalized: false })).toBe(true);
+    expect(shouldTriggerDefeat({ mode: "upgrade", runFinalized: false })).toBe(true);
+    expect(shouldTriggerDefeat({ mode: "defeat", runFinalized: false })).toBe(false);
+    expect(shouldTriggerDefeat({ mode: "victory", runFinalized: true })).toBe(false);
+  });
+
+  it("settles Rift Energy only once per run", () => {
+    expect(shouldSettleRunRiftEnergy({ riftEnergySettled: false })).toBe(true);
+    expect(shouldSettleRunRiftEnergy({ riftEnergySettled: true })).toBe(false);
   });
 });

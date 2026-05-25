@@ -49,3 +49,15 @@ export function getMoveRating(lines, spinType, perfect, { b2bActive = false, com
   if (lines >= 2 || combo >= 2) return "CLEAN";
   return "GOOD";
 }
+
+export function isPlayerHpDefeated(playerHp) {
+  return Number(playerHp) <= 0;
+}
+
+export function shouldTriggerDefeat({ mode = "playing", runFinalized = false } = {}) {
+  return mode !== "defeat" && mode !== "victory" && !runFinalized;
+}
+
+export function shouldSettleRunRiftEnergy(runStats = {}) {
+  return !runStats?.riftEnergySettled;
+}

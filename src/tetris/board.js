@@ -10,14 +10,36 @@ export function collides(board, piece, x = piece.x, y = piece.y, shape = piece.s
   const cols = options.cols ?? DEFAULT_COLS;
   const rows = options.rows ?? DEFAULT_ROWS;
   const hidden = options.hidden ?? DEFAULT_HIDDEN;
+  const ignoredCell = options.ignoredCell;
   for (let r = 0; r < shape.length; r += 1) {
     for (let c = 0; c < shape[r].length; c += 1) {
       if (!shape[r][c]) continue;
       const bx = x + c;
       const by = y + r;
       if (bx < 0 || bx >= cols || by >= rows + hidden) return true;
-      if (by >= 0 && board[by][bx]) return true;
+      if (by >= 0 && isOccupiedCell(board[by][bx], ignoredCell)) return true;
     }
+  }
+  return false;
+}
+
+function isOccupiedCell(cell, ignoredCell) {
+  return Boolean(cell && (ignoredCell === undefined || cell !== ignoredCell));
+}
+
+export function isSpawnBlocked(board, piece, options = {}) {
+  return collides(board, piece, piece.x, piece.y, piece.shape, options);
+}
+
+export function canSpawnPiece(board, piece, options = {}) {
+  return !isSpawnBlocked(board, piece, options);
+}
+
+export function isBoardTopOut(board, options = {}) {
+  const hidden = Math.min(options.hidden ?? DEFAULT_HIDDEN, board.length);
+  const ignoredCell = options.ignoredCell;
+  for (let y = 0; y < hidden; y += 1) {
+    if (board[y].some((cell) => isOccupiedCell(cell, ignoredCell))) return true;
   }
   return false;
 }
