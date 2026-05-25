@@ -72,17 +72,122 @@ export const BUILD_TAGS = {
   "Boss Killer": { labelKey: "tag.bossKiller", color: "#ff8f98", family: "burst" },
 };
 
+export const BUILD_FAMILY = {
+  spin: { labelKey: "family.spin", color: "#d7c2ff" },
+  combo: { labelKey: "family.combo", color: "#7ef7ff" },
+  defense: { labelKey: "family.defense", color: "#9df7da" },
+  garbage: { labelKey: "family.garbage", color: "#9df7da" },
+  burst: { labelKey: "family.burst", color: "#fff0a6" },
+  perfect: { labelKey: "family.perfect", color: "#fff0a6" },
+};
+
 export const TRAIT_DEFS = {
-  Defense: { category: "common", breakpoints: [3, 5, 7], icon: "◆", effectKeys: ["traitEffect.defense.1", "traitEffect.defense.2", "traitEffect.defense.3"] },
-  Burst: { category: "common", breakpoints: [3, 5, 7], icon: "✦", effectKeys: ["traitEffect.burst.1", "traitEffect.burst.2", "traitEffect.burst.3"] },
-  Spin: { category: "uncommon", breakpoints: [2, 4, 6], icon: "↻", effectKeys: ["traitEffect.spin.1", "traitEffect.spin.2", "traitEffect.spin.3"] },
-  Utility: { category: "uncommon", breakpoints: [2, 4, 6], icon: "◇", effectKeys: ["traitEffect.utility.1", "traitEffect.utility.2", "traitEffect.utility.3"] },
-  Survival: { category: "uncommon", breakpoints: [2, 4, 6], icon: "✚", effectKeys: ["traitEffect.survival.1", "traitEffect.survival.2", "traitEffect.survival.3"] },
-  Combo: { category: "uncommon", breakpoints: [2, 4, 6], icon: "×", effectKeys: ["traitEffect.combo.1", "traitEffect.combo.2", "traitEffect.combo.3"] },
-  Garbage: { category: "uncommon", breakpoints: [2, 4, 6], icon: "▦", effectKeys: ["traitEffect.garbage.1", "traitEffect.garbage.2", "traitEffect.garbage.3"] },
-  B2B: { category: "rare", breakpoints: [2, 3, 4], icon: "⇄", effectKeys: ["traitEffect.b2b.1", "traitEffect.b2b.2", "traitEffect.b2b.3"] },
-  Perfect: { category: "rare", breakpoints: [2, 3], icon: "★", effectKeys: ["traitEffect.perfect.1", "traitEffect.perfect.2"] },
-  "Boss Killer": { category: "rare", breakpoints: [1, 2], icon: "☄", effectKeys: ["traitEffect.bossKiller.1", "traitEffect.bossKiller.2"] },
+  Defense: {
+    category: "common",
+    breakpoints: [3, 5, 7],
+    icon: "◆",
+    effectKeys: ["traitEffect.defense.1", "traitEffect.defense.2", "traitEffect.defense.3"],
+    overcap: {
+      maxGuard: { every: 1, value: 2, cap: 12 },
+      clearGuard: { every: 2, value: 1, cap: 4 },
+      reflectDamage: { every: 1, value: 2, cap: 10 },
+    },
+  },
+  Burst: {
+    category: "common",
+    breakpoints: [3, 5, 7],
+    icon: "✦",
+    effectKeys: ["traitEffect.burst.1", "traitEffect.burst.2", "traitEffect.burst.3"],
+    overcap: {
+      damage: { every: 1, value: 4, cap: 24 },
+    },
+  },
+  Spin: {
+    category: "uncommon",
+    breakpoints: [2, 4, 6],
+    icon: "↻",
+    effectKeys: ["traitEffect.spin.1", "traitEffect.spin.2", "traitEffect.spin.3"],
+    overcap: {
+      damage: { every: 1, value: 3, cap: 18 },
+      guard: { every: 2, value: 1, cap: 3 },
+    },
+  },
+  Utility: {
+    category: "uncommon",
+    breakpoints: [2, 4, 6],
+    icon: "◇",
+    effectKeys: ["traitEffect.utility.1", "traitEffect.utility.2", "traitEffect.utility.3"],
+    overcap: {
+      ultimateCharge: { every: 2, value: 1, cap: 3 },
+    },
+  },
+  Survival: {
+    category: "uncommon",
+    breakpoints: [2, 4, 6],
+    icon: "✚",
+    effectKeys: ["traitEffect.survival.1", "traitEffect.survival.2", "traitEffect.survival.3"],
+    overcap: {
+      waveHeal: { every: 1, value: 2, cap: 12 },
+    },
+  },
+  Combo: {
+    category: "uncommon",
+    breakpoints: [2, 4, 6],
+    icon: "×",
+    effectKeys: ["traitEffect.combo.1", "traitEffect.combo.2", "traitEffect.combo.3"],
+    overcap: {
+      damagePerCombo: { every: 1, value: 1, cap: 5 },
+      delay: { every: 3, value: 1, cap: 2 },
+      traitDelayCap: 3,
+    },
+  },
+  Garbage: {
+    category: "uncommon",
+    breakpoints: [2, 4, 6],
+    icon: "▦",
+    effectKeys: ["traitEffect.garbage.1", "traitEffect.garbage.2", "traitEffect.garbage.3"],
+    overcap: {
+      counterDamagePerRow: { every: 1, value: 3, cap: 18 },
+      graceDelay: { every: 3, value: 1, cap: 2 },
+    },
+  },
+  B2B: {
+    category: "rare",
+    breakpoints: [2, 3, 4],
+    icon: "⇄",
+    effectKeys: ["traitEffect.b2b.1", "traitEffect.b2b.2", "traitEffect.b2b.3"],
+    overcap: {
+      damage: { every: 1, value: 5, cap: 25 },
+      guard: { every: 1, value: 1, cap: 5 },
+    },
+  },
+  Perfect: {
+    category: "rare",
+    breakpoints: [1, 3],
+    icon: "★",
+    effectKeys: ["traitEffect.perfect.1", "traitEffect.perfect.2"],
+    overcap: {
+      bossMaxHpRatio: { every: 1, value: 0.05, cap: 0.25 },
+      guard: { every: 1, value: 5, cap: 15 },
+      baseDelay: 1,
+      baseGuard: 8,
+      fullGuard: 15,
+      maxGuard: 30,
+      baseBossMaxHpRatio: 0.35,
+      fullBossMaxHpRatio: 0.45,
+      maxBossMaxHpRatio: 0.7,
+    },
+  },
+  "Boss Killer": {
+    category: "rare",
+    breakpoints: [1, 2],
+    icon: "☄",
+    effectKeys: ["traitEffect.bossKiller.1", "traitEffect.bossKiller.2"],
+    overcap: {
+      damage: { every: 1, value: 10, cap: 40 },
+      maxHpRatio: { every: 1, value: 0.02, cap: 0.08 },
+    },
+  },
 };
 
 export const UPGRADES = [

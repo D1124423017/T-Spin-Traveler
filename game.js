@@ -29,14 +29,27 @@ import {
   upgradeCardFrames,
   upgradeTypeIcons,
 } from "./src/data/assets.js";
-import { ENEMIES } from "./src/data/enemies.js";
+import { ENEMIES, MINI_BOSS_ENEMY_IDS } from "./src/data/enemies.js";
 import { translations } from "./src/data/i18n.js";
 import {
-  BUILD_TAGS,
   RARITY,
-  TRAIT_DEFS,
   UPGRADES,
 } from "./src/data/upgrades.js";
+import {
+  buildTagLabel as buildTagLabelForStats,
+  getAcquiredRelicGroups as getAcquiredRelicGroupsForStats,
+  getBuildTagMeta,
+  getCurrentBuildFamilyStats as getCurrentBuildFamilyStatsForGroups,
+  getTraitBonus as getTraitBonusForGroups,
+  getTraitChangeHintsForUpgrade as getTraitChangeHintsForUpgradeForGroups,
+  getTraitCount as getTraitCountForGroups,
+  getTraitEffectText as getTraitEffectTextForEntry,
+  getTraitEntries as getTraitEntriesForGroups,
+  getTraitNextThreshold as getTraitNextThresholdForGroups,
+  getTraitProgress as getTraitProgressForGroups,
+  getUpgradeById,
+  getUpgradeTags,
+} from "./src/combat/buildStats.js";
 import {
   I_KICKS,
   JLSTZ_KICKS,
@@ -59,7 +72,26 @@ import {
 import {
   calculateDamage as calculateBaseDamage,
 } from "./src/combat/damage.js";
-import { applyUpgradeEffect } from "./src/combat/upgradeEffects.js";
+import {
+  applyUpgradeEffect,
+  getB2BTraitBonus,
+  getBossKillerTraitBonus,
+  getBurstTraitBonus,
+  getComboTraitBonus,
+  getDefenseTraitBonus,
+  getGarbageTraitBonus,
+  getPerfectClearTraitBonus,
+  getSpinTraitBonus,
+  getSurvivalTraitBonus,
+  getTraitFullCount as getTraitFullCountFromDefs,
+  getTraitStage as getTraitStageFromDefs,
+  getUtilityTraitBonus,
+  isTraitHighValueClear,
+} from "./src/combat/upgradeEffects.js";
+import {
+  isBossEnemy,
+  isBossLikeEnemy,
+} from "./src/combat/enemyTypes.js";
 import {
   META_UPGRADE_DEFS,
   buyMetaUpgrade,
@@ -339,7 +371,6 @@ const ASSET_LOADING_MAX_MS = 2600;
 const PLAYER_MAX_HP = 100;
 const ENEMY_DEFEAT_HEAL = 15;
 const PERFECT_CLEAR_BASE_DAMAGE = 90;
-const PERFECT_CLEAR_BOSS_HP_RATIO = 0.35;
 const PERFECT_CROWN_BOSS_HP_RATIO = 0.5;
 const LEGENDARY_DRAFT_CHANCE = 0.12;
 const LEGENDARY_BOSS_DRAFT_CHANCE = 0.35;
@@ -544,21 +575,6 @@ const TUNING_SLIDERS = {
   softDrop: { min: 1, max: 32, unit: "ms" },
   lockDelay: { min: 200, max: 900, unit: "ms" },
 };
-
-
-
-const BUILD_FAMILY = {
-  spin: { labelKey: "family.spin", color: "#d7c2ff" },
-  combo: { labelKey: "family.combo", color: "#7ef7ff" },
-  defense: { labelKey: "family.defense", color: "#9df7da" },
-  garbage: { labelKey: "family.garbage", color: "#9df7da" },
-  burst: { labelKey: "family.burst", color: "#fff0a6" },
-  perfect: { labelKey: "family.perfect", color: "#fff0a6" },
-};
-
-
-
-
 
 const COLORS = {
   I: "#5fd7f4",
@@ -1833,7 +1849,7 @@ function grantGuardFromUpgrade(amount, floaterKey, color = "#9df7da", x = 86, y 
 }
 
 function getEffectiveMaxGuard() {
-  return state.maxGuard + getTraitBonus("Defense", [4, 8, 14]);
+  return state.maxGuard + getTraitBonus("Defense", [4, 8, 14]) + getDefenseTraitBonus(getTraitSnapshot()).maxGuard;
 }
 
 function triggerEmergencyRiftShield(projectedHp = state.playerHp) {
@@ -2177,7 +2193,7 @@ function applyEnemyHit(hit) {
     }
   }
   if (!enemyDefeatedByReflect && blocked > 0 && getTraitStage("Defense") >= 3 && state.enemyHp > 0 && state.mode === "playing") {
-    const traitReflectDamage = Math.floor(blocked * 0.5);
+    const traitReflectDamage = Math.floor(blocked * 0.5) + getDefenseTraitBonus(getTraitSnapshot()).reflectDamage;
     if (traitReflectDamage > 0) {
       damageEnemyFromUpgrade(traitReflectDamage, "floaterGuardReflect", "#9df7da", 920, 444);
       enemyDefeatedByReflect = state.mode !== "playing" || state.enemyHp <= 0;
@@ -2205,6 +2221,7 @@ function createBattleSnapshot() {
     b2bChain: state.b2bChain,
     lastPerfectClear: state.lastPerfectClear,
     enemy: state.enemyType,
+    miniBoss: state.miniBoss,
     upgrades: state.upgrades,
     traits: getTraitSnapshot(),
     rotationKind: state.lastRotationKind,
@@ -2213,11 +2230,14 @@ function createBattleSnapshot() {
 }
 
 function getTraitSnapshot() {
-  return getTraitEntries().map(({ tag, count, stage }) => ({ tag, count, stage }));
+  return getTraitEntries().map(({ tag, count, stage, fullCount, isFull, overcap }) => ({ tag, count, stage, fullCount, isFull, overcap }));
 }
 
 function calculateDamage(context, snapshot) {
   const { lines, pieceType, spinType } = context;
+  const traits = snapshot.traits || getTraitSnapshot();
+  const enemy = snapshot.enemy || state.enemyType;
+  const bossLikeEnemy = isBossLikeEnemy(enemy, { miniBoss: snapshot.miniBoss ?? state.miniBoss });
   const basePreview = calculateBaseDamage(context, {
     combo: snapshot.combo,
     b2bActive: snapshot.b2bActive,
@@ -2235,6 +2255,7 @@ function calculateDamage(context, snapshot) {
   const comboAttackRows = getComboAttackRows(state.combo);
   const comboMilestoneBonus = getComboMilestoneDamage(state.combo);
   const b2bAttackRows = isDifficultClear && state.b2bActive ? 1 : 0;
+  const highValueClear = isTraitHighValueClear({ lines, spinType, b2bActive: state.b2bActive, perfect: state.lastPerfectClear });
   const effectiveLines = getEffectiveClearLines(lines, spinType);
   const b2bBonus = b2bAttackRows * ATTACK_ROW_DAMAGE + (b2bAttackRows > 0 ? state.upgrades.b2bBonus : 0);
   const comboBonus = comboAttackRows * ATTACK_ROW_DAMAGE;
@@ -2255,7 +2276,8 @@ function calculateDamage(context, snapshot) {
   if (lines > 0 && spinType) {
     damage += state.upgrades.spinBonus;
     addDamagePart(parts, sources, "damageSpinBonus", state.upgrades.spinBonus, "upgrade");
-    const traitSpinDamage = getTraitBonus("Spin", [6, 12, 20]);
+    const spinTrait = getSpinTraitBonus(traits);
+    const traitSpinDamage = getTraitBonus("Spin", [6, 12, 20]) + spinTrait.damage;
     if (traitSpinDamage > 0) {
       damage += traitSpinDamage;
       addDamagePart(parts, sources, "damageSpinBonus", traitSpinDamage, "upgrade");
@@ -2333,7 +2355,8 @@ function calculateDamage(context, snapshot) {
   const comboUpgradeBonus = lines > 0 && state.combo >= 2 ? state.combo * state.upgrades.comboDamage : 0;
   damage += comboUpgradeBonus;
   addDamagePart(parts, sources, "damageCombo", comboUpgradeBonus, "upgrade");
-  const comboTraitBonus = lines > 0 && state.combo >= 2 ? state.combo * getTraitBonus("Combo", [2, 4, 7]) : 0;
+  const comboTrait = getComboTraitBonus(traits);
+  const comboTraitBonus = lines > 0 && state.combo >= 2 ? state.combo * (getTraitBonus("Combo", [2, 4, 7]) + comboTrait.damagePerCombo) : 0;
   damage += comboTraitBonus;
   addDamagePart(parts, sources, "damageCombo", comboTraitBonus, "upgrade");
   const comboEchoBonus = lines > 0 && state.combo >= 4 && state.upgrades.comboEchoDamage > 0
@@ -2355,14 +2378,29 @@ function calculateDamage(context, snapshot) {
       life: 1000,
     });
   }
-  const b2bTraitBonus = b2bAttackRows > 0 ? getTraitBonus("B2B", [6, 12, 20]) : 0;
+  const b2bTrait = getB2BTraitBonus(traits);
+  const b2bTraitBonus = b2bAttackRows > 0 ? getTraitBonus("B2B", [6, 12, 20]) + b2bTrait.damage : 0;
   damage += b2bTraitBonus;
   addDamagePart(parts, sources, "damageB2B", b2bTraitBonus, "b2b");
-  const burstTraitBonus = lines > 0 && (lines >= 4 || spinType || state.lastPerfectClear) ? getTraitBonus("Burst", [8, 16, 28]) : 0;
+  if (b2bAttackRows > 0 && b2bTrait.guard > 0) {
+    const gained = grantGuardFromUpgrade(b2bTrait.guard, null);
+    if (gained > 0) {
+      state.floaters.push({
+        x: 86,
+        y: 288,
+        text: fmt("floaterGuard", { amount: gained }),
+        color: "#ffdf8a",
+        life: 900,
+      });
+    }
+  }
+  const burstTrait = getBurstTraitBonus(traits);
+  const burstTraitBonus = highValueClear ? getTraitBonus("Burst", [8, 16, 28]) + burstTrait.damage : 0;
   damage += burstTraitBonus;
   addDamagePart(parts, sources, "damageLineBonus", burstTraitBonus, "upgrade");
-  const bossTraitBonus = lines > 0 && state.enemyType.id === "king" && (lines >= 4 || spinType || state.b2bActive || state.lastPerfectClear) ? getTraitBonus("Boss Killer", [18, 40]) : 0;
-  const bossBonus = lines > 0 && state.enemyType.id === "king" && (spinType || state.b2bActive) ? state.upgrades.bossDamage : 0;
+  const bossKillerTrait = getBossKillerTraitBonus(traits);
+  const bossTraitBonus = bossLikeEnemy && highValueClear ? getTraitBonus("Boss Killer", [18, 40]) + bossKillerTrait.damage : 0;
+  const bossBonus = lines > 0 && isBossEnemy(enemy) && (spinType || state.b2bActive) ? state.upgrades.bossDamage : 0;
   damage += bossBonus;
   addDamagePart(parts, sources, "damageBoss", bossBonus, "upgrade");
   damage += bossTraitBonus;
@@ -2370,9 +2408,6 @@ function calculateDamage(context, snapshot) {
   if (state.lastPerfectClear) {
     damage += PERFECT_CLEAR_BASE_DAMAGE;
     addDamagePart(parts, sources, "damagePerfect", PERFECT_CLEAR_BASE_DAMAGE, "perfect");
-    const perfectTraitDamage = getTraitBonus("Perfect", [30, 60]);
-    damage += perfectTraitDamage;
-    addDamagePart(parts, sources, "damagePerfect", perfectTraitDamage, "perfect");
   }
   damage += b2bBonus;
   addDamagePart(parts, sources, "damageB2B", b2bBonus, "b2b");
@@ -2461,19 +2496,28 @@ function calculateDamage(context, snapshot) {
   }
   if (state.lastPerfectClear) {
     const before = damage;
-    if (state.enemyType.id === "king") {
-      damage = Math.max(damage, Math.ceil(state.enemyMaxHp * PERFECT_CLEAR_BOSS_HP_RATIO));
-      let perfectBossDelta = Math.max(0, damage - before);
+    const perfectTrait = getPerfectClearTraitBonus(traits);
+    if (bossLikeEnemy) {
+      damage = Math.max(damage, Math.ceil(state.enemyMaxHp * perfectTrait.bossMaxHpRatio));
+      const perfectBossDeltaRaw = Math.max(0, damage - before);
       let perfectCrownDelta = 0;
       if (state.upgrades.perfectRiftCrown > 0) {
         const crownBefore = damage;
         damage = Math.max(damage, Math.ceil(state.enemyMaxHp * PERFECT_CROWN_BOSS_HP_RATIO));
         perfectCrownDelta = Math.max(0, damage - crownBefore);
       }
+      const bossKillerRatioBefore = damage;
+      const bossKillerRatioDamage = bossKillerTrait.maxHpRatio > 0 ? Math.ceil(state.enemyMaxHp * bossKillerTrait.maxHpRatio) : 0;
+      damage += bossKillerRatioDamage;
+      const bossKillerRatioDelta = Math.max(0, damage - bossKillerRatioBefore);
       damage = Math.min(damage, state.enemyHp);
       const cappedDelta = Math.max(0, damage - before);
-      perfectCrownDelta = Math.min(perfectCrownDelta, cappedDelta);
-      perfectBossDelta = Math.min(perfectBossDelta, Math.max(0, cappedDelta - perfectCrownDelta));
+      let remainingDelta = cappedDelta;
+      const perfectBossDelta = Math.min(perfectBossDeltaRaw, remainingDelta);
+      remainingDelta -= perfectBossDelta;
+      perfectCrownDelta = Math.min(perfectCrownDelta, remainingDelta);
+      remainingDelta -= perfectCrownDelta;
+      const bossKillerRatioPart = Math.min(bossKillerRatioDelta, remainingDelta);
       if (perfectBossDelta > 0) addDamagePart(parts, sources, "damagePerfectBoss", perfectBossDelta, "perfect");
       if (perfectCrownDelta > 0) {
         addDamagePart(parts, sources, "damagePerfectCrown", perfectCrownDelta, "upgrade");
@@ -2485,10 +2529,23 @@ function calculateDamage(context, snapshot) {
           life: 1300,
         });
       }
-    } else {
+      if (bossKillerRatioPart > 0) addDamagePart(parts, sources, "damageBoss", bossKillerRatioPart, "upgrade");
+    } else if (perfectTrait.executesNormalEnemy) {
       damage = Math.max(damage, state.enemyHp);
       if (damage > before) {
         addDamagePart(parts, sources, "damageExecute", damage - before, "perfect");
+      }
+    }
+    if (perfectTrait.guard > 0) {
+      const gained = grantGuardFromUpgrade(perfectTrait.guard, null);
+      if (gained > 0) {
+        state.floaters.push({
+          x: 86,
+          y: 262,
+          text: fmt("floaterPerfectGuard", { guard: gained }),
+          color: "#fff0a6",
+          life: 1100,
+        });
       }
     }
     startPerfectClearFx(damage);
@@ -2503,6 +2560,10 @@ function calculateDamage(context, snapshot) {
       });
     }
     extendUltimateOnPerfectClear();
+  } else if (bossLikeEnemy && highValueClear && bossKillerTrait.maxHpRatio > 0) {
+    const bossKillerRatioDamage = Math.ceil(state.enemyMaxHp * bossKillerTrait.maxHpRatio);
+    damage += bossKillerRatioDamage;
+    addDamagePart(parts, sources, "damageBoss", bossKillerRatioDamage, "upgrade");
   }
   extendUltimateOnCombo(lines);
 
@@ -2517,7 +2578,8 @@ function calculateDamage(context, snapshot) {
   const garbageTransmuterDamage = canceled > 0 && state.upgrades.garbageTransmuter > 0
     ? canceled * 12 * state.upgrades.garbageTransmuter + (canceled >= 3 ? 24 : 0)
     : 0;
-  const garbageTraitPerRow = getTraitBonus("Garbage", [5, 10, 16]);
+  const garbageTrait = getGarbageTraitBonus(traits);
+  const garbageTraitPerRow = getTraitBonus("Garbage", [5, 10, 16]) + garbageTrait.counterDamagePerRow;
   const garbageTraitDamage = canceled > 0 ? canceled * garbageTraitPerRow : 0;
   if (garbageTraitDamage > 0) {
     damage += garbageTraitDamage;
@@ -2583,7 +2645,7 @@ function calculateDamage(context, snapshot) {
     });
   }
   if (state.lastPerfectClear) {
-    const perfectTraitDelay = getTraitBonus("Perfect", [1, 2]);
+    const perfectTraitDelay = getPerfectClearTraitBonus(traits).delay;
     if (perfectTraitDelay > 0 && damage < state.enemyHp) {
       state.enemyCountdown += perfectTraitDelay;
       state.floaters.push({
@@ -2608,7 +2670,9 @@ function calculateDamage(context, snapshot) {
       life: 1150,
     });
   }
-  const comboTraitDelay = lines > 0 && state.combo >= 4 ? getTraitBonus("Combo", [0, 1, 1]) : 0;
+  const comboTraitDelay = lines > 0 && state.combo >= 4
+    ? Math.min(comboTrait.traitDelayCap, getTraitBonus("Combo", [0, 1, 1]) + comboTrait.delay)
+    : 0;
   if (comboTraitDelay > 0) {
     state.enemyCountdown += comboTraitDelay;
     state.floaters.push({
@@ -2837,9 +2901,10 @@ function getComboMilestoneDamage(combo) {
 
 function gainGuardFromClear(lines, spinType) {
   if (lines <= 0) return;
+  const traits = getTraitSnapshot();
   const comboGuard = state.combo >= 3 ? state.upgrades.comboGuardGain : 0;
-  const traitDefenseGuard = getTraitBonus("Defense", [1, 2, 3]);
-  const traitSpinGuard = spinType ? getTraitBonus("Spin", [1, 2, 4]) : 0;
+  const traitDefenseGuard = getTraitBonus("Defense", [1, 2, 3]) + getDefenseTraitBonus(traits).clearGuard;
+  const traitSpinGuard = spinType ? getTraitBonus("Spin", [1, 2, 4]) + getSpinTraitBonus(traits).guard : 0;
   const gain = lines * BALANCE.guardPerLine + (spinType ? BALANCE.guardSpinBonus : 0) + state.upgrades.guardGain + comboGuard + traitDefenseGuard + traitSpinGuard;
   const before = state.guard;
   state.guard = Math.min(getEffectiveMaxGuard(), state.guard + gain);
@@ -2862,14 +2927,14 @@ function getGravityMsForWave() {
 }
 
 function getGarbageDelayForWave() {
-  return Math.max(0, 1 + state.upgrades.garbageGrace - Math.floor((state.wave - 1) / BALANCE.garbageDelayStepWaves));
+  return Math.max(0, 1 + state.upgrades.garbageGrace + getGarbageTraitBonus(getTraitSnapshot()).graceDelay - Math.floor((state.wave - 1) / BALANCE.garbageDelayStepWaves));
 }
 
 function addUltimateCharge(lines, spinType = null) {
   if (lines <= 0 || state.ultimateActive) return;
-  const highValue = lines >= 4 || spinType;
+  const highValue = isTraitHighValueClear({ lines, spinType, b2bActive: state.b2bActive, perfect: state.lastPerfectClear });
   const bonus = (state.upgrades.burstCharge > 0 && highValue ? state.upgrades.burstCharge : 0)
-    + (highValue ? getTraitBonus("Utility", [1, 2, 3]) : 0);
+    + (highValue ? getTraitBonus("Utility", [1, 2, 3]) + getUtilityTraitBonus(getTraitSnapshot()).ultimateCharge : 0);
   state.ultimateCharge = Math.min(ULTIMATE_REQUIRED_LINES, state.ultimateCharge + lines + bonus);
   if (state.ultimateCharge >= ULTIMATE_REQUIRED_LINES) activateUltimateMode();
 }
@@ -3598,7 +3663,7 @@ function startNextWave() {
   state.upgradeChoices = [];
   state.mode = "playing";
   const beforeHeal = state.playerHp;
-  const waveHeal = BALANCE.waveHeal + state.upgrades.waveHeal + getTraitBonus("Survival", [4, 8, 14]);
+  const waveHeal = BALANCE.waveHeal + state.upgrades.waveHeal + getTraitBonus("Survival", [4, 8, 14]) + getSurvivalTraitBonus(getTraitSnapshot()).waveHeal;
   state.playerHp = Math.min(state.playerMaxHp, state.playerHp + waveHeal);
   const healed = state.playerHp - beforeHeal;
   state.floaters.push({
@@ -3838,8 +3903,6 @@ function getRunRating(outcome) {
 function getEnemyCountdownForWave() {
   return Math.max(4, state.enemyType.countdown - Math.floor((state.wave - 1) / 10));
 }
-
-const MINI_BOSS_ENEMY_IDS = ["beetle", "mist", "sentinel"];
 
 function findEnemyById(id) {
   return ENEMIES.find((enemy) => enemy.id === id) || ENEMIES[0];
@@ -5302,8 +5365,7 @@ function drawTraitList() {
 
 function drawTraitListRow(trait, x, y, w, h) {
   const active = trait.stage > 0;
-  const next = trait.nextThreshold || trait.def.breakpoints[trait.def.breakpoints.length - 1];
-  const color = trait.stage >= 3 ? "#fff0a6" : trait.stage >= 2 ? "#d7c2ff" : trait.color;
+  const color = trait.isFull ? "#fff0a6" : trait.stage >= 2 ? "#d7c2ff" : trait.color;
   ctx.save();
   ctx.fillStyle = active ? hexToRgba(color, 0.14) : "rgba(8, 13, 20, 0.34)";
   roundedRect(x, y, w, h, 6, true, false);
@@ -5319,13 +5381,27 @@ function drawTraitListRow(trait, x, y, w, h) {
   ctx.textAlign = "left";
   fitLabel(getTraitHudLabel(trait), x + 26, y + 14, 48, 10, active ? "#f5f1e6" : "rgba(238,244,252,0.48)", 8, "800", true);
   ctx.textAlign = "right";
-  fitLabel(`${trait.count}/${next}`, x + w - 32, y + 14, 28, 10, active ? color : "rgba(238,244,252,0.44)", 8, "900", true);
+  fitLabel(getTraitProgressStatusText(trait), x + w - 56, y + 14, 52, 10, active ? color : "rgba(238,244,252,0.44)", 7, "900", true);
   if (active) {
     ctx.fillStyle = color;
-    ctx.globalAlpha = trait.stage >= 3 ? 0.9 : 0.64;
+    ctx.globalAlpha = trait.isFull ? 0.9 : 0.64;
     ctx.fillRect(x + w - 26, y + h - 4, Math.min(20, 6 + trait.stage * 5), 2);
   }
   ctx.restore();
+}
+
+function getTraitProgressStatusText(trait) {
+  if (trait.overcap > 0) return fmt("traitOvercapCount", { count: trait.overcap });
+  if (trait.isFull) return t("traitFull");
+  const fullCount = trait.fullCount || getTraitFullCount(trait.tag);
+  return `${trait.count}/${fullCount}`;
+}
+
+function getTraitDetailTitle(trait) {
+  const fullCount = trait.fullCount || getTraitFullCount(trait.tag);
+  const countText = fullCount ? `${trait.count}/${fullCount}` : `${trait.count}`;
+  const statusText = getTraitProgressStatusText(trait);
+  return trait.isFull ? `${trait.label} ${countText} ${statusText}` : `${trait.label} ${countText}`;
 }
 
 function getTraitHudLabel(trait) {
@@ -9450,27 +9526,30 @@ function drawUpgradeTraitHint(upgrade, card) {
   if (!hint) return;
   const isUpgrade = hint.type === "upgrade";
   const isActivate = hint.type === "activate";
-  const accent = isUpgrade ? "#fff0a6" : isActivate ? "#9df7da" : hint.color;
-  const text = hint.type === "progress"
+  const isOvercap = hint.type === "overcap";
+  const accent = isOvercap ? "#fff0a6" : isUpgrade ? "#fff0a6" : isActivate ? "#9df7da" : hint.color;
+  const text = isOvercap
+    ? `${t("traitOvercap")}: ${hint.label} ${fmt("traitOvercapCount", { count: hint.overcap })}`
+    : hint.type === "progress"
     ? fmt(hint.stage > 0 ? "traitProgressUpgrade" : "traitProgressActivate", { tag: hint.label, remain: hint.remaining })
     : `${t(isActivate ? "traitActivated" : "traitUpgrade")}: ${hint.label} ${hint.count}/${hint.next}`;
   const layout = getUpgradeCardContentLayout(card).trait;
   const { x, y, w, h } = layout;
   ctx.save();
-  if (isActivate || isUpgrade) {
-    ctx.shadowColor = hexToRgba(accent, isUpgrade ? 0.42 : 0.32);
-    ctx.shadowBlur = isUpgrade ? 12 : 9;
+  if (isActivate || isUpgrade || isOvercap) {
+    ctx.shadowColor = hexToRgba(accent, isUpgrade || isOvercap ? 0.42 : 0.32);
+    ctx.shadowBlur = isUpgrade || isOvercap ? 12 : 9;
   }
-  ctx.fillStyle = hexToRgba(accent, isUpgrade ? 0.2 : isActivate ? 0.17 : 0.1);
+  ctx.fillStyle = hexToRgba(accent, isUpgrade || isOvercap ? 0.2 : isActivate ? 0.17 : 0.1);
   roundedRect(x, y, w, h, 8, true, false);
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = hexToRgba(accent, isUpgrade ? 0.56 : isActivate ? 0.46 : 0.26);
-  ctx.lineWidth = isActivate || isUpgrade ? 1.4 : 1;
+  ctx.strokeStyle = hexToRgba(accent, isUpgrade || isOvercap ? 0.56 : isActivate ? 0.46 : 0.26);
+  ctx.lineWidth = isActivate || isUpgrade || isOvercap ? 1.4 : 1;
   roundedRect(x, y, w, h, 8, false, true);
-  ctx.fillStyle = hexToRgba(accent, isUpgrade ? 0.28 : isActivate ? 0.2 : 0.13);
+  ctx.fillStyle = hexToRgba(accent, isUpgrade || isOvercap ? 0.28 : isActivate ? 0.2 : 0.13);
   roundedRect(x + 9, y + 10, 15, 15, 5, true, false);
-  fitLabel(isUpgrade ? "↑" : isActivate ? "✦" : "+", x + 12, y + 22, 9, 11, accent, 8, "900", true);
-  fitLabel(text, x + 32, y + 23, w - 44, 11, isActivate || isUpgrade ? "#f5f1e6" : hexToRgba(accent, 0.84), 8, "900", true);
+  fitLabel(isOvercap ? "+" : isUpgrade ? "↑" : isActivate ? "✦" : "+", x + 12, y + 22, 9, 11, accent, 8, "900", true);
+  fitLabel(text, x + 32, y + 23, w - 44, 11, isActivate || isUpgrade || isOvercap ? "#f5f1e6" : hexToRgba(accent, 0.84), 8, "900", true);
   ctx.restore();
 }
 
@@ -9588,7 +9667,7 @@ function drawCurrentBuildTraitDetails(traits, x, y, w, h) {
     roundedRect(xx, y, cardW, h, 8, true, false);
     ctx.strokeStyle = active ? hexToRgba(trait.color, 0.42) : "rgba(238,244,252,0.12)";
     roundedRect(xx, y, cardW, h, 8, false, true);
-    fitLabel(`${trait.label} ${trait.count}/${trait.nextThreshold || trait.def.breakpoints[trait.def.breakpoints.length - 1]}`, xx + 12, y + 18, cardW - 24, 12, active ? trait.color : "rgba(238,244,252,0.62)", 9, "900", true);
+    fitLabel(getTraitDetailTitle(trait), xx + 12, y + 18, cardW - 24, 12, active ? trait.color : "rgba(238,244,252,0.62)", 8, "900", true);
     fitLabel(getTraitEffectText(trait), xx + 12, y + 39, cardW - 24, 12, "rgba(238,244,252,0.62)", 8, "700");
     ctx.restore();
   });
@@ -9637,164 +9716,53 @@ function drawAcquiredRelicCard(group, x, y, w, h) {
 
 function getAcquiredRelicGroups() {
   if (!Array.isArray(state.acquiredRelics)) state.acquiredRelics = [];
-  const map = new Map();
-  for (const entry of state.acquiredRelics) {
-    if (!entry?.id) continue;
-    const upgrade = getUpgradeById(entry.id);
-    if (!upgrade) continue;
-    const group = map.get(entry.id);
-    if (group) {
-      group.count += 1;
-      continue;
-    }
-    map.set(entry.id, {
-      id: entry.id,
-      upgrade,
-      count: 1,
-      rarity: entry.rarity || upgrade.rarity,
-      tags: getUpgradeTags(upgrade),
-      family: getUpgradeFamily(upgrade),
-    });
-  }
-  return [...map.values()];
+  return getAcquiredRelicGroupsForStats(state.acquiredRelics);
 }
 
 function getCurrentBuildFamilyStats(groups = getAcquiredRelicGroups()) {
-  const stats = new Map();
-  for (const group of groups) {
-    for (const tag of group.tags) {
-      const meta = getBuildTagMeta(tag);
-      const current = stats.get(tag) || { tag, meta, count: 0 };
-      current.count += group.count;
-      stats.set(tag, current);
-    }
-  }
-  return [...stats.values()]
-    .sort((a, b) => b.count - a.count)
-    .map(({ tag, meta, count }) => ({
-      label: buildTagLabel(tag),
-      color: meta.color,
-      count,
-    }));
+  return getCurrentBuildFamilyStatsForGroups(groups, { translate: t });
 }
 
 function getTraitEntries(groups = getAcquiredRelicGroups()) {
-  const stats = new Map();
-  for (const group of groups) {
-    for (const tag of group.tags) {
-      const def = TRAIT_DEFS[tag];
-      if (!def) continue;
-      const meta = getBuildTagMeta(tag);
-      const entry = stats.get(tag) || { tag, def, meta, count: 0 };
-      entry.count += group.count;
-      stats.set(tag, entry);
-    }
-  }
-  return [...stats.values()]
-    .map((entry) => {
-      const stage = getTraitStage(entry.tag, entry.count);
-      const nextThreshold = getTraitNextThreshold(entry.tag, entry.count);
-      return {
-        ...entry,
-        stage,
-        nextThreshold,
-        active: stage > 0,
-        label: buildTagLabel(entry.tag),
-        color: entry.meta.color,
-      };
-    })
-    .sort((a, b) => (b.stage - a.stage) || (b.count - a.count) || a.label.localeCompare(b.label));
+  return getTraitEntriesForGroups(groups, { translate: t });
 }
 
 function getTraitCount(tag, groups = getAcquiredRelicGroups()) {
-  let count = 0;
-  for (const group of groups) {
-    if (group.tags.includes(tag)) count += group.count;
-  }
-  return count;
+  return getTraitCountForGroups(tag, groups);
 }
 
 function getTraitStage(tag, count = getTraitCount(tag)) {
-  const def = TRAIT_DEFS[tag];
-  if (!def) return 0;
-  let stage = 0;
-  for (const breakpoint of def.breakpoints) {
-    if (count >= breakpoint) stage += 1;
-  }
-  return stage;
+  return getTraitStageFromDefs(tag, count);
 }
 
 function getTraitNextThreshold(tag, count = getTraitCount(tag)) {
-  const def = TRAIT_DEFS[tag];
-  if (!def) return null;
-  return def.breakpoints.find((breakpoint) => count < breakpoint) || null;
+  return getTraitNextThresholdForGroups(tag, count);
+}
+
+function getTraitFullCount(tag) {
+  return getTraitFullCountFromDefs(tag);
+}
+
+function getTraitProgress(tag, count = getTraitCount(tag)) {
+  return getTraitProgressForGroups(tag, count);
 }
 
 function getTraitBonus(tag, values) {
-  const stage = getTraitStage(tag);
-  if (stage <= 0) return 0;
-  return values[Math.min(stage, values.length) - 1] || 0;
+  return getTraitBonusForGroups(tag, values, getAcquiredRelicGroups());
 }
 
 function getTraitEffectText(entry) {
-  if (!entry || entry.stage <= 0) return t("traitEffectNone");
-  const key = entry.def.effectKeys[Math.min(entry.stage, entry.def.effectKeys.length) - 1];
-  return key ? t(key) : t("traitEffectNone");
+  return getTraitEffectTextForEntry(entry, t);
 }
 
 function getTraitChangeHintsForUpgrade(upgrade) {
-  const tags = getUpgradeTags(upgrade);
-  const hints = [];
-  for (const tag of tags) {
-    const def = TRAIT_DEFS[tag];
-    if (!def) continue;
-    const before = getTraitCount(tag);
-    const after = before + 1;
-    const beforeStage = getTraitStage(tag, before);
-    const afterStage = getTraitStage(tag, after);
-    if (afterStage > beforeStage) {
-      const next = beforeStage === 0
-        ? def.breakpoints[0]
-        : getTraitNextThreshold(tag, after) || def.breakpoints[Math.min(afterStage - 1, def.breakpoints.length - 1)];
-      hints.push({
-        tag,
-        label: buildTagLabel(tag),
-        color: getBuildTagMeta(tag).color,
-        type: beforeStage === 0 ? "activate" : "upgrade",
-        count: after,
-        next,
-        stage: afterStage,
-        priority: beforeStage === 0 ? 0 : 1,
-      });
-      continue;
-    }
-    const next = getTraitNextThreshold(tag, before);
-    if (!next) continue;
-    const remaining = next - after;
-    if (remaining <= 0) continue;
-    hints.push({
-      tag,
-      label: buildTagLabel(tag),
-      color: getBuildTagMeta(tag).color,
-      type: "progress",
-      count: after,
-      next,
-      remaining,
-      stage: beforeStage,
-      priority: 2,
-    });
-  }
-  return hints.sort((a, b) => (a.priority - b.priority) || ((a.remaining ?? 0) - (b.remaining ?? 0)) || a.label.localeCompare(b.label));
+  return getTraitChangeHintsForUpgradeForGroups(upgrade, getAcquiredRelicGroups(), { translate: t });
 }
 
 function getCurrentBuildDirectionText(stats) {
   if (!stats.length) return t("currentBuildNoDirection");
   const families = stats.slice(0, 2).map((stat) => stat.label).join(" / ");
   return fmt("currentBuildDirection", { families });
-}
-
-function getUpgradeById(id) {
-  return UPGRADES.find((upgrade) => upgrade.id === id);
 }
 
 function drawUpgradeTagPills(tags, x, y, maxWidth, maxTags = 2, alpha = 1) {
@@ -9925,31 +9893,14 @@ function drawLimitedWrapText(text, x, y, maxWidth, lineHeight, color, size, maxL
   ctx.restore();
 }
 
-function getUpgradeFamily(upgrade) {
-  const primaryTag = getUpgradeTags(upgrade)[0];
-  const meta = getBuildTagMeta(primaryTag);
-  return BUILD_FAMILY[meta.family] || BUILD_FAMILY.burst;
-}
-
 function upgradeFamilyShortLabel(family) {
   const shortKey = family.labelKey.replace("family.", "familyShort.");
   const shortLabel = t(shortKey);
   return shortLabel === shortKey ? t(family.labelKey) : shortLabel;
 }
 
-function getUpgradeTags(upgrade) {
-  if (Array.isArray(upgrade?.tags) && upgrade.tags.length) return upgrade.tags;
-  return ["Burst"];
-}
-
-function getBuildTagMeta(tag) {
-  return BUILD_TAGS[tag] || BUILD_TAGS.Burst;
-}
-
 function buildTagLabel(tag) {
-  const meta = getBuildTagMeta(tag);
-  const label = t(meta.labelKey);
-  return label === meta.labelKey ? tag : label;
+  return buildTagLabelForStats(tag, t);
 }
 
 function stackRuleLabel(rule = "stackable") {

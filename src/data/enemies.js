@@ -1,4 +1,5 @@
 export const ENEMY_WEAKNESSES = Object.freeze(["combo", "spin", "allspin", "perfect", "b2b"]);
+export const MINI_BOSS_ENEMY_IDS = Object.freeze(["beetle", "mist", "sentinel"]);
 
 export const ENEMIES = [
   {
