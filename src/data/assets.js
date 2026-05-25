@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-05-25-upgrade-ui";
+export const ASSET_VERSION = "2026-05-25-enemy-battle-portraits";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -141,6 +141,18 @@ export const heroCombo3Sheet = registerImageAsset("hero-combo-3-sheet-16", "asse
 export const heroUltimateSheet = registerImageAsset("hero-ultimate-sheet", "assets/images/clean/hero_ultimate_16_spritesheet_alpha.png");
 export const enemyConceptSheetA = registerImageAsset("enemy-concept-sheet-a", "assets/images/clean/Enemy01_alpha.png");
 export const enemyConceptSheetB = registerImageAsset("enemy-concept-sheet-b", "assets/images/clean/Enemy02_alpha.png");
+
+export const enemyBattlePortraits = {
+  slime: registerImageAsset("enemy-battle-slime-left", "assets/enemies/battle/slime_battle_left.png"),
+  vine: registerImageAsset("enemy-battle-vine-left", "assets/enemies/battle/vine_battle_left.png"),
+  mushroom: registerImageAsset("enemy-battle-mushroom-left", "assets/enemies/battle/mushroom_battle_left.png"),
+  beetle: registerImageAsset("enemy-battle-beetle-left", "assets/enemies/battle/beetle_battle_left.png"),
+  mist: registerImageAsset("enemy-battle-mist-left", "assets/enemies/battle/mist_battle_left.png"),
+  thorn: registerImageAsset("enemy-battle-thorn-left", "assets/enemies/battle/thorn_battle_left.png"),
+  wisp: registerImageAsset("enemy-battle-wisp-left", "assets/enemies/battle/wisp_battle_left.png"),
+  sentinel: registerImageAsset("enemy-battle-sentinel-left", "assets/enemies/battle/sentinel_battle_left.png"),
+  king: registerImageAsset("enemy-battle-king-left", "assets/enemies/battle/king_battle_left.png"),
+};
 
 export const upgradeCardFrames = {
   common: registerImageAsset("upgrade-card-frame-common", "assets/ui/relic_cards/upgrade_card_common.png"),

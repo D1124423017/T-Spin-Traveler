@@ -28,6 +28,7 @@ import { createCanvasFont, shouldUseDisplayFont, tokenizeForWrap } from "../src/
 import {
   getCurrentBuildCloseRect,
   getCurrentBuildPanelRect,
+  getUpgradeDraftLayout,
   getUpgradeCardContentLayout,
   getUpgradeCardRect,
   getUpgradeOverlayPanelRect,
@@ -106,10 +107,12 @@ describe("HUD and card layout helpers", () => {
 
   it("calculates upgrade card and current build rects", () => {
     const card = getUpgradeCardRect(2);
+    const draftLayout = getUpgradeDraftLayout();
 
-    expect(getUpgradeOverlayPanelRect()).toEqual({ x: 238, y: 126, w: 804, h: 546 });
-    expect(card).toEqual({ x: 800, y: 262, w: 232, h: 348 });
-    expect(getUpgradeCardContentLayout(card).trait).toEqual({ x: 824, y: 552, w: 184, h: 36 });
+    expect(getUpgradeOverlayPanelRect()).toEqual({ x: 198, y: 118, w: 934, h: 548 });
+    expect(draftLayout.buildRail).toEqual({ x: 966, y: 324, w: 148, h: 312 });
+    expect(card).toEqual({ x: 730, y: 282, w: 214, h: 344 });
+    expect(getUpgradeCardContentLayout(card).trait).toEqual({ x: 750, y: 578, w: 174, h: 34 });
     expect(getCurrentBuildPanelRect()).toEqual({ x: 190, y: 82, w: 900, h: 560 });
     expect(getCurrentBuildCloseRect()).toEqual({ x: 912, y: 116, w: 132, h: 38 });
   });

@@ -18,6 +18,7 @@ export const ENEMIES = [
     artRect: { x: 235, y: 128, w: 335, h: 240 },
     artDraw: { x: -132, y: -146, w: 264, h: 238 },
     artKey: "forest-slime-hatchling",
+    battleArt: "slime",
   },
   {
     id: "vine",
@@ -35,7 +36,7 @@ export const ENEMIES = [
     artRect: { x: 118, y: 118, w: 360, h: 230 },
     artDraw: { x: -144, y: -150, w: 288, h: 236 },
     artKey: "vine-hopper",
-    artFacing: "right",
+    battleArt: "vine",
   },
   {
     id: "mushroom",
@@ -53,6 +54,7 @@ export const ENEMIES = [
     artRect: { x: 116, y: 715, w: 350, h: 250 },
     artDraw: { x: -140, y: -170, w: 280, h: 264 },
     artKey: "bloom-shaman",
+    battleArt: "mushroom",
   },
   {
     id: "beetle",
@@ -71,6 +73,7 @@ export const ENEMIES = [
     artRect: { x: 770, y: 132, w: 380, h: 235 },
     artDraw: { x: -150, y: -138, w: 300, h: 226 },
     artKey: "bramble-beetle",
+    battleArt: "beetle",
   },
   {
     id: "mist",
@@ -88,6 +91,7 @@ export const ENEMIES = [
     artRect: { x: 195, y: 455, w: 255, h: 250 },
     artDraw: { x: -122, y: -170, w: 244, h: 270 },
     artKey: "mist-lantern-sprite",
+    battleArt: "mist",
   },
   {
     id: "thorn",
@@ -105,6 +109,7 @@ export const ENEMIES = [
     artRect: { x: 895, y: 126, w: 360, h: 246 },
     artDraw: { x: -154, y: -154, w: 308, h: 232 },
     artKey: "thorn-prowler",
+    battleArt: "thorn",
   },
   {
     id: "wisp",
@@ -122,6 +127,7 @@ export const ENEMIES = [
     artRect: { x: 205, y: 498, w: 365, h: 240 },
     artDraw: { x: -148, y: -180, w: 296, h: 266 },
     artKey: "wisp-moth",
+    battleArt: "wisp",
   },
   {
     id: "sentinel",
@@ -140,6 +146,7 @@ export const ENEMIES = [
     artRect: { x: 892, y: 508, w: 385, h: 284 },
     artDraw: { x: -160, y: -184, w: 320, h: 292 },
     artKey: "ruin-sentinel",
+    battleArt: "sentinel",
   },
   {
     id: "king",
@@ -157,5 +164,6 @@ export const ENEMIES = [
     artRect: { x: 825, y: 690, w: 365, h: 260 },
     artDraw: { x: -156, y: -176, w: 312, h: 278 },
     artKey: "ancient-bark-colossus",
+    battleArt: "king",
   },
 ];

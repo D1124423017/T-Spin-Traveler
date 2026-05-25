@@ -1,27 +1,41 @@
 export function getUpgradeOverlayPanelRect() {
-  return { x: 238, y: 126, w: 804, h: 546 };
+  return { x: 198, y: 118, w: 934, h: 548 };
+}
+
+export function getUpgradeDraftLayout() {
+  const panel = getUpgradeOverlayPanelRect();
+  return {
+    panel,
+    title: { x: panel.x + 62, y: panel.y + 90, w: 470, size: 34 },
+    detail: { x: panel.x + 64, y: panel.y + 122, w: 560, lineH: 18, size: 15 },
+    safeHint: { x: panel.x + 64, y: panel.y + 164, w: 360, size: 12 },
+    buildButton: getCurrentBuildButtonRect(),
+    buildRail: { x: panel.x + 768, y: panel.y + 206, w: 148, h: 312 },
+    help: { x: panel.x + 64, y: panel.y + panel.h - 28, w: 470, size: 13 },
+  };
 }
 
 export function getUpgradeCardRect(index) {
-  const w = 232;
-  const gap = 28;
-  return { x: 280 + index * (w + gap), y: 262, w, h: 348 };
+  const w = 214;
+  const gap = 26;
+  return { x: 250 + index * (w + gap), y: 282, w, h: 344 };
 }
 
 export function getUpgradeCardContentLayout(card) {
   return {
-    badge: { x: card.x + 25, y: card.y + 18, w: 88, h: 23 },
-    icon: { x: card.x + card.w / 2, y: card.y + 88, size: 68 },
-    title: { x: card.x + 28, y: card.y + 154, w: card.w - 56, lineH: 19, size: 16 },
-    tags: { x: card.x + 28, y: card.y + 203, w: card.w - 56 },
-    divider: { x: card.x + 28, y: card.y + 234, w: card.w - 56 },
-    desc: { x: card.x + 28, y: card.y + 252, w: card.w - 56, lineH: 15, size: 11 },
-    trait: { x: card.x + 24, y: card.y + card.h - 58, w: card.w - 48, h: 36 },
+    badge: { x: card.x + 22, y: card.y + 16, w: 82, h: 22 },
+    icon: { x: card.x + card.w / 2, y: card.y + 86, size: 62 },
+    title: { x: card.x + 24, y: card.y + 148, w: card.w - 48, lineH: 18, size: 15 },
+    tags: { x: card.x + 24, y: card.y + 204, w: card.w - 48 },
+    divider: { x: card.x + 24, y: card.y + 234, w: card.w - 48 },
+    desc: { x: card.x + 24, y: card.y + 252, w: card.w - 48, lineH: 16, size: 12 },
+    trait: { x: card.x + 20, y: card.y + card.h - 48, w: card.w - 40, h: 34 },
   };
 }
 
 export function getCurrentBuildButtonRect() {
-  return { x: 790, y: 216, w: 166, h: 36 };
+  const panel = getUpgradeOverlayPanelRect();
+  return { x: panel.x + 768, y: panel.y + 156, w: 148, h: 36 };
 }
 
 export function getCurrentBuildPanelRect() {

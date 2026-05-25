@@ -3,6 +3,7 @@ import {
   BACKGROUND_STAGES,
   BOSS_BACKGROUND_STAGE,
   enemyAttackSheets,
+  enemyBattlePortraits,
   enemyConceptSheetA,
   enemyConceptSheetB,
   forestBg,
@@ -153,6 +154,7 @@ import {
   getCurrentBuildButtonRect,
   getCurrentBuildCloseRect,
   getCurrentBuildPanelRect,
+  getUpgradeDraftLayout,
   getUpgradeCardContentLayout,
   getUpgradeCardRect,
   getUpgradeOverlayPanelRect,
@@ -6229,8 +6231,10 @@ function drawBossPhaseBar(x, y) {
 }
 
 function drawEnemyConceptArt(enemy, hit) {
+  const battlePortrait = enemyBattlePortraits[enemy.battleArt || enemy.id];
+  const hasBattlePortrait = isImageReady(battlePortrait);
   const sheet = enemy.artSheet === "enemy02" ? enemyConceptSheetB : enemyConceptSheetA;
-  if (!isImageReady(sheet) || !enemy.artRect) return false;
+  if (!hasBattlePortrait && (!isImageReady(sheet) || !enemy.artRect)) return false;
   const rect = enemy.artRect;
   const draw = alignDrawBoxToBaseline(enemy.artDraw || { x: -130, y: -150, w: 260, h: 240 }, CHARACTER_BASELINES.enemy.localY);
   ctx.save();
@@ -6241,9 +6245,8 @@ function drawEnemyConceptArt(enemy, hit) {
     ctx.globalCompositeOperation = "lighter";
     ctx.globalAlpha = 0.88;
   }
-  if (enemy.artFacing === "right") {
-    ctx.scale(-1, 1);
-    drawKeyedImageCropContain(sheet, rect.x, rect.y, rect.w, rect.h, -draw.x - draw.w, draw.y, draw.w, draw.h, enemy.artKey || enemy.id);
+  if (hasBattlePortrait) {
+    drawImageContain(battlePortrait, draw.x, draw.y, draw.w, draw.h);
   } else {
     drawKeyedImageCropContain(sheet, rect.x, rect.y, rect.w, rect.h, draw.x, draw.y, draw.w, draw.h, enemy.artKey || enemy.id);
   }
@@ -9064,16 +9067,18 @@ function drawUpgradeOverlay() {
   ctx.save();
   ctx.fillStyle = "rgba(4, 6, 10, 0.76)";
   ctx.fillRect(0, 0, W, H);
-  const panel = getUpgradeOverlayPanelRect();
+  const draftLayout = getUpgradeDraftLayout();
+  const panel = draftLayout.panel;
   drawCard(panel.x, panel.y, panel.w, panel.h);
-  label(t("relicDraft").toUpperCase(), panel.x + 62, 198, 35, "#f5f1e6");
+  fitLabel(t("relicDraft").toUpperCase(), draftLayout.title.x, draftLayout.title.y, draftLayout.title.w, draftLayout.title.size, "#f5f1e6", 24, "900", true);
   const draftDetail = state.upgradeDraftReason === "progress"
     ? t("upgradeProgressPick")
     : fmt("waveClearPick", { wave: Math.max(1, state.wave - 1) });
-  label(draftDetail, panel.x + 64, 230, 17, "rgba(238,244,252,0.62)");
-  label(t("safeNodeDraft"), panel.x + 64, 252, 13, "#9df7da");
-  const buildButton = getCurrentBuildButtonRect();
+  drawLimitedWrapText(draftDetail, draftLayout.detail.x, draftLayout.detail.y, draftLayout.detail.w, draftLayout.detail.lineH, "rgba(238,244,252,0.66)", draftLayout.detail.size, 2, "800");
+  fitLabel(t("safeNodeDraft"), draftLayout.safeHint.x, draftLayout.safeHint.y, draftLayout.safeHint.w, draftLayout.safeHint.size, "#9df7da", 9, "900");
+  const buildButton = draftLayout.buildButton;
   drawMenuButton(buildButton.x, buildButton.y, buildButton.w, buildButton.h, t("currentBuild"), "");
+  drawUpgradeBuildRail(getAcquiredRelicGroups(), draftLayout.buildRail);
   for (let i = 0; i < 3; i += 1) {
     const upgrade = state.upgradeChoices[i];
     if (!upgrade) continue;
@@ -9095,8 +9100,33 @@ function drawUpgradeOverlay() {
     ctx.restore();
   }
   if (state.upgradePickConfirm) drawUpgradePickConfirmFx();
-  label(t("upgradeHelp"), panel.x + 64, 644, 14, "rgba(159, 180, 255, 0.72)");
+  fitLabel(t("upgradeHelp"), draftLayout.help.x, draftLayout.help.y, draftLayout.help.w, draftLayout.help.size, "rgba(159, 180, 255, 0.72)", 10, "800");
   if (state.currentBuildOpen) drawCurrentBuildPanel();
+  ctx.restore();
+}
+
+function drawUpgradeBuildRail(groups, rect) {
+  ctx.save();
+  ctx.fillStyle = "rgba(5, 9, 15, 0.58)";
+  roundedRect(rect.x, rect.y, rect.w, rect.h, 10, true, false);
+  ctx.strokeStyle = "rgba(126, 231, 255, 0.22)";
+  ctx.lineWidth = 1.2;
+  roundedRect(rect.x, rect.y, rect.w, rect.h, 10, false, true);
+  label(t("currentBuildList").toUpperCase(), rect.x + 14, rect.y + 22, 10, "rgba(143, 232, 220, 0.72)");
+  if (!groups.length) {
+    drawLimitedWrapText(t("currentBuildEmpty"), rect.x + 14, rect.y + 54, rect.w - 28, 15, "rgba(238,244,252,0.58)", 11, 3, "700");
+    ctx.restore();
+    return;
+  }
+  const rowH = 46;
+  const gap = 8;
+  const maxRows = Math.max(1, Math.floor((rect.h - 48) / (rowH + gap)));
+  groups.slice(0, maxRows).forEach((group, index) => {
+    drawAcquiredRelicListRow(group, rect.x + 10, rect.y + 38 + index * (rowH + gap), rect.w - 20, rowH);
+  });
+  if (groups.length > maxRows) {
+    label(`+${groups.length - maxRows}`, rect.x + 14, rect.y + rect.h - 10, 11, "rgba(238,244,252,0.5)");
+  }
   ctx.restore();
 }
 
@@ -9435,22 +9465,30 @@ function drawAcquiredRelicCards(groups, x, y, w, bottomY) {
 }
 
 function drawAcquiredRelicCard(group, x, y, w, h) {
+  drawAcquiredRelicListRow(group, x, y, w, h);
+}
+
+function drawAcquiredRelicListRow(group, x, y, w, h) {
   const rarity = getRarityVisual(group.rarity);
   ctx.save();
   const cardG = ctx.createLinearGradient(x, y, x + w, y + h);
-  cardG.addColorStop(0, rarity.fillTop);
-  cardG.addColorStop(1, rarity.fillBottom);
+  cardG.addColorStop(0, hexToRgba(rarity.color, 0.16));
+  cardG.addColorStop(1, "rgba(7, 11, 18, 0.62)");
   ctx.fillStyle = cardG;
-  roundedRect(x, y, w, h, 8, true, false);
-  ctx.strokeStyle = hexToRgba(rarity.border, 0.42);
-  ctx.lineWidth = Math.max(1.2, rarity.lineWidth - 0.8);
-  roundedRect(x, y, w, h, 8, false, true);
-  drawUpgradeSigil(x + w - 28, y + 26, rarity.color, 0.42, rarity.emblemAlpha * 0.52);
-  drawRarityBadge(x + 10, y + 7, 60, 18, rarityLabel(group.rarity).toUpperCase(), rarity);
-  drawUpgradeTagPills(group.tags, x + 78, y + 6, Math.min(116, w - 122), 2, 0.58);
-  if (group.count > 1) label(`x${group.count}`, x + w - 38, y + 56, 13, "#fff0a6");
-  fitLabel(upgradeName(group.upgrade), x + 10, y + 38, w - 54, 14, rarity.titleColor, 10, "800", true);
-  fitLabel(upgradeShortText(group.upgrade), x + 10, y + 55, w - 58, 10, "rgba(238,244,252,0.6)", 8, "600");
+  roundedRect(x, y, w, h, 7, true, false);
+  ctx.strokeStyle = hexToRgba(rarity.border, 0.32);
+  ctx.lineWidth = 1.1;
+  roundedRect(x, y, w, h, 7, false, true);
+  ctx.fillStyle = hexToRgba(rarity.color, 0.42);
+  roundedRect(x + 5, y + 6, 4, h - 12, 3, true, false);
+  const countText = group.count > 1 ? ` x${group.count}` : "";
+  fitLabel(`${rarityLabel(group.rarity).toUpperCase()}${countText}`, x + 16, y + 17, Math.max(50, w - 28), 9, hexToRgba(rarity.color, 0.9), 7, "900", true);
+  fitLabel(upgradeName(group.upgrade), x + 16, y + 34, w - 30, h >= 60 ? 13 : 12, rarity.titleColor, 8, "800", true);
+  if (h >= 58) {
+    drawUpgradeTagPills(group.tags, x + 16, y + 42, w - 32, 2, 0.56);
+  } else if (group.tags?.length) {
+    fitLabel(buildTagLabel(group.tags[0]).toUpperCase(), x + 16, y + h - 7, w - 32, 8, "rgba(238,244,252,0.56)", 6, "800", true);
+  }
   ctx.restore();
 }
 
