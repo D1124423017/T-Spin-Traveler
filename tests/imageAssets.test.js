@@ -31,6 +31,7 @@ const runtimeAnimationSheets = [
   { path: "assets/images/clean/noa_menu_idle_cube_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/noa_menu_idle_meditate_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/enemy_attack_slime_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/enemy_attack_blue_slime_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/enemy_attack_vine_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/enemy_attack_mushroom_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/enemy_attack_beetle_16.png", columns: 4, rows: 4 },
@@ -106,6 +107,7 @@ const upgradeCardFrames = [
 
 const enemyBattlePortraits = [
   { path: "assets/enemies/battle/slime_battle_left.png", width: 335, height: 240 },
+  { path: "assets/enemies/battle/blue_slime_battle_left.png", width: 380, height: 250 },
   { path: "assets/enemies/battle/vine_battle_left.png", width: 360, height: 230 },
   { path: "assets/enemies/battle/mushroom_battle_left.png", width: 350, height: 250 },
   { path: "assets/enemies/battle/beetle_battle_left.png", width: 380, height: 235 },
@@ -195,5 +197,9 @@ describe("image assets", () => {
       expect(assetsSource).toContain(portrait.path);
       expect(readPngInfo(portrait.path)).toEqual({ width: portrait.width, height: portrait.height, colorType: 6 });
     }
+  });
+
+  it("keeps the blue slime attack sheet at the requested 384 x 512 frame grid", () => {
+    expect(readPngInfo("assets/images/clean/enemy_attack_blue_slime_16.png")).toEqual({ width: 1536, height: 2048, colorType: 6 });
   });
 });

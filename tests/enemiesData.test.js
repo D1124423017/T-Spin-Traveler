@@ -9,4 +9,17 @@ describe("enemy data", () => {
     expect(missingBattleArt).toEqual([]);
     expect(runtimeFacingFlips).toEqual([]);
   });
+
+  it("includes the blue slime as a non-boss early enemy", () => {
+    const blueSlime = ENEMIES.find((enemy) => enemy.id === "blue_slime");
+
+    expect(blueSlime).toMatchObject({
+      name: "RIFT BLUE SLIME",
+      trait: "GEL WAVE",
+      battleArt: "blueSlime",
+      garbage: 0,
+    });
+    expect(blueSlime.hp).toBeLessThanOrEqual(140);
+    expect(blueSlime.damage).toBeLessThanOrEqual(8);
+  });
 });

@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-05-25-enemy-battle-portraits";
+export const ASSET_VERSION = "2026-05-26-blue-slime-reference-attack";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -144,6 +144,7 @@ export const enemyConceptSheetB = registerImageAsset("enemy-concept-sheet-b", "a
 
 export const enemyBattlePortraits = {
   slime: registerImageAsset("enemy-battle-slime-left", "assets/enemies/battle/slime_battle_left.png"),
+  blueSlime: registerImageAsset("enemy-battle-blue-slime-left", "assets/enemies/battle/blue_slime_battle_left.png"),
   vine: registerImageAsset("enemy-battle-vine-left", "assets/enemies/battle/vine_battle_left.png"),
   mushroom: registerImageAsset("enemy-battle-mushroom-left", "assets/enemies/battle/mushroom_battle_left.png"),
   beetle: registerImageAsset("enemy-battle-beetle-left", "assets/enemies/battle/beetle_battle_left.png"),
@@ -190,6 +191,7 @@ export const metaUpgradeIcons = {
 
 export const enemyAttackSheets = {
   slime16: registerImageAsset("enemy-attack-slime-16", "assets/images/clean/enemy_attack_slime_16.png"),
+  blueSlime16: registerImageAsset("enemy-attack-blue-slime-16", "assets/images/clean/enemy_attack_blue_slime_16.png"),
   vine16: registerImageAsset("enemy-attack-vine-16", "assets/images/clean/enemy_attack_vine_16.png"),
   mushroom16: registerImageAsset("enemy-attack-mushroom-16", "assets/images/clean/enemy_attack_mushroom_16.png"),
   beetle16: registerImageAsset("enemy-attack-beetle-16", "assets/images/clean/enemy_attack_beetle_16.png"),

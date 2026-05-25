@@ -126,6 +126,7 @@ import {
   hexToRgba,
   insetSpriteFrameRect,
   lerp,
+  OVERLAY_READABILITY,
   pointInRect,
   smoothstep,
 } from "./src/render/drawUtils.js";
@@ -876,6 +877,18 @@ const ENEMY_ATTACK_ANIMATIONS = {
     frameMs: 60,
     timing: [78, 76, 72, 68, 64, 58, 52, 50, 78, 84, 72, 68, 72, 78, 84, 88],
     draw: { x: -198, y: -162, w: 392, h: 306 },
+    hitFrame: 8,
+    noKeying: true,
+  },
+  blue_slime: {
+    id: "enemy-attack-blue-slime",
+    image: enemyAttackSheets.blueSlime16,
+    columns: 4,
+    rows: 4,
+    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    frameMs: 60,
+    timing: [78, 76, 72, 68, 62, 56, 52, 50, 58, 84, 76, 70, 72, 78, 84, 88],
+    draw: { x: -196, y: -304, w: 392, h: 612 },
     hitFrame: 8,
     noKeying: true,
   },
@@ -5122,9 +5135,9 @@ function drawBoardFocusAura(board) {
 function drawCard(x, y, w, h) {
   ctx.save();
   const g = ctx.createLinearGradient(x, y, x + w, y + h);
-  g.addColorStop(0, "rgba(6, 11, 20, 0.66)");
-  g.addColorStop(0.52, "rgba(4, 7, 13, 0.58)");
-  g.addColorStop(1, "rgba(20, 13, 31, 0.54)");
+  g.addColorStop(0, OVERLAY_READABILITY.panel.top);
+  g.addColorStop(0.52, OVERLAY_READABILITY.panel.middle);
+  g.addColorStop(1, OVERLAY_READABILITY.panel.bottom);
   ctx.fillStyle = g;
   ctx.shadowColor = "rgba(126, 231, 255, 0.06)";
   ctx.shadowBlur = 10;
@@ -5158,7 +5171,7 @@ function drawCard(x, y, w, h) {
   scan.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = scan;
   ctx.fillRect(x + 10, y + 10, w - 20, 1);
-  ctx.fillStyle = "rgba(126, 231, 255, 0.02)";
+  ctx.fillStyle = OVERLAY_READABILITY.panel.scanline;
   for (let yy = y + 22; yy < y + h - 16; yy += 26) ctx.fillRect(x + 12, yy, w - 24, 1);
   ctx.restore();
 }
@@ -7828,14 +7841,15 @@ function drawTutorialPrompt() {
   ctx.restore();
 }
 
-function drawDimOverlay(alpha = 0.76) {
+function drawDimOverlay(alpha = OVERLAY_READABILITY.scrim.standard) {
+  const baseAlpha = clamp(alpha, 0, 0.94);
   ctx.save();
-  ctx.fillStyle = `rgba(2, 4, 8, ${alpha})`;
+  ctx.fillStyle = `rgba(2, 4, 8, ${baseAlpha})`;
   ctx.fillRect(0, 0, W, H);
   const g = ctx.createRadialGradient(W / 2, H / 2, 80, W / 2, H / 2, 620);
-  g.addColorStop(0, "rgba(48, 34, 70, 0.1)");
-  g.addColorStop(0.62, "rgba(0, 0, 0, 0.2)");
-  g.addColorStop(1, "rgba(0, 0, 0, 0.58)");
+  g.addColorStop(0, `rgba(48, 34, 70, ${Math.min(0.16, baseAlpha * 0.16)})`);
+  g.addColorStop(0.62, `rgba(0, 0, 0, ${Math.min(0.34, baseAlpha * 0.36)})`);
+  g.addColorStop(1, `rgba(0, 0, 0, ${Math.min(0.68, baseAlpha * 0.74)})`);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
   ctx.restore();
@@ -8615,7 +8629,7 @@ function drawOverlay() {
     return;
   }
   ctx.save();
-  drawDimOverlay(0.74);
+  drawDimOverlay(OVERLAY_READABILITY.scrim.standard);
   drawCard(318, 126, 644, 324);
   const title =
     state.mode === "start"
@@ -8650,7 +8664,7 @@ function drawResultOverlay() {
   const accent = victory ? "#fff0a6" : "#ff8f98";
   const buttons = getResultButtonRects();
   ctx.save();
-  drawDimOverlay(0.82);
+  drawDimOverlay(OVERLAY_READABILITY.scrim.result);
   drawCard(318, 62, 644, 536);
   ctx.textAlign = "left";
   label(victory ? t("victory") : t("defeat"), 382, 134, 48, "#f5f1e6");
@@ -8671,7 +8685,7 @@ function drawPauseOverlay() {
   }
   const m = UI_LAYOUT.pauseMenu;
   ctx.save();
-  drawDimOverlay(0.72);
+  drawDimOverlay(OVERLAY_READABILITY.scrim.pause);
   drawCard(m.x, m.y, m.w, m.h);
   label(t("pauseMenu"), m.x + 48, m.y + 76, 42, "#f5f1e6");
   wrapText(t("pauseMenuHint"), m.x + 50, m.y + 112, m.w - 100, 22, "rgba(238,244,252,0.62)", 15);
@@ -8687,7 +8701,7 @@ function drawPauseOverlay() {
 function drawSettingsOverlay(source = "pause") {
   const s = UI_LAYOUT.settings;
   ctx.save();
-  drawDimOverlay(source === "start" ? 0.84 : 0.78);
+  drawDimOverlay(source === "start" ? OVERLAY_READABILITY.scrim.settings : OVERLAY_READABILITY.scrim.standard);
   drawCard(s.x, s.y, s.w, s.h);
   label(t("settings"), s.x + 42, s.y + 58, 40, "#f5f1e6");
   const backText = source === "start" ? t("settingsBackMenu") : t("settingsBack");
@@ -8704,7 +8718,7 @@ function drawSettingsTabs(x, y) {
     const active = state.settingsTab === tab;
     const yy = y + i * 62;
     ctx.save();
-    ctx.fillStyle = active ? "rgba(183, 146, 255, 0.22)" : "rgba(8, 13, 20, 0.4)";
+    ctx.fillStyle = active ? "rgba(183, 146, 255, 0.3)" : OVERLAY_READABILITY.surface.fillSoft;
     roundedRect(x, yy, 164, 46, 12, true, false);
     ctx.strokeStyle = active ? "rgba(255, 240, 166, 0.54)" : "rgba(145, 232, 222, 0.14)";
     roundedRect(x, yy, 164, 46, 12, false, true);
@@ -8749,7 +8763,7 @@ function drawSettingsContent(x, y) {
 function drawSettingsFeedbackCard(x, y, w, h) {
   const buttonRect = getSettingsFeedbackButtonRect(x, y, w, h);
   ctx.save();
-  ctx.fillStyle = "rgba(8, 13, 20, 0.56)";
+  ctx.fillStyle = OVERLAY_READABILITY.surface.fill;
   roundedRect(x, y, w, h, 12, true, false);
   ctx.strokeStyle = "rgba(126, 231, 255, 0.22)";
   ctx.lineWidth = 1.5;
@@ -8763,7 +8777,7 @@ function drawSettingsFeedbackCard(x, y, w, h) {
 function drawSettingsFeedbackButton(rect, text, color) {
   const hovered = pointInRect(state.pointer.x, state.pointer.y, rect.x, rect.y, rect.w, rect.h);
   ctx.save();
-  ctx.fillStyle = hovered ? hexToRgba(color, 0.24) : "rgba(10, 16, 25, 0.66)";
+  ctx.fillStyle = hovered ? hexToRgba(color, 0.28) : OVERLAY_READABILITY.surface.fillStrong;
   roundedRect(rect.x, rect.y, rect.w, rect.h, 8, true, false);
   ctx.strokeStyle = hovered ? hexToRgba(color, 0.68) : hexToRgba(color, 0.34);
   ctx.lineWidth = hovered ? 2 : 1.4;
@@ -8779,7 +8793,7 @@ function drawSettingsFeedbackButton(rect, text, color) {
 function drawSettingsUtilityButton(rect, text) {
   const hovered = pointInRect(state.pointer.x, state.pointer.y, rect.x, rect.y, rect.w, rect.h);
   ctx.save();
-  ctx.fillStyle = hovered ? "rgba(126, 231, 255, 0.2)" : "rgba(10, 16, 25, 0.58)";
+  ctx.fillStyle = hovered ? "rgba(126, 231, 255, 0.24)" : OVERLAY_READABILITY.surface.fill;
   roundedRect(rect.x, rect.y, rect.w, rect.h, 8, true, false);
   ctx.strokeStyle = hovered ? "rgba(255, 240, 166, 0.52)" : "rgba(126, 231, 255, 0.26)";
   ctx.lineWidth = hovered ? 2 : 1.4;
@@ -8804,7 +8818,7 @@ function drawSettingsFeedbackNoa(x, y, w, h) {
 
 function drawPauseStat(x, y, name, value) {
   ctx.save();
-  ctx.fillStyle = "rgba(8, 13, 20, 0.52)";
+  ctx.fillStyle = OVERLAY_READABILITY.surface.fill;
   roundedRect(x, y - 22, 190, 28, 7, true, false);
   ctx.strokeStyle = "rgba(145, 232, 222, 0.16)";
   roundedRect(x, y - 22, 190, 28, 7, false, true);
@@ -8816,7 +8830,7 @@ function drawPauseStat(x, y, name, value) {
 function drawPauseDamageDetail(x, y, w, h) {
   const breakdown = state.lastDamageBreakdown;
   ctx.save();
-  ctx.fillStyle = "rgba(8, 13, 20, 0.52)";
+  ctx.fillStyle = OVERLAY_READABILITY.surface.fill;
   roundedRect(x, y, w, h, 8, true, false);
   ctx.strokeStyle = "rgba(255, 240, 166, 0.18)";
   roundedRect(x, y, w, h, 8, false, true);
@@ -8848,7 +8862,7 @@ function drawRunSummary() {
     const row = Math.floor(i / 2);
     const x = 384 + col * 258;
     const y = 278 + row * 32;
-    ctx.fillStyle = "rgba(8, 13, 20, 0.5)";
+    ctx.fillStyle = OVERLAY_READABILITY.surface.fillSoft;
     roundedRect(x, y - 20, 244, 24, 6, true, false);
     label(rows[i][0], x + 12, y - 3, 13, "rgba(238,244,252,0.54)");
     label(String(rows[i][1]), x + 118, y - 3, 15, "#f5f1e6");
@@ -8921,7 +8935,7 @@ function drawMetaUpgradeScreen() {
   const progress = state.metaProgress;
   ctx.save();
   drawMainMenuScene();
-  drawDimOverlay(0.58);
+  drawDimOverlay(OVERLAY_READABILITY.scrim.standard);
   drawCard(166, 68, 948, 586);
   drawCornerGlyph(640, 88, "#fff0a6");
   label(t("metaUpgradeTitle").toUpperCase(), 224, 136, 42, "#f5f1e6");
@@ -9065,8 +9079,7 @@ function purchaseMetaUpgrade(id) {
 
 function drawUpgradeOverlay() {
   ctx.save();
-  ctx.fillStyle = "rgba(4, 6, 10, 0.76)";
-  ctx.fillRect(0, 0, W, H);
+  drawDimOverlay(OVERLAY_READABILITY.scrim.upgrade);
   const draftLayout = getUpgradeDraftLayout();
   const panel = draftLayout.panel;
   drawCard(panel.x, panel.y, panel.w, panel.h);
@@ -9107,9 +9120,9 @@ function drawUpgradeOverlay() {
 
 function drawUpgradeBuildRail(groups, rect) {
   ctx.save();
-  ctx.fillStyle = "rgba(5, 9, 15, 0.58)";
+  ctx.fillStyle = OVERLAY_READABILITY.surface.fill;
   roundedRect(rect.x, rect.y, rect.w, rect.h, 10, true, false);
-  ctx.strokeStyle = "rgba(126, 231, 255, 0.22)";
+  ctx.strokeStyle = OVERLAY_READABILITY.surface.stroke;
   ctx.lineWidth = 1.2;
   roundedRect(rect.x, rect.y, rect.w, rect.h, 10, false, true);
   label(t("currentBuildList").toUpperCase(), rect.x + 14, rect.y + 22, 10, "rgba(143, 232, 220, 0.72)");
@@ -9363,8 +9376,7 @@ function drawCurrentBuildPanel() {
   const groups = getAcquiredRelicGroups();
   const stats = getCurrentBuildFamilyStats(groups);
   ctx.save();
-  ctx.fillStyle = "rgba(4, 6, 10, 0.62)";
-  ctx.fillRect(0, 0, W, H);
+  drawDimOverlay(OVERLAY_READABILITY.scrim.nested);
   drawCard(panel.x, panel.y, panel.w, panel.h);
   label(t("currentBuildTitle"), panel.x + 42, panel.y + 58, 32, "#f5f1e6");
   drawMenuButton(closeRect.x, closeRect.y, closeRect.w, closeRect.h, t("currentBuildClose"), "Esc");
@@ -9385,7 +9397,7 @@ function drawCurrentBuildPanel() {
 
 function drawCurrentBuildEmpty(x, y, w, h) {
   ctx.save();
-  ctx.fillStyle = "rgba(8, 13, 20, 0.58)";
+  ctx.fillStyle = OVERLAY_READABILITY.surface.fill;
   roundedRect(x, y, w, h, 10, true, false);
   ctx.strokeStyle = "rgba(126, 231, 255, 0.2)";
   roundedRect(x, y, w, h, 10, false, true);
@@ -9396,7 +9408,7 @@ function drawCurrentBuildEmpty(x, y, w, h) {
 function drawCurrentBuildSummary(stats, x, y, w, h) {
   const strongest = stats[0];
   ctx.save();
-  ctx.fillStyle = "rgba(8, 13, 20, 0.58)";
+  ctx.fillStyle = OVERLAY_READABILITY.surface.fill;
   roundedRect(x, y, w, h, 9, true, false);
   ctx.strokeStyle = strongest ? hexToRgba(strongest.color, 0.34) : "rgba(126, 231, 255, 0.18)";
   roundedRect(x, y, w, h, 9, false, true);
@@ -9433,7 +9445,7 @@ function drawCurrentBuildTraitDetails(traits, x, y, w, h) {
     const xx = x + index * (cardW + gap);
     const active = trait.stage > 0;
     ctx.save();
-    ctx.fillStyle = active ? hexToRgba(trait.color, 0.15) : "rgba(8, 13, 20, 0.48)";
+    ctx.fillStyle = active ? hexToRgba(trait.color, 0.22) : OVERLAY_READABILITY.surface.fillSoft;
     roundedRect(xx, y, cardW, h, 8, true, false);
     ctx.strokeStyle = active ? hexToRgba(trait.color, 0.42) : "rgba(238,244,252,0.12)";
     roundedRect(xx, y, cardW, h, 8, false, true);
@@ -9473,7 +9485,7 @@ function drawAcquiredRelicListRow(group, x, y, w, h) {
   ctx.save();
   const cardG = ctx.createLinearGradient(x, y, x + w, y + h);
   cardG.addColorStop(0, hexToRgba(rarity.color, 0.16));
-  cardG.addColorStop(1, "rgba(7, 11, 18, 0.62)");
+  cardG.addColorStop(1, OVERLAY_READABILITY.surface.fill);
   ctx.fillStyle = cardG;
   roundedRect(x, y, w, h, 7, true, false);
   ctx.strokeStyle = hexToRgba(rarity.border, 0.32);
@@ -9640,8 +9652,7 @@ function stackRuleLabel(rule = "stackable") {
 
 function drawMoveGuideOverlay() {
   ctx.save();
-  ctx.fillStyle = "rgba(4, 6, 10, 0.76)";
-  ctx.fillRect(0, 0, W, H);
+  drawDimOverlay(OVERLAY_READABILITY.scrim.standard);
   drawCard(176, 70, 928, 580);
   label(t("moveGuide"), 232, 136, 44, "#f5f1e6");
   label(t("moveGuideSubtitle"), 236, 174, 16, "#9fb4ff");
@@ -9661,7 +9672,7 @@ function drawMoveGuideOverlay() {
 
 function drawDamageRulesBox(x, y, w, h) {
   ctx.save();
-  ctx.fillStyle = "rgba(8, 13, 20, 0.62)";
+  ctx.fillStyle = OVERLAY_READABILITY.surface.fill;
   roundedRect(x, y, w, h, 8, true, false);
   ctx.strokeStyle = "rgba(255, 240, 166, 0.22)";
   roundedRect(x, y, w, h, 8, false, true);
@@ -9673,7 +9684,7 @@ function drawDamageRulesBox(x, y, w, h) {
 
 function drawGuideRow(x, y, title, text, color, width = 620) {
   ctx.save();
-  ctx.fillStyle = "rgba(8, 13, 20, 0.6)";
+  ctx.fillStyle = OVERLAY_READABILITY.surface.fill;
   roundedRect(x, y, width, 48, 8, true, false);
   ctx.fillStyle = hexToRgba(color, 0.28);
   roundedRect(x, y, 5, 48, 5, true, false);
@@ -9697,7 +9708,7 @@ function drawMenuButton(x, y, w, h, text, hint, variant = "secondary") {
     ctx.shadowColor = "rgba(255, 224, 162, 0.38)";
     ctx.shadowBlur = hovered ? 24 : 16;
   } else {
-    ctx.fillStyle = hovered ? "rgba(109, 232, 255, 0.2)" : "rgba(10, 16, 25, 0.62)";
+    ctx.fillStyle = hovered ? "rgba(109, 232, 255, 0.24)" : OVERLAY_READABILITY.surface.fill;
   }
   roundedRect(x, y, w, h, 8, true, false);
   ctx.shadowBlur = 0;
@@ -9997,7 +10008,7 @@ function drawHandlingSlider(labelText, helpText, key, x, y) {
   const shown = key === "arr" && value === 0 ? "0 ms" : `${Math.round(value)} ${spec.unit}`;
   const active = state.pointer.dragging === `tuning:${key}`;
   ctx.save();
-  ctx.fillStyle = active ? "rgba(183, 146, 255, 0.18)" : "rgba(8, 13, 20, 0.48)";
+  ctx.fillStyle = active ? "rgba(183, 146, 255, 0.26)" : OVERLAY_READABILITY.surface.fillSoft;
   roundedRect(x, y, 640, 70, 12, true, false);
   ctx.strokeStyle = active ? "rgba(255, 240, 166, 0.54)" : "rgba(126, 231, 255, 0.2)";
   ctx.lineWidth = active ? 2 : 1.4;
@@ -10054,7 +10065,7 @@ function drawKeyBindRow(x, y, text, value, binding, w = UI_LAYOUT.controlsGrid.r
   const keyX = x + w - keyW;
   const labelW = keyX - x - 22;
   ctx.save();
-  ctx.fillStyle = binding ? "rgba(241, 211, 107, 0.16)" : "rgba(8, 13, 20, 0.38)";
+  ctx.fillStyle = binding ? "rgba(241, 211, 107, 0.22)" : OVERLAY_READABILITY.surface.fillSoft;
   roundedRect(x, y, w, 42, 8, true, false);
   ctx.strokeStyle = binding ? "rgba(255, 244, 168, 0.44)" : "rgba(145, 232, 222, 0.14)";
   ctx.lineWidth = 1.4;

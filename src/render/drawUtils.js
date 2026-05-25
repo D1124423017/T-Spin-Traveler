@@ -1,3 +1,26 @@
+export const OVERLAY_READABILITY = Object.freeze({
+  scrim: {
+    standard: 0.86,
+    upgrade: 0.88,
+    nested: 0.9,
+    settings: 0.9,
+    pause: 0.86,
+    result: 0.88,
+  },
+  panel: {
+    top: "rgba(5, 9, 17, 0.9)",
+    middle: "rgba(3, 6, 12, 0.92)",
+    bottom: "rgba(17, 10, 29, 0.88)",
+    scanline: "rgba(126, 231, 255, 0.035)",
+  },
+  surface: {
+    fill: "rgba(6, 10, 18, 0.76)",
+    fillSoft: "rgba(7, 12, 21, 0.7)",
+    fillStrong: "rgba(3, 6, 12, 0.84)",
+    stroke: "rgba(126, 231, 255, 0.28)",
+  },
+});
+
 export function drawRoundedRect(ctx, x, y, w, h, r, fill, stroke) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
