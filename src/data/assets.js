@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-05-26-clean-enemy-portraits-upgrade-flow";
+export const ASSET_VERSION = "2026-05-26-alien-upgrade-cards-level-up";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -139,6 +139,7 @@ export const heroCombo1Sheet = registerImageAsset("hero-combo-1-sheet-16", "asse
 export const heroCombo2Sheet = registerImageAsset("hero-combo-2-sheet-16", "assets/images/clean/hero_combo_02_16_spritesheet_alpha.png");
 export const heroCombo3Sheet = registerImageAsset("hero-combo-3-sheet-16", "assets/images/clean/hero_combo_03_16_spritesheet_alpha.png");
 export const heroUltimateSheet = registerImageAsset("hero-ultimate-sheet", "assets/images/clean/hero_ultimate_16_spritesheet_alpha.png");
+export const noaLevelUpSheet = registerImageAsset("noa-level-up-sheet-16", "assets/effects/noa_level_up_16.png");
 export const enemyConceptSheetA = registerImageAsset("enemy-concept-sheet-a", "assets/images/clean/Enemy01_alpha.png");
 export const enemyConceptSheetB = registerImageAsset("enemy-concept-sheet-b", "assets/images/clean/Enemy02_alpha.png");
 
@@ -156,10 +157,10 @@ export const enemyBattlePortraits = {
 };
 
 export const upgradeCardFrames = {
-  common: registerImageAsset("upgrade-card-frame-common", "assets/ui/relic_cards/upgrade_card_common.png"),
-  rare: registerImageAsset("upgrade-card-frame-rare", "assets/ui/relic_cards/upgrade_card_rare.png"),
-  relic: registerImageAsset("upgrade-card-frame-relic", "assets/ui/relic_cards/upgrade_card_relic.png"),
-  legendary: registerImageAsset("upgrade-card-frame-legendary", "assets/ui/relic_cards/upgrade_card_legendary.png"),
+  common: registerImageAsset("upgrade-card-frame-common-alien", "assets/ui/relic_cards/upgrade_card_common_alien_frame.png"),
+  rare: registerImageAsset("upgrade-card-frame-rare-alien", "assets/ui/relic_cards/upgrade_card_rare_alien_frame.png"),
+  relic: registerImageAsset("upgrade-card-frame-relic-alien", "assets/ui/relic_cards/upgrade_card_relic_alien_frame.png"),
+  legendary: registerImageAsset("upgrade-card-frame-legendary-alien", "assets/ui/relic_cards/upgrade_card_legendary_alien_frame.png"),
 };
 
 export const upgradeTypeIcons = {

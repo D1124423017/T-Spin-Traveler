@@ -28,6 +28,7 @@ const runtimeAnimationSheets = [
   { path: "assets/images/clean/hero_combo_02_16_spritesheet_alpha.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/hero_combo_03_16_spritesheet_alpha.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/hero_ultimate_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/effects/noa_level_up_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/noa_menu_idle_cube_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/noa_menu_idle_meditate_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/enemy_attack_slime_16.png", columns: 4, rows: 4 },
@@ -99,10 +100,10 @@ const upgradeTypeIcons = [
 ];
 
 const upgradeCardFrames = [
-  "assets/ui/relic_cards/upgrade_card_common.png",
-  "assets/ui/relic_cards/upgrade_card_rare.png",
-  "assets/ui/relic_cards/upgrade_card_relic.png",
-  "assets/ui/relic_cards/upgrade_card_legendary.png",
+  "assets/ui/relic_cards/upgrade_card_common_alien_frame.png",
+  "assets/ui/relic_cards/upgrade_card_rare_alien_frame.png",
+  "assets/ui/relic_cards/upgrade_card_relic_alien_frame.png",
+  "assets/ui/relic_cards/upgrade_card_legendary_alien_frame.png",
 ];
 
 const enemyBattlePortraits = [
@@ -187,8 +188,12 @@ describe("image assets", () => {
 
   it("keeps upgrade card frames at the in-game card ratio with alpha", () => {
     for (const frame of upgradeCardFrames) {
-      expect(readPngInfo(frame)).toEqual({ width: 512, height: 768, colorType: 6 });
+      expect(readPngInfo(frame)).toEqual({ width: 1024, height: 1536, colorType: 6 });
     }
+  });
+
+  it("keeps the NOA level up effect at the requested 384 x 512 frame grid", () => {
+    expect(readPngInfo("assets/effects/noa_level_up_16.png")).toEqual({ width: 1536, height: 2048, colorType: 6 });
   });
 
   it("keeps enemy battle portraits as registered alpha PNGs", () => {

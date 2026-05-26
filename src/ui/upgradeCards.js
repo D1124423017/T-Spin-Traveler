@@ -1,3 +1,26 @@
+export const UPGRADE_CARD_ASSET_SIZE = Object.freeze({ w: 1024, h: 1536 });
+
+export const UPGRADE_CARD_SAFE_ZONES = Object.freeze({
+  badge: Object.freeze({ x: 90, y: 70, w: 300, h: 80 }),
+  skull: Object.freeze({ x: 362, y: 110, w: 300, h: 260 }),
+  icon: Object.freeze({ x: 382, y: 250, w: 260, h: 260 }),
+  title: Object.freeze({ x: 120, y: 545, w: 784, h: 130 }),
+  tags: Object.freeze({ x: 120, y: 700, w: 784, h: 90 }),
+  desc: Object.freeze({ x: 120, y: 820, w: 784, h: 390 }),
+  trait: Object.freeze({ x: 110, y: 1270, w: 804, h: 120 }),
+});
+
+function scaleCardZone(card, zone) {
+  const sx = card.w / UPGRADE_CARD_ASSET_SIZE.w;
+  const sy = card.h / UPGRADE_CARD_ASSET_SIZE.h;
+  return {
+    x: Math.round(card.x + zone.x * sx),
+    y: Math.round(card.y + zone.y * sy),
+    w: Math.round(zone.w * sx),
+    h: Math.round(zone.h * sy),
+  };
+}
+
 export function getUpgradeOverlayPanelRect() {
   return { x: 198, y: 118, w: 934, h: 548 };
 }
@@ -16,8 +39,8 @@ export function getUpgradeDraftLayout() {
 
 export function getUpgradeCardRect(index) {
   const panel = getUpgradeOverlayPanelRect();
-  const w = 226;
-  const h = 352;
+  const w = 232;
+  const h = 348;
   const gap = 44;
   const totalW = w * 3 + gap * 2;
   const startX = panel.x + (panel.w - totalW) / 2;
@@ -25,14 +48,20 @@ export function getUpgradeCardRect(index) {
 }
 
 export function getUpgradeCardContentLayout(card) {
+  const badge = scaleCardZone(card, UPGRADE_CARD_SAFE_ZONES.badge);
+  const icon = scaleCardZone(card, UPGRADE_CARD_SAFE_ZONES.icon);
+  const title = scaleCardZone(card, UPGRADE_CARD_SAFE_ZONES.title);
+  const tags = scaleCardZone(card, UPGRADE_CARD_SAFE_ZONES.tags);
+  const desc = scaleCardZone(card, UPGRADE_CARD_SAFE_ZONES.desc);
+  const trait = scaleCardZone(card, UPGRADE_CARD_SAFE_ZONES.trait);
   return {
-    badge: { x: card.x + 22, y: card.y + 18, w: 86, h: 22 },
-    icon: { x: card.x + card.w / 2, y: card.y + 78, size: 56 },
-    title: { x: card.x + 24, y: card.y + 124, w: card.w - 48, lineH: 17, size: 14, maxLines: 2 },
-    tags: { x: card.x + 24, y: card.y + 178, w: card.w - 48, maxTags: 2 },
-    divider: { x: card.x + 24, y: card.y + 212, w: card.w - 48 },
-    desc: { x: card.x + 24, y: card.y + 230, w: card.w - 48, lineH: 15, size: 11, maxLines: 4 },
-    trait: { x: card.x + 18, y: card.y + card.h - 54, w: card.w - 36, h: 38 },
+    badge,
+    icon: { x: icon.x + icon.w / 2, y: icon.y + icon.h / 2, size: Math.round(Math.min(icon.w, icon.h) * 0.86) },
+    title: { x: title.x, y: title.y + 8, w: title.w, lineH: 16, size: 14, maxLines: 2 },
+    tags: { x: tags.x, y: tags.y + 4, w: tags.w, maxTags: 2 },
+    divider: { x: desc.x, y: desc.y - 10, w: desc.w },
+    desc: { x: desc.x, y: desc.y + 8, w: desc.w, lineH: 14, size: 11, maxLines: 5 },
+    trait: { x: trait.x, y: trait.y, w: trait.w, h: Math.max(30, trait.h) },
   };
 }
 

@@ -23,6 +23,7 @@ import {
   musicLoopAssets,
   noaBattleIdleArt,
   noaFeedbackBowArt,
+  noaLevelUpSheet,
   noaMenuShowcaseArt,
   riftEnergyIcon,
   rosterArt,
@@ -263,6 +264,18 @@ const HERO_ANIMATIONS = {
     draw: { x: -352, y: -276, w: 704, h: 402 },
     noKeying: true,
   },
+};
+
+const HERO_LEVEL_UP_EFFECT = {
+  id: "levelUp",
+  image: noaLevelUpSheet,
+  columns: 4,
+  rows: 4,
+  frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+  frameMs: 52,
+  label: "NOA Level Up Rift",
+  draw: { x: -188, y: -314, w: 376, h: 502 },
+  noKeying: true,
 };
 
 const spriteFrameCache = new Map();
@@ -1036,6 +1049,7 @@ const state = {
   enemyHitIntensity: 0,
   playerHit: 0,
   heroAnimation: null,
+  heroLevelUpFx: null,
   enemyAnimation: null,
   placed: 0,
   combo: 0,
@@ -1420,6 +1434,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.enemyHitIntensity = 0;
   state.playerHit = 0;
   state.heroAnimation = null;
+  state.heroLevelUpFx = null;
   state.enemyAnimation = null;
   state.placed = 0;
   state.combo = 0;
@@ -3134,6 +3149,13 @@ function startHeroAttackAnimation(kind) {
   };
 }
 
+function startHeroLevelUpEffect() {
+  state.heroLevelUpFx = {
+    startedAt: performance.now(),
+    duration: getAnimationDuration(HERO_LEVEL_UP_EFFECT),
+  };
+}
+
 function startEnemyAttackAnimation(kind) {
   const config = ENEMY_ATTACK_ANIMATIONS[kind];
   if (!config) return;
@@ -3767,6 +3789,7 @@ function finishUpgradeSelection() {
   state.upgradeReady = state.upgradeMeter >= state.nextUpgradeAt;
   state.upgradeDraftReason = null;
   if (state.upgradeReady && triggerUpgradeIfReady(false, false, "progress")) return;
+  startHeroLevelUpEffect();
   if (!state.active) spawnPiece();
 }
 
@@ -5586,6 +5609,7 @@ function drawHeroSprite(hit) {
 
   drawHeroIdleBase();
   drawHeroIdleEnergy();
+  drawHeroLevelUpEffect();
   ctx.restore();
 }
 
@@ -5632,6 +5656,22 @@ function drawHeroAnimationFrame() {
   } else {
     drawFallbackHeroAttackAnimation(state.heroAnimation.kind, elapsed / state.heroAnimation.duration, frameIndex);
   }
+  return true;
+}
+
+function drawHeroLevelUpEffect() {
+  if (!state.heroLevelUpFx) return false;
+  const elapsed = performance.now() - state.heroLevelUpFx.startedAt;
+  if (elapsed >= state.heroLevelUpFx.duration) {
+    state.heroLevelUpFx = null;
+    return false;
+  }
+  if (!isImageReady(HERO_LEVEL_UP_EFFECT.image)) return true;
+  const draw = HERO_LEVEL_UP_EFFECT.draw;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  drawSpriteAnimationFrame(HERO_LEVEL_UP_EFFECT, elapsed, draw.x, draw.y, draw.w, draw.h);
+  ctx.restore();
   return true;
 }
 

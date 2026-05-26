@@ -26,6 +26,8 @@ import {
 import { getPiecePreviewLayout } from "../src/ui/piecePreview.js";
 import { createCanvasFont, shouldUseDisplayFont, tokenizeForWrap } from "../src/ui/textLayout.js";
 import {
+  UPGRADE_CARD_ASSET_SIZE,
+  UPGRADE_CARD_SAFE_ZONES,
   getCurrentBuildCloseRect,
   getCurrentBuildPanelRect,
   getUpgradeDraftLayout,
@@ -113,9 +115,11 @@ describe("HUD and card layout helpers", () => {
     expect(getUpgradeOverlayPanelRect()).toEqual({ x: 198, y: 118, w: 934, h: 548 });
     expect(draftLayout.buildRail).toBeUndefined();
     expect(draftLayout.buildButton).toEqual({ x: 942, y: 170, w: 150, h: 36 });
-    expect(getUpgradeCardRect(0)).toEqual({ x: 282, y: 260, w: 226, h: 352 });
-    expect(card).toEqual({ x: 822, y: 260, w: 226, h: 352 });
-    expect(cardLayout.trait).toEqual({ x: 840, y: 558, w: 190, h: 38 });
+    expect(UPGRADE_CARD_ASSET_SIZE).toEqual({ w: 1024, h: 1536 });
+    expect(UPGRADE_CARD_SAFE_ZONES.desc).toEqual({ x: 120, y: 820, w: 784, h: 390 });
+    expect(getUpgradeCardRect(0)).toEqual({ x: 273, y: 260, w: 232, h: 348 });
+    expect(card).toEqual({ x: 825, y: 260, w: 232, h: 348 });
+    expect(cardLayout.trait).toEqual({ x: 850, y: 548, w: 182, h: 30 });
     expect(cardLayout.desc.y + cardLayout.desc.lineH * cardLayout.desc.maxLines).toBeLessThanOrEqual(cardLayout.trait.y - 8);
     expect(cardLayout.icon.y + cardLayout.icon.size / 2).toBeLessThan(cardLayout.title.y);
     expect(getCurrentBuildPanelRect()).toEqual({ x: 190, y: 82, w: 900, h: 560 });
