@@ -18,9 +18,21 @@ AI assistance was used as a development support tool. The game concept, gameplay
 本專案由作者負責遊戲企劃、玩法設計、視覺方向、整體開發調整與最終決策，並使用 AI 工具與 Codex 輔助程式開發、架構整理、錯誤修正、測試補強、文件更新與專案優化。
 AI 在本專案中作為開發輔助工具使用，遊戲概念、玩法方向、視覺設計方向、測試回饋與最終修改決策皆由作者主導。
 ---
-## Author｜作者
+## Author & Contributors｜作者與協作者
+
+**Author｜作者**  
 身體健康
-Game planning, gameplay design, visual direction, testing, and overall development direction by the author.
-遊戲企劃、玩法設計、視覺方向、測試與整體開發方向由作者負責。
-AI tools and Codex were used as development assistance for programming, refactoring, debugging, testing, and documentation.
+
+Responsible for game planning, gameplay design, visual direction, testing, and overall development direction.  
+負責遊戲企劃、玩法設計、視覺方向、測試與整體開發方向。
+
+**Contributors｜協作者**  
+- 南瓜一顆
+- RonCYC
+
+Participated in the development process and assisted with discussion, testing, feedback, and project refinement.  
+參與遊戲製作過程，協助討論、測試、回饋與專案內容調整。
+
+**AI-Assisted Development｜AI 輔助開發**  
+AI tools and Codex were used as development assistance for programming, refactoring, debugging, testing, and documentation.  
 AI 工具與 Codex 用於輔助程式開發、架構整理、錯誤修正、測試補強與文件撰寫。
