@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-05-26-alien-upgrade-cards-level-up";
+export const ASSET_VERSION = "2026-05-26-generated-alien-relic-cards";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";

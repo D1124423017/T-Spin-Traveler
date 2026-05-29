@@ -49,7 +49,12 @@
 ## 5. Art Rules
 
 - Formal in-game art must use real production assets, not placeholders.
+- Formal in-game image assets must be produced with image generation / 生圖模式 by default.
+- Do not create formal in-game art with Canvas procedural drawing, SVG procedural drawing, PowerShell / GDI+, CSS / HTML image composition, geometric glow line art, placeholder blocks, Canva-style templates, or low-resolution temporary materials unless explicitly requested.
+- This applies to upgrade card frames, UI icons, upgrade icons, energy icons, enemies, characters, spritesheets, VFX, backgrounds, panel ornaments, and any other formal image asset shown to players.
+- Programmatic drawing is allowed for debug views, collision / hitbox / layout visualization, temporary test images, smoke-test placeholders, or when explicitly requested, but those outputs must not be committed as formal game art.
 - New images should be placed in a reasonable asset folder, registered in the asset registry, and update `ASSET_VERSION` when needed.
+- UI / character / enemy / spritesheet assets should be transparent PNGs when the game pipeline expects cutout art, with no black, white, or fake checkerboard background.
 - Maintain the established fantasy style: magic rifts, purple-blue neon, forest ruins, and translucent magical UI.
 - Do not shift the visual direction toward modern tech, cute cartoon, or low-cost mobile-game styling.
 
@@ -80,6 +85,7 @@ After completing a task, report:
 - Deleted files
 - Functional changes
 - Architecture impact
+- For art tasks: whether image generation was used, whether procedural drawing was avoided, generated filenames, resolution, transparency, asset folder, `src/data/assets.js` update, `ASSET_VERSION` update, and whether the asset is actually wired into the game.
 - Test results
 - GitHub commit hash
 - Whether push succeeded
