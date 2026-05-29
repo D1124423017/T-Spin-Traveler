@@ -21,6 +21,15 @@ function scaleCardZone(card, zone) {
   };
 }
 
+function expandRect(rect, xPad, yPad, minH = 0) {
+  return {
+    x: rect.x - xPad,
+    y: rect.y - yPad,
+    w: rect.w + xPad * 2,
+    h: Math.max(minH, rect.h + yPad * 2),
+  };
+}
+
 export function getUpgradeOverlayPanelRect() {
   return { x: 198, y: 118, w: 934, h: 548 };
 }
@@ -33,18 +42,18 @@ export function getUpgradeDraftLayout() {
     detail: { x: panel.x + 64, y: panel.y + 116, w: 590, lineH: 18, size: 14 },
     safeHint: { x: panel.x + 64, y: panel.y + 156, w: 360, size: 12 },
     buildButton: getCurrentBuildButtonRect(),
-    help: { x: panel.x + 64, y: panel.y + panel.h - 28, w: 470, size: 13 },
+    help: { x: panel.x + 64, y: panel.y + panel.h - 22, w: 470, size: 12 },
   };
 }
 
 export function getUpgradeCardRect(index) {
   const panel = getUpgradeOverlayPanelRect();
-  const w = 232;
-  const h = 348;
-  const gap = 44;
+  const w = 246;
+  const h = 369;
+  const gap = 34;
   const totalW = w * 3 + gap * 2;
   const startX = panel.x + (panel.w - totalW) / 2;
-  return { x: startX + index * (w + gap), y: panel.y + 142, w, h };
+  return { x: startX + index * (w + gap), y: panel.y + 128, w, h };
 }
 
 export function getUpgradeCardContentLayout(card) {
@@ -54,14 +63,24 @@ export function getUpgradeCardContentLayout(card) {
   const tags = scaleCardZone(card, UPGRADE_CARD_SAFE_ZONES.tags);
   const desc = scaleCardZone(card, UPGRADE_CARD_SAFE_ZONES.desc);
   const trait = scaleCardZone(card, UPGRADE_CARD_SAFE_ZONES.trait);
+  const titleText = { x: title.x, y: title.y + 8, w: title.w, lineH: 17, size: 14, maxLines: 2 };
+  const tagsText = { x: tags.x, y: tags.y + 4, w: tags.w, maxTags: 2 };
+  const descText = { x: desc.x, y: desc.y + 8, w: desc.w, lineH: 15, size: 11, maxLines: 5 };
+  const traitHint = { x: trait.x, y: trait.y, w: trait.w, h: Math.max(34, trait.h) };
   return {
-    badge,
-    icon: { x: icon.x + icon.w / 2, y: icon.y + icon.h / 2, size: Math.round(Math.min(icon.w, icon.h) * 0.86) },
-    title: { x: title.x, y: title.y + 8, w: title.w, lineH: 16, size: 14, maxLines: 2 },
-    tags: { x: tags.x, y: tags.y + 4, w: tags.w, maxTags: 2 },
+    badge: { ...badge, h: Math.max(22, badge.h) },
+    icon: { x: icon.x + icon.w / 2, y: icon.y + icon.h / 2, size: Math.round(Math.min(icon.w, icon.h) * 0.78) },
+    title: titleText,
+    tags: tagsText,
     divider: { x: desc.x, y: desc.y - 10, w: desc.w },
-    desc: { x: desc.x, y: desc.y + 8, w: desc.w, lineH: 14, size: 11, maxLines: 5 },
-    trait: { x: trait.x, y: trait.y, w: trait.w, h: Math.max(30, trait.h) },
+    desc: descText,
+    trait: traitHint,
+    panels: {
+      title: expandRect({ x: title.x, y: title.y + 3, w: title.w, h: title.h - 4 }, 8, 4, 44),
+      tags: expandRect({ x: tags.x, y: tags.y + 1, w: tags.w, h: tags.h - 3 }, 8, 3, 28),
+      desc: expandRect({ x: desc.x, y: desc.y + 4, w: desc.w, h: desc.h - 8 }, 8, 4, 96),
+      trait: expandRect(traitHint, 4, 3, 40),
+    },
   };
 }
 

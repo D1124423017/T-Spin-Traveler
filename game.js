@@ -9187,17 +9187,22 @@ function drawUpgradeOverlay() {
     ctx.save();
     if (dimmed) ctx.globalAlpha = 0.42;
     drawUpgradeCardFrame(card.x, card.y, card.w, card.h, rarity, hovered || state.upgradePickConfirm?.index === i);
+    drawUpgradeCardReadabilityPanels(layout, rarity, hovered);
     drawRarityBadge(layout.badge.x, layout.badge.y, layout.badge.w, layout.badge.h, rarityLabel(upgrade.rarity).toUpperCase(), rarity);
     drawUpgradeEmblem(upgrade, layout.icon.x, layout.icon.y, rarity, layout.icon.size);
-    drawLimitedWrapText(upgradeName(upgrade), layout.title.x, layout.title.y, layout.title.w, layout.title.lineH, rarity.titleColor, layout.title.size, layout.title.maxLines || 2, "900", true);
-    drawUpgradeTagPills(getUpgradeTags(upgrade), layout.tags.x, layout.tags.y, layout.tags.w, layout.tags.maxTags || 2, 0.84);
-    drawUpgradeDivider(layout.divider.x, layout.divider.y, layout.divider.w, rarity.color, hovered ? 0.58 : 0.34);
-    drawLimitedWrapText(upgradeShortText(upgrade), layout.desc.x, layout.desc.y, layout.desc.w, layout.desc.lineH, "rgba(238,244,252,0.78)", layout.desc.size, layout.desc.maxLines || 3, "700");
+    drawReadableUpgradeText(() => {
+      drawLimitedWrapText(upgradeName(upgrade), layout.title.x, layout.title.y, layout.title.w, layout.title.lineH, rarity.titleColor, layout.title.size, layout.title.maxLines || 2, "900", true);
+    }, 7);
+    drawUpgradeTagPills(getUpgradeTags(upgrade), layout.tags.x, layout.tags.y, layout.tags.w, layout.tags.maxTags || 2, 0.92);
+    drawUpgradeDivider(layout.divider.x, layout.divider.y, layout.divider.w, rarity.color, hovered ? 0.66 : 0.42);
+    drawReadableUpgradeText(() => {
+      drawLimitedWrapText(upgradeShortText(upgrade), layout.desc.x, layout.desc.y, layout.desc.w, layout.desc.lineH, "rgba(246,250,255,0.92)", layout.desc.size, layout.desc.maxLines || 3, "800");
+    }, 5);
     drawUpgradeTraitHint(upgrade, card);
     ctx.restore();
   }
   if (state.upgradePickConfirm) drawUpgradePickConfirmFx();
-  fitLabel(t("upgradeHelp"), draftLayout.help.x, draftLayout.help.y, draftLayout.help.w, draftLayout.help.size, "rgba(159, 180, 255, 0.72)", 10, "800");
+  fitLabel(t("upgradeHelp"), draftLayout.help.x, draftLayout.help.y, draftLayout.help.w, draftLayout.help.size, "rgba(184, 202, 255, 0.82)", 10, "800");
   if (state.currentBuildOpen) drawCurrentBuildPanel();
   ctx.restore();
 }
@@ -9265,6 +9270,39 @@ function drawUpgradeCardFrame(x, y, w, h, rarity, hovered = false) {
   ctx.fillStyle = hexToRgba(rarity.color, hovered ? 0.24 : 0.14);
   roundedRect(x + 10, y + h - 8, w - 20, 3, 2, true, false);
   drawUpgradeCornerMarks(x, y, w, h, rarity.color, hovered ? 0.58 : 0.34);
+  ctx.restore();
+}
+
+function drawUpgradeCardReadabilityPanels(layout, rarity, hovered = false) {
+  if (!layout?.panels) return;
+  const panels = [
+    { rect: layout.panels.title, fill: hovered ? 0.7 : 0.64, stroke: hovered ? 0.24 : 0.16, radius: 8 },
+    { rect: layout.panels.tags, fill: hovered ? 0.62 : 0.56, stroke: hovered ? 0.2 : 0.12, radius: 7 },
+    { rect: layout.panels.desc, fill: hovered ? 0.76 : 0.7, stroke: hovered ? 0.22 : 0.13, radius: 9 },
+    { rect: layout.panels.trait, fill: hovered ? 0.68 : 0.62, stroke: hovered ? 0.24 : 0.16, radius: 9 },
+  ];
+  ctx.save();
+  for (const panel of panels) {
+    if (!panel.rect) continue;
+    const { x, y, w, h } = panel.rect;
+    const fill = ctx.createLinearGradient(x, y, x, y + h);
+    fill.addColorStop(0, `rgba(2, 5, 12, ${panel.fill})`);
+    fill.addColorStop(1, `rgba(8, 12, 22, ${Math.min(0.82, panel.fill + 0.06)})`);
+    ctx.fillStyle = fill;
+    roundedRect(x, y, w, h, panel.radius, true, false);
+    ctx.strokeStyle = hexToRgba(rarity.border, panel.stroke);
+    ctx.lineWidth = 1;
+    roundedRect(x, y, w, h, panel.radius, false, true);
+  }
+  ctx.restore();
+}
+
+function drawReadableUpgradeText(draw, blur = 6) {
+  ctx.save();
+  ctx.shadowColor = "rgba(0, 0, 0, 0.92)";
+  ctx.shadowBlur = blur;
+  ctx.shadowOffsetY = 1;
+  draw();
   ctx.restore();
 }
 
@@ -9391,13 +9429,13 @@ function drawUpgradeTraitHint(upgrade, card) {
     ctx.shadowColor = hexToRgba(accent, isUpgrade || isOvercap ? 0.42 : 0.32);
     ctx.shadowBlur = isUpgrade || isOvercap ? 12 : 9;
   }
-  ctx.fillStyle = hexToRgba(accent, isUpgrade || isOvercap ? 0.2 : isActivate ? 0.17 : 0.1);
+  ctx.fillStyle = hexToRgba(accent, isUpgrade || isOvercap ? 0.26 : isActivate ? 0.22 : 0.16);
   roundedRect(x, y, w, h, 8, true, false);
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = hexToRgba(accent, isUpgrade || isOvercap ? 0.56 : isActivate ? 0.46 : 0.26);
+  ctx.strokeStyle = hexToRgba(accent, isUpgrade || isOvercap ? 0.64 : isActivate ? 0.54 : 0.34);
   ctx.lineWidth = isActivate || isUpgrade || isOvercap ? 1.4 : 1;
   roundedRect(x, y, w, h, 8, false, true);
-  ctx.fillStyle = hexToRgba(accent, isUpgrade || isOvercap ? 0.28 : isActivate ? 0.2 : 0.13);
+  ctx.fillStyle = hexToRgba(accent, isUpgrade || isOvercap ? 0.34 : isActivate ? 0.26 : 0.18);
   roundedRect(x + 9, y + 10, 15, 15, 5, true, false);
   fitLabel(isOvercap ? "+" : isUpgrade ? "↑" : isActivate ? "✦" : "+", x + 12, y + 22, 9, 11, accent, 8, "900", true);
   fitLabel(text, x + 32, y + 23, w - 44, 11, isActivate || isUpgrade || isOvercap ? "#f5f1e6" : hexToRgba(accent, 0.84), 8, "900", true);
@@ -9626,7 +9664,7 @@ function drawUpgradeTagPills(tags, x, y, maxWidth, maxTags = 2, alpha = 1) {
     if (xx + pillW > x + maxWidth) break;
     ctx.save();
     ctx.globalAlpha = alpha;
-    drawUpgradePill(xx, y, pillW, 18, text, meta.color, 0.1);
+    drawUpgradePill(xx, y, pillW, 18, text, meta.color, 0.16);
     ctx.restore();
     xx += pillW + 5;
   }
