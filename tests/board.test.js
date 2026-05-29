@@ -8,6 +8,15 @@ import {
 } from "../src/tetris/board.js";
 import { createPiece } from "../src/tetris/pieces.js";
 
+function pushGarbageRowsForTest(board, count, { cols = 10, hole = 9 } = {}) {
+  const nextBoard = board.map((row) => row.slice());
+  for (let i = 0; i < count; i += 1) {
+    nextBoard.shift();
+    nextBoard.push(Array.from({ length: cols }, (_, x) => (x === hole ? null : "G")));
+  }
+  return nextBoard;
+}
+
 describe("board line clear", () => {
   it("clears a full row and inserts an empty row at the top", () => {
     const board = makeBoard({ cols: 10, rows: 20, hidden: 2 });
@@ -68,5 +77,46 @@ describe("board game over checks", () => {
     expect(isBoardTopOut(board, { hidden: 2, ignoredCell: "U", spawnPiece: piece })).toBe(false);
     board[1][4] = "I";
     expect(isBoardTopOut(board, { hidden: 2, ignoredCell: "U", spawnPiece: piece })).toBe(true);
+  });
+
+  it("allows hidden row occupancy when the next piece can still spawn", () => {
+    const board = makeBoard({ cols: 10, rows: 20, hidden: 2 });
+    const piece = createPiece("O", { x: 4, y: 0 });
+    board[0][0] = "T";
+    board[1][9] = "T";
+
+    expect(canSpawnPiece(board, piece, { cols: 10, rows: 20, hidden: 2 })).toBe(true);
+    expect(isBoardTopOut(board, { cols: 10, rows: 20, hidden: 2, spawnPiece: piece })).toBe(false);
+  });
+
+  it("keeps true spawn footprint blocks as game over", () => {
+    const board = makeBoard({ cols: 10, rows: 20, hidden: 2 });
+    const piece = createPiece("O", { x: 4, y: 0 });
+    board[0][4] = "T";
+
+    expect(canSpawnPiece(board, piece, { cols: 10, rows: 20, hidden: 2 })).toBe(false);
+    expect(isBoardTopOut(board, { cols: 10, rows: 20, hidden: 2, spawnPiece: piece })).toBe(true);
+  });
+
+  it("does not top out only because garbage pushes out an occupied hidden row", () => {
+    const board = makeBoard({ cols: 10, rows: 20, hidden: 2 });
+    const piece = createPiece("O", { x: 4, y: 0 });
+    board[0][0] = "T";
+
+    const afterGarbage = pushGarbageRowsForTest(board, 1);
+
+    expect(canSpawnPiece(afterGarbage, piece, { cols: 10, rows: 20, hidden: 2 })).toBe(true);
+    expect(isBoardTopOut(afterGarbage, { cols: 10, rows: 20, hidden: 2, spawnPiece: piece })).toBe(false);
+  });
+
+  it("tops out after garbage only when the next spawn is actually blocked", () => {
+    const board = makeBoard({ cols: 10, rows: 20, hidden: 2 });
+    const piece = createPiece("O", { x: 4, y: 0 });
+    board[1][4] = "T";
+
+    const afterGarbage = pushGarbageRowsForTest(board, 1);
+
+    expect(canSpawnPiece(afterGarbage, piece, { cols: 10, rows: 20, hidden: 2 })).toBe(false);
+    expect(isBoardTopOut(afterGarbage, { cols: 10, rows: 20, hidden: 2, spawnPiece: piece })).toBe(true);
   });
 });

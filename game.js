@@ -65,7 +65,6 @@ import {
   clearFullLines,
   canSpawnPiece,
   collides as collidesOnBoard,
-  isBoardTopOut as isBoardTopOutCore,
   isBoardEmpty as isBoardEmptyCore,
   isSpawnBlocked as isSpawnBlockedCore,
   makeBoard as makeEmptyBoard,
@@ -1226,20 +1225,36 @@ function getBoardCollisionOptions() {
   return { cols: COLS, rows: ROWS, hidden: HIDDEN, ignoredCell: ULTIMATE_WALL };
 }
 
-function isBoardTopOut() {
-  const nextType = state.queue[0];
-  return nextType ? isBoardTopOutCore(state.board, { ...getBoardCollisionOptions(), spawnPiece: newPiece(nextType) }) : false;
-}
-
 function isPieceSpawnBlocked(piece) {
   return piece ? isSpawnBlockedCore(state.board, piece, getBoardCollisionOptions()) : false;
 }
 
-function triggerDefeatIfBoardTopOut(messageKey = "messageLockAbove") {
-  if (!isBoardTopOut()) return false;
-  const previousMode = state.mode;
-  triggerDefeat(messageKey);
-  return previousMode !== "defeat" && state.mode === "defeat";
+function getActivePieceDebugInfo() {
+  if (!state.active) return null;
+  return {
+    type: state.active.type,
+    x: state.active.x,
+    y: state.active.y,
+  };
+}
+
+function getHiddenRowsDebugInfo() {
+  const hiddenRows = state.board.slice(0, HIDDEN);
+  return {
+    occupied: hiddenRows.some(rowHasPlayableCells),
+    rows: hiddenRows.map((row) => row.some(rowHasPlayableCells)),
+  };
+}
+
+function warnDefeatSource(source, messageKey) {
+  console.warn("[T-Spin Traveler] Game Over", {
+    source,
+    messageKey,
+    mode: state.mode,
+    playerHp: state.playerHp,
+    active: getActivePieceDebugInfo(),
+    hiddenRows: getHiddenRowsDebugInfo(),
+  });
 }
 
 function makeStats() {
@@ -1380,12 +1395,13 @@ function spawnPiece() {
   state.lastRotationKind = null;
   state.lastKickIndex = null;
   if (!canSpawnPiece(state.board, state.active, getBoardCollisionOptions())) {
-    triggerDefeat("messageSpawnTop");
+    triggerDefeat("messageSpawnTop", "spawnPiece.spawnBlocked");
   }
 }
 
-function triggerDefeat(messageKey) {
+function triggerDefeat(messageKey, source = "triggerDefeat") {
   if (!shouldTriggerDefeat(state)) return;
+  warnDefeatSource(source, messageKey);
   state.mode = "defeat";
   setMessage(messageKey);
   state.active = null;
@@ -1732,7 +1748,7 @@ function holdPiece() {
     state.hold = current;
     state.active = newPiece(next);
     if (isPieceSpawnBlocked(state.active)) {
-      triggerDefeat("messageHoldBlocked");
+      triggerDefeat("messageHoldBlocked", "holdPiece.spawnBlocked");
       return;
     }
   }
@@ -1767,7 +1783,7 @@ function lockPiece(fromHardDrop = false) {
     }
   }
   if (lockedOutsideBoard) {
-    triggerDefeat("messageLockAbove");
+    triggerDefeat("messageLockAbove", "lockPiece.lockedOutsideBoard");
     return;
   }
 
@@ -1775,7 +1791,7 @@ function lockPiece(fromHardDrop = false) {
   const cleared = clearLines();
   recordRunClearStats(cleared, spinType);
   applyBattle(cleared, piece.type, spinType);
-  if (triggerDefeatIfBoardTopOut("messageSpawnTop")) return;
+  if (state.mode !== "playing") return;
   state.placed += 1;
   state.queueHex = Math.max(0, state.queueHex - 1);
   state.lastMoveWasRotate = false;
@@ -2245,7 +2261,7 @@ function applyEnemyHit(hit) {
     });
   }
   if (isPlayerHpDefeated(state.playerHp)) {
-    triggerDefeat("messagePlayerDefeat");
+    triggerDefeat("messagePlayerDefeat", "applyEnemyHit.playerHpDefeated");
     return;
   }
   let enemyDefeatedByReflect = false;
@@ -3061,7 +3077,6 @@ function endUltimateMode() {
     color: "#d7c2ff",
     life: 1100,
   });
-  if (triggerDefeatIfBoardTopOut("messageSpawnTop")) return;
   if (state.mode === "playing") spawnPiece();
 }
 
@@ -3920,11 +3935,7 @@ function configureEnemyForWave() {
 
 function addGarbageLines(count) {
   for (let i = 0; i < count; i += 1) {
-    const removed = state.board.shift();
-    if (removed && rowHasPlayableCells(removed)) {
-      triggerDefeat("messageGarbageTop");
-      return;
-    }
+    state.board.shift();
     const holeMin = state.ultimateActive ? ULTIMATE_WELL_START : 0;
     const holeMax = state.ultimateActive ? ULTIMATE_WELL_START + ULTIMATE_WELL_WIDTH - 1 : COLS - 1;
     const hole = chooseGarbageHole(holeMin, holeMax);
@@ -3937,11 +3948,6 @@ function addGarbageLines(count) {
     spawnGarbageParticles(hole);
   }
   applyUltimateWalls();
-  if (state.active) {
-    if (isPieceSpawnBlocked(state.active)) triggerDefeat("messageGarbageTop");
-    return;
-  }
-  triggerDefeatIfBoardTopOut("messageGarbageTop");
 }
 
 function chooseGarbageHole(holeMin, holeMax) {
