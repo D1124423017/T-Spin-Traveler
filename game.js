@@ -64,7 +64,9 @@ import {
 import {
   clearFullLines,
   canSpawnPiece,
+  getFourWideWellRange,
   collides as collidesOnBoard,
+  getVisiblePieceCells,
   isBoardEmpty as isBoardEmptyCore,
   isSpawnBlocked as isSpawnBlockedCore,
   makeBoard as makeEmptyBoard,
@@ -1197,7 +1199,12 @@ function makeBoard() {
 }
 
 function isUltimateWellColumn(x) {
-  return x >= ULTIMATE_WELL_START && x < ULTIMATE_WELL_START + ULTIMATE_WELL_WIDTH;
+  const well = getUltimateWellRange();
+  return x >= well.start && x < well.end;
+}
+
+function getUltimateWellRange() {
+  return getFourWideWellRange({ x: ULTIMATE_WELL_START, width: ULTIMATE_WELL_WIDTH, cols: COLS });
 }
 
 function makeUltimateRow(fill = null) {
@@ -1222,7 +1229,7 @@ function rowHasPlayableCells(row) {
 }
 
 function getBoardCollisionOptions() {
-  return { cols: COLS, rows: ROWS, hidden: HIDDEN, ignoredCell: ULTIMATE_WALL };
+  return { cols: COLS, rows: ROWS, hidden: HIDDEN };
 }
 
 function isPieceSpawnBlocked(piece) {
@@ -1374,8 +1381,9 @@ function refillQueue() {
 
 function newPiece(type) {
   const shape = cloneMatrix(PIECES[type]);
-  const spawnLeft = state.ultimateActive ? ULTIMATE_WELL_START : 0;
-  const spawnWidth = state.ultimateActive ? ULTIMATE_WELL_WIDTH : COLS;
+  const well = getUltimateWellRange();
+  const spawnLeft = state.ultimateActive ? well.start : 0;
+  const spawnWidth = state.ultimateActive ? well.width : COLS;
   return {
     type,
     shape,
@@ -1858,8 +1866,9 @@ function spawnLineParticles(lines) {
   for (const line of lines) {
     const py = BOARD_Y + (line - HIDDEN) * TILE + TILE / 2;
     if (py < BOARD_Y) continue;
-    const colStart = state.ultimateActive ? ULTIMATE_WELL_START : 0;
-    const colEnd = state.ultimateActive ? ULTIMATE_WELL_START + ULTIMATE_WELL_WIDTH : COLS;
+    const well = getUltimateWellRange();
+    const colStart = state.ultimateActive ? well.start : 0;
+    const colEnd = state.ultimateActive ? well.end : COLS;
     for (let x = colStart; x < colEnd; x += 1) {
       state.particles.push({
         x: BOARD_X + x * TILE + TILE / 2,
@@ -1876,8 +1885,9 @@ function spawnLineParticles(lines) {
 
 function spawnClearBurst(lines, combo) {
   const intensity = Math.min(1.35, 0.42 + lines * 0.16 + combo * 0.035);
+  const well = getUltimateWellRange();
   const centerX = state.ultimateActive
-    ? BOARD_X + (ULTIMATE_WELL_START + ULTIMATE_WELL_WIDTH / 2) * TILE
+    ? BOARD_X + (well.start + well.width / 2) * TILE
     : BOARD_X + (COLS * TILE) / 2;
   state.bursts.push({
     x: centerX,
@@ -3936,8 +3946,9 @@ function configureEnemyForWave() {
 function addGarbageLines(count) {
   for (let i = 0; i < count; i += 1) {
     state.board.shift();
-    const holeMin = state.ultimateActive ? ULTIMATE_WELL_START : 0;
-    const holeMax = state.ultimateActive ? ULTIMATE_WELL_START + ULTIMATE_WELL_WIDTH - 1 : COLS - 1;
+    const well = getUltimateWellRange();
+    const holeMin = state.ultimateActive ? well.start : 0;
+    const holeMax = state.ultimateActive ? well.end - 1 : COLS - 1;
     const hole = chooseGarbageHole(holeMin, holeMax);
     state.lastGarbageHole = hole;
     const row = Array.from({ length: COLS }, (_, x) => {
@@ -6903,8 +6914,9 @@ function drawBoard() {
     const y = (flash.y - HIDDEN) * TILE;
     if (y < 0) continue;
     ctx.fillStyle = `rgba(245, 236, 190, ${Math.min(0.32, flash.life / 620)})`;
-    const flashX = state.ultimateActive ? ULTIMATE_WELL_START * TILE : 0;
-    const flashW = state.ultimateActive ? ULTIMATE_WELL_WIDTH * TILE : COLS * TILE;
+    const well = getUltimateWellRange();
+    const flashX = state.ultimateActive ? well.start * TILE : 0;
+    const flashW = state.ultimateActive ? well.width * TILE : COLS * TILE;
     ctx.fillRect(flashX, y, flashW, TILE);
   }
   ctx.restore();
@@ -6913,11 +6925,15 @@ function drawBoard() {
 
 function drawUltimateWellMask() {
   if (!state.ultimateActive) return;
-  const wellX = ULTIMATE_WELL_START * TILE;
-  const wellW = ULTIMATE_WELL_WIDTH * TILE;
+  const well = getUltimateWellRange();
+  const wellX = well.start * TILE;
+  const wellW = well.width * TILE;
   const leftW = wellX;
   const rightX = wellX + wellW;
   ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, COLS * TILE, ROWS * TILE);
+  ctx.clip();
   ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
   ctx.fillRect(0, 0, leftW, ROWS * TILE);
   ctx.fillRect(rightX, 0, COLS * TILE - rightX, ROWS * TILE);
@@ -7019,14 +7035,17 @@ function getGhost() {
 }
 
 function drawPiece(piece, ghost) {
-  for (let r = 0; r < piece.shape.length; r += 1) {
-    for (let c = 0; c < piece.shape[r].length; c += 1) {
-      if (!piece.shape[r][c]) continue;
-      const y = piece.y + r - HIDDEN;
-      const x = piece.x + c;
-      if (y < 0) continue;
-      drawBlock(x * TILE, y * TILE, ghost ? "rgba(228,235,245,0.16)" : COLORS[piece.type], ghost);
-    }
+  const constrainToUltimateWell = Boolean(state.ultimateActive);
+  const well = getUltimateWellRange();
+  const cells = getVisiblePieceCells(piece, {
+    cols: COLS,
+    rows: ROWS,
+    hidden: HIDDEN,
+    minCol: constrainToUltimateWell ? well.start : 0,
+    maxCol: constrainToUltimateWell ? well.end : COLS,
+  });
+  for (const cell of cells) {
+    drawBlock(cell.x * TILE, cell.y * TILE, ghost ? "rgba(228,235,245,0.16)" : COLORS[piece.type], ghost);
   }
 }
 

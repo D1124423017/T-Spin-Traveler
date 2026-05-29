@@ -35,6 +35,42 @@ export function canSpawnPiece(board, piece, options = {}) {
   return !isSpawnBlocked(board, piece, options);
 }
 
+export function clampFourWideWellX(x, width = 4, cols = DEFAULT_COLS) {
+  const safeCols = Math.max(1, Math.floor(Number.isFinite(cols) ? cols : DEFAULT_COLS));
+  const safeWidth = Math.max(1, Math.min(safeCols, Math.floor(Number.isFinite(width) ? width : 4)));
+  const maxStart = Math.max(0, safeCols - safeWidth);
+  const requested = Math.floor(Number.isFinite(x) ? x : 0);
+  return Math.max(0, Math.min(maxStart, requested));
+}
+
+export function getFourWideWellRange({ x = 0, width = 4, cols = DEFAULT_COLS } = {}) {
+  const safeCols = Math.max(1, Math.floor(Number.isFinite(cols) ? cols : DEFAULT_COLS));
+  const safeWidth = Math.max(1, Math.min(safeCols, Math.floor(Number.isFinite(width) ? width : 4)));
+  const start = clampFourWideWellX(x, safeWidth, safeCols);
+  return { x: start, start, end: start + safeWidth, width: safeWidth };
+}
+
+export function getVisiblePieceCells(piece, options = {}) {
+  if (!piece || !Array.isArray(piece.shape)) return [];
+  const cols = options.cols ?? DEFAULT_COLS;
+  const rows = options.rows ?? DEFAULT_ROWS;
+  const hidden = options.hidden ?? DEFAULT_HIDDEN;
+  const minCol = Math.max(0, options.minCol ?? 0);
+  const maxCol = Math.max(minCol, Math.min(cols, options.maxCol ?? cols));
+  const cells = [];
+  for (let r = 0; r < piece.shape.length; r += 1) {
+    for (let c = 0; c < piece.shape[r].length; c += 1) {
+      if (!piece.shape[r][c]) continue;
+      const x = piece.x + c;
+      const boardY = piece.y + r;
+      if (x < minCol || x >= maxCol) continue;
+      if (boardY < hidden || boardY >= rows + hidden) continue;
+      cells.push({ x, y: boardY - hidden, boardY, row: r, col: c });
+    }
+  }
+  return cells;
+}
+
 export function isBoardTopOut(board, options = {}) {
   if (options.spawnPiece) return isSpawnBlocked(board, options.spawnPiece, options);
   if (Array.isArray(options.spawnPieces) && options.spawnPieces.length > 0) {
