@@ -150,6 +150,9 @@ import {
   getSettingsContentOrigin as getSettingsContentOriginForLayout,
   getSettingsFeedbackCardRect as getSettingsFeedbackCardRectForLayout,
   getSettingsFeedbackButtonRect,
+  getUltimateCountdownSeconds,
+  getUltimateTimerRatio,
+  shouldShowUltimateCountdownWarning,
 } from "./src/ui/hudLayout.js";
 import { getPiecePreviewLayout } from "./src/ui/piecePreview.js";
 import { buildDamageEquation } from "./src/ui/combatReadout.js";
@@ -6920,6 +6923,7 @@ function drawBoard() {
     ctx.fillRect(flashX, y, flashW, TILE);
   }
   ctx.restore();
+  drawUltimateTimerUi();
   drawIncomingGarbageMeter();
 }
 
@@ -6951,16 +6955,24 @@ function drawUltimateWellMask() {
   ctx.stroke();
   ctx.fillStyle = "rgba(255, 190, 95, 0.12)";
   ctx.fillRect(wellX, 0, wellW, ROWS * TILE);
-  drawUltimateCountdownBar();
   ctx.restore();
 }
 
+function drawUltimateTimerUi() {
+  if (!state.ultimateActive) return;
+  ctx.save();
+  ctx.translate(BOARD_X, BOARD_Y);
+  drawUltimateCountdownBar();
+  ctx.restore();
+  drawUltimateCountdownWarning();
+}
+
 function drawUltimateCountdownBar() {
+  if (!state.ultimateActive) return;
   const meter = UI_LAYOUT.ultimateMeter;
-  const total = Math.max(1, state.ultimateTimerMax || ULTIMATE_DURATION_MS);
   const remaining = Math.max(0, state.ultimateTimer);
-  const ratio = clamp(remaining / total, 0, 1);
-  const secondsText = `${Math.max(0, Math.ceil(remaining / 1000))}s`;
+  const ratio = getUltimateTimerRatio(state.ultimateActive, remaining, state.ultimateTimerMax || ULTIMATE_DURATION_MS);
+  const secondsText = `${getUltimateCountdownSeconds(remaining)}s`;
   const danger = remaining <= 5000;
   const barX = meter.x + 90;
   const barY = meter.y + 8;
@@ -6985,20 +6997,66 @@ function drawUltimateCountdownBar() {
 
   ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
   roundedRect(barX, barY, barW, barH, 8, true, false);
-  const fillW = Math.max(4, barW * ratio);
-  const g = ctx.createLinearGradient(barX, 0, barX + barW, 0);
-  g.addColorStop(0, danger ? "#ff7782" : "#d7c2ff");
-  g.addColorStop(0.58, danger ? "#ffbe5f" : "#ffbe5f");
-  g.addColorStop(1, "#8fe8dc");
-  ctx.fillStyle = g;
-  roundedRect(barX, barY, fillW, barH, 8, true, false);
-  ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
-  ctx.fillRect(barX + 2, barY + 2, Math.max(0, fillW - 4), 1);
+  const fillW = Math.max(0, barW * ratio);
+  if (fillW > 0) {
+    const g = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+    g.addColorStop(0, danger ? "#ff7782" : "#d7c2ff");
+    g.addColorStop(0.58, danger ? "#ffbe5f" : "#ffbe5f");
+    g.addColorStop(1, "#8fe8dc");
+    ctx.fillStyle = g;
+    roundedRect(barX, barY, Math.max(4, fillW), barH, 8, true, false);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
+    ctx.fillRect(barX + 2, barY + 2, Math.max(0, fillW - 4), 1);
+  }
 
   ctx.font = canvasFont("900", 13, secondsText, true);
   ctx.textAlign = "right";
   ctx.fillStyle = danger ? "#ffb7bd" : "#f5f1e6";
   ctx.fillText(secondsText, meter.x + meter.w - 12, meter.y + 18);
+  ctx.restore();
+}
+
+function drawUltimateCountdownWarning() {
+  if (!shouldShowUltimateCountdownWarning(state.ultimateActive, state.ultimateTimer)) return;
+  const seconds = getUltimateCountdownSeconds(state.ultimateTimer);
+  const t = performance.now();
+  const urgent = seconds <= 1;
+  const pulse = 0.5 + Math.sin(t * (urgent ? 0.026 : 0.018)) * 0.5;
+  const cx = BOARD_X + (COLS * TILE) / 2;
+  const cy = BOARD_Y + TILE * 3.25;
+  const badgeW = urgent ? 112 : 96;
+  const badgeH = urgent ? 82 : 70;
+  const alpha = 0.78 + pulse * 0.18;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(cx, cy);
+  ctx.shadowColor = urgent ? "rgba(255, 119, 130, 0.75)" : "rgba(255, 190, 95, 0.62)";
+  ctx.shadowBlur = urgent ? 26 : 20;
+  const g = ctx.createLinearGradient(0, -badgeH / 2, 0, badgeH / 2);
+  g.addColorStop(0, urgent ? "rgba(70, 10, 26, 0.78)" : "rgba(30, 20, 52, 0.72)");
+  g.addColorStop(0.55, "rgba(8, 12, 24, 0.82)");
+  g.addColorStop(1, "rgba(4, 8, 14, 0.72)");
+  ctx.fillStyle = g;
+  roundedRect(-badgeW / 2, -badgeH / 2, badgeW, badgeH, 16, true, false);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = urgent ? `rgba(255, 119, 130, ${0.52 + pulse * 0.28})` : `rgba(255, 190, 95, ${0.48 + pulse * 0.22})`;
+  ctx.lineWidth = urgent ? 2.6 : 2;
+  roundedRect(-badgeW / 2, -badgeH / 2, badgeW, badgeH, 16, false, true);
+  ctx.strokeStyle = `rgba(126, 247, 255, ${0.16 + pulse * 0.18})`;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(-badgeW / 2 + 18, -badgeH / 2 + 12);
+  ctx.lineTo(badgeW / 2 - 18, -badgeH / 2 + 12);
+  ctx.moveTo(-badgeW / 2 + 18, badgeH / 2 - 12);
+  ctx.lineTo(badgeW / 2 - 18, badgeH / 2 - 12);
+  ctx.stroke();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = canvasFont("900", urgent ? 50 : 44, String(seconds), true);
+  ctx.fillStyle = urgent ? "#ffdde0" : "#fff0a6";
+  ctx.shadowColor = urgent ? "#ff7782" : "#ffbe5f";
+  ctx.shadowBlur = urgent ? 18 : 14;
+  ctx.fillText(String(seconds), 0, 3);
   ctx.restore();
 }
 

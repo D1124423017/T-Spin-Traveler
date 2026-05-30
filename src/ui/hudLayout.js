@@ -1,3 +1,8 @@
+function clampRatio(value) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
+}
+
 export function createHudLayout({ boardX, boardY, cols, rows, tile }) {
   return {
     panelPadding: 24,
@@ -39,6 +44,24 @@ export function createHudLayout({ boardX, boardY, cols, rows, tile }) {
       "screenMute",
     ],
   };
+}
+
+export function getUltimateTimerRatio(active, timer, maxTimer) {
+  if (!active) return 0;
+  const total = Math.max(1, Number.isFinite(maxTimer) ? maxTimer : 0);
+  const remaining = Math.max(0, Number.isFinite(timer) ? timer : 0);
+  return clampRatio(remaining / total);
+}
+
+export function getUltimateCountdownSeconds(timer) {
+  const remaining = Math.max(0, Number.isFinite(timer) ? timer : 0);
+  return Math.ceil(remaining / 1000);
+}
+
+export function shouldShowUltimateCountdownWarning(active, timer, warningMs = 3000) {
+  const remaining = Math.max(0, Number.isFinite(timer) ? timer : 0);
+  const threshold = Math.max(0, Number.isFinite(warningMs) ? warningMs : 3000);
+  return Boolean(active && remaining > 0 && remaining <= threshold);
 }
 
 export function getMainMenuButtonRects(menuLayout) {

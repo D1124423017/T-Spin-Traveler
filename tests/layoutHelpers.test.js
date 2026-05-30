@@ -21,7 +21,10 @@ import {
   getSettingsContentOrigin,
   getSettingsFeedbackButtonRect,
   getSettingsFeedbackCardRect,
+  getUltimateCountdownSeconds,
+  getUltimateTimerRatio,
   getHandlingResetButtonRect,
+  shouldShowUltimateCountdownWarning,
 } from "../src/ui/hudLayout.js";
 import { getPiecePreviewLayout } from "../src/ui/piecePreview.js";
 import { createCanvasFont, shouldUseDisplayFont, tokenizeForWrap } from "../src/ui/textLayout.js";
@@ -91,6 +94,20 @@ describe("HUD and card layout helpers", () => {
     expect(layout.boardFrame).toEqual({ x: 458, y: 54, w: 326, h: 616 });
     expect(layout.ultimateMeter).toEqual({ x: 0, y: 590, w: 290, h: 30 });
     expect(getMainMenuButtonRects(layout.menu).settings).toEqual({ x: 838, y: 494, w: 322, h: 44 });
+  });
+
+  it("calculates ultimate timer display state", () => {
+    expect(getUltimateTimerRatio(false, 15000, 15000)).toBe(0);
+    expect(getUltimateTimerRatio(true, 15000, 15000)).toBe(1);
+    expect(getUltimateTimerRatio(true, 7500, 15000)).toBe(0.5);
+    expect(getUltimateTimerRatio(true, 0, 15000)).toBe(0);
+    expect(getUltimateCountdownSeconds(2999)).toBe(3);
+    expect(getUltimateCountdownSeconds(1)).toBe(1);
+    expect(getUltimateCountdownSeconds(0)).toBe(0);
+    expect(shouldShowUltimateCountdownWarning(true, 3001)).toBe(false);
+    expect(shouldShowUltimateCountdownWarning(true, 3000)).toBe(true);
+    expect(shouldShowUltimateCountdownWarning(true, 1)).toBe(true);
+    expect(shouldShowUltimateCountdownWarning(false, 2000)).toBe(false);
   });
 
   it("calculates overlay, result, settings, and meta rects", () => {
