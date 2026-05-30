@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-05-26-generated-alien-relic-cards";
+export const ASSET_VERSION = "2026-05-30-egyptian-rift-slice";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -125,6 +125,7 @@ export const stageForestGateNightBg = registerImageAsset("stage-forest-gate-nigh
 export const stageArcaneRuinsMidBg = registerImageAsset("stage-arcane-ruins-mid", "assets/backgrounds/stage_arcane_ruins_mid.png");
 export const stageCorruptedForestLateBg = registerImageAsset("stage-corrupted-forest-late", "assets/backgrounds/stage_corrupted_forest_late.png");
 export const stageRiftBossBg = registerImageAsset("stage-rift-boss", "assets/backgrounds/stage_rift_boss.png");
+export const stageEgyptStarTombRiftBg = registerImageAsset("stage-egypt-star-tomb-rift", "assets/backgrounds/egypt_star_tomb_rift_battle_bg.png");
 export const slimeArt = registerImageAsset("forest-slime", "assets/forest-slime.png");
 export const rosterArt = registerImageAsset("character-roster", "assets/character-roster-v4-alpha.png");
 export const heroIdleArt = registerImageAsset("hero-idle-concept", "assets/images/clean/ET_Character_alpha.png");
@@ -154,6 +155,9 @@ export const enemyBattlePortraits = {
   wisp: registerImageAsset("enemy-battle-wisp-left", "assets/enemies/battle/wisp_battle_clean_left.png"),
   sentinel: registerImageAsset("enemy-battle-sentinel-left", "assets/enemies/battle/sentinel_battle_clean_left.png"),
   king: registerImageAsset("enemy-battle-king-left", "assets/enemies/battle/king_battle_clean_left.png"),
+  egyptScarabScout: registerImageAsset("enemy-battle-egypt-scarab-scout-left", "assets/enemies/battle/enemy_scarab_scout_battle.png"),
+  sandTombMummyPriest: registerImageAsset("enemy-battle-sand-tomb-mummy-priest-left", "assets/enemies/battle/enemy_sand_tomb_mummy_priest_battle.png"),
+  anubisRiftGuard: registerImageAsset("enemy-battle-anubis-rift-guard-left", "assets/enemies/battle/enemy_anubis_rift_guard_battle.png"),
 };
 
 export const upgradeCardFrames = {
@@ -228,9 +232,9 @@ export const musicLoopAssets = {
 
 export const BACKGROUND_STAGES = [
   {
-    id: "forest-ruins-day",
+    id: "egypt-star-tomb-rift",
     startWave: 1,
-    image: stageForestRuinsDayBg,
+    image: stageEgyptStarTombRiftBg,
     fallback: forestBg,
     dim: 0.22,
     vignette: 0.48,

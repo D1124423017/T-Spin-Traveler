@@ -50,6 +50,7 @@ const upgradedBackgrounds = [
   "assets/backgrounds/stage_arcane_ruins_mid.png",
   "assets/backgrounds/stage_corrupted_forest_late.png",
   "assets/backgrounds/stage_rift_boss.png",
+  "assets/backgrounds/egypt_star_tomb_rift_battle_bg.png",
 ];
 
 const legacyAnimationNames = [
@@ -117,6 +118,9 @@ const enemyBattlePortraits = [
   { path: "assets/enemies/battle/wisp_battle_clean_left.png", width: 365, height: 240 },
   { path: "assets/enemies/battle/sentinel_battle_clean_left.png", width: 385, height: 284 },
   { path: "assets/enemies/battle/king_battle_clean_left.png", width: 365, height: 260 },
+  { path: "assets/enemies/battle/enemy_scarab_scout_battle.png", width: 1437, height: 1095 },
+  { path: "assets/enemies/battle/enemy_sand_tomb_mummy_priest_battle.png", width: 1414, height: 1112 },
+  { path: "assets/enemies/battle/enemy_anubis_rift_guard_battle.png", width: 1402, height: 1122 },
 ];
 
 describe("image assets", () => {

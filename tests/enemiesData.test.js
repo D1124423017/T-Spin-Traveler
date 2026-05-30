@@ -10,17 +10,33 @@ describe("enemy data", () => {
     expect(runtimeFacingFlips).toEqual([]);
   });
 
-  it("includes the blue slime as a non-boss early enemy", () => {
-    const blueSlime = ENEMIES.find((enemy) => enemy.id === "blue_slime");
+  it("keeps the Egyptian rift slice on early enemy slots without changing values", () => {
+    const scarabScout = ENEMIES.find((enemy) => enemy.id === "blue_slime");
+    const mummyPriest = ENEMIES.find((enemy) => enemy.id === "slime");
+    const anubisGuard = ENEMIES.find((enemy) => enemy.id === "beetle");
 
     expect(ENEMIES[0].id).toBe("blue_slime");
-    expect(blueSlime).toMatchObject({
-      name: "RIFT BLUE SLIME",
-      trait: "GEL WAVE",
-      battleArt: "blueSlime",
+    expect(scarabScout).toMatchObject({
+      name: "SCARAB SCOUT",
+      trait: "RIFT CARAPACE",
+      battleArt: "egyptScarabScout",
       garbage: 0,
     });
-    expect(blueSlime.hp).toBeLessThanOrEqual(140);
-    expect(blueSlime.damage).toBeLessThanOrEqual(8);
+    expect(scarabScout.hp).toBe(128);
+    expect(scarabScout.damage).toBe(7);
+    expect(mummyPriest).toMatchObject({
+      name: "SAND TOMB MUMMY PRIEST",
+      trait: "STAR TOMB HEX",
+      battleArt: "sandTombMummyPriest",
+      hp: 120,
+      damage: 8,
+    });
+    expect(anubisGuard).toMatchObject({
+      name: "ANUBIS RIFT GUARD",
+      trait: "OBELISK GUARD",
+      battleArt: "anubisRiftGuard",
+      hp: 210,
+      damage: 10,
+    });
   });
 });
