@@ -55,7 +55,7 @@
 - Programmatic drawing is allowed for debug views, collision / hitbox / layout visualization, temporary test images, smoke-test placeholders, or when explicitly requested, but those outputs must not be committed as formal game art.
 - New images should be placed in a reasonable asset folder, registered in the asset registry, and update `ASSET_VERSION` when needed.
 - UI / character / enemy / spritesheet assets should be transparent PNGs when the game pipeline expects cutout art, with no black, white, or fake checkerboard background.
-- Maintain the established fantasy style: magic rifts, purple-blue neon, forest ruins, and translucent magical UI.
+- Maintain the current ancient-civilization rift style: lost wonders, alien-origin legends, star maps, obelisks, temples, colossi, crystal ruins, purple-blue rift energy, and translucent magical UI.
 - Do not shift the visual direction toward modern tech, cute cartoon, or low-cost mobile-game styling.
 
 ## 6. Testing Rules

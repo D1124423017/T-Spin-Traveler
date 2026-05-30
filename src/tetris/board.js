@@ -35,6 +35,23 @@ export function canSpawnPiece(board, piece, options = {}) {
   return !isSpawnBlocked(board, piece, options);
 }
 
+export function isPieceLockedAboveVisibleBoard(piece, options = {}) {
+  if (!piece || !Array.isArray(piece.shape)) return false;
+  const hidden = options.hidden ?? DEFAULT_HIDDEN;
+  for (let r = 0; r < piece.shape.length; r += 1) {
+    for (let c = 0; c < piece.shape[r].length; c += 1) {
+      if (!piece.shape[r][c]) continue;
+      if (piece.y + r < hidden) return true;
+    }
+  }
+  return false;
+}
+
+export function isPieceGroundedAboveVisibleBoard(board, piece, options = {}) {
+  if (!isPieceLockedAboveVisibleBoard(piece, options)) return false;
+  return collides(board, piece, piece.x, piece.y + 1, piece.shape, options);
+}
+
 export function clampFourWideWellX(x, width = 4, cols = DEFAULT_COLS) {
   const safeCols = Math.max(1, Math.floor(Number.isFinite(cols) ? cols : DEFAULT_COLS));
   const safeWidth = Math.max(1, Math.min(safeCols, Math.floor(Number.isFinite(width) ? width : 4)));

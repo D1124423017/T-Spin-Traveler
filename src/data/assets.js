@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-05-30-ancient-civilization-battle-art";
+export const ASSET_VERSION = "2026-05-30-ancient-attack-sheets";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -190,16 +190,16 @@ export const metaUpgradeIcons = {
 };
 
 export const enemyAttackSheets = {
-  slime16: registerImageAsset("enemy-attack-slime-16", "assets/images/clean/enemy_attack_slime_16.png"),
-  blueSlime16: registerImageAsset("enemy-attack-blue-slime-16", "assets/images/clean/enemy_attack_blue_slime_16.png"),
-  vine16: registerImageAsset("enemy-attack-vine-16", "assets/images/clean/enemy_attack_vine_16.png"),
-  mushroom16: registerImageAsset("enemy-attack-mushroom-16", "assets/images/clean/enemy_attack_mushroom_16.png"),
-  beetle16: registerImageAsset("enemy-attack-beetle-16", "assets/images/clean/enemy_attack_beetle_16.png"),
-  mist16: registerImageAsset("enemy-attack-mist-16", "assets/images/clean/enemy_attack_mist_16.png"),
-  thorn16: registerImageAsset("enemy-attack-thorn-prowler-16", "assets/images/clean/enemy_attack_thorn_prowler_16.png"),
-  wisp16: registerImageAsset("enemy-attack-wisp-moth-16", "assets/images/clean/enemy_attack_wisp_moth_16.png"),
-  sentinel16: registerImageAsset("enemy-attack-ruin-sentinel-16", "assets/images/clean/enemy_attack_ruin_sentinel_16.png"),
-  king16: registerImageAsset("enemy-attack-king-16", "assets/images/clean/enemy_attack_king_16.png"),
+  egyptScarabScout16: registerImageAsset("enemy-attack-egypt-scarab-scout-16", "assets/images/clean/enemy_attack_egypt_scarab_scout_16.png"),
+  sandTombMummyPriest16: registerImageAsset("enemy-attack-sand-tomb-mummy-priest-16", "assets/images/clean/enemy_attack_sand_tomb_mummy_priest_16.png"),
+  anubisRiftGuard16: registerImageAsset("enemy-attack-anubis-rift-guard-16", "assets/images/clean/enemy_attack_anubis_rift_guard_16.png"),
+  mayaStoneBeastScout16: registerImageAsset("enemy-attack-maya-stone-beast-scout-16", "assets/images/clean/enemy_attack_maya_stone_beast_scout_16.png"),
+  mayaEclipsePriest16: registerImageAsset("enemy-attack-maya-eclipse-priest-16", "assets/images/clean/enemy_attack_maya_eclipse_priest_16.png"),
+  mayaFeatheredSerpentGuard16: registerImageAsset("enemy-attack-maya-feathered-serpent-guard-16", "assets/images/clean/enemy_attack_maya_feathered_serpent_guard_16.png"),
+  atlantisCrystalJellyfishScout16: registerImageAsset("enemy-attack-atlantis-crystal-jellyfish-scout-16", "assets/images/clean/enemy_attack_atlantis_crystal_jellyfish_scout_16.png"),
+  atlantisTidalShellGuard16: registerImageAsset("enemy-attack-atlantis-tidal-shell-guard-16", "assets/images/clean/enemy_attack_atlantis_tidal_shell_guard_16.png"),
+  atlantisRiftJellyfish16: registerImageAsset("enemy-attack-atlantis-rift-jellyfish-16", "assets/images/clean/enemy_attack_atlantis_rift_jellyfish_16.png"),
+  atlantisCrystalTempleSentinel16: registerImageAsset("enemy-attack-atlantis-crystal-temple-sentinel-16", "assets/images/clean/enemy_attack_atlantis_crystal_temple_sentinel_16.png"),
 };
 
 export const musicLoopAssets = {

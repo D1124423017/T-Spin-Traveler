@@ -6,6 +6,8 @@ import {
   getDefeatSafetyResult,
   getHeroAttackStyle,
   getMoveRating,
+  getOverlayRenderPath,
+  getPlayingFlowSafetyResult,
   getRotationDamageBonus,
   isPlayerHpDefeated,
   shouldSettleRunRiftEnergy,
@@ -89,9 +91,75 @@ describe("combat rule helpers", () => {
 
   it("allows defeat from pause or upgrade overlays but not after finalization", () => {
     expect(shouldTriggerDefeat({ mode: "pause", runFinalized: false })).toBe(true);
+    expect(shouldTriggerDefeat({ mode: "paused", runFinalized: false })).toBe(true);
     expect(shouldTriggerDefeat({ mode: "upgrade", runFinalized: false })).toBe(true);
     expect(shouldTriggerDefeat({ mode: "defeat", runFinalized: false })).toBe(false);
     expect(shouldTriggerDefeat({ mode: "victory", runFinalized: true })).toBe(false);
+  });
+
+  it("routes defeat and victory to the result overlay path", () => {
+    expect(getOverlayRenderPath({ mode: "defeat" })).toBe("result");
+    expect(getOverlayRenderPath({ mode: "victory" })).toBe("result");
+    expect(getOverlayRenderPath({ mode: "playing" })).toBe("none");
+  });
+
+  it("keeps upgrade, pause, countdown, and loading paths separate from result overlays", () => {
+    expect(getOverlayRenderPath({ mode: "upgrade" })).toBe("upgrade");
+    expect(getOverlayRenderPath({ mode: "paused" })).toBe("pause");
+    expect(getOverlayRenderPath({ mode: "start", assetLoadingDone: false })).toBe("assetLoading");
+    expect(getOverlayRenderPath({ mode: "start", assetLoadingDone: true })).toBe("start");
+  });
+
+  it("classifies playing-flow stalls without using hidden rows alone", () => {
+    expect(getPlayingFlowSafetyResult({ mode: "playing", runFinalized: false, hasActivePiece: false })).toMatchObject({
+      action: "spawn",
+      reason: "activeMissing",
+    });
+    expect(getPlayingFlowSafetyResult({
+      mode: "playing",
+      runFinalized: false,
+      hasActivePiece: true,
+      activeAboveVisible: true,
+      activeGroundedAboveVisible: true,
+    })).toMatchObject({
+      action: "defeat",
+      reason: "activeGroundedAboveVisible",
+      messageKey: "messageLockAbove",
+    });
+    expect(getPlayingFlowSafetyResult({
+      mode: "playing",
+      runFinalized: false,
+      hasActivePiece: true,
+      activeAboveVisible: true,
+      activeOverlapsBoard: true,
+    })).toMatchObject({
+      action: "defeat",
+      reason: "activeOverlapsAboveVisible",
+      messageKey: "messageSpawnTop",
+    });
+    expect(getPlayingFlowSafetyResult({
+      mode: "playing",
+      runFinalized: false,
+      hasActivePiece: true,
+      activeAboveVisible: true,
+      activeOverlapsBoard: false,
+      activeGroundedAboveVisible: false,
+    })).toMatchObject({ action: "none" });
+    expect(getPlayingFlowSafetyResult({
+      mode: "playing",
+      runFinalized: false,
+      hasActivePiece: true,
+      activeOverlapsBoard: true,
+      activeAboveVisible: false,
+    })).toMatchObject({
+      action: "spawn",
+      reason: "activeOverlapsLockedBoard",
+    });
+    expect(getPlayingFlowSafetyResult({
+      mode: "playing",
+      runFinalized: true,
+      hasActivePiece: false,
+    })).toMatchObject({ action: "none" });
   });
 
   it("settles Rift Energy only once per run", () => {

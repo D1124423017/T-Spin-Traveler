@@ -107,19 +107,26 @@ Use this checklist after every gameplay, UI, asset, audio, or deployment change.
 - [ ] NOA main-menu idle breathing, glow, cloak, and particles are visible.
 - [ ] NOA cube idle sprite sheet plays on the menu.
 - [ ] NOA meditate idle sprite sheet plays on the menu.
-- [ ] Thorn Prowler attack sprite sheet plays for Thorn Prowler.
-- [ ] Wisp Moth attack sprite sheet plays for Wisp Moth.
-- [ ] Ruin Sentinel attack sprite sheet plays for Ruin Sentinel.
+- [ ] Egyptian Scarab Scout attack sprite sheet plays when its enemy attacks.
+- [ ] Sand Tomb Mummy Priest attack sprite sheet plays when its enemy attacks.
+- [ ] Anubis Rift Guard attack sprite sheet plays when its enemy attacks.
+- [ ] Maya Stone Beast Scout attack sprite sheet plays when its enemy attacks.
+- [ ] Maya Eclipse Priest attack sprite sheet plays when its enemy attacks.
+- [ ] Maya Feathered Serpent Guard attack sprite sheet plays when its enemy attacks.
+- [ ] Atlantis Crystal Jellyfish attack sprite sheet plays when its enemy attacks.
+- [ ] Atlantis Tidal Shell Guard attack sprite sheet plays when its enemy attacks.
+- [ ] Atlantis Rift Jellyfish attack sprite sheet plays when its enemy attacks.
+- [ ] Atlantis Crystal Temple Sentinel attack sprite sheet plays when its enemy attacks.
 - [ ] Enemy attack effects remain readable and do not cover the board.
 
 ## Background Progression
 
-- [ ] Wave 1 uses the bright forest ruins background.
-- [ ] Wave 5 uses the night forest gate background.
-- [ ] Wave 10 uses the rift boss background.
-- [ ] Wave 11 returns to the arcane ruins background.
-- [ ] Wave 15 uses the corrupted forest background.
-- [ ] Boss waves 10 / 20 / 30 override the normal background with the rift boss background.
+- [ ] Wave 1 uses the Egyptian star tomb exterior rift background.
+- [ ] Wave 5 uses the Egyptian pyramid observatory rift background.
+- [ ] Wave 10 uses the boss background override without breaking readability.
+- [ ] Wave 11 returns to the Maya eclipse temple rift background.
+- [ ] Wave 15 uses the Atlantis sunken crystal temple rift background.
+- [ ] Boss waves 10 / 20 / 30 override the normal background with the ancient rift boss background.
 - [ ] Backgrounds are dimmed enough to keep the board, HUD, and text readable.
 
 ## Audio

@@ -92,6 +92,8 @@ import {
   getDefeatSafetyResult,
   getComboAttackStyle,
   getHeroAttackStyle,
+  getOverlayRenderPath,
+  getPlayingFlowSafetyResult,
   getRotationDamageBonus,
   shouldSettleRunRiftEnergy,
   shouldTriggerDefeat,
@@ -422,7 +424,7 @@ const W = canvas.width;
 const H = canvas.height;
 const COLS = 10;
 const ROWS = 20;
-const HIDDEN = 2;
+const HIDDEN = 5;
 const TILE = 29;
 const BOARD_X = 476;
 const BOARD_Y = 72;
@@ -476,6 +478,8 @@ const BOSS_PHASE_BANNER_MS = 1550;
 const BOSS_WINDUP_MS = 1350;
 const HEAVY_ATTACK_WARNING_DAMAGE = 20;
 const GITHUB_FEEDBACK_URL = "https://github.com/D1124423017/T-Spin-Traveler/issues";
+const DEBUG_HUD_ENABLED = new URLSearchParams(window.location.search).get("debug") === "1";
+const DEBUG_HUD_BUILD = "debug-hud-2026-05-31-loading-trace";
 
 const BALANCE = {
   enemyWaveHp: 10,
@@ -892,20 +896,20 @@ const CHALLENGE_REWARDS = {
 
 const ENEMY_ATTACK_ANIMATIONS = {
   slime: {
-    id: "enemy-attack-slime",
-    image: enemyAttackSheets.slime16,
+    id: "enemy-attack-sand-tomb-mummy-priest",
+    image: enemyAttackSheets.sandTombMummyPriest16,
     columns: 4,
     rows: 4,
     frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     frameMs: 60,
     timing: [78, 76, 72, 68, 64, 58, 52, 50, 78, 84, 72, 68, 72, 78, 84, 88],
-    draw: { x: -198, y: -162, w: 392, h: 306 },
+    draw: { x: -198, y: -320, w: 396, h: 500 },
     hitFrame: 8,
     noKeying: true,
   },
   blue_slime: {
-    id: "enemy-attack-blue-slime",
-    image: enemyAttackSheets.blueSlime16,
+    id: "enemy-attack-egypt-scarab-scout",
+    image: enemyAttackSheets.egyptScarabScout16,
     columns: 4,
     rows: 4,
     frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
@@ -916,98 +920,98 @@ const ENEMY_ATTACK_ANIMATIONS = {
     noKeying: true,
   },
   vine: {
-    id: "enemy-attack-vine",
-    image: enemyAttackSheets.vine16,
+    id: "enemy-attack-maya-stone-beast-scout",
+    image: enemyAttackSheets.mayaStoneBeastScout16,
     columns: 4,
     rows: 4,
     frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     frameMs: 60,
     timing: [80, 78, 74, 70, 64, 58, 52, 50, 58, 86, 74, 70, 72, 78, 84, 88],
-    draw: { x: -204, y: -158, w: 402, h: 304 },
+    draw: { x: -198, y: -300, w: 396, h: 500 },
     hitFrame: 9,
     noKeying: true,
   },
   mushroom: {
-    id: "enemy-attack-mushroom",
-    image: enemyAttackSheets.mushroom16,
+    id: "enemy-attack-maya-eclipse-priest",
+    image: enemyAttackSheets.mayaEclipsePriest16,
     columns: 4,
     rows: 4,
     frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     frameMs: 60,
     timing: [82, 78, 76, 70, 66, 60, 54, 52, 58, 86, 78, 72, 74, 80, 86, 90],
-    draw: { x: -204, y: -174, w: 400, h: 318 },
+    draw: { x: -198, y: -320, w: 396, h: 500 },
     hitFrame: 9,
     noKeying: true,
   },
   beetle: {
-    id: "enemy-attack-beetle",
-    image: enemyAttackSheets.beetle16,
+    id: "enemy-attack-anubis-rift-guard",
+    image: enemyAttackSheets.anubisRiftGuard16,
     columns: 4,
     rows: 4,
     frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     frameMs: 60,
     timing: [84, 82, 78, 72, 66, 60, 54, 50, 56, 90, 80, 74, 76, 82, 88, 92],
-    draw: { x: -212, y: -154, w: 414, h: 304 },
+    draw: { x: -218, y: -350, w: 436, h: 560 },
     hitFrame: 9,
     noKeying: true,
   },
   mist: {
-    id: "enemy-attack-mist",
-    image: enemyAttackSheets.mist16,
+    id: "enemy-attack-atlantis-crystal-jellyfish-scout",
+    image: enemyAttackSheets.atlantisCrystalJellyfishScout16,
     columns: 4,
     rows: 4,
     frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     frameMs: 60,
     timing: [78, 76, 72, 68, 62, 58, 52, 50, 56, 84, 76, 70, 72, 78, 84, 88],
-    draw: { x: -202, y: -176, w: 400, h: 324 },
+    draw: { x: -198, y: -300, w: 396, h: 500 },
     hitFrame: 9,
     noKeying: true,
   },
   thorn: {
-    id: "enemy-attack-thorn",
-    image: enemyAttackSheets.thorn16,
+    id: "enemy-attack-atlantis-tidal-shell-guard",
+    image: enemyAttackSheets.atlantisTidalShellGuard16,
     columns: 4,
     rows: 4,
     frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     frameMs: 60,
     timing: [82, 80, 78, 72, 62, 54, 48, 48, 66, 88, 72, 68, 72, 78, 86, 90],
-    draw: { x: -214, y: -158, w: 420, h: 306 },
+    draw: { x: -218, y: -340, w: 436, h: 540 },
     hitFrame: 9,
     noKeying: true,
   },
   wisp: {
-    id: "enemy-attack-wisp",
-    image: enemyAttackSheets.wisp16,
+    id: "enemy-attack-atlantis-rift-jellyfish",
+    image: enemyAttackSheets.atlantisRiftJellyfish16,
     columns: 4,
     rows: 4,
     frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     frameMs: 60,
     timing: [78, 74, 70, 66, 62, 58, 52, 50, 56, 82, 76, 70, 70, 76, 82, 86],
-    draw: { x: -204, y: -180, w: 402, h: 326 },
+    draw: { x: -198, y: -300, w: 396, h: 500 },
     hitFrame: 9,
     noKeying: true,
   },
   sentinel: {
-    id: "enemy-attack-sentinel",
-    image: enemyAttackSheets.sentinel16,
+    id: "enemy-attack-maya-feathered-serpent-guard",
+    image: enemyAttackSheets.mayaFeatheredSerpentGuard16,
     columns: 4,
     rows: 4,
     frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     frameMs: 62,
     timing: [86, 82, 80, 78, 72, 66, 58, 52, 56, 92, 82, 76, 78, 82, 88, 92],
-    draw: { x: -218, y: -174, w: 428, h: 322 },
+    draw: { x: -218, y: -350, w: 436, h: 560 },
     hitFrame: 9,
     noKeying: true,
   },
   king: {
-    id: "enemy-attack-king",
-    image: enemyAttackSheets.king16,
+    id: "enemy-attack-atlantis-crystal-temple-sentinel",
+    image: enemyAttackSheets.atlantisCrystalTempleSentinel16,
     columns: 4,
     rows: 4,
     frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     frameMs: 62,
     timing: [92, 88, 84, 80, 74, 68, 60, 54, 60, 96, 86, 80, 82, 88, 94, 100],
-    draw: { x: -216, y: -174, w: 424, h: 318 },
+    draw: { x: -224, y: -352, w: 448, h: 560 },
     hitFrame: 9,
     noKeying: true,
   },
@@ -1084,6 +1088,22 @@ const state = {
   metaProgress: loadMetaProgress(),
   runStats: makeRunStats(),
   runFinalized: false,
+  defeatRenderTraceWarned: false,
+  playingStallWarned: false,
+  debug: {
+    lastDefeatSource: "",
+    lastDefeatMessageKey: "",
+    triggerDefeatCalled: false,
+    finishRunCalled: false,
+    resultOverlayDrawn: false,
+    stuckActiveKey: "",
+    stuckSince: 0,
+    flowStuck: false,
+    lastUpdateAt: 0,
+    lastDrawAt: 0,
+    drawError: "",
+    domHud: null,
+  },
   challenge: null,
   tutorial: null,
   upgradeChoices: [],
@@ -1228,7 +1248,7 @@ function applyUltimateWalls() {
 }
 
 function rowHasPlayableCells(row) {
-  return row.some((cell) => cell && cell !== ULTIMATE_WALL);
+  return Array.isArray(row) && row.some((cell) => cell && cell !== ULTIMATE_WALL);
 }
 
 function getBoardCollisionOptions() {
@@ -1241,10 +1261,10 @@ function isPieceSpawnBlocked(piece) {
 
 function getDefeatSpawnProbe(spawnPiece = null) {
   if (spawnPiece) return spawnPiece;
-  const nextType = state.queue[0] && PIECES[state.queue[0]]
-    ? state.queue[0]
-    : state.active?.type && PIECES[state.active.type]
-      ? state.active.type
+  const nextType = state.active?.type && PIECES[state.active.type]
+    ? state.active.type
+    : state.queue[0] && PIECES[state.queue[0]]
+      ? state.queue[0]
       : "T";
   return newPiece(nextType);
 }
@@ -1253,8 +1273,90 @@ function isSpawnBlockedForDefeat(spawnPiece = null) {
   return isPieceSpawnBlocked(getDefeatSpawnProbe(spawnPiece));
 }
 
+function isActivePieceOverlappingBoard() {
+  return state.active
+    ? collidesOnBoard(state.board, state.active, state.active.x, state.active.y, state.active.shape, getBoardCollisionOptions())
+    : false;
+}
+
+function isPieceAboveTopBuffer(piece) {
+  if (!piece || !Array.isArray(piece.shape)) return false;
+  for (let r = 0; r < piece.shape.length; r += 1) {
+    for (let c = 0; c < piece.shape[r].length; c += 1) {
+      if (piece.shape[r][c] && piece.y + r < 0) return true;
+    }
+  }
+  return false;
+}
+
+function isPieceGroundedAboveTopBuffer(piece) {
+  if (!isPieceAboveTopBuffer(piece)) return false;
+  return collidesOnBoard(state.board, piece, piece.x, piece.y + 1, piece.shape, getBoardCollisionOptions());
+}
+
+function warnPlayingStallOnce(reason, source, extra = {}) {
+  if (state.playingStallWarned) return;
+  state.playingStallWarned = true;
+  console.warn("[T-Spin Traveler] Playing flow safety recovery", {
+    reason,
+    source,
+    mode: state.mode,
+    runFinalized: state.runFinalized,
+    playerHp: state.playerHp,
+    active: getActivePieceDebugInfo(),
+    lockTimer: state.lockTimer,
+    countdownMs: state.countdownMs,
+    hitStopMs: state.hitStopMs,
+    pendingHits: state.pendingHits.length,
+    hiddenRows: getHiddenRowsDebugInfo(),
+    ...extra,
+  });
+}
+
+function resolvePlayingFlowSafety(source = "playingFlowSafety") {
+  if (state.mode !== "playing" || state.runFinalized) return false;
+  const activeOverlapsBoard = isActivePieceOverlappingBoard();
+  const activeAboveVisible = state.active ? isPieceAboveTopBuffer(state.active) : false;
+  const activeGroundedAboveVisible = state.active ? isPieceGroundedAboveTopBuffer(state.active) : false;
+  const result = getPlayingFlowSafetyResult({
+    mode: state.mode,
+    runFinalized: state.runFinalized,
+    hasActivePiece: Boolean(state.active),
+    activeOverlapsBoard,
+    activeAboveVisible,
+    activeGroundedAboveVisible,
+  });
+  if (result.action === "none") return false;
+  warnPlayingStallOnce(result.reason, source, { activeOverlapsBoard, activeAboveVisible, activeGroundedAboveVisible });
+  if (result.action === "defeat") {
+    triggerDefeat(result.messageKey, `${source}.${result.reason}`);
+    return state.mode === "defeat";
+  }
+  if (result.action === "spawn") {
+    state.active = null;
+    state.lockTimer = null;
+    spawnPiece();
+    return state.mode === "defeat";
+  }
+  return false;
+}
+
 function checkDefeatState(source = "checkDefeatState", { spawnPiece = null, spawnBlocked = null } = {}) {
   if (state.mode !== "playing" || state.runFinalized) return false;
+  const hpResult = getDefeatSafetyResult({
+    mode: state.mode,
+    runFinalized: state.runFinalized,
+    playerHp: state.playerHp,
+    spawnBlocked: false,
+  });
+  if (hpResult.playerHp !== state.playerHp) state.playerHp = hpResult.playerHp;
+  if (hpResult.defeated) {
+    triggerDefeat(hpResult.messageKey, `${source}.${hpResult.reason}`);
+    return state.mode === "defeat";
+  }
+
+  if (resolvePlayingFlowSafety(source)) return true;
+
   const result = getDefeatSafetyResult({
     mode: state.mode,
     runFinalized: state.runFinalized,
@@ -1280,7 +1382,7 @@ function getHiddenRowsDebugInfo() {
   const hiddenRows = state.board.slice(0, HIDDEN);
   return {
     occupied: hiddenRows.some(rowHasPlayableCells),
-    rows: hiddenRows.map((row) => row.some(rowHasPlayableCells)),
+    rows: hiddenRows.map(rowHasPlayableCells),
   };
 }
 
@@ -1439,6 +1541,9 @@ function spawnPiece() {
 }
 
 function triggerDefeat(messageKey, source = "triggerDefeat") {
+  state.debug.triggerDefeatCalled = true;
+  state.debug.lastDefeatSource = source;
+  state.debug.lastDefeatMessageKey = messageKey;
   if (!shouldTriggerDefeat(state)) return;
   warnDefeatSource(source, messageKey);
   state.mode = "defeat";
@@ -1518,6 +1623,22 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.stats = makeStats();
   state.runStats = makeRunStats();
   state.runFinalized = false;
+  state.defeatRenderTraceWarned = false;
+  state.playingStallWarned = false;
+  state.debug = {
+    lastDefeatSource: "",
+    lastDefeatMessageKey: "",
+    triggerDefeatCalled: false,
+    finishRunCalled: false,
+    resultOverlayDrawn: false,
+    stuckActiveKey: "",
+    stuckSince: 0,
+    flowStuck: false,
+    lastUpdateAt: performance.now(),
+    lastDrawAt: performance.now(),
+    drawError: "",
+    domHud: null,
+  };
   state.challenge = challengeId ? makeChallengeState(challengeId) : null;
   state.tutorial = null;
   state.upgradeChoices = [];
@@ -1811,32 +1932,31 @@ function lockPiece(fromHardDrop = false) {
   const piece = state.active;
   if (!piece) return;
   const spinType = detectSpin(piece);
-  let lockedOutsideBoard = false;
+  const lockedAboveTopBuffer = isPieceAboveTopBuffer(piece);
   for (let r = 0; r < piece.shape.length; r += 1) {
     for (let c = 0; c < piece.shape[r].length; c += 1) {
       if (!piece.shape[r][c]) continue;
       const y = piece.y + r;
       const x = piece.x + c;
-      if (y < 0) lockedOutsideBoard = true;
       if (y >= 0 && y < state.board.length && x >= 0 && x < COLS) state.board[y][x] = piece.type;
     }
   }
-  if (lockedOutsideBoard) {
-    triggerDefeat("messageLockAbove", "lockPiece.lockedOutsideBoard");
+  if (lockedAboveTopBuffer) {
+    triggerDefeat("messageLockAbove", "lockPiece.lockedAboveTopBuffer");
     return;
   }
 
   if (!fromHardDrop) playSfx("lock");
   const cleared = clearLines();
   recordRunClearStats(cleared, spinType);
-  applyBattle(cleared, piece.type, spinType);
-  if (state.mode !== "playing") return;
   state.placed += 1;
   state.queueHex = Math.max(0, state.queueHex - 1);
   state.lastMoveWasRotate = false;
   state.lastRotationKind = null;
   state.lastKickIndex = null;
   state.active = null;
+  applyBattle(cleared, piece.type, spinType);
+  if (state.mode !== "playing") return;
   if (state.mode === "playing") spawnPiece();
 }
 
@@ -3908,6 +4028,7 @@ function getCurrentRunRiftEnergyEarned() {
 }
 
 function finishRun(outcome) {
+  state.debug.finishRunCalled = true;
   if (state.runFinalized) return;
   state.runFinalized = true;
   state.stats.peakWave = Math.max(state.stats.peakWave, state.wave);
@@ -4068,6 +4189,7 @@ function spawnGarbageParticles(hole) {
 function update(time) {
   const dt = Math.min(34, time - (state.lastTime || time));
   state.lastTime = time;
+  state.debug.lastUpdateAt = time;
 
   try {
     updateAssetLoading(time);
@@ -4109,6 +4231,8 @@ function update(time) {
 
     tickEffects(dt);
     updateScreenNoteMode();
+    updateDebugHudState(time);
+    updateDebugDomHud(time);
     draw();
   } catch (error) {
     console.error("T-Spin Traveler update failed:", error);
@@ -4996,6 +5120,7 @@ function tickEffects(dt) {
 }
 
 function draw() {
+  state.debug.lastDrawAt = performance.now();
   resetCanvasFrame();
   ctx.save();
   try {
@@ -5017,13 +5142,196 @@ function draw() {
     drawBattleCountdown();
     drawFirstWaveCombatHint();
     drawTutorialPrompt();
+    drawPerfectClearFx();
     drawOverlay();
     if (!["start", "guide", "upgrade", "metaUpgrade", "victory", "defeat"].includes(state.mode)) drawSettings();
-    drawPerfectClearFx();
+    safeDrawDebugHud();
   } finally {
     ctx.restore();
     resetCanvasTransform();
   }
+}
+
+function safeDrawDebugHud() {
+  if (!DEBUG_HUD_ENABLED) return;
+  try {
+    drawDebugHud();
+    state.debug.drawError = "";
+  } catch (error) {
+    state.debug.drawError = String(error?.message || error);
+    console.error("[T-Spin Traveler] Debug HUD draw failed:", error);
+  }
+}
+
+function activeHasCellAboveHiddenRows() {
+  if (!state.active) return false;
+  for (let r = 0; r < state.active.shape.length; r += 1) {
+    for (let c = 0; c < state.active.shape[r].length; c += 1) {
+      if (state.active.shape[r][c] && state.active.y + r < HIDDEN) return true;
+    }
+  }
+  return false;
+}
+
+function activeHasCellAboveTopBuffer() {
+  return isPieceAboveTopBuffer(state.active);
+}
+
+function canActiveMoveDownForDebug() {
+  if (!state.active) return false;
+  return !collides(state.active, state.active.x, state.active.y + 1, state.active.shape);
+}
+
+function getActiveDebugKey() {
+  if (!state.active) return "";
+  return `${state.active.type}:${state.active.x}:${state.active.y}:${state.active.shape.map((row) => row.join("")).join("/")}`;
+}
+
+function getActiveCellMinYForDebug() {
+  if (!state.active) return "";
+  let minY = Infinity;
+  for (let r = 0; r < state.active.shape.length; r += 1) {
+    for (let c = 0; c < state.active.shape[r].length; c += 1) {
+      if (state.active.shape[r][c]) minY = Math.min(minY, state.active.y + r);
+    }
+  }
+  return Number.isFinite(minY) ? minY : "";
+}
+
+function updateDebugHudState(now = performance.now()) {
+  if (!DEBUG_HUD_ENABLED) return;
+  const activeKey = getActiveDebugKey();
+  const blockedDown = state.mode === "playing" && Boolean(state.active) && !canActiveMoveDownForDebug();
+  if (!blockedDown) {
+    state.debug.stuckActiveKey = "";
+    state.debug.stuckSince = 0;
+    state.debug.flowStuck = false;
+    return;
+  }
+  if (state.debug.stuckActiveKey !== activeKey) {
+    state.debug.stuckActiveKey = activeKey;
+    state.debug.stuckSince = now;
+    state.debug.flowStuck = false;
+    return;
+  }
+  state.debug.flowStuck = state.debug.stuckSince > 0 && now - state.debug.stuckSince > 2000;
+}
+
+function readDebugValue(label, reader) {
+  try {
+    return [label, reader()];
+  } catch (error) {
+    return [label, `ERR ${String(error?.message || error)}`];
+  }
+}
+
+function getDebugRows(now = performance.now()) {
+  const active = state.active;
+  return [
+    readDebugValue("mode", () => state.mode),
+    readDebugValue("runFinalized", () => state.runFinalized),
+    readDebugValue("playerHp", () => state.playerHp),
+    readDebugValue("active", () => Boolean(active)),
+    readDebugValue("active.type", () => active?.type || ""),
+    readDebugValue("active.x", () => active?.x ?? ""),
+    readDebugValue("active.y", () => active?.y ?? ""),
+    readDebugValue("active min cell y", getActiveCellMinYForDebug),
+    readDebugValue("active y<HIDDEN", activeHasCellAboveHiddenRows),
+    readDebugValue("active y<0", activeHasCellAboveTopBuffer),
+    readDebugValue("active canMove down", canActiveMoveDownForDebug),
+    readDebugValue("active overlaps board", isActivePieceOverlappingBoard),
+    readDebugValue("lockTimer", () => state.lockTimer === null ? "null" : Math.round(now - state.lockTimer)),
+    readDebugValue("dropTimer", () => Math.round(state.dropTimer || 0)),
+    readDebugValue("countdownMs", () => Math.round(state.countdownMs || 0)),
+    readDebugValue("hitStopMs", () => Math.round(state.hitStopMs || 0)),
+    readDebugValue("pendingHits.length", () => state.pendingHits.length),
+    readDebugValue("upgrade choice open", () => state.mode === "upgrade" || state.upgradeChoices.length > 0),
+    readDebugValue("pause open", () => state.mode === "paused"),
+    readDebugValue("hidden row 0", () => getHiddenRowsDebugInfo().rows[0] || false),
+    readDebugValue("hidden row 1", () => getHiddenRowsDebugInfo().rows[1] || false),
+    readDebugValue("spawn footprint blocked", isSpawnBlockedForDefeat),
+    readDebugValue("lastDefeatSource", () => state.debug.lastDefeatSource),
+    readDebugValue("lastDefeatMessageKey", () => state.debug.lastDefeatMessageKey),
+    readDebugValue("triggerDefeat called", () => state.debug.triggerDefeatCalled),
+    readDebugValue("finishRun called", () => state.debug.finishRunCalled),
+    readDebugValue("drawResultOverlay called", () => state.debug.resultOverlayDrawn),
+    readDebugValue("last update age", () => Math.round(now - state.debug.lastUpdateAt)),
+    readDebugValue("last draw age", () => Math.round(now - state.debug.lastDrawAt)),
+    readDebugValue("draw error", () => state.debug.drawError),
+    readDebugValue("debug build", () => DEBUG_HUD_BUILD),
+  ];
+}
+
+function ensureDebugDomHud() {
+  if (!DEBUG_HUD_ENABLED || state.debug.domHud) return state.debug.domHud;
+  const hud = document.createElement("pre");
+  hud.id = "tst-debug-hud";
+  Object.assign(hud.style, {
+    position: "fixed",
+    left: "10px",
+    top: "10px",
+    zIndex: "2147483647",
+    maxWidth: "420px",
+    maxHeight: "92vh",
+    overflow: "hidden",
+    margin: "0",
+    padding: "8px 10px",
+    border: "1px solid rgba(126, 231, 255, 0.72)",
+    borderRadius: "6px",
+    background: "rgba(5, 8, 14, 0.86)",
+    color: "#f5f1e6",
+    font: "10px/1.3 monospace",
+    pointerEvents: "none",
+    whiteSpace: "pre-wrap",
+  });
+  document.body.appendChild(hud);
+  state.debug.domHud = hud;
+  return hud;
+}
+
+function updateDebugDomHud(now = performance.now()) {
+  if (!DEBUG_HUD_ENABLED) return;
+  const hud = ensureDebugDomHud();
+  if (!hud) return;
+  const rows = getDebugRows(now);
+  if (state.debug.flowStuck) rows.unshift(["FLOW STUCK", `${Math.round(now - state.debug.stuckSince)}ms`]);
+  hud.textContent = rows.map(([key, value]) => `${key}: ${formatDebugValue(value)}`).join("\n");
+  hud.style.borderColor = state.debug.flowStuck ? "rgba(255, 120, 132, 0.95)" : "rgba(126, 231, 255, 0.72)";
+}
+
+function formatDebugValue(value) {
+  if (typeof value === "boolean") return value ? "yes" : "no";
+  if (value === null) return "null";
+  if (value === undefined) return "undefined";
+  return String(value);
+}
+
+function drawDebugHud() {
+  if (!DEBUG_HUD_ENABLED) return;
+  const now = performance.now();
+  const rows = getDebugRows(now);
+  if (state.debug.flowStuck) rows.unshift(["FLOW STUCK", `${Math.round(now - state.debug.stuckSince)}ms`]);
+
+  ctx.save();
+  resetCanvasTransform();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "rgba(5, 8, 14, 0.82)";
+  roundedRect(10, 10, 318, 18 + rows.length * 13, 6, true, false);
+  ctx.strokeStyle = state.debug.flowStuck ? "rgba(255, 120, 132, 0.9)" : "rgba(126, 231, 255, 0.42)";
+  ctx.lineWidth = 1;
+  roundedRect(10, 10, 318, 18 + rows.length * 13, 6, false, true);
+  ctx.font = "10px monospace";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  for (let i = 0; i < rows.length; i += 1) {
+    const [key, value] = rows[i];
+    const y = 18 + i * 13;
+    ctx.fillStyle = key === "FLOW STUCK" ? "#ff8f98" : "rgba(157, 247, 218, 0.9)";
+    ctx.fillText(`${key}:`, 18, y);
+    ctx.fillStyle = "rgba(245, 241, 230, 0.92)";
+    ctx.fillText(formatDebugValue(value), 160, y);
+  }
+  ctx.restore();
 }
 
 function resetCanvasFrame() {
@@ -5097,23 +5405,19 @@ function drawCenterBackgroundShade(alpha) {
 
 function drawProceduralBackground() {
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, "#14202d");
-  g.addColorStop(0.46, "#172a25");
-  g.addColorStop(1, "#0c1114");
+  g.addColorStop(0, "#101326");
+  g.addColorStop(0.46, "#12172a");
+  g.addColorStop(1, "#07090f");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 
-  ctx.fillStyle = "rgba(62, 92, 90, 0.38)";
-  for (let i = 0; i < 6; i += 1) {
-    const x = 60 + i * 235;
-    drawTree(x, 95 + (i % 2) * 35, 190 + (i % 3) * 34, 0.48);
-  }
-  ctx.fillStyle = "rgba(28, 43, 38, 0.72)";
-  for (let i = 0; i < 8; i += 1) {
-    drawTree(-70 + i * 190, 210 + (i % 2) * 12, 260, 0.9);
-  }
+  drawStarMapBackdrop();
+  drawAncientObelisk(96, 112, 260, 0.42);
+  drawAncientObelisk(1098, 96, 310, 0.52);
+  drawAncientColumn(288, 170, 236, 0.34);
+  drawAncientColumn(915, 154, 258, 0.4);
 
-  ctx.fillStyle = "#111716";
+  ctx.fillStyle = "#0a0d15";
   ctx.beginPath();
   ctx.moveTo(0, 613);
   ctx.bezierCurveTo(240, 570, 420, 642, 660, 590);
@@ -5123,54 +5427,72 @@ function drawProceduralBackground() {
   ctx.closePath();
   ctx.fill();
 
-  drawMushrooms();
-  drawRunes();
+  drawAncientRiftRunes();
   drawVignette();
 }
 
-function drawTree(x, y, h, alpha) {
+function drawStarMapBackdrop() {
+  ctx.save();
+  ctx.strokeStyle = "rgba(120, 150, 255, 0.14)";
+  ctx.fillStyle = "rgba(185, 210, 255, 0.28)";
+  ctx.lineWidth = 1;
+  const points = [
+    [182, 126], [302, 86], [456, 154], [620, 106], [768, 164],
+    [928, 112], [1098, 152], [1190, 92],
+  ];
+  ctx.beginPath();
+  points.forEach(([x, y], index) => {
+    if (index === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  for (const [x, y] of points) {
+    ctx.beginPath();
+    ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawAncientObelisk(x, y, h, alpha) {
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = "#111b1a";
+  const w = h * 0.22;
+  ctx.fillStyle = "#171323";
   ctx.beginPath();
-  ctx.moveTo(x + 48, y + h);
-  ctx.bezierCurveTo(x + 28, y + h * 0.62, x + 62, y + h * 0.32, x + 35, y);
-  ctx.bezierCurveTo(x + 84, y + h * 0.32, x + 64, y + h * 0.72, x + 86, y + h);
+  ctx.moveTo(x + w / 2, y);
+  ctx.lineTo(x + w, y + h * 0.16);
+  ctx.lineTo(x + w * 0.78, y + h);
+  ctx.lineTo(x + w * 0.22, y + h);
+  ctx.lineTo(x, y + h * 0.16);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "rgba(130, 151, 151, 0.22)";
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = "rgba(155, 132, 255, 0.26)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(104, 218, 255, 0.24)";
+  ctx.beginPath();
+  ctx.moveTo(x + w * 0.5, y + h * 0.2);
+  ctx.lineTo(x + w * 0.5, y + h * 0.82);
   ctx.stroke();
   ctx.restore();
 }
 
-function drawMushrooms() {
-  const spots = [
-    [116, 594, 0.9],
-    [370, 626, 0.65],
-    [1116, 580, 1.0],
-    [1212, 610, 0.72],
-  ];
-  for (const [x, y, s] of spots) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(s, s);
-    ctx.fillStyle = "rgba(123, 228, 198, 0.18)";
-    ctx.beginPath();
-    ctx.arc(0, 0, 34, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#abc9b7";
-    ctx.fillRect(-5, -8, 10, 24);
-    ctx.fillStyle = "#73d4bd";
-    ctx.beginPath();
-    ctx.arc(0, -10, 22, Math.PI, 0);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
+function drawAncientColumn(x, y, h, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  const w = h * 0.18;
+  ctx.fillStyle = "#141826";
+  roundedRect(x, y, w, h, 10, true, false);
+  ctx.strokeStyle = "rgba(184, 160, 112, 0.22)";
+  ctx.lineWidth = 2;
+  roundedRect(x, y, w, h, 10, false, true);
+  ctx.fillStyle = "rgba(115, 96, 210, 0.16)";
+  ctx.fillRect(x + w * 0.22, y + h * 0.18, w * 0.56, h * 0.64);
+  ctx.restore();
 }
 
-function drawRunes() {
+function drawAncientRiftRunes() {
   ctx.save();
   ctx.translate(176, 520);
   ctx.fillStyle = "#28302f";
@@ -6929,6 +7251,7 @@ function drawBoard() {
   for (let y = 0; y <= ROWS; y += 1) ctx.fillRect(0, y * TILE, COLS * TILE, 1);
   drawUltimateWellMask();
 
+  drawHiddenBoardCells();
   for (let y = HIDDEN; y < ROWS + HIDDEN; y += 1) {
     for (let x = 0; x < COLS; x += 1) {
       const type = state.board[y][x];
@@ -6953,6 +7276,25 @@ function drawBoard() {
   ctx.restore();
   drawUltimateTimerUi();
   drawIncomingGarbageMeter();
+}
+
+function getTopBufferLayout() {
+  const h = HIDDEN * TILE;
+  return { x: 0, y: -h, w: COLS * TILE, h, rowH: TILE };
+}
+
+function drawHiddenBoardCells() {
+  const layout = getTopBufferLayout();
+  ctx.save();
+  ctx.globalAlpha = 0.62;
+  for (let y = 0; y < HIDDEN; y += 1) {
+    for (let x = 0; x < COLS; x += 1) {
+      const type = state.board[y]?.[x];
+      if (!type || type === ULTIMATE_WALL) continue;
+      drawBlock(x * TILE, layout.y + y * TILE, COLORS[type]);
+    }
+  }
+  ctx.restore();
 }
 
 function drawUltimateWellMask() {
@@ -7123,6 +7465,7 @@ function getGhost() {
 function drawPiece(piece, ghost) {
   const constrainToUltimateWell = Boolean(state.ultimateActive);
   const well = getUltimateWellRange();
+  if (!ghost) drawHiddenPieceCells(piece, constrainToUltimateWell ? well : null);
   const cells = getVisiblePieceCells(piece, {
     cols: COLS,
     rows: ROWS,
@@ -7133,6 +7476,24 @@ function drawPiece(piece, ghost) {
   for (const cell of cells) {
     drawBlock(cell.x * TILE, cell.y * TILE, ghost ? "rgba(228,235,245,0.16)" : COLORS[piece.type], ghost);
   }
+}
+
+function drawHiddenPieceCells(piece, well = null) {
+  if (!piece || !Array.isArray(piece.shape)) return;
+  const layout = getTopBufferLayout();
+  ctx.save();
+  ctx.globalAlpha = 0.78;
+  for (let r = 0; r < piece.shape.length; r += 1) {
+    for (let c = 0; c < piece.shape[r].length; c += 1) {
+      if (!piece.shape[r][c]) continue;
+      const x = piece.x + c;
+      const boardY = piece.y + r;
+      if (x < 0 || x >= COLS || boardY < 0 || boardY >= HIDDEN) continue;
+      if (well && (x < well.start || x >= well.end)) continue;
+      drawBlock(x * TILE, layout.y + boardY * TILE, COLORS[piece.type]);
+    }
+  }
+  ctx.restore();
 }
 
 function drawBlock(x, y, color, ghost = false, size = TILE) {
@@ -8155,6 +8516,7 @@ function menuActionText(key) {
 function drawAssetLoadingScreen() {
   const summary = getAssetLoadingSummary();
   const now = performance.now();
+  const elapsed = now - state.assetLoadingStartedAt;
   const pulse = 0.5 + Math.sin(now * 0.006) * 0.5;
   const progress = summary.total > 0 ? clamp((summary.loaded + summary.error) / summary.total, 0, 1) : 0;
   const message = summary.error > 0
@@ -8213,6 +8575,18 @@ function drawAssetLoadingScreen() {
     ctx.globalAlpha = 0.2 + pulse * 0.26;
     ctx.fillStyle = i % 3 === 0 ? "#7ef7ff" : i % 3 === 1 ? "#d7c2ff" : "#fff0a6";
     ctx.fillRect(sx, sy, 2.5, 2.5);
+  }
+  if (DEBUG_HUD_ENABLED) {
+    ctx.globalAlpha = 1;
+    ctx.textAlign = "left";
+    ctx.font = "10px monospace";
+    ctx.fillStyle = "rgba(157, 247, 218, 0.9)";
+    ctx.fillText(`debug: ${DEBUG_HUD_BUILD}`, x + 18, y + h - 42);
+    ctx.fillText(`asset age: ${Math.round(elapsed)}ms loading:${summary.loading} loaded:${summary.loaded} error:${summary.error}`, x + 18, y + h - 26);
+    if (state.debug.drawError) {
+      ctx.fillStyle = "#ff8f98";
+      ctx.fillText(`draw error: ${state.debug.drawError.slice(0, 72)}`, x + 18, y + h - 10);
+    }
   }
   ctx.restore();
 }
@@ -8787,35 +9161,49 @@ function drawMenuIdleParticles(anchorX, anchorY, pose, motion, now) {
 }
 
 function drawOverlay() {
-  if (state.mode === "playing") return;
-  if (state.mode === "metaUpgrade") {
+  if (state.mode === "art") state.mode = "start";
+  const overlayPath = getOverlayRenderPath(state);
+  if (overlayPath === "none") return;
+  if (overlayPath === "result") {
+    if (state.mode === "defeat" && !state.defeatRenderTraceWarned) {
+      state.defeatRenderTraceWarned = true;
+      console.warn("[T-Spin Traveler] Defeat render trace", {
+        mode: state.mode,
+        runFinalized: state.runFinalized,
+        overlayPath,
+        hasResultOverlay: typeof drawResultOverlay === "function",
+        active: getActivePieceDebugInfo(),
+        pendingHits: state.pendingHits.length,
+        countdownMs: state.countdownMs,
+        hitStopMs: state.hitStopMs,
+      });
+    }
+    drawResultOverlay();
+    return;
+  }
+  if (overlayPath === "metaUpgrade") {
     drawMetaUpgradeScreen();
     return;
   }
-  if (state.mode === "upgrade") {
+  if (overlayPath === "upgrade") {
     drawUpgradeOverlay();
     return;
   }
-  if (state.mode === "art") state.mode = "start";
-  if (state.mode === "guide") {
+  if (overlayPath === "guide") {
     drawMoveGuideOverlay();
     return;
   }
-  if (state.mode === "paused") {
+  if (overlayPath === "pause") {
     drawPauseOverlay();
     return;
   }
-  if (state.mode === "start") {
-    if (!state.assetLoadingDone) {
-      drawAssetLoadingScreen();
-      return;
-    }
-    drawStartMenuOverlay();
-    if (state.settingsOpen) drawSettingsOverlay("start");
+  if (overlayPath === "assetLoading") {
+    drawAssetLoadingScreen();
     return;
   }
-  if (state.mode === "victory" || state.mode === "defeat") {
-    drawResultOverlay();
+  if (overlayPath === "start") {
+    drawStartMenuOverlay();
+    if (state.settingsOpen) drawSettingsOverlay("start");
     return;
   }
   ctx.save();
@@ -8850,6 +9238,7 @@ function drawOverlay() {
 }
 
 function drawResultOverlay() {
+  state.debug.resultOverlayDrawn = true;
   const victory = state.mode === "victory";
   const accent = victory ? "#fff0a6" : "#ff8f98";
   const buttons = getResultButtonRects();
@@ -10878,5 +11267,11 @@ function hitControlBind(x, y) {
 
 applySavedSettings();
 syncControlHints();
-draw();
+try {
+  draw();
+} catch (error) {
+  state.debug.drawError = String(error?.message || error);
+  console.error("[T-Spin Traveler] Initial draw failed:", error);
+}
+updateDebugDomHud(performance.now());
 requestAnimationFrame(update);

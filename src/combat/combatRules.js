@@ -85,8 +85,39 @@ export function getDefeatSafetyResult({
   return { defeated: false, messageKey: "", reason: "", playerHp };
 }
 
+export function getPlayingFlowSafetyResult({
+  mode = "playing",
+  runFinalized = false,
+  hasActivePiece = true,
+  activeOverlapsBoard = false,
+  activeAboveVisible = false,
+  activeGroundedAboveVisible = false,
+} = {}) {
+  if (mode !== "playing" || runFinalized) return { action: "none", reason: "", messageKey: "" };
+  if (!hasActivePiece) return { action: "spawn", reason: "activeMissing", messageKey: "" };
+  if (activeGroundedAboveVisible) {
+    return { action: "defeat", reason: "activeGroundedAboveVisible", messageKey: "messageLockAbove" };
+  }
+  if (activeOverlapsBoard && activeAboveVisible) {
+    return { action: "defeat", reason: "activeOverlapsAboveVisible", messageKey: "messageSpawnTop" };
+  }
+  if (activeOverlapsBoard) return { action: "spawn", reason: "activeOverlapsLockedBoard", messageKey: "" };
+  return { action: "none", reason: "", messageKey: "" };
+}
+
 export function shouldTriggerDefeat({ mode = "playing", runFinalized = false } = {}) {
   return mode !== "defeat" && mode !== "victory" && !runFinalized;
+}
+
+export function getOverlayRenderPath({ mode = "playing", assetLoadingDone = true } = {}) {
+  if (mode === "playing") return "none";
+  if (mode === "victory" || mode === "defeat") return "result";
+  if (mode === "metaUpgrade") return "metaUpgrade";
+  if (mode === "upgrade") return "upgrade";
+  if (mode === "guide") return "guide";
+  if (mode === "paused") return "pause";
+  if (mode === "start") return assetLoadingDone ? "start" : "assetLoading";
+  return "fallback";
 }
 
 export function shouldSettleRunRiftEnergy(runStats = {}) {

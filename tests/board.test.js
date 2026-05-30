@@ -7,6 +7,8 @@ import {
   getFourWideWellRange,
   getVisiblePieceCells,
   isBoardTopOut,
+  isPieceGroundedAboveVisibleBoard,
+  isPieceLockedAboveVisibleBoard,
   isSpawnBlocked,
   makeBoard,
 } from "../src/tetris/board.js";
@@ -122,6 +124,23 @@ describe("board game over checks", () => {
 
     expect(canSpawnPiece(afterGarbage, piece, { cols: 10, rows: 20, hidden: 2 })).toBe(false);
     expect(isBoardTopOut(afterGarbage, { cols: 10, rows: 20, hidden: 2, spawnPiece: piece })).toBe(true);
+  });
+
+  it("detects lock out when a piece locks in hidden rows", () => {
+    const hiddenLockPiece = createPiece("T", { x: 3, y: 0 });
+    const visibleLockPiece = createPiece("T", { x: 3, y: 2 });
+
+    expect(isPieceLockedAboveVisibleBoard(hiddenLockPiece, { hidden: 2 })).toBe(true);
+    expect(isPieceLockedAboveVisibleBoard(visibleLockPiece, { hidden: 2 })).toBe(false);
+  });
+
+  it("detects a spawned piece grounded above the visible board", () => {
+    const board = makeBoard({ cols: 10, rows: 20, hidden: 2 });
+    const piece = createPiece("T", { x: 3, y: 0 });
+
+    expect(isPieceGroundedAboveVisibleBoard(board, piece, { cols: 10, rows: 20, hidden: 2 })).toBe(false);
+    board[2][4] = "G";
+    expect(isPieceGroundedAboveVisibleBoard(board, piece, { cols: 10, rows: 20, hidden: 2 })).toBe(true);
   });
 });
 

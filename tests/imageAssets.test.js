@@ -31,16 +31,16 @@ const runtimeAnimationSheets = [
   { path: "assets/effects/noa_level_up_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/noa_menu_idle_cube_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/noa_menu_idle_meditate_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_slime_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_blue_slime_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_vine_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_mushroom_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_beetle_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_mist_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_thorn_prowler_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_wisp_moth_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_ruin_sentinel_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_king_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/enemy_attack_egypt_scarab_scout_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/enemy_attack_sand_tomb_mummy_priest_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/enemy_attack_anubis_rift_guard_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/enemy_attack_maya_stone_beast_scout_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/enemy_attack_maya_eclipse_priest_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/enemy_attack_maya_feathered_serpent_guard_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/enemy_attack_atlantis_crystal_jellyfish_scout_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/enemy_attack_atlantis_tidal_shell_guard_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/enemy_attack_atlantis_rift_jellyfish_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/enemy_attack_atlantis_crystal_temple_sentinel_16.png", columns: 4, rows: 4 },
 ];
 
 const upgradedBackgrounds = [
@@ -72,6 +72,16 @@ const legacyAnimationNames = [
   "enemy_attack_wisp_moth.png",
   "enemy_attack_ruin_sentinel.png",
   "enemy_attack_king_redesign.png",
+  "enemy_attack_slime_16.png",
+  "enemy_attack_blue_slime_16.png",
+  "enemy_attack_vine_16.png",
+  "enemy_attack_mushroom_16.png",
+  "enemy_attack_beetle_16.png",
+  "enemy_attack_mist_16.png",
+  "enemy_attack_thorn_prowler_16.png",
+  "enemy_attack_wisp_moth_16.png",
+  "enemy_attack_ruin_sentinel_16.png",
+  "enemy_attack_king_16.png",
 ];
 
 const heroCombatSheets = [
@@ -159,7 +169,7 @@ describe("image assets", () => {
     }
   });
 
-  it("does not keep legacy non-16 animation sheets in the clean asset folder", () => {
+  it("does not keep legacy animation sheets in the clean asset folder", () => {
     const cleanDir = path.join(projectRoot, "assets/images/clean");
     const existing = new Set(fs.readdirSync(cleanDir));
     const leftovers = legacyAnimationNames.filter((name) => existing.has(name));
@@ -245,7 +255,22 @@ describe("image assets", () => {
     }
   });
 
-  it("keeps the blue slime attack sheet at the requested 384 x 512 frame grid", () => {
-    expect(readPngInfo("assets/images/clean/enemy_attack_blue_slime_16.png")).toEqual({ width: 1536, height: 2048, colorType: 6 });
+  it("keeps ancient civilization enemy attack sheets at the requested 384 x 512 frame grid", () => {
+    const sheets = [
+      "assets/images/clean/enemy_attack_egypt_scarab_scout_16.png",
+      "assets/images/clean/enemy_attack_sand_tomb_mummy_priest_16.png",
+      "assets/images/clean/enemy_attack_anubis_rift_guard_16.png",
+      "assets/images/clean/enemy_attack_maya_stone_beast_scout_16.png",
+      "assets/images/clean/enemy_attack_maya_eclipse_priest_16.png",
+      "assets/images/clean/enemy_attack_maya_feathered_serpent_guard_16.png",
+      "assets/images/clean/enemy_attack_atlantis_crystal_jellyfish_scout_16.png",
+      "assets/images/clean/enemy_attack_atlantis_tidal_shell_guard_16.png",
+      "assets/images/clean/enemy_attack_atlantis_rift_jellyfish_16.png",
+      "assets/images/clean/enemy_attack_atlantis_crystal_temple_sentinel_16.png",
+    ];
+
+    for (const sheet of sheets) {
+      expect(readPngInfo(sheet)).toEqual({ width: 1536, height: 2048, colorType: 6 });
+    }
   });
 });
