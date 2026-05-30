@@ -54,6 +54,37 @@ export function isPlayerHpDefeated(playerHp) {
   return Number(playerHp) <= 0;
 }
 
+export function getDefeatSafetyResult({
+  mode = "playing",
+  runFinalized = false,
+  playerHp = 1,
+  spawnBlocked = false,
+} = {}) {
+  if (mode !== "playing" || runFinalized) {
+    return { defeated: false, messageKey: "", reason: "", playerHp };
+  }
+
+  if (isPlayerHpDefeated(playerHp)) {
+    return {
+      defeated: true,
+      messageKey: "messagePlayerDefeat",
+      reason: "playerHp",
+      playerHp: 0,
+    };
+  }
+
+  if (spawnBlocked) {
+    return {
+      defeated: true,
+      messageKey: "messageSpawnTop",
+      reason: "spawnBlocked",
+      playerHp,
+    };
+  }
+
+  return { defeated: false, messageKey: "", reason: "", playerHp };
+}
+
 export function shouldTriggerDefeat({ mode = "playing", runFinalized = false } = {}) {
   return mode !== "defeat" && mode !== "victory" && !runFinalized;
 }

@@ -89,10 +89,10 @@ import {
   getComboMilestoneDamage as getComboMilestoneDamageBase,
 } from "./src/combat/damage.js";
 import {
+  getDefeatSafetyResult,
   getComboAttackStyle,
   getHeroAttackStyle,
   getRotationDamageBonus,
-  isPlayerHpDefeated,
   shouldSettleRunRiftEnergy,
   shouldTriggerDefeat,
 } from "./src/combat/combatRules.js";
@@ -1239,6 +1239,34 @@ function isPieceSpawnBlocked(piece) {
   return piece ? isSpawnBlockedCore(state.board, piece, getBoardCollisionOptions()) : false;
 }
 
+function getDefeatSpawnProbe(spawnPiece = null) {
+  if (spawnPiece) return spawnPiece;
+  const nextType = state.queue[0] && PIECES[state.queue[0]]
+    ? state.queue[0]
+    : state.active?.type && PIECES[state.active.type]
+      ? state.active.type
+      : "T";
+  return newPiece(nextType);
+}
+
+function isSpawnBlockedForDefeat(spawnPiece = null) {
+  return isPieceSpawnBlocked(getDefeatSpawnProbe(spawnPiece));
+}
+
+function checkDefeatState(source = "checkDefeatState", { spawnPiece = null, spawnBlocked = null } = {}) {
+  if (state.mode !== "playing" || state.runFinalized) return false;
+  const result = getDefeatSafetyResult({
+    mode: state.mode,
+    runFinalized: state.runFinalized,
+    playerHp: state.playerHp,
+    spawnBlocked: spawnBlocked ?? isSpawnBlockedForDefeat(spawnPiece),
+  });
+  if (result.playerHp !== state.playerHp) state.playerHp = result.playerHp;
+  if (!result.defeated) return false;
+  triggerDefeat(result.messageKey, `${source}.${result.reason}`);
+  return state.mode === "defeat";
+}
+
 function getActivePieceDebugInfo() {
   if (!state.active) return null;
   return {
@@ -1406,7 +1434,7 @@ function spawnPiece() {
   state.lastRotationKind = null;
   state.lastKickIndex = null;
   if (!canSpawnPiece(state.board, state.active, getBoardCollisionOptions())) {
-    triggerDefeat("messageSpawnTop", "spawnPiece.spawnBlocked");
+    checkDefeatState("spawnPiece.spawnBlocked", { spawnPiece: state.active, spawnBlocked: true });
   }
 }
 
@@ -2273,10 +2301,7 @@ function applyEnemyHit(hit) {
       life: 1100,
     });
   }
-  if (isPlayerHpDefeated(state.playerHp)) {
-    triggerDefeat("messagePlayerDefeat", "applyEnemyHit.playerHpDefeated");
-    return;
-  }
+  if (checkDefeatState("applyEnemyHit.playerHpDefeated")) return;
   let enemyDefeatedByReflect = false;
   if (blocked > 0 && state.upgrades.guardReflect > 0 && state.enemyHp > 0) {
     const reflectDamage = Math.floor(blocked * state.upgrades.guardReflect);
@@ -3962,6 +3987,7 @@ function addGarbageLines(count) {
     spawnGarbageParticles(hole);
   }
   applyUltimateWalls();
+  checkDefeatState("addGarbageLines.spawnBlocked");
 }
 
 function chooseGarbageHole(holeMin, holeMax) {
@@ -4047,35 +4073,37 @@ function update(time) {
     updateAssetLoading(time);
     if (state.mode === "playing") {
       purgeLegacyVineBlocks();
-      if (isBattleCountdownActive()) {
-        updateBattleCountdown(dt);
-      } else {
-        if (state.firstWaveHintMs > 0) state.firstWaveHintMs = Math.max(0, state.firstWaveHintMs - dt);
-        if (state.hitStopMs > 0) {
-          state.hitStopMs = Math.max(0, state.hitStopMs - dt);
+      if (!checkDefeatState("update.safety")) {
+        if (isBattleCountdownActive()) {
+          updateBattleCountdown(dt);
         } else {
-          if (state.ultimateActive) {
-            state.ultimateTimer = Math.max(0, state.ultimateTimer - dt);
-            if (state.ultimateTimer <= 0) endUltimateMode();
-          }
-          updateHorizontalInput(dt);
-          if (state.input.softDrop) updateSoftDrop(dt);
-          state.dropTimer += dt;
-          if (state.dropTimer >= getGravityMsForWave()) {
-            state.dropTimer = 0;
-            if (!move(0, 1) && state.lockTimer === null) {
-              state.lockTimer = time;
+          if (state.firstWaveHintMs > 0) state.firstWaveHintMs = Math.max(0, state.firstWaveHintMs - dt);
+          if (state.hitStopMs > 0) {
+            state.hitStopMs = Math.max(0, state.hitStopMs - dt);
+          } else {
+            if (state.ultimateActive) {
+              state.ultimateTimer = Math.max(0, state.ultimateTimer - dt);
+              if (state.ultimateTimer <= 0) endUltimateMode();
+            }
+            updateHorizontalInput(dt);
+            if (state.input.softDrop) updateSoftDrop(dt);
+            state.dropTimer += dt;
+            if (state.dropTimer >= getGravityMsForWave()) {
+              state.dropTimer = 0;
+              if (!move(0, 1) && state.lockTimer === null) {
+                state.lockTimer = time;
+              }
+            }
+            if (touchingGround()) {
+              if (state.lockTimer === null) state.lockTimer = time;
+              if (time - state.lockTimer >= state.tuning.lockDelay) lockPiece();
+            } else {
+              state.lockTimer = null;
             }
           }
-          if (touchingGround()) {
-            if (state.lockTimer === null) state.lockTimer = time;
-            if (time - state.lockTimer >= state.tuning.lockDelay) lockPiece();
-          } else {
-            state.lockTimer = null;
-          }
         }
+        updateAudioCues(time);
       }
-      updateAudioCues(time);
     }
     if (state.mode === "upgrade") updateUpgradeConfirm(dt);
 

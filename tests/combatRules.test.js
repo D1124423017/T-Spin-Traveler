@@ -3,6 +3,7 @@ import {
   formatRotationKind,
   getBaseAttackRows,
   getComboAttackStyle,
+  getDefeatSafetyResult,
   getHeroAttackStyle,
   getMoveRating,
   getRotationDamageBonus,
@@ -51,6 +52,39 @@ describe("combat rule helpers", () => {
     expect(isPlayerHpDefeated(1)).toBe(false);
     expect(isPlayerHpDefeated(0)).toBe(true);
     expect(isPlayerHpDefeated(-4)).toBe(true);
+  });
+
+  it("builds defeat safety results for active runs only", () => {
+    expect(getDefeatSafetyResult({ mode: "playing", runFinalized: false, playerHp: 12, spawnBlocked: false })).toMatchObject({
+      defeated: false,
+      playerHp: 12,
+    });
+    expect(getDefeatSafetyResult({ mode: "playing", runFinalized: false, playerHp: 0, spawnBlocked: false })).toMatchObject({
+      defeated: true,
+      messageKey: "messagePlayerDefeat",
+      reason: "playerHp",
+      playerHp: 0,
+    });
+    expect(getDefeatSafetyResult({ mode: "playing", runFinalized: false, playerHp: -8, spawnBlocked: true })).toMatchObject({
+      defeated: true,
+      messageKey: "messagePlayerDefeat",
+      reason: "playerHp",
+      playerHp: 0,
+    });
+    expect(getDefeatSafetyResult({ mode: "playing", runFinalized: false, playerHp: 12, spawnBlocked: true })).toMatchObject({
+      defeated: true,
+      messageKey: "messageSpawnTop",
+      reason: "spawnBlocked",
+      playerHp: 12,
+    });
+    expect(getDefeatSafetyResult({ mode: "upgrade", runFinalized: false, playerHp: 0, spawnBlocked: true })).toMatchObject({
+      defeated: false,
+      playerHp: 0,
+    });
+    expect(getDefeatSafetyResult({ mode: "playing", runFinalized: true, playerHp: -4, spawnBlocked: true })).toMatchObject({
+      defeated: false,
+      playerHp: -4,
+    });
   });
 
   it("allows defeat from pause or upgrade overlays but not after finalization", () => {
