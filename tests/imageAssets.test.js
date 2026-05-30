@@ -44,13 +44,11 @@ const runtimeAnimationSheets = [
 ];
 
 const upgradedBackgrounds = [
-  "assets/magic-forest-bg-v2.png",
-  "assets/backgrounds/stage_forest_ruins_day.png",
-  "assets/backgrounds/stage_forest_gate_night.png",
-  "assets/backgrounds/stage_arcane_ruins_mid.png",
-  "assets/backgrounds/stage_corrupted_forest_late.png",
-  "assets/backgrounds/stage_rift_boss.png",
   "assets/backgrounds/egypt_star_tomb_rift_battle_bg.png",
+  "assets/backgrounds/egypt_star_tomb_exterior_rift_bg.png",
+  "assets/backgrounds/egypt_pyramid_observatory_rift_bg.png",
+  "assets/backgrounds/maya_eclipse_temple_rift_bg.png",
+  "assets/backgrounds/atlantis_sunken_crystal_temple_rift_bg.png",
 ];
 
 const legacyAnimationNames = [
@@ -108,19 +106,15 @@ const upgradeCardFrames = [
 ];
 
 const enemyBattlePortraits = [
-  { path: "assets/enemies/battle/slime_battle_clean_left.png", width: 335, height: 240 },
-  { path: "assets/enemies/battle/blue_slime_battle_left.png", width: 380, height: 250 },
-  { path: "assets/enemies/battle/vine_battle_clean_left.png", width: 360, height: 230 },
-  { path: "assets/enemies/battle/mushroom_battle_clean_left.png", width: 350, height: 250 },
-  { path: "assets/enemies/battle/beetle_battle_clean_left.png", width: 380, height: 235 },
-  { path: "assets/enemies/battle/mist_battle_clean_left.png", width: 255, height: 250 },
-  { path: "assets/enemies/battle/thorn_battle_clean_left.png", width: 360, height: 246 },
-  { path: "assets/enemies/battle/wisp_battle_clean_left.png", width: 365, height: 240 },
-  { path: "assets/enemies/battle/sentinel_battle_clean_left.png", width: 385, height: 284 },
-  { path: "assets/enemies/battle/king_battle_clean_left.png", width: 365, height: 260 },
   { path: "assets/enemies/battle/enemy_scarab_scout_battle.png", width: 1437, height: 1095 },
   { path: "assets/enemies/battle/enemy_sand_tomb_mummy_priest_battle.png", width: 1414, height: 1112 },
   { path: "assets/enemies/battle/enemy_anubis_rift_guard_battle.png", width: 1402, height: 1122 },
+  { path: "assets/enemies/battle/enemy_maya_stone_beast_scout_battle.png", width: 1366, height: 1151 },
+  { path: "assets/enemies/battle/enemy_maya_eclipse_priest_battle.png", width: 1149, height: 1368 },
+  { path: "assets/enemies/battle/enemy_maya_feathered_serpent_guard_battle.png", width: 1106, height: 1422 },
+  { path: "assets/enemies/battle/enemy_atlantis_crystal_jellyfish_scout_battle.png", width: 1160, height: 1355 },
+  { path: "assets/enemies/battle/enemy_atlantis_tidal_shell_guard_battle.png", width: 1139, height: 1381 },
+  { path: "assets/enemies/battle/enemy_atlantis_crystal_temple_sentinel_battle.png", width: 1151, height: 1366 },
 ];
 
 describe("image assets", () => {
@@ -131,6 +125,20 @@ describe("image assets", () => {
     const missing = registeredImagePaths.filter((assetPath) => !fs.existsSync(path.join(projectRoot, assetPath)));
 
     expect(missing).toEqual([]);
+  });
+
+  it("does not register raw or candidate image paths", () => {
+    const source = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
+    const registeredImagePaths = [...source.matchAll(/registerImageAsset\([^,]+,\s*"([^"]+\.png)"/g)]
+      .map((match) => match[1]);
+    const temporaryPaths = registeredImagePaths.filter((assetPath) => (
+      assetPath.includes("/tmp/")
+      || assetPath.includes("tmp/")
+      || assetPath.includes("_candidate")
+      || assetPath.includes("_raw")
+    ));
+
+    expect(temporaryPaths).toEqual([]);
   });
 
   it("keeps runtime animation sheets at 16 frames", () => {
@@ -211,6 +219,16 @@ describe("image assets", () => {
   it("uses clean left-facing battle portrait assets for concept-sheet enemies", () => {
     const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
     const legacyPortraits = [
+      "slime_battle_clean_left.png",
+      "blue_slime_battle_left.png",
+      "vine_battle_clean_left.png",
+      "mushroom_battle_clean_left.png",
+      "beetle_battle_clean_left.png",
+      "mist_battle_clean_left.png",
+      "thorn_battle_clean_left.png",
+      "wisp_battle_clean_left.png",
+      "sentinel_battle_clean_left.png",
+      "king_battle_clean_left.png",
       "slime_battle_left.png",
       "vine_battle_left.png",
       "mushroom_battle_left.png",

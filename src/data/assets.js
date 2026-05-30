@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-05-30-egyptian-rift-slice";
+export const ASSET_VERSION = "2026-05-30-ancient-civilization-battle-art";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -119,14 +119,13 @@ if (typeof window !== "undefined") {
   };
 }
 
-export const forestBg = registerImageAsset("forest-background", "assets/magic-forest-bg-v2.png");
-export const stageForestRuinsDayBg = registerImageAsset("stage-forest-ruins-day", "assets/backgrounds/stage_forest_ruins_day.png");
-export const stageForestGateNightBg = registerImageAsset("stage-forest-gate-night", "assets/backgrounds/stage_forest_gate_night.png");
-export const stageArcaneRuinsMidBg = registerImageAsset("stage-arcane-ruins-mid", "assets/backgrounds/stage_arcane_ruins_mid.png");
-export const stageCorruptedForestLateBg = registerImageAsset("stage-corrupted-forest-late", "assets/backgrounds/stage_corrupted_forest_late.png");
-export const stageRiftBossBg = registerImageAsset("stage-rift-boss", "assets/backgrounds/stage_rift_boss.png");
+export const forestBg = registerImageAsset("default-ancient-rift-background", "assets/backgrounds/egypt_star_tomb_exterior_rift_bg.png");
 export const stageEgyptStarTombRiftBg = registerImageAsset("stage-egypt-star-tomb-rift", "assets/backgrounds/egypt_star_tomb_rift_battle_bg.png");
-export const slimeArt = registerImageAsset("forest-slime", "assets/forest-slime.png");
+export const stageEgyptStarTombExteriorRiftBg = registerImageAsset("stage-egypt-star-tomb-exterior-rift", "assets/backgrounds/egypt_star_tomb_exterior_rift_bg.png");
+export const stageEgyptPyramidObservatoryRiftBg = registerImageAsset("stage-egypt-pyramid-observatory-rift", "assets/backgrounds/egypt_pyramid_observatory_rift_bg.png");
+export const stageMayaEclipseTempleRiftBg = registerImageAsset("stage-maya-eclipse-temple-rift", "assets/backgrounds/maya_eclipse_temple_rift_bg.png");
+export const stageAtlantisSunkenCrystalTempleRiftBg = registerImageAsset("stage-atlantis-sunken-crystal-temple-rift", "assets/backgrounds/atlantis_sunken_crystal_temple_rift_bg.png");
+export const slimeArt = registerImageAsset("fallback-enemy-battle-portrait", "assets/enemies/battle/enemy_scarab_scout_battle.png");
 export const rosterArt = registerImageAsset("character-roster", "assets/character-roster-v4-alpha.png");
 export const heroIdleArt = registerImageAsset("hero-idle-concept", "assets/images/clean/ET_Character_alpha.png");
 export const noaMenuShowcaseArt = registerImageAsset("noa-menu-showcase", "assets/images/clean/noa_menu_showcase.png");
@@ -145,19 +144,15 @@ export const enemyConceptSheetA = registerImageAsset("enemy-concept-sheet-a", "a
 export const enemyConceptSheetB = registerImageAsset("enemy-concept-sheet-b", "assets/images/clean/Enemy02_alpha.png");
 
 export const enemyBattlePortraits = {
-  slime: registerImageAsset("enemy-battle-slime-left", "assets/enemies/battle/slime_battle_clean_left.png"),
-  blueSlime: registerImageAsset("enemy-battle-blue-slime-left", "assets/enemies/battle/blue_slime_battle_left.png"),
-  vine: registerImageAsset("enemy-battle-vine-left", "assets/enemies/battle/vine_battle_clean_left.png"),
-  mushroom: registerImageAsset("enemy-battle-mushroom-left", "assets/enemies/battle/mushroom_battle_clean_left.png"),
-  beetle: registerImageAsset("enemy-battle-beetle-left", "assets/enemies/battle/beetle_battle_clean_left.png"),
-  mist: registerImageAsset("enemy-battle-mist-left", "assets/enemies/battle/mist_battle_clean_left.png"),
-  thorn: registerImageAsset("enemy-battle-thorn-left", "assets/enemies/battle/thorn_battle_clean_left.png"),
-  wisp: registerImageAsset("enemy-battle-wisp-left", "assets/enemies/battle/wisp_battle_clean_left.png"),
-  sentinel: registerImageAsset("enemy-battle-sentinel-left", "assets/enemies/battle/sentinel_battle_clean_left.png"),
-  king: registerImageAsset("enemy-battle-king-left", "assets/enemies/battle/king_battle_clean_left.png"),
   egyptScarabScout: registerImageAsset("enemy-battle-egypt-scarab-scout-left", "assets/enemies/battle/enemy_scarab_scout_battle.png"),
   sandTombMummyPriest: registerImageAsset("enemy-battle-sand-tomb-mummy-priest-left", "assets/enemies/battle/enemy_sand_tomb_mummy_priest_battle.png"),
   anubisRiftGuard: registerImageAsset("enemy-battle-anubis-rift-guard-left", "assets/enemies/battle/enemy_anubis_rift_guard_battle.png"),
+  mayaStoneBeastScout: registerImageAsset("enemy-battle-maya-stone-beast-scout-left", "assets/enemies/battle/enemy_maya_stone_beast_scout_battle.png"),
+  mayaEclipsePriest: registerImageAsset("enemy-battle-maya-eclipse-priest-left", "assets/enemies/battle/enemy_maya_eclipse_priest_battle.png"),
+  mayaFeatheredSerpentGuard: registerImageAsset("enemy-battle-maya-feathered-serpent-guard-left", "assets/enemies/battle/enemy_maya_feathered_serpent_guard_battle.png"),
+  atlantisCrystalJellyfishScout: registerImageAsset("enemy-battle-atlantis-crystal-jellyfish-scout-left", "assets/enemies/battle/enemy_atlantis_crystal_jellyfish_scout_battle.png"),
+  atlantisTidalShellGuard: registerImageAsset("enemy-battle-atlantis-tidal-shell-guard-left", "assets/enemies/battle/enemy_atlantis_tidal_shell_guard_battle.png"),
+  atlantisCrystalTempleSentinel: registerImageAsset("enemy-battle-atlantis-crystal-temple-sentinel-left", "assets/enemies/battle/enemy_atlantis_crystal_temple_sentinel_battle.png"),
 };
 
 export const upgradeCardFrames = {
@@ -232,48 +227,50 @@ export const musicLoopAssets = {
 
 export const BACKGROUND_STAGES = [
   {
-    id: "egypt-star-tomb-rift",
+    id: "egypt-star-tomb-exterior-rift",
     startWave: 1,
-    image: stageEgyptStarTombRiftBg,
+    image: stageEgyptStarTombExteriorRiftBg,
     fallback: forestBg,
     dim: 0.22,
     vignette: 0.48,
     tint: "rgba(52, 124, 148, 0.05)",
   },
   {
-    id: "forest-gate-night",
+    id: "egypt-pyramid-observatory-rift",
     startWave: 5,
-    image: stageForestGateNightBg,
+    image: stageEgyptPyramidObservatoryRiftBg,
     fallback: forestBg,
-    dim: 0.25,
-    vignette: 0.54,
-    tint: "rgba(38, 96, 145, 0.09)",
+    dim: 0.3,
+    vignette: 0.56,
+    centerDim: 0.1,
+    tint: "rgba(120, 80, 34, 0.06)",
   },
   {
-    id: "arcane-ruins-mid",
+    id: "maya-eclipse-temple-rift",
     startWave: 10,
-    image: stageArcaneRuinsMidBg,
+    image: stageMayaEclipseTempleRiftBg,
     fallback: forestBg,
     dim: 0.34,
     vignette: 0.6,
     centerDim: 0.12,
-    tint: "rgba(72, 86, 188, 0.08)",
+    tint: "rgba(48, 112, 78, 0.07)",
   },
   {
-    id: "corrupted-forest-late",
+    id: "atlantis-sunken-crystal-temple-rift",
     startWave: 15,
-    image: stageCorruptedForestLateBg,
+    image: stageAtlantisSunkenCrystalTempleRiftBg,
     fallback: forestBg,
-    dim: 0.46,
-    vignette: 0.68,
-    tint: "rgba(100, 52, 184, 0.14)",
+    dim: 0.38,
+    vignette: 0.64,
+    centerDim: 0.12,
+    tint: "rgba(42, 104, 170, 0.1)",
   },
 ];
 
 export const BOSS_BACKGROUND_STAGE = {
-  id: "rift-boss",
+  id: "atlantis-sunken-crystal-temple-rift-boss",
   bossOnly: true,
-  image: stageRiftBossBg,
+  image: stageAtlantisSunkenCrystalTempleRiftBg,
   fallback: forestBg,
   dim: 0.5,
   vignette: 0.74,
