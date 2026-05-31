@@ -200,6 +200,7 @@ import {
   getUpgradeCardContentLayout,
   getUpgradeCardRect,
   getUpgradeOverlayPanelRect,
+  getNextUpgradeSelectionIndex,
 } from "./src/ui/upgradeCards.js";
 import {
   DEBUG_HUD_BUILD,
@@ -1127,6 +1128,7 @@ const state = {
   challenge: null,
   tutorial: null,
   upgradeChoices: [],
+  upgradeSelectedIndex: 0,
   upgradeDraftReason: null,
   acquiredRelics: [],
   currentBuildOpen: false,
@@ -1651,6 +1653,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.challenge = challengeId ? makeChallengeState(challengeId) : null;
   state.tutorial = null;
   state.upgradeChoices = [];
+  state.upgradeSelectedIndex = 0;
   state.upgradeDraftReason = null;
   state.acquiredRelics = [];
   state.currentBuildOpen = false;
@@ -3760,6 +3763,7 @@ function startNextWave() {
   state.comboConstellationFirstUsed = false;
   state.comboConstellationSecondUsed = false;
   state.upgradeChoices = [];
+  state.upgradeSelectedIndex = 0;
   state.mode = "playing";
   const beforeHeal = state.playerHp;
   const waveHeal = BALANCE.waveHeal + state.upgrades.waveHeal + getTraitBonus("Survival", [4, 8, 14]) + getSurvivalTraitBonus(getTraitSnapshot()).waveHeal;
@@ -3858,6 +3862,7 @@ function triggerUpgradeIfReady(forceRelic = false, forceRare = false, reason = "
   state.nextUpgradeAt += BALANCE.upgradeGrowthPerTier * state.upgradeTier;
   state.upgradeReady = false;
   state.upgradeChoices = createUpgradeChoices(forceRelic, forceRare);
+  state.upgradeSelectedIndex = 0;
   state.upgradeDraftReason = reason;
   state.mode = "upgrade";
   state.floaters.push({
@@ -3879,10 +3884,17 @@ function applyUpgrade(upgrade) {
   });
 }
 
+function moveUpgradeSelection(direction) {
+  const previous = state.upgradeSelectedIndex;
+  state.upgradeSelectedIndex = getNextUpgradeSelectionIndex(previous, direction, state.upgradeChoices.length);
+  if (state.upgradeSelectedIndex !== previous) playSfx("hold");
+}
+
 function chooseUpgrade(index) {
   if (state.upgradePickConfirm) return;
   const upgrade = state.upgradeChoices[index];
   if (!upgrade) return;
+  state.upgradeSelectedIndex = index;
   applyUpgrade(upgrade);
   recordAcquiredRelic(upgrade);
   state.floaters.push({
@@ -3906,6 +3918,7 @@ function chooseUpgrade(index) {
 
 function finishUpgradeSelection() {
   state.upgradeChoices = [];
+  state.upgradeSelectedIndex = 0;
   state.currentBuildOpen = false;
   state.upgradePickConfirm = null;
   state.mode = "playing";
@@ -9332,12 +9345,13 @@ function drawUpgradeOverlay() {
     const rarity = getRarityVisual(upgrade.rarity);
     const card = getUpgradeCardRect(i);
     const hovered = !state.upgradePickConfirm && pointInRect(state.pointer.x, state.pointer.y, card.x, card.y, card.w, card.h);
+    const selected = !state.upgradePickConfirm && state.upgradeSelectedIndex === i;
     const dimmed = state.upgradePickConfirm && state.upgradePickConfirm.index !== i;
     const layout = getUpgradeCardContentLayout(card);
     ctx.save();
     if (dimmed) ctx.globalAlpha = 0.42;
-    drawUpgradeCardFrame(card.x, card.y, card.w, card.h, rarity, hovered || state.upgradePickConfirm?.index === i);
-    drawUpgradeCardReadabilityPanels(layout, rarity, hovered);
+    drawUpgradeCardFrame(card.x, card.y, card.w, card.h, rarity, hovered || selected || state.upgradePickConfirm?.index === i);
+    drawUpgradeCardReadabilityPanels(layout, rarity, hovered || selected);
     drawRarityBadge(layout.badge.x, layout.badge.y, layout.badge.w, layout.badge.h, rarityLabel(upgrade.rarity).toUpperCase(), rarity);
     drawUpgradeEmblem(upgrade, layout.icon.x, layout.icon.y, rarity, layout.icon.size);
     drawReadableUpgradeText(() => {
@@ -9349,6 +9363,7 @@ function drawUpgradeOverlay() {
       drawLimitedWrapText(upgradeShortText(upgrade), layout.desc.x, layout.desc.y, layout.desc.w, layout.desc.lineH, "rgba(246,250,255,0.92)", layout.desc.size, layout.desc.maxLines || 3, "800");
     }, 5);
     drawUpgradeTraitHint(upgrade, card);
+    if (selected) drawUpgradeSelectionHighlight(card, rarity);
     ctx.restore();
   }
   if (state.upgradePickConfirm) drawUpgradePickConfirmFx();
@@ -9420,6 +9435,21 @@ function drawUpgradeCardFrame(x, y, w, h, rarity, hovered = false) {
   ctx.fillStyle = hexToRgba(rarity.color, hovered ? 0.24 : 0.14);
   roundedRect(x + 10, y + h - 8, w - 20, 3, 2, true, false);
   drawUpgradeCornerMarks(x, y, w, h, rarity.color, hovered ? 0.58 : 0.34);
+  ctx.restore();
+}
+
+function drawUpgradeSelectionHighlight(card, rarity) {
+  const pulse = 0.5 + Math.sin(performance.now() / 220) * 0.5;
+  ctx.save();
+  ctx.shadowColor = rarity.glow;
+  ctx.shadowBlur = 18 + pulse * 8;
+  ctx.strokeStyle = hexToRgba(rarity.border, 0.7 + pulse * 0.18);
+  ctx.lineWidth = 2.6;
+  roundedRect(card.x - 7, card.y - 7, card.w + 14, card.h + 14, 15, false, true);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = hexToRgba("#fff0a6", 0.28 + pulse * 0.18);
+  ctx.lineWidth = 1.1;
+  roundedRect(card.x + 7, card.y + 7, card.w - 14, card.h - 14, 10, false, true);
   ctx.restore();
 }
 
@@ -10190,12 +10220,22 @@ window.addEventListener("keydown", (event) => {
 
   if (state.mode === "upgrade" && state.upgradePickConfirm) return;
 
-  if (state.mode === "upgrade" && ["1", "2", "3"].includes(key)) {
-    chooseUpgrade(Number(key) - 1);
-    return;
+  if (state.mode === "upgrade") {
+    if (key === "ArrowLeft" || key === "ArrowRight") {
+      moveUpgradeSelection(key === "ArrowLeft" ? -1 : 1);
+      return;
+    }
+    if (code === "Space" || key === " ") {
+      chooseUpgrade(state.upgradeSelectedIndex);
+      return;
+    }
+    if (["1", "2", "3"].includes(key)) {
+      chooseUpgrade(Number(key) - 1);
+      return;
+    }
   }
   if (key === "Enter" && state.mode !== "playing") {
-    if (state.mode === "upgrade") chooseUpgrade(0);
+    if (state.mode === "upgrade") chooseUpgrade(state.upgradeSelectedIndex);
     else if (state.mode === "start" && state.assetLoadingDone && !state.settingsOpen) resetGame("endless");
     return;
   }
@@ -10281,6 +10321,7 @@ function isGameKey(key, code) {
   return allControlKeys().includes(normalized)
     || key === "Enter"
     || key === "Escape"
+    || (state.mode === "upgrade" && (key === "ArrowLeft" || key === "ArrowRight"))
     || ["1", "2", "3"].includes(key)
     || (state.mode === "paused" && state.pauseView === "menu" && normalized === "r")
     || ((state.mode === "victory" || state.mode === "defeat") && normalized === "r")

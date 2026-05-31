@@ -30,6 +30,18 @@ function expandRect(rect, xPad, yPad, minH = 0) {
   };
 }
 
+export function clampUpgradeSelectionIndex(index, choiceCount) {
+  const count = Math.max(0, Math.trunc(Number(choiceCount) || 0));
+  if (count <= 0) return 0;
+  const value = Math.trunc(Number(index) || 0);
+  return Math.min(count - 1, Math.max(0, value));
+}
+
+export function getNextUpgradeSelectionIndex(currentIndex, direction, choiceCount) {
+  const step = Math.sign(Number(direction) || 0);
+  return clampUpgradeSelectionIndex(currentIndex + step, choiceCount);
+}
+
 export function getUpgradeOverlayPanelRect() {
   return { x: 198, y: 118, w: 934, h: 548 };
 }
