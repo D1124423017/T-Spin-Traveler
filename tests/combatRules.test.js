@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatRotationKind,
   getBaseAttackRows,
+  getDefeatCheckPriority,
   getComboAttackStyle,
   getDefeatSafetyResult,
   getHeroAttackStyle,
@@ -86,6 +87,55 @@ describe("combat rule helpers", () => {
     expect(getDefeatSafetyResult({ mode: "playing", runFinalized: true, playerHp: -4, spawnBlocked: true })).toMatchObject({
       defeated: false,
       playerHp: -4,
+    });
+  });
+
+  it("prioritizes explicit spawn blocked defeat before playing-flow recovery", () => {
+    expect(getDefeatCheckPriority({
+      mode: "playing",
+      runFinalized: false,
+      playerHp: 12,
+      spawnBlocked: true,
+    })).toMatchObject({
+      result: {
+        defeated: true,
+        messageKey: "messageSpawnTop",
+        reason: "spawnBlocked",
+        playerHp: 12,
+      },
+      shouldRunPlayingFlowSafety: false,
+    });
+  });
+
+  it("keeps HP defeat above spawn blocked defeat", () => {
+    expect(getDefeatCheckPriority({
+      mode: "playing",
+      runFinalized: false,
+      playerHp: 0,
+      spawnBlocked: true,
+    })).toMatchObject({
+      result: {
+        defeated: true,
+        messageKey: "messagePlayerDefeat",
+        reason: "playerHp",
+        playerHp: 0,
+      },
+      shouldRunPlayingFlowSafety: false,
+    });
+  });
+
+  it("keeps ordinary playing-flow safety recovery available without explicit spawn blocked", () => {
+    expect(getDefeatCheckPriority({
+      mode: "playing",
+      runFinalized: false,
+      playerHp: 12,
+      spawnBlocked: null,
+    })).toMatchObject({
+      result: {
+        defeated: false,
+        playerHp: 12,
+      },
+      shouldRunPlayingFlowSafety: true,
     });
   });
 

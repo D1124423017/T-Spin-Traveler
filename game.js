@@ -89,6 +89,7 @@ import {
   getComboMilestoneDamage as getComboMilestoneDamageBase,
 } from "./src/combat/damage.js";
 import {
+  getDefeatCheckPriority,
   getDefeatSafetyResult,
   getComboAttackStyle,
   getHeroAttackStyle,
@@ -129,6 +130,10 @@ import {
   saveMetaProgress,
 } from "./src/core/metaProgress.js";
 import {
+  getAssetLoadingSummary,
+  isAssetLoadingComplete,
+} from "./src/core/assetReadiness.js";
+import {
   animateNumber,
   clamp,
   drawRoundedRect,
@@ -140,6 +145,10 @@ import {
   pointInRect,
   smoothstep,
 } from "./src/render/drawUtils.js";
+import {
+  resetCanvasFrame,
+  resetCanvasTransform,
+} from "./src/render/renderStyles.js";
 import {
   createHudLayout,
   getControlsResetButtonRect as getControlsResetButtonRectForLayout,
@@ -158,6 +167,11 @@ import {
 } from "./src/ui/hudLayout.js";
 import { getPiecePreviewLayout } from "./src/ui/piecePreview.js";
 import { buildDamageEquation } from "./src/ui/combatReadout.js";
+import {
+  formatControlKey,
+  formatDamageSources as formatDamageSourcesForUi,
+  formatMetaUpgradeEffect as formatMetaUpgradeEffectForUi,
+} from "./src/ui/formatters.js";
 import { createCanvasFont, createTextLayout } from "./src/ui/textLayout.js";
 import {
   getTraitDetailTitle as getTraitDetailTitleForPanel,
@@ -173,6 +187,12 @@ import {
   getUpgradeCardRect,
   getUpgradeOverlayPanelRect,
 } from "./src/ui/upgradeCards.js";
+import {
+  DEBUG_HUD_BUILD,
+  createDebugHudState,
+  isDebugHudEnabled,
+  updateDebugDomHud,
+} from "./src/debug/debugHud.js";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -478,8 +498,7 @@ const BOSS_PHASE_BANNER_MS = 1550;
 const BOSS_WINDUP_MS = 1350;
 const HEAVY_ATTACK_WARNING_DAMAGE = 20;
 const GITHUB_FEEDBACK_URL = "https://github.com/D1124423017/T-Spin-Traveler/issues";
-const DEBUG_HUD_ENABLED = new URLSearchParams(window.location.search).get("debug") === "1";
-const DEBUG_HUD_BUILD = "debug-hud-2026-05-31-loading-trace";
+const DEBUG_HUD_ENABLED = isDebugHudEnabled();
 
 const BALANCE = {
   enemyWaveHp: 10,
@@ -1090,20 +1109,7 @@ const state = {
   runFinalized: false,
   defeatRenderTraceWarned: false,
   playingStallWarned: false,
-  debug: {
-    lastDefeatSource: "",
-    lastDefeatMessageKey: "",
-    triggerDefeatCalled: false,
-    finishRunCalled: false,
-    resultOverlayDrawn: false,
-    stuckActiveKey: "",
-    stuckSince: 0,
-    flowStuck: false,
-    lastUpdateAt: 0,
-    lastDrawAt: 0,
-    drawError: "",
-    domHud: null,
-  },
+  debug: createDebugHudState(),
   challenge: null,
   tutorial: null,
   upgradeChoices: [],
@@ -1343,19 +1349,19 @@ function resolvePlayingFlowSafety(source = "playingFlowSafety") {
 
 function checkDefeatState(source = "checkDefeatState", { spawnPiece = null, spawnBlocked = null } = {}) {
   if (state.mode !== "playing" || state.runFinalized) return false;
-  const hpResult = getDefeatSafetyResult({
+  const priority = getDefeatCheckPriority({
     mode: state.mode,
     runFinalized: state.runFinalized,
     playerHp: state.playerHp,
-    spawnBlocked: false,
+    spawnBlocked,
   });
-  if (hpResult.playerHp !== state.playerHp) state.playerHp = hpResult.playerHp;
-  if (hpResult.defeated) {
-    triggerDefeat(hpResult.messageKey, `${source}.${hpResult.reason}`);
+  if (priority.result.playerHp !== state.playerHp) state.playerHp = priority.result.playerHp;
+  if (priority.result.defeated) {
+    triggerDefeat(priority.result.messageKey, `${source}.${priority.result.reason}`);
     return state.mode === "defeat";
   }
 
-  if (resolvePlayingFlowSafety(source)) return true;
+  if (priority.shouldRunPlayingFlowSafety && resolvePlayingFlowSafety(source)) return true;
 
   const result = getDefeatSafetyResult({
     mode: state.mode,
@@ -1625,20 +1631,9 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.runFinalized = false;
   state.defeatRenderTraceWarned = false;
   state.playingStallWarned = false;
-  state.debug = {
-    lastDefeatSource: "",
-    lastDefeatMessageKey: "",
-    triggerDefeatCalled: false,
-    finishRunCalled: false,
-    resultOverlayDrawn: false,
-    stuckActiveKey: "",
-    stuckSince: 0,
-    flowStuck: false,
-    lastUpdateAt: performance.now(),
-    lastDrawAt: performance.now(),
-    drawError: "",
-    domHud: null,
-  };
+  state.debug = createDebugHudState();
+  state.debug.lastUpdateAt = performance.now();
+  state.debug.lastDrawAt = performance.now();
   state.challenge = challengeId ? makeChallengeState(challengeId) : null;
   state.tutorial = null;
   state.upgradeChoices = [];
@@ -4231,10 +4226,17 @@ function update(time) {
 
     tickEffects(dt);
     updateScreenNoteMode();
-    updateDebugHudState(time);
-    updateDebugDomHud(time);
+    if (DEBUG_HUD_ENABLED) {
+      updateDebugDomHud({
+        enabled: DEBUG_HUD_ENABLED,
+        debugState: state.debug,
+        readers: getDebugHudReaders(time),
+        now: time,
+      });
+    }
     draw();
   } catch (error) {
+    state.debug.drawError = String(error?.message || error);
     console.error("T-Spin Traveler update failed:", error);
   }
   requestAnimationFrame(update);
@@ -4242,23 +4244,14 @@ function update(time) {
 
 function updateAssetLoading(now = performance.now()) {
   if (state.assetLoadingDone) return;
-  const summary = window.TST_ASSETS?.getSummary?.();
-  const loading = summary?.counts?.loading || 0;
+  const summary = getAssetLoadingSummary(window.TST_ASSETS);
   const elapsed = now - state.assetLoadingStartedAt;
-  if ((loading === 0 && elapsed >= ASSET_LOADING_MIN_MS) || elapsed >= ASSET_LOADING_MAX_MS) {
+  if (isAssetLoadingComplete(summary, elapsed, {
+    minMs: ASSET_LOADING_MIN_MS,
+    maxMs: ASSET_LOADING_MAX_MS,
+  })) {
     state.assetLoadingDone = true;
   }
-}
-
-function getAssetLoadingSummary() {
-  const summary = window.TST_ASSETS?.getSummary?.();
-  const counts = summary?.counts || {};
-  return {
-    loading: counts.loading || 0,
-    error: counts.error || 0,
-    loaded: counts.loaded || 0,
-    total: summary?.images?.length || 0,
-  };
 }
 
 function isBattleCountdownActive() {
@@ -5121,7 +5114,7 @@ function tickEffects(dt) {
 
 function draw() {
   state.debug.lastDrawAt = performance.now();
-  resetCanvasFrame();
+  resetCanvasFrame(ctx, W, H);
   ctx.save();
   try {
     const jitter = state.shake ? Math.sin(performance.now() * 0.06) * state.shake : 0;
@@ -5145,21 +5138,9 @@ function draw() {
     drawPerfectClearFx();
     drawOverlay();
     if (!["start", "guide", "upgrade", "metaUpgrade", "victory", "defeat"].includes(state.mode)) drawSettings();
-    safeDrawDebugHud();
   } finally {
     ctx.restore();
-    resetCanvasTransform();
-  }
-}
-
-function safeDrawDebugHud() {
-  if (!DEBUG_HUD_ENABLED) return;
-  try {
-    drawDebugHud();
-    state.debug.drawError = "";
-  } catch (error) {
-    state.debug.drawError = String(error?.message || error);
-    console.error("[T-Spin Traveler] Debug HUD draw failed:", error);
+    resetCanvasTransform(ctx);
   }
 }
 
@@ -5198,160 +5179,40 @@ function getActiveCellMinYForDebug() {
   return Number.isFinite(minY) ? minY : "";
 }
 
-function updateDebugHudState(now = performance.now()) {
-  if (!DEBUG_HUD_ENABLED) return;
-  const activeKey = getActiveDebugKey();
-  const blockedDown = state.mode === "playing" && Boolean(state.active) && !canActiveMoveDownForDebug();
-  if (!blockedDown) {
-    state.debug.stuckActiveKey = "";
-    state.debug.stuckSince = 0;
-    state.debug.flowStuck = false;
-    return;
-  }
-  if (state.debug.stuckActiveKey !== activeKey) {
-    state.debug.stuckActiveKey = activeKey;
-    state.debug.stuckSince = now;
-    state.debug.flowStuck = false;
-    return;
-  }
-  state.debug.flowStuck = state.debug.stuckSince > 0 && now - state.debug.stuckSince > 2000;
-}
-
-function readDebugValue(label, reader) {
-  try {
-    return [label, reader()];
-  } catch (error) {
-    return [label, `ERR ${String(error?.message || error)}`];
-  }
-}
-
-function getDebugRows(now = performance.now()) {
+function getDebugHudReaders(now = performance.now()) {
   const active = state.active;
-  return [
-    readDebugValue("mode", () => state.mode),
-    readDebugValue("runFinalized", () => state.runFinalized),
-    readDebugValue("playerHp", () => state.playerHp),
-    readDebugValue("active", () => Boolean(active)),
-    readDebugValue("active.type", () => active?.type || ""),
-    readDebugValue("active.x", () => active?.x ?? ""),
-    readDebugValue("active.y", () => active?.y ?? ""),
-    readDebugValue("active min cell y", getActiveCellMinYForDebug),
-    readDebugValue("active y<HIDDEN", activeHasCellAboveHiddenRows),
-    readDebugValue("active y<0", activeHasCellAboveTopBuffer),
-    readDebugValue("active canMove down", canActiveMoveDownForDebug),
-    readDebugValue("active overlaps board", isActivePieceOverlappingBoard),
-    readDebugValue("lockTimer", () => state.lockTimer === null ? "null" : Math.round(now - state.lockTimer)),
-    readDebugValue("dropTimer", () => Math.round(state.dropTimer || 0)),
-    readDebugValue("countdownMs", () => Math.round(state.countdownMs || 0)),
-    readDebugValue("hitStopMs", () => Math.round(state.hitStopMs || 0)),
-    readDebugValue("pendingHits.length", () => state.pendingHits.length),
-    readDebugValue("upgrade choice open", () => state.mode === "upgrade" || state.upgradeChoices.length > 0),
-    readDebugValue("pause open", () => state.mode === "paused"),
-    readDebugValue("hidden row 0", () => getHiddenRowsDebugInfo().rows[0] || false),
-    readDebugValue("hidden row 1", () => getHiddenRowsDebugInfo().rows[1] || false),
-    readDebugValue("spawn footprint blocked", isSpawnBlockedForDefeat),
-    readDebugValue("lastDefeatSource", () => state.debug.lastDefeatSource),
-    readDebugValue("lastDefeatMessageKey", () => state.debug.lastDefeatMessageKey),
-    readDebugValue("triggerDefeat called", () => state.debug.triggerDefeatCalled),
-    readDebugValue("finishRun called", () => state.debug.finishRunCalled),
-    readDebugValue("drawResultOverlay called", () => state.debug.resultOverlayDrawn),
-    readDebugValue("last update age", () => Math.round(now - state.debug.lastUpdateAt)),
-    readDebugValue("last draw age", () => Math.round(now - state.debug.lastDrawAt)),
-    readDebugValue("draw error", () => state.debug.drawError),
-    readDebugValue("debug build", () => DEBUG_HUD_BUILD),
-  ];
-}
-
-function ensureDebugDomHud() {
-  if (!DEBUG_HUD_ENABLED || state.debug.domHud) return state.debug.domHud;
-  const hud = document.createElement("pre");
-  hud.id = "tst-debug-hud";
-  Object.assign(hud.style, {
-    position: "fixed",
-    left: "10px",
-    top: "10px",
-    zIndex: "2147483647",
-    maxWidth: "420px",
-    maxHeight: "92vh",
-    overflow: "hidden",
-    margin: "0",
-    padding: "8px 10px",
-    border: "1px solid rgba(126, 231, 255, 0.72)",
-    borderRadius: "6px",
-    background: "rgba(5, 8, 14, 0.86)",
-    color: "#f5f1e6",
-    font: "10px/1.3 monospace",
-    pointerEvents: "none",
-    whiteSpace: "pre-wrap",
-  });
-  document.body.appendChild(hud);
-  state.debug.domHud = hud;
-  return hud;
-}
-
-function updateDebugDomHud(now = performance.now()) {
-  if (!DEBUG_HUD_ENABLED) return;
-  const hud = ensureDebugDomHud();
-  if (!hud) return;
-  const rows = getDebugRows(now);
-  if (state.debug.flowStuck) rows.unshift(["FLOW STUCK", `${Math.round(now - state.debug.stuckSince)}ms`]);
-  hud.textContent = rows.map(([key, value]) => `${key}: ${formatDebugValue(value)}`).join("\n");
-  hud.style.borderColor = state.debug.flowStuck ? "rgba(255, 120, 132, 0.95)" : "rgba(126, 231, 255, 0.72)";
-}
-
-function formatDebugValue(value) {
-  if (typeof value === "boolean") return value ? "yes" : "no";
-  if (value === null) return "null";
-  if (value === undefined) return "undefined";
-  return String(value);
-}
-
-function drawDebugHud() {
-  if (!DEBUG_HUD_ENABLED) return;
-  const now = performance.now();
-  const rows = getDebugRows(now);
-  if (state.debug.flowStuck) rows.unshift(["FLOW STUCK", `${Math.round(now - state.debug.stuckSince)}ms`]);
-
-  ctx.save();
-  resetCanvasTransform();
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = "rgba(5, 8, 14, 0.82)";
-  roundedRect(10, 10, 318, 18 + rows.length * 13, 6, true, false);
-  ctx.strokeStyle = state.debug.flowStuck ? "rgba(255, 120, 132, 0.9)" : "rgba(126, 231, 255, 0.42)";
-  ctx.lineWidth = 1;
-  roundedRect(10, 10, 318, 18 + rows.length * 13, 6, false, true);
-  ctx.font = "10px monospace";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-  for (let i = 0; i < rows.length; i += 1) {
-    const [key, value] = rows[i];
-    const y = 18 + i * 13;
-    ctx.fillStyle = key === "FLOW STUCK" ? "#ff8f98" : "rgba(157, 247, 218, 0.9)";
-    ctx.fillText(`${key}:`, 18, y);
-    ctx.fillStyle = "rgba(245, 241, 230, 0.92)";
-    ctx.fillText(formatDebugValue(value), 160, y);
-  }
-  ctx.restore();
-}
-
-function resetCanvasFrame() {
-  // Recover from any leaked canvas state after a draw error, then clear the frame.
-  for (let i = 0; i < 24; i += 1) ctx.restore();
-  resetCanvasTransform();
-  ctx.globalAlpha = 1;
-  ctx.globalCompositeOperation = "source-over";
-  ctx.shadowBlur = 0;
-  ctx.shadowColor = "transparent";
-  ctx.lineWidth = 1;
-  ctx.clearRect(0, 0, W, H);
-}
-
-function resetCanvasTransform() {
-  if (typeof ctx.setTransform === "function") {
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-  } else if (typeof ctx.resetTransform === "function") {
-    ctx.resetTransform();
-  }
+  return {
+    mode: () => state.mode,
+    runFinalized: () => state.runFinalized,
+    playerHp: () => state.playerHp,
+    active: () => Boolean(active),
+    activeType: () => active?.type || "",
+    activeX: () => active?.x ?? "",
+    activeY: () => active?.y ?? "",
+    activeMinCellY: getActiveCellMinYForDebug,
+    activeAboveHidden: activeHasCellAboveHiddenRows,
+    activeAboveTopBuffer: activeHasCellAboveTopBuffer,
+    activeCanMoveDown: canActiveMoveDownForDebug,
+    activeOverlapsBoard: isActivePieceOverlappingBoard,
+    lockTimer: () => state.lockTimer === null ? "null" : Math.round(now - state.lockTimer),
+    dropTimer: () => Math.round(state.dropTimer || 0),
+    countdownMs: () => Math.round(state.countdownMs || 0),
+    hitStopMs: () => Math.round(state.hitStopMs || 0),
+    pendingHitsLength: () => state.pendingHits.length,
+    upgradeChoiceOpen: () => state.mode === "upgrade" || state.upgradeChoices.length > 0,
+    pauseOpen: () => state.mode === "paused",
+    hiddenRow0: () => getHiddenRowsDebugInfo().rows[0] || false,
+    hiddenRow1: () => getHiddenRowsDebugInfo().rows[1] || false,
+    spawnFootprintBlocked: isSpawnBlockedForDefeat,
+    assetLoading: () => getAssetLoadingSummary().loading,
+    assetLoaded: () => getAssetLoadingSummary().loaded,
+    assetError: () => getAssetLoadingSummary().error,
+    assetTotal: () => getAssetLoadingSummary().total,
+    assetAge: () => `${Math.round(now - state.assetLoadingStartedAt)}ms`,
+    servedTopBuffer: () => HIDDEN === 5,
+    activeDebugKey: getActiveDebugKey,
+    activeBlockedDown: () => state.mode === "playing" && Boolean(state.active) && !canActiveMoveDownForDebug(),
+  };
 }
 
 function drawBackground() {
@@ -9485,21 +9346,7 @@ function getNextRunGoalText() {
 }
 
 function formatDamageSources() {
-  const labels = {
-    base: t("damageBase"),
-    spin: "Spin",
-    combo: "Combo",
-    b2b: "B2B",
-    perfect: "Perfect",
-    weakness: t("enemyInfoWeakness"),
-    upgrade: t("summaryUpgradeSource"),
-  };
-  const top = Object.entries(state.stats.damageSources || {})
-    .filter(([, value]) => value > 0)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 4);
-  if (!top.length) return "-";
-  return top.map(([key, value]) => `${labels[key] || key} ${value}`).join(" / ");
+  return formatDamageSourcesForUi(state.stats.damageSources || {}, { translate: t });
 }
 
 function getRatingColor(rating) {
@@ -9580,11 +9427,7 @@ function drawMetaUpgradeRow(def, rect, progress) {
 }
 
 function formatMetaUpgradeEffect(def, level) {
-  const value = Math.max(0, level) * def.valuePerLevel;
-  if (def.id === "hp") return fmt("metaUpgradeHpEffect", { value });
-  if (def.id === "attack") return fmt("metaUpgradeAttackEffect", { value });
-  if (def.id === "guard") return fmt("metaUpgradeGuardEffect", { value });
-  return `+${value}`;
+  return formatMetaUpgradeEffectForUi(def, level, { format: fmt });
 }
 
 function drawMetaUpgradeBuyButton(rect, maxed, canBuy) {
@@ -10678,26 +10521,6 @@ function drawKeyBindRow(x, y, text, value, binding, w = UI_LAYOUT.controlsGrid.r
   ctx.restore();
 }
 
-function formatControlKey(key) {
-  const map = {
-    arrowleft: "←",
-    arrowright: "→",
-    arrowdown: "↓",
-    arrowup: "↑",
-    shift: "SHIFT",
-    enter: "ENTER",
-    escape: "ESC",
-    control: "CTRL",
-    alt: "ALT",
-    tab: "TAB",
-    backspace: "BACKSPACE",
-  };
-  if (key === " ") return "SPACE";
-  if (map[key]) return map[key];
-  if (key.length === 1) return key.toUpperCase();
-  return key.toUpperCase();
-}
-
 function drawImageContain(img, x, y, w, h) {
   if (!isImageReady(img)) {
     drawImageFallbackBox(x, y, w, h, getMissingImageLabel(img, "IMAGE"));
@@ -11273,5 +11096,13 @@ try {
   state.debug.drawError = String(error?.message || error);
   console.error("[T-Spin Traveler] Initial draw failed:", error);
 }
-updateDebugDomHud(performance.now());
+if (DEBUG_HUD_ENABLED) {
+  const initialDebugNow = performance.now();
+  updateDebugDomHud({
+    enabled: DEBUG_HUD_ENABLED,
+    debugState: state.debug,
+    readers: getDebugHudReaders(initialDebugNow),
+    now: initialDebugNow,
+  });
+}
 requestAnimationFrame(update);

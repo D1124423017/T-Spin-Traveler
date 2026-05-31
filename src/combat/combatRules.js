@@ -85,6 +85,35 @@ export function getDefeatSafetyResult({
   return { defeated: false, messageKey: "", reason: "", playerHp };
 }
 
+export function getDefeatCheckPriority({
+  mode = "playing",
+  runFinalized = false,
+  playerHp = 1,
+  spawnBlocked = null,
+} = {}) {
+  const hpResult = getDefeatSafetyResult({
+    mode,
+    runFinalized,
+    playerHp,
+    spawnBlocked: false,
+  });
+  if (hpResult.defeated) {
+    return { result: hpResult, shouldRunPlayingFlowSafety: false };
+  }
+  if (spawnBlocked === true) {
+    return {
+      result: getDefeatSafetyResult({
+        mode,
+        runFinalized,
+        playerHp: hpResult.playerHp,
+        spawnBlocked: true,
+      }),
+      shouldRunPlayingFlowSafety: false,
+    };
+  }
+  return { result: hpResult, shouldRunPlayingFlowSafety: true };
+}
+
 export function getPlayingFlowSafetyResult({
   mode = "playing",
   runFinalized = false,
