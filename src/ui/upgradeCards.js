@@ -3,11 +3,21 @@ export const UPGRADE_CARD_ASSET_SIZE = Object.freeze({ w: 1024, h: 1536 });
 export const UPGRADE_CARD_SAFE_ZONES = Object.freeze({
   badge: Object.freeze({ x: 90, y: 70, w: 300, h: 80 }),
   skull: Object.freeze({ x: 362, y: 110, w: 300, h: 260 }),
-  icon: Object.freeze({ x: 382, y: 250, w: 260, h: 260 }),
-  title: Object.freeze({ x: 120, y: 545, w: 784, h: 130 }),
-  tags: Object.freeze({ x: 120, y: 700, w: 784, h: 90 }),
-  desc: Object.freeze({ x: 120, y: 820, w: 784, h: 390 }),
-  trait: Object.freeze({ x: 110, y: 1270, w: 804, h: 120 }),
+  icon: Object.freeze({ x: 748, y: 848, w: 150, h: 150 }),
+  title: Object.freeze({ x: 145, y: 852, w: 580, h: 95 }),
+  tags: Object.freeze({ x: 145, y: 960, w: 734, h: 78 }),
+  desc: Object.freeze({ x: 145, y: 1045, w: 734, h: 210 }),
+  trait: Object.freeze({ x: 145, y: 1340, w: 734, h: 72 }),
+});
+
+export const SPECIAL_UPGRADE_CARD_SAFE_ZONES = Object.freeze({
+  badge: UPGRADE_CARD_SAFE_ZONES.badge,
+  skull: UPGRADE_CARD_SAFE_ZONES.skull,
+  icon: Object.freeze({ x: 748, y: 1004, w: 150, h: 150 }),
+  title: Object.freeze({ x: 145, y: 1000, w: 580, h: 68 }),
+  tags: Object.freeze({ x: 145, y: 1078, w: 734, h: 70 }),
+  desc: Object.freeze({ x: 145, y: 1155, w: 734, h: 138 }),
+  trait: Object.freeze({ x: 145, y: 1368, w: 734, h: 64 }),
 });
 
 function scaleCardZone(card, zone) {
@@ -68,16 +78,17 @@ export function getUpgradeCardRect(index) {
   return { x: startX + index * (w + gap), y: panel.y + 128, w, h };
 }
 
-export function getUpgradeCardContentLayout(card) {
-  const badge = scaleCardZone(card, UPGRADE_CARD_SAFE_ZONES.badge);
-  const icon = scaleCardZone(card, UPGRADE_CARD_SAFE_ZONES.icon);
-  const title = scaleCardZone(card, UPGRADE_CARD_SAFE_ZONES.title);
-  const tags = scaleCardZone(card, UPGRADE_CARD_SAFE_ZONES.tags);
-  const desc = scaleCardZone(card, UPGRADE_CARD_SAFE_ZONES.desc);
-  const trait = scaleCardZone(card, UPGRADE_CARD_SAFE_ZONES.trait);
-  const titleText = { x: title.x, y: title.y + 8, w: title.w, lineH: 17, size: 14, maxLines: 2 };
+export function getUpgradeCardContentLayout(card, variant = "default") {
+  const zones = variant === "special" ? SPECIAL_UPGRADE_CARD_SAFE_ZONES : UPGRADE_CARD_SAFE_ZONES;
+  const badge = scaleCardZone(card, zones.badge);
+  const icon = scaleCardZone(card, zones.icon);
+  const title = scaleCardZone(card, zones.title);
+  const tags = scaleCardZone(card, zones.tags);
+  const desc = scaleCardZone(card, zones.desc);
+  const trait = scaleCardZone(card, zones.trait);
+  const titleText = { x: title.x, y: title.y + 7, w: title.w, lineH: 15, size: 13, maxLines: 2 };
   const tagsText = { x: tags.x, y: tags.y + 4, w: tags.w, maxTags: 2 };
-  const descText = { x: desc.x, y: desc.y + 8, w: desc.w, lineH: 15, size: 11, maxLines: 5 };
+  const descText = { x: desc.x, y: desc.y + 7, w: desc.w, lineH: 12, size: 10, maxLines: variant === "special" ? 3 : 4 };
   const traitHint = { x: trait.x, y: trait.y, w: trait.w, h: Math.max(34, trait.h) };
   return {
     badge: { ...badge, h: Math.max(22, badge.h) },
@@ -90,7 +101,7 @@ export function getUpgradeCardContentLayout(card) {
     panels: {
       title: expandRect({ x: title.x, y: title.y + 3, w: title.w, h: title.h - 4 }, 8, 4, 44),
       tags: expandRect({ x: tags.x, y: tags.y + 1, w: tags.w, h: tags.h - 3 }, 8, 3, 28),
-      desc: expandRect({ x: desc.x, y: desc.y + 4, w: desc.w, h: desc.h - 8 }, 8, 4, 96),
+      desc: expandRect({ x: desc.x, y: desc.y + 4, w: desc.w, h: desc.h - 8 }, 8, 4, variant === "special" ? 46 : 58),
       trait: expandRect(traitHint, 4, 3, 40),
     },
   };

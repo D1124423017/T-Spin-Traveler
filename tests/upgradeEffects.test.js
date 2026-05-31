@@ -13,6 +13,7 @@ function createRuntime(overrides = {}) {
       tspinBonus: 0,
       comboDamage: 0,
       guardGain: 0,
+      damageMultiplier: 0,
       singularitySpinCore: 0,
     },
     maxGuard: 20,
@@ -72,5 +73,33 @@ describe("upgrade effects", () => {
     expect(runtime.state.maxGuard).toBe(28);
     expect(runtime.state.upgrades.guardGain).toBe(1);
     expect(runtime.state.guard).toBe(13);
+  });
+
+  it("sets the new Angel special card flags without immediate healing", () => {
+    const runtime = createRuntime();
+
+    applyUpgradeEffect(getUpgrade("angel_halo_sanctuary"), runtime);
+    applyUpgradeEffect(getUpgrade("angel_cleansing_prism"), runtime);
+    applyUpgradeEffect(getUpgrade("angel_perfect_benediction"), runtime);
+
+    expect(runtime.state.upgrades.angelHaloSanctuary).toBe(1);
+    expect(runtime.state.upgrades.angelCleansingPrism).toBe(1);
+    expect(runtime.state.upgrades.angelPerfectBenediction).toBe(1);
+    expect(runtime.state.playerHp).toBe(50);
+    expect(runtime.state.guard).toBe(5);
+  });
+
+  it("sets the new Devil special card flags without immediate HP payment", () => {
+    const runtime = createRuntime();
+
+    applyUpgradeEffect(getUpgrade("devil_blood_moon_pact"), runtime);
+    applyUpgradeEffect(getUpgrade("devil_abyss_chain"), runtime);
+    applyUpgradeEffect(getUpgrade("devil_fallen_crown"), runtime);
+
+    expect(runtime.state.upgrades.devilBloodMoonPact).toBe(1);
+    expect(runtime.state.upgrades.devilAbyssChain).toBe(1);
+    expect(runtime.state.upgrades.devilFallenCrown).toBe(1);
+    expect(runtime.state.playerHp).toBe(50);
+    expect(runtime.state.upgrades.damageMultiplier).toBe(0);
   });
 });

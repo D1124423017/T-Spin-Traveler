@@ -28,6 +28,7 @@ import {
   riftEnergyIcon,
   rosterArt,
   slimeArt,
+  specialUpgradeCardFrames,
   upgradeCardFrames,
   upgradeTypeIcons,
 } from "./src/data/assets.js";
@@ -115,6 +116,13 @@ import {
   getUtilityTraitBonus,
   isTraitHighValueClear,
 } from "./src/combat/upgradeEffects.js";
+import {
+  SPECIAL_UPGRADE_FAMILIES,
+  getSpecialBondCounts,
+  getSpecialBondPreview,
+  getSpecialBondTier,
+  isSpecialUpgradeId,
+} from "./src/combat/specialUpgrades.js";
 import {
   isBossEnemy,
   isBossLikeEnemy,
@@ -1145,6 +1153,10 @@ const state = {
   riftOverdriveCharge: 0,
   lastStarProtocolWave: 0,
   lastStarProtocolReady: false,
+  angelWard: 0,
+  angelBlessingCharges: 0,
+  angelMercyWave: 0,
+  devilSinMarks: 0,
   upgrades: {
     tspinBonus: 0,
     garbageCancel: 0,
@@ -1184,6 +1196,12 @@ const state = {
     perfectEcho: 0,
     riftOverdrive: 0,
     lastStarProtocol: 0,
+    angelHaloSanctuary: 0,
+    angelCleansingPrism: 0,
+    angelPerfectBenediction: 0,
+    devilBloodMoonPact: 0,
+    devilAbyssChain: 0,
+    devilFallenCrown: 0,
   },
   message: "",
   messageKey: "",
@@ -1670,6 +1688,10 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.riftOverdriveCharge = 0;
   state.lastStarProtocolWave = 0;
   state.lastStarProtocolReady = false;
+  state.angelWard = 0;
+  state.angelBlessingCharges = 0;
+  state.angelMercyWave = 0;
+  state.devilSinMarks = 0;
   state.upgrades = {
     tspinBonus: 0,
     garbageCancel: 0,
@@ -1709,6 +1731,12 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
     perfectEcho: 0,
     riftOverdrive: 0,
     lastStarProtocol: 0,
+    angelHaloSanctuary: 0,
+    angelCleansingPrism: 0,
+    angelPerfectBenediction: 0,
+    devilBloodMoonPact: 0,
+    devilAbyssChain: 0,
+    devilFallenCrown: 0,
   };
   state.message = "";
   state.messageKey = "";
@@ -2338,7 +2366,8 @@ function updateAudioCues(now = performance.now()) {
 
 function applyEnemyHit(hit) {
   if (state.mode !== "playing") return;
-  const { enemy, damageTaken, garbageAdded } = hit;
+  const { enemy, damageTaken } = hit;
+  let garbageAdded = hit.garbageAdded;
   let blocked = Math.min(state.guard, damageTaken);
   let finalDamage = Math.max(0, damageTaken - blocked);
   const projectedHp = state.playerHp - finalDamage;
@@ -2349,6 +2378,9 @@ function applyEnemyHit(hit) {
       finalDamage = Math.max(0, damageTaken - blocked);
     }
   }
+  const angelProtection = applyAngelHitProtection(finalDamage, garbageAdded);
+  finalDamage = angelProtection.finalDamage;
+  garbageAdded = angelProtection.garbageAdded;
   state.guard -= blocked;
   state.playerHp = Math.max(0, state.playerHp - finalDamage);
   state.pendingGarbage += garbageAdded;
@@ -2439,6 +2471,233 @@ function createBattleSnapshot() {
 
 function getTraitSnapshot() {
   return getTraitEntries().map(({ tag, count, stage, fullCount, isFull, overcap }) => ({ tag, count, stage, fullCount, isFull, overcap }));
+}
+
+function getSpecialBondCountsForRun() {
+  return getSpecialBondCounts(state.acquiredRelics);
+}
+
+function getAngelBondTier() {
+  return getSpecialBondTier("angel", getSpecialBondCountsForRun());
+}
+
+function getDevilBondTier() {
+  return getSpecialBondTier("devil", getSpecialBondCountsForRun());
+}
+
+function isPlayerLowHp() {
+  return state.playerMaxHp > 0 && state.playerHp / state.playerMaxHp <= 0.4;
+}
+
+function getAngelWardCap() {
+  return 3 + getAngelBondTier();
+}
+
+function getAngelWardBlockValue() {
+  return 4 + getAngelBondTier();
+}
+
+function grantAngelWard(stacks) {
+  if (stacks <= 0) return 0;
+  const before = state.angelWard || 0;
+  state.angelWard = Math.min(getAngelWardCap(), before + stacks);
+  return state.angelWard - before;
+}
+
+function cleansePendingGarbage(amount) {
+  if (amount <= 0 || state.pendingGarbage <= 0) return 0;
+  const cleansed = Math.min(state.pendingGarbage, amount);
+  state.pendingGarbage -= cleansed;
+  if (state.pendingGarbage === 0) state.garbageGrace = 0;
+  return cleansed;
+}
+
+function applyAngelClearRewards({ lines, spinType, highValueClear }) {
+  if (lines <= 0) return;
+  const angelTier = getAngelBondTier();
+  if (angelTier <= 0) return;
+
+  if (highValueClear) {
+    const wardGain = (angelTier >= 1 ? 1 : 0) + (state.upgrades.angelHaloSanctuary > 0 ? 1 : 0);
+    const gainedWard = grantAngelWard(wardGain);
+    if (gainedWard > 0) {
+      state.floaters.push({
+        x: 86,
+        y: 306,
+        text: fmt("floaterAngelWard", { count: state.angelWard }),
+        color: "#dff7ff",
+        life: 1050,
+      });
+    }
+  }
+
+  const cleansePower = highValueClear
+    ? (state.upgrades.angelCleansingPrism > 0 ? 1 : 0) + (angelTier >= 2 ? 1 : 0)
+    : 0;
+  const cleansed = cleansePendingGarbage(cleansePower);
+  if (cleansed > 0) {
+    const guardGain = grantGuardFromUpgrade(cleansed * (2 + angelTier), null);
+    state.floaters.push({
+      x: BOARD_X + COLS * TILE + 34,
+      y: BOARD_Y + 188,
+      text: fmt("floaterAngelCleanse", { count: cleansed, guard: guardGain }),
+      color: "#dff7ff",
+      life: 1150,
+    });
+    playSfx("cancel");
+  }
+
+  if (state.upgrades.angelPerfectBenediction > 0 && (spinType || state.lastPerfectClear)) {
+    const before = state.angelBlessingCharges || 0;
+    const maxCharges = angelTier >= 3 ? 3 : 2;
+    const chargeGain = state.lastPerfectClear ? 2 : 1;
+    state.angelBlessingCharges = Math.min(maxCharges, before + chargeGain);
+    if (state.angelBlessingCharges > before) {
+      state.floaters.push({
+        x: 86,
+        y: 328,
+        text: fmt("floaterAngelBenediction", { count: state.angelBlessingCharges }),
+        color: "#fff7d2",
+        life: 1050,
+      });
+    }
+  }
+}
+
+function applyAngelHitProtection(finalDamage, incomingGarbage) {
+  let reducedDamage = finalDamage;
+  let reducedGarbage = incomingGarbage;
+  let protectedAmount = 0;
+  let cleansedGarbage = 0;
+  const angelTier = getAngelBondTier();
+  if (angelTier <= 0) return { finalDamage: reducedDamage, garbageAdded: reducedGarbage };
+
+  if (state.angelBlessingCharges > 0 && (reducedDamage > 0 || reducedGarbage > 0)) {
+    state.angelBlessingCharges -= 1;
+    const blessingBlock = Math.min(reducedDamage, 5 + angelTier * 2);
+    protectedAmount += blessingBlock;
+    reducedDamage -= blessingBlock;
+    if (reducedGarbage > 0) {
+      const cleanse = Math.min(reducedGarbage, 1 + (angelTier >= 3 ? 1 : 0));
+      reducedGarbage -= cleanse;
+      cleansedGarbage += cleanse;
+    }
+  }
+
+  const wardBlockValue = getAngelWardBlockValue();
+  while (reducedDamage > 0 && state.angelWard > 0) {
+    state.angelWard -= 1;
+    const blocked = Math.min(reducedDamage, wardBlockValue);
+    protectedAmount += blocked;
+    reducedDamage -= blocked;
+  }
+
+  if (angelTier >= 3 && reducedDamage > 0 && state.angelMercyWave !== state.wave) {
+    state.angelMercyWave = state.wave;
+    const mercyBlock = Math.min(reducedDamage, 12);
+    protectedAmount += mercyBlock;
+    reducedDamage -= mercyBlock;
+  }
+
+  if (protectedAmount > 0 || cleansedGarbage > 0) {
+    state.floaters.push({
+      x: 244,
+      y: 248,
+      text: fmt("floaterAngelProtect", { block: protectedAmount, garbage: cleansedGarbage }),
+      color: "#dff7ff",
+      life: 1050,
+    });
+    playSfx("shield");
+  }
+
+  return { finalDamage: reducedDamage, garbageAdded: reducedGarbage };
+}
+
+function getDevilSinThreshold() {
+  const devilTier = getDevilBondTier();
+  return Math.max(4, 6 - (devilTier >= 2 ? 1 : 0) - (devilTier >= 3 ? 1 : 0));
+}
+
+function payDevilHp(amount) {
+  if (amount <= 0 || state.playerHp <= 1) return 0;
+  const paid = Math.min(amount, state.playerHp - 1);
+  state.playerHp -= paid;
+  return paid;
+}
+
+function gainDevilSinMarks(amount) {
+  if (amount <= 0) return { gained: 0, burstDamage: 0, threshold: getDevilSinThreshold() };
+  const threshold = getDevilSinThreshold();
+  const devilTier = getDevilBondTier();
+  state.devilSinMarks = Math.max(0, (state.devilSinMarks || 0) + amount);
+  if (state.devilSinMarks < threshold) return { gained: amount, burstDamage: 0, threshold };
+  state.devilSinMarks -= threshold;
+  const lowHpBonus = state.upgrades.devilFallenCrown > 0 && isPlayerLowHp() ? 16 : 0;
+  return {
+    gained: amount,
+    burstDamage: 30 + devilTier * 8 + lowHpBonus,
+    threshold,
+  };
+}
+
+function applyDevilClearRewards({ lines, spinType, highValueClear, isDifficultClear, parts, sources }) {
+  if (lines <= 0) return 0;
+  const devilTier = getDevilBondTier();
+  if (devilTier <= 0) return 0;
+
+  let extraDamage = 0;
+  let marks = 0;
+  if ((spinType || lines >= 4) && devilTier >= 1) marks += 1;
+
+  if (state.upgrades.devilBloodMoonPact > 0 && highValueClear) {
+    const paid = payDevilHp(3);
+    if (paid > 0) {
+      const pactDamage = 8 + paid * 3 + (devilTier >= 3 && isPlayerLowHp() ? 6 : 0);
+      extraDamage += pactDamage;
+      marks += 2;
+      addDamagePart(parts, sources, "damageDevilPact", pactDamage, "upgrade");
+      state.floaters.push({
+        x: BOARD_X + COLS * TILE + 36,
+        y: BOARD_Y + 316,
+        text: fmt("floaterDevilPact", { hp: paid, damage: pactDamage }),
+        color: "#ff8fca",
+        life: 1100,
+      });
+    }
+  }
+
+  if (state.upgrades.devilAbyssChain > 0) {
+    if (state.combo >= 3) marks += 1;
+    if (state.combo >= 6) marks += 1;
+    if (isDifficultClear && state.b2bActive) marks += 1;
+  }
+  if (devilTier >= 2 && state.combo >= 4) marks += 1;
+  if (state.upgrades.devilFallenCrown > 0 && isPlayerLowHp() && (highValueClear || state.combo >= 3)) marks += 1;
+
+  const sinResult = gainDevilSinMarks(marks);
+  if (sinResult.gained > 0 && sinResult.burstDamage <= 0) {
+    state.floaters.push({
+      x: BOARD_X + COLS * TILE + 36,
+      y: BOARD_Y + 292,
+      text: fmt("floaterDevilSin", { count: state.devilSinMarks, max: sinResult.threshold }),
+      color: "#ff8fca",
+      life: 950,
+    });
+  }
+  if (sinResult.burstDamage > 0) {
+    extraDamage += sinResult.burstDamage;
+    addDamagePart(parts, sources, "damageDevilSinBurst", sinResult.burstDamage, "upgrade");
+    state.floaters.push({
+      x: BOARD_X + COLS * TILE + 36,
+      y: BOARD_Y + 292,
+      text: fmt("floaterDevilSinBurst", { damage: sinResult.burstDamage }),
+      color: "#ff6f9f",
+      life: 1250,
+    });
+    state.bursts.push({ x: BOARD_X + COLS * TILE + 210, y: BOARD_Y + 278, radius: 20, color: "#ff4d9a", life: 500, duration: 500, intensity: 1.55 });
+    playSfx("tspin");
+  }
+  return extraDamage;
 }
 
 function calculateDamage(context, snapshot) {
@@ -2670,6 +2929,8 @@ function calculateDamage(context, snapshot) {
       });
     }
   }
+  const devilDamage = applyDevilClearRewards({ lines, spinType, highValueClear, isDifficultClear, parts, sources });
+  damage += devilDamage;
 
   const multipliers = [];
   if (lines === 1 && state.enemyType.armorSingle && !state.lastPerfectClear) {
@@ -2776,6 +3037,7 @@ function calculateDamage(context, snapshot) {
   extendUltimateOnCombo(lines);
 
   const canceled = cancelIncomingGarbage(lines);
+  applyAngelClearRewards({ lines, spinType, highValueClear });
   const garbageCounterBonus = canceled > 0 && state.upgrades.garbageCounterDamage > 0
     ? canceled * state.upgrades.garbageCounterDamage
     : 0;
@@ -3804,8 +4066,9 @@ function recordRunEnemyDefeat(clearedBoss) {
 }
 
 function createUpgradeChoices(forceRelic = false, forceRare = false) {
-  const legendaryPool = UPGRADES.filter((upgrade) => upgrade.rarity === "legendary");
-  const pool = UPGRADES.filter((upgrade) => upgrade.rarity !== "legendary");
+  const availableUpgrades = UPGRADES.filter((upgrade) => isUpgradeAvailableForDraft(upgrade));
+  const legendaryPool = availableUpgrades.filter((upgrade) => upgrade.rarity === "legendary");
+  const pool = availableUpgrades.filter((upgrade) => upgrade.rarity !== "legendary");
   for (let i = pool.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -3833,6 +4096,11 @@ function createUpgradeChoices(forceRelic = false, forceRare = false) {
     if (choices.length >= 3) break;
   }
   return choices;
+}
+
+function isUpgradeAvailableForDraft(upgrade) {
+  if (!upgrade?.id || !isSpecialUpgradeId(upgrade.id)) return true;
+  return !state.acquiredRelics.some((entry) => entry?.id === upgrade.id);
 }
 
 function addUpgradeProgress(effectiveLines) {
@@ -9325,6 +9593,30 @@ function purchaseMetaUpgrade(id) {
   return false;
 }
 
+function drawSpecialBondProgressSummary(x, y) {
+  const counts = getSpecialBondCountsForRun();
+  drawSpecialBondChip(SPECIAL_UPGRADE_FAMILIES.angel, counts.angel, x, y);
+  drawSpecialBondChip(SPECIAL_UPGRADE_FAMILIES.devil, counts.devil, x + 128, y);
+}
+
+function drawSpecialBondChip(family, count, x, y) {
+  const w = 116;
+  const h = 28;
+  const active = count > 0;
+  ctx.save();
+  ctx.fillStyle = active ? hexToRgba(family.color, 0.18) : "rgba(238,244,252,0.06)";
+  roundedRect(x, y, w, h, 9, true, false);
+  ctx.strokeStyle = active ? hexToRgba(family.color, 0.46) : "rgba(238,244,252,0.13)";
+  ctx.lineWidth = active ? 1.2 : 1;
+  roundedRect(x, y, w, h, 9, false, true);
+  fitLabel(`${t(family.labelKey)} ${count}/3`, x + 10, y + 18, 58, 11, active ? family.color : "rgba(238,244,252,0.54)", 8, "900", true);
+  for (let i = 0; i < 3; i += 1) {
+    ctx.fillStyle = i < count ? family.color : "rgba(238,244,252,0.18)";
+    roundedRect(x + 73 + i * 11, y + 10, 7, 7, 3, true, false);
+  }
+  ctx.restore();
+}
+
 function drawUpgradeOverlay() {
   ctx.save();
   drawDimOverlay(OVERLAY_READABILITY.scrim.upgrade);
@@ -9337,6 +9629,7 @@ function drawUpgradeOverlay() {
     : fmt("waveClearPick", { wave: Math.max(1, state.wave - 1) });
   drawLimitedWrapText(draftDetail, draftLayout.detail.x, draftLayout.detail.y, draftLayout.detail.w, draftLayout.detail.lineH, "rgba(238,244,252,0.66)", draftLayout.detail.size, 2, "800");
   fitLabel(t("safeNodeDraft"), draftLayout.safeHint.x, draftLayout.safeHint.y, draftLayout.safeHint.w, draftLayout.safeHint.size, "#9df7da", 9, "900");
+  drawSpecialBondProgressSummary(panel.x + 628, panel.y + 90);
   const buildButton = draftLayout.buildButton;
   drawMenuButton(buildButton.x, buildButton.y, buildButton.w, buildButton.h, t("currentBuild"), "");
   for (let i = 0; i < 3; i += 1) {
@@ -9347,12 +9640,12 @@ function drawUpgradeOverlay() {
     const hovered = !state.upgradePickConfirm && pointInRect(state.pointer.x, state.pointer.y, card.x, card.y, card.w, card.h);
     const selected = !state.upgradePickConfirm && state.upgradeSelectedIndex === i;
     const dimmed = state.upgradePickConfirm && state.upgradePickConfirm.index !== i;
-    const layout = getUpgradeCardContentLayout(card);
+    const specialFrame = getSpecialUpgradeCardFrame(upgrade);
+    const layout = getUpgradeCardContentLayout(card, specialFrame ? "special" : "default");
     ctx.save();
     if (dimmed) ctx.globalAlpha = 0.42;
-    drawUpgradeCardFrame(card.x, card.y, card.w, card.h, rarity, hovered || selected || state.upgradePickConfirm?.index === i);
+    drawUpgradeCardFrame(card.x, card.y, card.w, card.h, rarity, hovered || selected || state.upgradePickConfirm?.index === i, specialFrame);
     drawUpgradeCardReadabilityPanels(layout, rarity, hovered || selected);
-    drawRarityBadge(layout.badge.x, layout.badge.y, layout.badge.w, layout.badge.h, rarityLabel(upgrade.rarity).toUpperCase(), rarity);
     drawUpgradeEmblem(upgrade, layout.icon.x, layout.icon.y, rarity, layout.icon.size);
     drawReadableUpgradeText(() => {
       drawLimitedWrapText(upgradeName(upgrade), layout.title.x, layout.title.y, layout.title.w, layout.title.lineH, rarity.titleColor, layout.title.size, layout.title.maxLines || 2, "900", true);
@@ -9362,7 +9655,7 @@ function drawUpgradeOverlay() {
     drawReadableUpgradeText(() => {
       drawLimitedWrapText(upgradeShortText(upgrade), layout.desc.x, layout.desc.y, layout.desc.w, layout.desc.lineH, "rgba(246,250,255,0.92)", layout.desc.size, layout.desc.maxLines || 3, "800");
     }, 5);
-    drawUpgradeTraitHint(upgrade, card);
+    drawUpgradeTraitHint(upgrade, card, specialFrame ? "special" : "default");
     if (selected) drawUpgradeSelectionHighlight(card, rarity);
     ctx.restore();
   }
@@ -9372,9 +9665,10 @@ function drawUpgradeOverlay() {
   ctx.restore();
 }
 
-function drawUpgradeCardFrame(x, y, w, h, rarity, hovered = false) {
+function drawUpgradeCardFrame(x, y, w, h, rarity, hovered = false, frameOverride = null) {
   ctx.save();
-  const frame = upgradeCardFrames[rarity.tier] || upgradeCardFrames.common;
+  const fallbackFrame = upgradeCardFrames[rarity.tier] || upgradeCardFrames.common;
+  const frame = isImageReady(frameOverride) ? frameOverride : fallbackFrame;
   if (isImageReady(frame)) {
     ctx.shadowColor = rarity.glow;
     ctx.shadowBlur = hovered ? 18 : 10;
@@ -9561,12 +9855,23 @@ function getUpgradeTypeIcon(upgrade) {
   return upgradeTypeIcons.rift;
 }
 
+function getSpecialUpgradeCardFrame(upgrade) {
+  return upgrade?.id ? specialUpgradeCardFrames[upgrade.id] : null;
+}
+
 function drawUpgradeEmblem(upgrade, x, y, rarity, size = 82) {
   const icon = getUpgradeTypeIcon(upgrade);
   const emblem = legendaryUpgradeEmblems[upgrade.id];
+  const box = Math.max(22, size * 1.28);
   ctx.save();
   ctx.shadowColor = rarity.glow;
   ctx.shadowBlur = rarity.tier === "legendary" ? 18 : 12;
+  ctx.fillStyle = "rgba(2, 5, 12, 0.58)";
+  roundedRect(x - box / 2, y - box / 2, box, box, Math.min(10, box * 0.32), true, false);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = hexToRgba(rarity.border, 0.42);
+  ctx.lineWidth = 1;
+  roundedRect(x - box / 2, y - box / 2, box, box, Math.min(10, box * 0.32), false, true);
   if (isImageReady(icon)) {
     ctx.globalAlpha = rarity.tier === "legendary" ? 0.98 : 0.92;
     ctx.drawImage(icon, x - size / 2, y - size / 2, size, size);
@@ -9590,7 +9895,12 @@ function drawUpgradeEmblem(upgrade, x, y, rarity, size = 82) {
   ctx.restore();
 }
 
-function drawUpgradeTraitHint(upgrade, card) {
+function drawUpgradeTraitHint(upgrade, card, layoutVariant = "default") {
+  const specialHint = getSpecialBondPreview(upgrade, state.acquiredRelics);
+  if (specialHint) {
+    drawSpecialBondUpgradeHint(specialHint, card, layoutVariant);
+    return;
+  }
   const hint = getTraitChangeHintsForUpgrade(upgrade)[0];
   if (!hint) return;
   const isUpgrade = hint.type === "upgrade";
@@ -9602,7 +9912,7 @@ function drawUpgradeTraitHint(upgrade, card) {
     : hint.type === "progress"
     ? fmt(hint.stage > 0 ? "traitProgressUpgrade" : "traitProgressActivate", { tag: hint.label, remain: hint.remaining })
     : `${t(isActivate ? "traitActivated" : "traitUpgrade")}: ${hint.label} ${hint.count}/${hint.next}`;
-  const layout = getUpgradeCardContentLayout(card).trait;
+  const layout = getUpgradeCardContentLayout(card, layoutVariant).trait;
   const { x, y, w, h } = layout;
   ctx.save();
   if (isActivate || isUpgrade || isOvercap) {
@@ -9619,6 +9929,30 @@ function drawUpgradeTraitHint(upgrade, card) {
   roundedRect(x + 9, y + 10, 15, 15, 5, true, false);
   fitLabel(isOvercap ? "+" : isUpgrade ? "↑" : isActivate ? "✦" : "+", x + 12, y + 22, 9, 11, accent, 8, "900", true);
   fitLabel(text, x + 32, y + 23, w - 44, 11, isActivate || isUpgrade || isOvercap ? "#f5f1e6" : hexToRgba(accent, 0.84), 8, "900", true);
+  ctx.restore();
+}
+
+function drawSpecialBondUpgradeHint(hint, card, layoutVariant = "default") {
+  const layout = getUpgradeCardContentLayout(card, layoutVariant).trait;
+  const { x, y, w, h } = layout;
+  const accent = hint.family.color;
+  const activated = hint.after > hint.before;
+  const text = activated
+    ? fmt("bondHintUpgrade", { bond: t(hint.family.labelKey), before: hint.before, after: hint.after })
+    : fmt("bondHintOwned", { bond: t(hint.family.labelKey), count: hint.after });
+  ctx.save();
+  ctx.shadowColor = hexToRgba(accent, activated ? 0.42 : 0.22);
+  ctx.shadowBlur = activated ? 12 : 7;
+  ctx.fillStyle = hexToRgba(accent, activated ? 0.24 : 0.14);
+  roundedRect(x, y, w, h, 8, true, false);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = hexToRgba(accent, activated ? 0.62 : 0.34);
+  ctx.lineWidth = activated ? 1.4 : 1;
+  roundedRect(x, y, w, h, 8, false, true);
+  ctx.fillStyle = hexToRgba(accent, 0.3);
+  roundedRect(x + 9, y + 10, 15, 15, 5, true, false);
+  fitLabel(activated ? "✦" : "•", x + 12, y + 22, 9, 11, accent, 8, "900", true);
+  fitLabel(text, x + 32, y + 23, w - 44, 11, "#f5f1e6", 8, "900", true);
   ctx.restore();
 }
 

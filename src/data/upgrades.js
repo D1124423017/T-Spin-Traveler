@@ -60,6 +60,8 @@ export const RARITY = {
 };
 
 export const BUILD_TAGS = {
+  Angel: { labelKey: "tag.angel", color: "#dff7ff", family: "angel" },
+  Devil: { labelKey: "tag.devil", color: "#ff8fca", family: "devil" },
   Spin: { labelKey: "tag.spin", color: "#d7c2ff", family: "spin" },
   Combo: { labelKey: "tag.combo", color: "#7ef7ff", family: "combo" },
   Defense: { labelKey: "tag.defense", color: "#9df7da", family: "defense" },
@@ -73,6 +75,8 @@ export const BUILD_TAGS = {
 };
 
 export const BUILD_FAMILY = {
+  angel: { labelKey: "family.angel", color: "#dff7ff" },
+  devil: { labelKey: "family.devil", color: "#ff8fca" },
   spin: { labelKey: "family.spin", color: "#d7c2ff" },
   combo: { labelKey: "family.combo", color: "#7ef7ff" },
   defense: { labelKey: "family.defense", color: "#9df7da" },
@@ -546,6 +550,78 @@ export const UPGRADES = [
     effects: [
       { type: "increasePlayerMaxHp", value: 40, healValue: 30 },
       { type: "addUpgradeValue", key: "damageMultiplier", value: 0.1 },
+    ],
+  },
+  {
+    id: "angel_halo_sanctuary",
+    name: "Halo Sanctuary",
+    rarity: "rare",
+    tags: ["Angel", "Defense"],
+    stackRule: "unique",
+    shortTextKey: "upgradeShort.angel_halo_sanctuary",
+    textKey: "upgrade.angel_halo_sanctuary",
+    effects: [
+      { type: "setUpgradeFlag", key: "angelHaloSanctuary", value: 1 },
+    ],
+  },
+  {
+    id: "angel_cleansing_prism",
+    name: "Cleansing Prism",
+    rarity: "rare",
+    tags: ["Angel", "Garbage", "Defense"],
+    stackRule: "unique",
+    shortTextKey: "upgradeShort.angel_cleansing_prism",
+    textKey: "upgrade.angel_cleansing_prism",
+    effects: [
+      { type: "setUpgradeFlag", key: "angelCleansingPrism", value: 1 },
+    ],
+  },
+  {
+    id: "angel_perfect_benediction",
+    name: "Perfect Benediction",
+    rarity: "relic",
+    tags: ["Angel", "Perfect", "Spin"],
+    stackRule: "unique",
+    shortTextKey: "upgradeShort.angel_perfect_benediction",
+    textKey: "upgrade.angel_perfect_benediction",
+    effects: [
+      { type: "setUpgradeFlag", key: "angelPerfectBenediction", value: 1 },
+    ],
+  },
+  {
+    id: "devil_blood_moon_pact",
+    name: "Blood Moon Pact",
+    rarity: "rare",
+    tags: ["Devil", "Burst"],
+    stackRule: "unique",
+    shortTextKey: "upgradeShort.devil_blood_moon_pact",
+    textKey: "upgrade.devil_blood_moon_pact",
+    effects: [
+      { type: "setUpgradeFlag", key: "devilBloodMoonPact", value: 1 },
+    ],
+  },
+  {
+    id: "devil_abyss_chain",
+    name: "Abyss Chain",
+    rarity: "rare",
+    tags: ["Devil", "Combo", "B2B"],
+    stackRule: "unique",
+    shortTextKey: "upgradeShort.devil_abyss_chain",
+    textKey: "upgrade.devil_abyss_chain",
+    effects: [
+      { type: "setUpgradeFlag", key: "devilAbyssChain", value: 1 },
+    ],
+  },
+  {
+    id: "devil_fallen_crown",
+    name: "Fallen Star Crown",
+    rarity: "relic",
+    tags: ["Devil", "Survival", "Burst"],
+    stackRule: "unique",
+    shortTextKey: "upgradeShort.devil_fallen_crown",
+    textKey: "upgrade.devil_fallen_crown",
+    effects: [
+      { type: "setUpgradeFlag", key: "devilFallenCrown", value: 1 },
     ],
   },
   {

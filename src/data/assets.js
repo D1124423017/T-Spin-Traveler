@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-05-30-ancient-attack-sheets";
+export const ASSET_VERSION = "2026-06-01-formal-upgrade-cards";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -156,29 +156,41 @@ export const enemyBattlePortraits = {
 };
 
 export const upgradeCardFrames = {
-  common: registerImageAsset("upgrade-card-frame-common-alien", "assets/ui/relic_cards/upgrade_card_common_alien_frame.png"),
-  rare: registerImageAsset("upgrade-card-frame-rare-alien", "assets/ui/relic_cards/upgrade_card_rare_alien_frame.png"),
-  relic: registerImageAsset("upgrade-card-frame-relic-alien", "assets/ui/relic_cards/upgrade_card_relic_alien_frame.png"),
-  legendary: registerImageAsset("upgrade-card-frame-legendary-alien", "assets/ui/relic_cards/upgrade_card_legendary_alien_frame.png"),
+  common: registerImageAsset("upgrade-card-frame-common-formal", "assets/ui/upgrade_cards/frames/formal_common_frame.png"),
+  rare: registerImageAsset("upgrade-card-frame-rare-formal", "assets/ui/upgrade_cards/frames/formal_rare_frame.png"),
+  relic: registerImageAsset("upgrade-card-frame-epic-formal", "assets/ui/upgrade_cards/frames/formal_epic_frame.png"),
+  legendary: registerImageAsset("upgrade-card-frame-relic-formal", "assets/ui/upgrade_cards/frames/formal_relic_frame.png"),
 };
 
 export const upgradeTypeIcons = {
-  attack: registerImageAsset("upgrade-type-icon-attack", "assets/ui/upgrades/upgrade_icon_attack.png"),
-  defense: registerImageAsset("upgrade-type-icon-defense", "assets/ui/upgrades/upgrade_icon_defense.png"),
-  survival: registerImageAsset("upgrade-type-icon-survival", "assets/ui/upgrades/upgrade_icon_survival.png"),
-  guard: registerImageAsset("upgrade-type-icon-guard", "assets/ui/upgrades/upgrade_icon_guard.png"),
-  combo: registerImageAsset("upgrade-type-icon-combo", "assets/ui/upgrades/upgrade_icon_combo.png"),
-  spin: registerImageAsset("upgrade-type-icon-spin", "assets/ui/upgrades/upgrade_icon_spin.png"),
-  garbage: registerImageAsset("upgrade-type-icon-garbage", "assets/ui/upgrades/upgrade_icon_garbage.png"),
-  rift: registerImageAsset("upgrade-type-icon-rift", "assets/ui/upgrades/upgrade_icon_rift.png"),
+  attack: registerImageAsset("upgrade-type-icon-attack", "assets/ui/upgrade_cards/icons/upgrade_icon_attack.png"),
+  defense: registerImageAsset("upgrade-type-icon-defense", "assets/ui/upgrade_cards/icons/upgrade_icon_defense.png"),
+  survival: registerImageAsset("upgrade-type-icon-survival", "assets/ui/upgrade_cards/icons/upgrade_icon_survival.png"),
+  guard: registerImageAsset("upgrade-type-icon-guard", "assets/ui/upgrade_cards/icons/upgrade_icon_guard.png"),
+  combo: registerImageAsset("upgrade-type-icon-combo", "assets/ui/upgrade_cards/icons/upgrade_icon_combo.png"),
+  spin: registerImageAsset("upgrade-type-icon-spin", "assets/ui/upgrade_cards/icons/upgrade_icon_spin.png"),
+  garbage: registerImageAsset("upgrade-type-icon-garbage", "assets/ui/upgrade_cards/icons/upgrade_icon_garbage.png"),
+  rift: registerImageAsset("upgrade-type-icon-rift", "assets/ui/upgrade_cards/icons/upgrade_icon_rift.png"),
 };
 
 export const legendaryUpgradeEmblems = {
-  singularity_spin_core: registerImageAsset("upgrade-emblem-singularity-spin-core", "assets/ui/relic_cards/upgrade_emblem_singularity_spin_core.png"),
-  combo_constellation: registerImageAsset("upgrade-emblem-combo-constellation", "assets/ui/relic_cards/upgrade_emblem_combo_constellation.png"),
-  aegis_star_mirror: registerImageAsset("upgrade-emblem-aegis-star-mirror", "assets/ui/relic_cards/upgrade_emblem_aegis_star_mirror.png"),
-  garbage_alchemy_core: registerImageAsset("upgrade-emblem-garbage-alchemy-core", "assets/ui/relic_cards/upgrade_emblem_garbage_alchemy_core.png"),
-  perfect_rift_crown: registerImageAsset("upgrade-emblem-perfect-rift-crown", "assets/ui/relic_cards/upgrade_emblem_perfect_rift_crown.png"),
+  singularity_spin_core: registerImageAsset("upgrade-emblem-singularity-spin-core", "assets/ui/upgrade_cards/emblems/upgrade_emblem_singularity_spin_core.png"),
+  combo_constellation: registerImageAsset("upgrade-emblem-combo-constellation", "assets/ui/upgrade_cards/emblems/upgrade_emblem_combo_constellation.png"),
+  aegis_star_mirror: registerImageAsset("upgrade-emblem-aegis-star-mirror", "assets/ui/upgrade_cards/emblems/upgrade_emblem_aegis_star_mirror.png"),
+  garbage_alchemy_core: registerImageAsset("upgrade-emblem-garbage-alchemy-core", "assets/ui/upgrade_cards/emblems/upgrade_emblem_garbage_alchemy_core.png"),
+  perfect_rift_crown: registerImageAsset("upgrade-emblem-perfect-rift-crown", "assets/ui/upgrade_cards/emblems/upgrade_emblem_perfect_rift_crown.png"),
+};
+
+const specialAngelCardFrame = registerImageAsset("special-upgrade-frame-angel-formal", "assets/ui/upgrade_cards/special/formal_angel_card.png");
+const specialDevilCardFrame = registerImageAsset("special-upgrade-frame-devil-formal", "assets/ui/upgrade_cards/special/formal_devil_card.png");
+
+export const specialUpgradeCardFrames = {
+  angel_halo_sanctuary: specialAngelCardFrame,
+  angel_cleansing_prism: specialAngelCardFrame,
+  angel_perfect_benediction: specialAngelCardFrame,
+  devil_blood_moon_pact: specialDevilCardFrame,
+  devil_abyss_chain: specialDevilCardFrame,
+  devil_fallen_crown: specialDevilCardFrame,
 };
 
 export const riftEnergyIcon = registerImageAsset("rift-energy-icon", "assets/ui/icons/rift_energy_icon.png");
