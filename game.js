@@ -150,6 +150,11 @@ import {
   resetCanvasTransform,
 } from "./src/render/renderStyles.js";
 import {
+  getAnimationDuration,
+  getAnimationFrameInfo,
+  getAnimationHitDelay,
+} from "./src/render/animationTiming.js";
+import {
   createHudLayout,
   getControlsResetButtonRect as getControlsResetButtonRectForLayout,
   getHandlingResetButtonRect as getHandlingResetButtonRectForLayout,
@@ -172,6 +177,11 @@ import {
   formatDamageSources as formatDamageSourcesForUi,
   formatMetaUpgradeEffect as formatMetaUpgradeEffectForUi,
 } from "./src/ui/formatters.js";
+import {
+  createLoadingOverlayModel,
+  drawLoadingOverlay,
+} from "./src/ui/loadingOverlay.js";
+import { drawMenuButtonPanel } from "./src/ui/panelDrawing.js";
 import { createCanvasFont, createTextLayout } from "./src/ui/textLayout.js";
 import {
   getTraitDetailTitle as getTraitDetailTitleForPanel,
@@ -2150,65 +2160,6 @@ function getEnemyHitDelay(kind) {
   const config = ENEMY_ATTACK_ANIMATIONS[kind];
   if (!config) return Math.floor(ENEMY_ATTACK_DURATION_MS * 0.78);
   return getAnimationHitDelay(config, 0.78);
-}
-
-function getAnimationFrameDuration(config, index) {
-  if (Array.isArray(config?.timing) && config.timing.length) {
-    const value = Number(config.timing[Math.min(index, config.timing.length - 1)]);
-    if (Number.isFinite(value) && value > 0) return value;
-  }
-  const fallback = Number(config?.frameMs);
-  return Number.isFinite(fallback) && fallback > 0 ? fallback : 100;
-}
-
-function getAnimationDuration(config) {
-  if (!config?.frames?.length) return 0;
-  let duration = 0;
-  for (let i = 0; i < config.frames.length; i += 1) {
-    duration += getAnimationFrameDuration(config, i);
-  }
-  return duration;
-}
-
-function getAnimationFrameInfo(config, elapsed) {
-  const frames = config?.frames || [];
-  if (!frames.length) return { frameIndex: 0, frame: 0, local: 0, frameDuration: 100 };
-  let remaining = Math.max(0, elapsed);
-  for (let i = 0; i < frames.length; i += 1) {
-    const frameDuration = getAnimationFrameDuration(config, i);
-    if (remaining < frameDuration || i === frames.length - 1) {
-      return {
-        frameIndex: i,
-        frame: frames[i],
-        local: clamp(remaining / frameDuration, 0, 1),
-        frameDuration,
-      };
-    }
-    remaining -= frameDuration;
-  }
-  const lastIndex = frames.length - 1;
-  return {
-    frameIndex: lastIndex,
-    frame: frames[lastIndex],
-    local: 1,
-    frameDuration: getAnimationFrameDuration(config, lastIndex),
-  };
-}
-
-function getAnimationHitDelay(config, fallbackRatio) {
-  const duration = getAnimationDuration(config);
-  if (duration <= 0) return 0;
-  if (typeof config.hitRatio === "number") return Math.floor(duration * config.hitRatio);
-  const fallbackFrame = Math.floor((config.frames?.length || 1) * fallbackRatio);
-  const hitFrame = clamp(
-    typeof config.hitFrame === "number" ? config.hitFrame : fallbackFrame,
-    0,
-    Math.max(0, (config.frames?.length || 1) - 1)
-  );
-  let delay = 0;
-  for (let i = 0; i < hitFrame; i += 1) delay += getAnimationFrameDuration(config, i);
-  delay += getAnimationFrameDuration(config, hitFrame) * 0.5;
-  return Math.min(Math.max(0, duration - 40), Math.floor(delay));
 }
 
 function schedulePendingHit(hit) {
@@ -8375,81 +8326,21 @@ function menuActionText(key) {
 }
 
 function drawAssetLoadingScreen() {
-  const summary = getAssetLoadingSummary();
   const now = performance.now();
-  const elapsed = now - state.assetLoadingStartedAt;
-  const pulse = 0.5 + Math.sin(now * 0.006) * 0.5;
-  const progress = summary.total > 0 ? clamp((summary.loaded + summary.error) / summary.total, 0, 1) : 0;
-  const message = summary.error > 0
-    ? "Some assets failed to load. The game will use fallback visuals."
-    : "Loading assets...";
-
-  drawDimOverlay(0.76);
-  ctx.save();
-  const x = 378;
-  const y = 214;
-  const w = 524;
-  const h = 220;
-  const glow = ctx.createLinearGradient(x, y, x + w, y + h);
-  glow.addColorStop(0, "rgba(126, 231, 255, 0.16)");
-  glow.addColorStop(0.48, "rgba(184, 141, 255, 0.18)");
-  glow.addColorStop(1, "rgba(255, 224, 162, 0.16)");
-  ctx.fillStyle = "rgba(4, 7, 14, 0.88)";
-  ctx.shadowColor = "rgba(184, 141, 255, 0.34)";
-  ctx.shadowBlur = 28;
-  roundedRect(x, y, w, h, 10, true, false);
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = glow;
-  roundedRect(x + 8, y + 8, w - 16, h - 16, 8, true, false);
-  ctx.strokeStyle = "rgba(255, 240, 166, 0.38)";
-  ctx.lineWidth = 1.8;
-  roundedRect(x, y, w, h, 10, false, true);
-  drawCornerGlyph(x + w / 2, y + 22, "#fff0a6");
-  ctx.textAlign = "center";
-  ctx.font = canvasFont("900", 26, message, true);
-  ctx.fillStyle = summary.error > 0 ? "#ffb7bd" : "#f8f3cf";
-  ctx.fillText(message, x + w / 2, y + 92);
-  ctx.fillStyle = "rgba(238,244,252,0.68)";
-  ctx.font = canvasFont("800", 13, "ASSETS", true);
-  ctx.fillText(`${summary.loaded + summary.error}/${summary.total || "..."}`, x + w / 2, y + 124);
-  const barX = x + 88;
-  const barY = y + 150;
-  const barW = w - 176;
-  ctx.fillStyle = "rgba(8, 13, 20, 0.68)";
-  roundedRect(barX, barY, barW, 12, 6, true, false);
-  const fillW = Math.max(18, barW * progress);
-  const bar = ctx.createLinearGradient(barX, barY, barX + barW, barY);
-  bar.addColorStop(0, "#7ef7ff");
-  bar.addColorStop(0.5, "#d7c2ff");
-  bar.addColorStop(1, "#fff0a6");
-  ctx.globalAlpha = 0.76 + pulse * 0.24;
-  ctx.fillStyle = bar;
-  roundedRect(barX, barY, fillW, 12, 6, true, false);
-  ctx.globalAlpha = 1;
-  ctx.strokeStyle = "rgba(238,244,252,0.18)";
-  roundedRect(barX, barY, barW, 12, 6, false, true);
-  for (let i = 0; i < 14; i += 1) {
-    const a = now * 0.0018 + i * 0.55;
-    const r = 72 + (i % 4) * 11;
-    const sx = x + w / 2 + Math.cos(a) * r;
-    const sy = y + 112 + Math.sin(a * 1.4) * 42;
-    ctx.globalAlpha = 0.2 + pulse * 0.26;
-    ctx.fillStyle = i % 3 === 0 ? "#7ef7ff" : i % 3 === 1 ? "#d7c2ff" : "#fff0a6";
-    ctx.fillRect(sx, sy, 2.5, 2.5);
-  }
-  if (DEBUG_HUD_ENABLED) {
-    ctx.globalAlpha = 1;
-    ctx.textAlign = "left";
-    ctx.font = "10px monospace";
-    ctx.fillStyle = "rgba(157, 247, 218, 0.9)";
-    ctx.fillText(`debug: ${DEBUG_HUD_BUILD}`, x + 18, y + h - 42);
-    ctx.fillText(`asset age: ${Math.round(elapsed)}ms loading:${summary.loading} loaded:${summary.loaded} error:${summary.error}`, x + 18, y + h - 26);
-    if (state.debug.drawError) {
-      ctx.fillStyle = "#ff8f98";
-      ctx.fillText(`draw error: ${state.debug.drawError.slice(0, 72)}`, x + 18, y + h - 10);
-    }
-  }
-  ctx.restore();
+  const model = createLoadingOverlayModel({
+    summary: getAssetLoadingSummary(),
+    now,
+    startedAt: state.assetLoadingStartedAt,
+    debugEnabled: DEBUG_HUD_ENABLED,
+    debugBuild: DEBUG_HUD_BUILD,
+    drawError: state.debug.drawError,
+  });
+  drawLoadingOverlay(ctx, model, {
+    canvasFont,
+    drawCornerGlyph,
+    drawDimOverlay,
+    roundedRect,
+  });
 }
 
 function drawStartMenuOverlay() {
@@ -10130,51 +10021,15 @@ function drawGuideRow(x, y, title, text, color, width = 620) {
 }
 
 function drawMenuButton(x, y, w, h, text, hint, variant = "secondary") {
-  const hovered = pointInRect(state.pointer.x, state.pointer.y, x, y, w, h);
-  ctx.save();
-  const primary = variant === "primary";
-  if (primary) {
-    const fill = ctx.createLinearGradient(x, y, x + w, y + h);
-    fill.addColorStop(0, hovered ? "rgba(255, 236, 180, 0.42)" : "rgba(255, 224, 162, 0.28)");
-    fill.addColorStop(0.48, hovered ? "rgba(184, 141, 255, 0.34)" : "rgba(184, 141, 255, 0.22)");
-    fill.addColorStop(1, hovered ? "rgba(119, 237, 255, 0.24)" : "rgba(119, 237, 255, 0.16)");
-    ctx.fillStyle = fill;
-    ctx.shadowColor = "rgba(255, 224, 162, 0.38)";
-    ctx.shadowBlur = hovered ? 24 : 16;
-  } else {
-    ctx.fillStyle = hovered ? "rgba(109, 232, 255, 0.24)" : OVERLAY_READABILITY.surface.fill;
-  }
-  roundedRect(x, y, w, h, 8, true, false);
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = primary
-    ? (hovered ? "rgba(255, 244, 168, 0.84)" : "rgba(255, 224, 162, 0.52)")
-    : (hovered ? "rgba(255, 244, 168, 0.5)" : "rgba(145, 232, 222, 0.26)");
-  ctx.lineWidth = primary ? 2.5 : 2;
-  roundedRect(x, y, w, h, 8, false, true);
-  if (primary) {
-    ctx.fillStyle = hovered ? "rgba(255, 240, 166, 0.78)" : "rgba(255, 240, 166, 0.58)";
-    roundedRect(x + 14, y + 14, 5, h - 28, 4, true, false);
-    const shimmer = ((performance.now() * 0.00022) % 1) * (w + 130) - 110;
-    const sheen = ctx.createLinearGradient(x + shimmer, y, x + shimmer + 90, y + h);
-    sheen.addColorStop(0, "rgba(255,255,255,0)");
-    sheen.addColorStop(0.5, "rgba(255,255,255,0.18)");
-    sheen.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = sheen;
-    roundedRect(x + 4, y + 4, w - 8, h - 8, 7, true, false);
-  }
-  ctx.font = canvasFont("800", primary ? 21 : 17, text, true);
-  ctx.fillStyle = primary ? "#fff7d2" : "#f3f2ea";
-  ctx.textBaseline = "middle";
-  fitLabel(text, x + 22, y + h / 2 + 1, w - (hint ? 126 : 44), primary ? 21 : 17, primary ? "#fff7d2" : "#f3f2ea", primary ? 16 : 14, "800", true);
-  if (hint) {
-    ctx.font = canvasFont("800", 12, hint);
-    ctx.fillStyle = "rgba(238,244,252,0.56)";
-    ctx.textAlign = "right";
-    ctx.fillText(hint, x + w - 18, y + h / 2 + 1);
-    ctx.textAlign = "left";
-  }
-  ctx.textBaseline = "alphabetic";
-  ctx.restore();
+  drawMenuButtonPanel(ctx, {
+    x, y, w, h, text, hint, variant,
+    pointer: state.pointer,
+    now: performance.now(),
+  }, {
+    canvasFont,
+    fitLabel,
+    roundedRect,
+  });
 }
 
 function t(key) {
