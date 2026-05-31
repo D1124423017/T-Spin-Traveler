@@ -91,3 +91,16 @@ After completing a task, report:
 - Whether push succeeded
 - `git status`
 - Risks
+
+## 9. 未來可評估項目
+
+### Anime.js
+
+- Short term: do not introduce Anime.js.
+- Anime.js is only suitable for future DOM UI overlay animations, such as DOM toasts, debug HUD transitions, settings/result modal entrance effects, or other non-gameplay DOM layers.
+- Do not use Anime.js for the Canvas gameplay loop.
+- Do not use Anime.js to control Tetris rules, combat flow, piece movement, rotation, lock timing, hard drop, enemy attacks, combat timing, or spritesheet timing.
+- If Anime.js is introduced later, isolate it behind `src/dom/domAnimation.js`.
+- `src/dom/domAnimation.js` must only receive DOM elements and display options. It must not read or mutate gameplay state.
+- Keep the existing `requestAnimationFrame` game loop authoritative for Canvas rendering and gameplay timing.
+- On GitHub Pages, use a vendored ESM file or a pinned-version CDN URL. Do not use a bare import such as `import ... from "animejs"` unless a bundler is added intentionally.

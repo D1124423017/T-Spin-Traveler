@@ -182,6 +182,10 @@ import {
   drawLoadingOverlay,
 } from "./src/ui/loadingOverlay.js";
 import { drawMenuButtonPanel } from "./src/ui/panelDrawing.js";
+import {
+  drawSettingsScreenOverlay,
+  getControlDisplayValue,
+} from "./src/ui/settingsScreen.js";
 import { createCanvasFont, createTextLayout } from "./src/ui/textLayout.js";
 import {
   getTraitDetailTitle as getTraitDetailTitleForPanel,
@@ -9030,121 +9034,39 @@ function drawPauseOverlay() {
 }
 
 function drawSettingsOverlay(source = "pause") {
-  const s = UI_LAYOUT.settings;
-  ctx.save();
-  drawDimOverlay(source === "start" ? OVERLAY_READABILITY.scrim.settings : OVERLAY_READABILITY.scrim.standard);
-  drawCard(s.x, s.y, s.w, s.h);
-  label(t("settings"), s.x + 42, s.y + 58, 40, "#f5f1e6");
-  const backText = source === "start" ? t("settingsBackMenu") : t("settingsBack");
-  const backButton = getSettingsBackButtonRect();
-  drawMenuButton(backButton.x, backButton.y, backButton.w, backButton.h, backText, "Esc");
-  drawSettingsTabs(s.tabX, s.y + 112);
-  drawSettingsContent(s.contentX, s.contentY);
-  ctx.restore();
+  drawSettingsScreenOverlay(getSettingsScreenRenderContext(), source);
 }
 
-function drawSettingsTabs(x, y) {
-  for (let i = 0; i < SETTINGS_TABS.length; i += 1) {
-    const tab = SETTINGS_TABS[i];
-    const active = state.settingsTab === tab;
-    const yy = y + i * 62;
-    ctx.save();
-    ctx.fillStyle = active ? "rgba(183, 146, 255, 0.3)" : OVERLAY_READABILITY.surface.fillSoft;
-    roundedRect(x, yy, 164, 46, 12, true, false);
-    ctx.strokeStyle = active ? "rgba(255, 240, 166, 0.54)" : "rgba(145, 232, 222, 0.14)";
-    roundedRect(x, yy, 164, 46, 12, false, true);
-    label(t(`settingsTab${tab[0].toUpperCase()}${tab.slice(1)}`), x + 22, yy + 29, 16, active ? "#fff0a6" : "rgba(238,244,252,0.64)");
-    ctx.restore();
-  }
-}
-
-function drawSettingsContent(x, y) {
-  if (state.settingsTab === "audio") {
-    label(t("audioSettingsTitle"), x, y, 26, "#8fe8dc");
-    drawSlider(t("master"), "masterVolume", x, y + 64, audio.masterVolume);
-    drawSlider(t("music"), "musicVolume", x, y + 128, audio.musicVolume);
-    drawSlider(t("sfx"), "sfxVolume", x, y + 192, audio.sfxVolume);
-    drawToggle(x, y + 250, t("mute"), audio.muted);
-    wrapText(t("audioMixHelp"), x, y + 316, 430, 18, "rgba(238,244,252,0.48)", 12);
-    return;
-  }
-  if (state.settingsTab === "controls") {
-    label(t("controlsSettingsTitle"), x, y, 26, "#8fe8dc");
-    label(t("controlListTitle").toUpperCase(), x, y + 46, 14, "#fff0a6");
-    wrapText(state.bindingAction ? t("binding") : t("bindHelp"), x, y + 74, 660, 18, "rgba(238,244,252,0.6)", 13);
-    drawControlGrid(x, y + 112);
-    drawSettingsUtilityButton(getControlsResetButtonRect(), t("resetKeybinds"));
-    return;
-  }
-  if (state.settingsTab === "handling") {
-    drawHandlingSettings(x, y);
-    return;
-  }
-  if (state.settingsTab === "language") {
-    label(t("languageSettingsTitle"), x, y, 26, "#8fe8dc");
-    drawLanguageToggle(x, y + 72);
-    wrapText(t("languageHelp"), x, y + 142, 480, 22, "rgba(238,244,252,0.62)", 15);
-    return;
-  }
-  label(t("feedbackTitle"), x, y, 26, "#8fe8dc");
-  const feedbackCard = getSettingsFeedbackCardRect();
-  drawSettingsFeedbackCard(feedbackCard.x, feedbackCard.y, feedbackCard.w, feedbackCard.h);
-}
-
-function drawSettingsFeedbackCard(x, y, w, h) {
-  const buttonRect = getSettingsFeedbackButtonRect(x, y, w, h);
-  ctx.save();
-  ctx.fillStyle = OVERLAY_READABILITY.surface.fill;
-  roundedRect(x, y, w, h, 12, true, false);
-  ctx.strokeStyle = "rgba(126, 231, 255, 0.22)";
-  ctx.lineWidth = 1.5;
-  roundedRect(x, y, w, h, 12, false, true);
-  wrapText(t("feedbackHelp"), x + 24, y + 48, w - 278, 23, "rgba(238,244,252,0.76)", 15);
-  drawSettingsFeedbackNoa(x + w - 236, y + 22, 202, h - 42);
-  drawSettingsFeedbackButton(buttonRect, t("feedbackOpenGithub"), "#fff0a6");
-  ctx.restore();
-}
-
-function drawSettingsFeedbackButton(rect, text, color) {
-  const hovered = pointInRect(state.pointer.x, state.pointer.y, rect.x, rect.y, rect.w, rect.h);
-  ctx.save();
-  ctx.fillStyle = hovered ? hexToRgba(color, 0.28) : OVERLAY_READABILITY.surface.fillStrong;
-  roundedRect(rect.x, rect.y, rect.w, rect.h, 8, true, false);
-  ctx.strokeStyle = hovered ? hexToRgba(color, 0.68) : hexToRgba(color, 0.34);
-  ctx.lineWidth = hovered ? 2 : 1.4;
-  roundedRect(rect.x, rect.y, rect.w, rect.h, 8, false, true);
-  ctx.fillStyle = hovered ? color : "rgba(245,241,230,0.82)";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  fitLabel(text, rect.x + 14, rect.y + rect.h / 2 + 1, rect.w - 28, 14, ctx.fillStyle, 11, "800");
-  ctx.textBaseline = "alphabetic";
-  ctx.restore();
-}
-
-function drawSettingsUtilityButton(rect, text) {
-  const hovered = pointInRect(state.pointer.x, state.pointer.y, rect.x, rect.y, rect.w, rect.h);
-  ctx.save();
-  ctx.fillStyle = hovered ? "rgba(126, 231, 255, 0.24)" : OVERLAY_READABILITY.surface.fill;
-  roundedRect(rect.x, rect.y, rect.w, rect.h, 8, true, false);
-  ctx.strokeStyle = hovered ? "rgba(255, 240, 166, 0.52)" : "rgba(126, 231, 255, 0.26)";
-  ctx.lineWidth = hovered ? 2 : 1.4;
-  roundedRect(rect.x, rect.y, rect.w, rect.h, 8, false, true);
-  fitLabel(text, rect.x + 16, rect.y + 25, rect.w - 32, 14, hovered ? "#fff0a6" : "rgba(245,241,230,0.78)", 11, "800");
-  ctx.restore();
-}
-
-function drawSettingsFeedbackNoa(x, y, w, h) {
-  ctx.save();
-  const glow = ctx.createRadialGradient(x + w / 2, y + h * 0.62, 10, x + w / 2, y + h * 0.62, w * 0.58);
-  glow.addColorStop(0, "rgba(126, 231, 255, 0.18)");
-  glow.addColorStop(0.58, "rgba(183, 146, 255, 0.1)");
-  glow.addColorStop(1, "rgba(0, 0, 0, 0)");
-  ctx.fillStyle = glow;
-  ctx.fillRect(x - 18, y, w + 36, h);
-  ctx.shadowColor = "#b690ff";
-  ctx.shadowBlur = 18;
-  drawImageContain(noaFeedbackBowArt, x, y, w, h);
-  ctx.restore();
+function getSettingsScreenRenderContext() {
+  return {
+    audio,
+    canvasFont,
+    controlActions: CONTROL_ACTIONS,
+    ctx,
+    drawCard,
+    drawDimOverlay,
+    drawImageContain,
+    drawMenuButton,
+    fitLabel,
+    formatControlKey,
+    getControlKeys,
+    getControlsResetButtonRect,
+    getHandlingResetButtonRect,
+    getSettingsBackButtonRect,
+    getSettingsFeedbackButtonRect,
+    getSettingsFeedbackCardRect,
+    getSettingsSliderTrackWidth,
+    getSettingsSliderTrackX,
+    label,
+    layout: UI_LAYOUT,
+    noaFeedbackBowArt,
+    roundedRect,
+    settingsTabs: SETTINGS_TABS,
+    state,
+    t,
+    tuningSliders: TUNING_SLIDERS,
+    wrapText,
+  };
 }
 
 function drawPauseStat(x, y, name, value) {
@@ -10118,12 +10040,6 @@ function enemyTrait(enemy) {
   return t(`enemy.${enemy.id}.trait`);
 }
 
-function controlLabel(action) {
-  const item = CONTROL_ACTIONS.find((entry) => entry.id === action);
-  if (!item) return action;
-  return t(item.labelKey);
-}
-
 function drawSettings() {
   if (state.mode === "playing") {
     drawRunRiftEnergyHud();
@@ -10153,56 +10069,8 @@ function drawRunRiftEnergyHud() {
   ctx.restore();
 }
 
-function drawLanguageToggle(x, y) {
-  ctx.save();
-  label(t("language"), x, y - 10, 15, "#8fe8dc");
-  const zhActive = state.language === "zh";
-  drawLanguagePill(x, y, 72, 34, t("languageZhShort"), zhActive);
-  drawLanguagePill(x + 80, y, 72, 34, t("languageEnShort"), !zhActive);
-  ctx.restore();
-}
-
-function drawLanguagePill(x, y, w, h, text, active) {
-  ctx.save();
-  ctx.fillStyle = active ? "rgba(241, 211, 107, 0.28)" : "rgba(109, 232, 255, 0.12)";
-  roundedRect(x, y, w, h, 8, true, false);
-  ctx.strokeStyle = active ? "rgba(255, 244, 168, 0.62)" : "rgba(145, 232, 222, 0.24)";
-  ctx.lineWidth = 2;
-  roundedRect(x, y, w, h, 8, false, true);
-  label(text, x + 18, y + 23, 15, active ? "#fff0a6" : "rgba(238,244,252,0.68)");
-  ctx.restore();
-}
-
-function drawHandlingSettings(x, y) {
-  label(t("handlingSettingsTitle"), x, y, 26, "#8fe8dc");
-  const rows = [
-    ["das", t("das"), t("dasHelp")],
-    ["arr", t("arr"), t("arrHelp")],
-    ["softDrop", t("softDropMs"), t("softDropHelp")],
-    ["lockDelay", t("lockDelayMs"), t("lockDelayHelp")],
-  ];
-  for (let i = 0; i < rows.length; i += 1) {
-    const [key, title, help] = rows[i];
-    drawHandlingSlider(title, help, key, x, y + 66 + i * 88);
-  }
-  drawSettingsUtilityButton(getHandlingResetButtonRect(), t("resetHandling"));
-}
-
-function drawControlGrid(x, y, columns = UI_LAYOUT.controlsGrid.columns, gapX = UI_LAYOUT.controlsGrid.gapX) {
-  const layout = UI_LAYOUT.controlsGrid;
-  for (let i = 0; i < CONTROL_ACTIONS.length; i += 1) {
-    const action = CONTROL_ACTIONS[i].id;
-    const col = i % columns;
-    const row = Math.floor(i / columns);
-    const rx = x + col * gapX;
-    const ry = y + row * layout.rowH;
-    drawKeyBindRow(rx, ry, controlLabel(action), controlDisplayValue(action), state.bindingAction === action, layout.rowW);
-  }
-}
-
 function controlDisplayValue(action) {
-  const keys = getControlKeys(action);
-  return keys.length ? keys.map(formatControlKey).join(" / ") : "-";
+  return getControlDisplayValue(action, { getControlKeys, formatControlKey });
 }
 
 function drawPauseButton() {
@@ -10223,156 +10091,6 @@ function drawPauseButton() {
   ctx.moveTo(b.x + 32, b.y + 10);
   ctx.lineTo(b.x + 32, b.y + 28);
   ctx.stroke();
-  ctx.restore();
-}
-
-function drawSlider(labelText, key, x, y, value) {
-  const trackW = 270;
-  const knobX = x + value * trackW;
-  ctx.save();
-  label(labelText, x, y - 10, 17, "#f3f2ea");
-  ctx.font = canvasFont("800", 14, `${Math.round(value * 100)}%`, true);
-  ctx.fillStyle = "rgba(238,244,252,0.62)";
-  ctx.fillText(`${Math.round(value * 100)}%`, x + trackW + 28, y - 10);
-  ctx.fillStyle = "rgba(255,255,255,0.08)";
-  roundedRect(x, y, trackW, 12, 6, true, false);
-  const g = ctx.createLinearGradient(x, y, x + trackW, y);
-  g.addColorStop(0, "#6de8ff");
-  g.addColorStop(1, "#b690ff");
-  ctx.fillStyle = g;
-  roundedRect(x, y, value * trackW, 12, 6, true, false);
-  ctx.strokeStyle = "rgba(231,244,255,0.26)";
-  ctx.lineWidth = 2;
-  roundedRect(x, y, trackW, 12, 6, false, true);
-  ctx.fillStyle = state.pointer.dragging === `audio:${key}` ? "#fff4a8" : "#f3f2ea";
-  ctx.beginPath();
-  ctx.arc(knobX, y + 6, 11, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#101620";
-  ctx.lineWidth = 3;
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawTuningSlider(labelText, key, x, y) {
-  const spec = TUNING_SLIDERS[key];
-  const value = state.tuning[key];
-  const ratio = (value - spec.min) / (spec.max - spec.min);
-  const trackW = 270;
-  const knobX = x + ratio * trackW;
-  const shown = key === "arr" && value === 0 ? "0 ms" : `${Math.round(value)} ${spec.unit}`;
-  ctx.save();
-  label(labelText, x, y - 10, 17, "#f3f2ea");
-  ctx.font = canvasFont("800", 14, shown, true);
-  ctx.fillStyle = "rgba(238,244,252,0.62)";
-  ctx.fillText(shown, x + trackW + 28, y - 10);
-  ctx.fillStyle = "rgba(255,255,255,0.08)";
-  roundedRect(x, y, trackW, 12, 6, true, false);
-  const g = ctx.createLinearGradient(x, y, x + trackW, y);
-  g.addColorStop(0, "#fff0a6");
-  g.addColorStop(1, "#7ef7ff");
-  ctx.fillStyle = g;
-  roundedRect(x, y, ratio * trackW, 12, 6, true, false);
-  ctx.strokeStyle = "rgba(231,244,255,0.26)";
-  ctx.lineWidth = 2;
-  roundedRect(x, y, trackW, 12, 6, false, true);
-  ctx.fillStyle = state.pointer.dragging === `tuning:${key}` ? "#fff4a8" : "#f3f2ea";
-  ctx.beginPath();
-  ctx.arc(knobX, y + 6, 11, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#101620";
-  ctx.lineWidth = 3;
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawHandlingSlider(labelText, helpText, key, x, y) {
-  const spec = TUNING_SLIDERS[key];
-  const value = state.tuning[key];
-  const ratio = clamp((value - spec.min) / (spec.max - spec.min), 0, 1);
-  const trackW = getSettingsSliderTrackWidth("tuning");
-  const trackX = getSettingsSliderTrackX("tuning");
-  const trackY = y + 34;
-  const valueX = trackX + trackW + 28;
-  const shown = key === "arr" && value === 0 ? "0 ms" : `${Math.round(value)} ${spec.unit}`;
-  const active = state.pointer.dragging === `tuning:${key}`;
-  ctx.save();
-  ctx.fillStyle = active ? "rgba(183, 146, 255, 0.26)" : OVERLAY_READABILITY.surface.fillSoft;
-  roundedRect(x, y, 640, 70, 12, true, false);
-  ctx.strokeStyle = active ? "rgba(255, 240, 166, 0.54)" : "rgba(126, 231, 255, 0.2)";
-  ctx.lineWidth = active ? 2 : 1.4;
-  roundedRect(x, y, 640, 70, 12, false, true);
-
-  fitLabel(labelText, x + 18, y + 24, 190, 16, "#f3f2ea", 12, "900");
-  wrapText(helpText, x + 18, y + 46, 205, 16, "rgba(238,244,252,0.58)", 11);
-
-  ctx.fillStyle = "rgba(1, 4, 10, 0.62)";
-  roundedRect(trackX, trackY, trackW, 14, 7, true, false);
-  const g = ctx.createLinearGradient(trackX, trackY, trackX + trackW, trackY);
-  g.addColorStop(0, "#7ef7ff");
-  g.addColorStop(0.58, "#b690ff");
-  g.addColorStop(1, "#fff0a6");
-  ctx.fillStyle = g;
-  roundedRect(trackX, trackY, trackW * ratio, 14, 7, true, false);
-  ctx.strokeStyle = active ? "rgba(255, 240, 166, 0.72)" : "rgba(231,244,255,0.3)";
-  ctx.lineWidth = 2;
-  roundedRect(trackX, trackY, trackW, 14, 7, false, true);
-
-  const knobX = trackX + ratio * trackW;
-  ctx.shadowColor = active ? "#fff0a6" : "#7ef7ff";
-  ctx.shadowBlur = active ? 16 : 9;
-  ctx.fillStyle = active ? "#fff4a8" : "#f3f2ea";
-  ctx.beginPath();
-  ctx.arc(knobX, trackY + 7, 12, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = "#101620";
-  ctx.lineWidth = 3;
-  ctx.stroke();
-
-  ctx.font = canvasFont("900", 15, shown, true);
-  ctx.fillStyle = active ? "#fff0a6" : "rgba(245,241,230,0.86)";
-  ctx.fillText(shown, valueX, trackY + 12);
-  ctx.restore();
-}
-
-function drawToggle(x, y, text, enabled) {
-  ctx.save();
-  label(text, x, y + 18, 17, "#f3f2ea");
-  ctx.fillStyle = enabled ? "rgba(255, 119, 130, 0.72)" : "rgba(109, 232, 255, 0.28)";
-  roundedRect(x + 116, y, 64, 30, 15, true, false);
-  ctx.fillStyle = "#f3f2ea";
-  ctx.beginPath();
-  ctx.arc(x + 131 + (enabled ? 32 : 0), y + 15, 11, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawKeyBindRow(x, y, text, value, binding, w = UI_LAYOUT.controlsGrid.rowW) {
-  const keyW = UI_LAYOUT.controlsGrid.keyW;
-  const keyH = UI_LAYOUT.controlsGrid.keyH;
-  const keyX = x + w - keyW;
-  const labelW = keyX - x - 22;
-  ctx.save();
-  ctx.fillStyle = binding ? "rgba(241, 211, 107, 0.22)" : OVERLAY_READABILITY.surface.fillSoft;
-  roundedRect(x, y, w, 42, 8, true, false);
-  ctx.strokeStyle = binding ? "rgba(255, 244, 168, 0.44)" : "rgba(145, 232, 222, 0.14)";
-  ctx.lineWidth = 1.4;
-  roundedRect(x, y, w, 42, 8, false, true);
-  fitLabel(text, x + 14, y + 26, labelW, 15, "#f3f2ea", 12, "800");
-  ctx.fillStyle = binding ? "rgba(241, 211, 107, 0.34)" : "rgba(109, 232, 255, 0.18)";
-  roundedRect(keyX, y + 3, keyW, keyH, 7, true, false);
-  ctx.strokeStyle = binding ? "rgba(255, 244, 168, 0.62)" : "rgba(145, 232, 222, 0.32)";
-  ctx.lineWidth = 2;
-  roundedRect(keyX, y + 3, keyW, keyH, 7, false, true);
-  const shownKey = binding ? t("settingPressKey") : value;
-  ctx.font = canvasFont("800", 15, shownKey);
-  ctx.fillStyle = "#f3f2ea";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  fitLabel(shownKey, keyX + keyW / 2, y + 21, keyW - 16, 15, "#f3f2ea", 11, "800");
-  ctx.textAlign = "left";
-  ctx.textBaseline = "alphabetic";
   ctx.restore();
 }
 
