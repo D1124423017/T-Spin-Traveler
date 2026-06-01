@@ -1,9 +1,12 @@
 import {
   OVERLAY_READABILITY,
-  clamp,
   hexToRgba,
   pointInRect,
 } from "../render/drawUtils.js";
+import {
+  drawElasticRiftSlider,
+  defaultElasticRiftSliderFormatValue,
+} from "./elasticRiftSlider.js";
 
 export function getSettingsTabLabelKey(tab) {
   if (!tab) return "";
@@ -287,31 +290,22 @@ function drawSlider(deps, labelText, key, x, y, value) {
     state,
   } = deps;
   const trackW = 270;
-  const knobX = x + value * trackW;
-  const shown = formatSettingsPercent(value);
-  ctx.save();
-  label(labelText, x, y - 10, 17, "#f3f2ea");
-  ctx.font = canvasFont("800", 14, shown, true);
-  ctx.fillStyle = "rgba(238,244,252,0.62)";
-  ctx.fillText(shown, x + trackW + 28, y - 10);
-  ctx.fillStyle = "rgba(255,255,255,0.08)";
-  roundedRect(x, y, trackW, 12, 6, true, false);
-  const g = ctx.createLinearGradient(x, y, x + trackW, y);
-  g.addColorStop(0, "#6de8ff");
-  g.addColorStop(1, "#b690ff");
-  ctx.fillStyle = g;
-  roundedRect(x, y, value * trackW, 12, 6, true, false);
-  ctx.strokeStyle = "rgba(231,244,255,0.26)";
-  ctx.lineWidth = 2;
-  roundedRect(x, y, trackW, 12, 6, false, true);
-  ctx.fillStyle = state.pointer.dragging === `audio:${key}` ? "#fff4a8" : "#f3f2ea";
-  ctx.beginPath();
-  ctx.arc(knobX, y + 6, 11, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#101620";
-  ctx.lineWidth = 3;
-  ctx.stroke();
-  ctx.restore();
+  drawElasticRiftSlider({
+    canvasFont,
+    ctx,
+    label,
+    roundedRect,
+    labelText,
+    value,
+    x,
+    y,
+    width: trackW,
+    key: `audio:${key}`,
+    pointer: state.pointer,
+    now: state.debug?.lastDrawAt || 0,
+    labelY: y - 10,
+    formatValue: defaultElasticRiftSliderFormatValue,
+  });
 }
 
 function drawHandlingSlider(deps, labelText, helpText, key, x, y) {
@@ -319,6 +313,7 @@ function drawHandlingSlider(deps, labelText, helpText, key, x, y) {
     canvasFont,
     ctx,
     fitLabel,
+    label,
     roundedRect,
     state,
     tuningSliders,
@@ -328,12 +323,10 @@ function drawHandlingSlider(deps, labelText, helpText, key, x, y) {
   } = deps;
   const spec = tuningSliders[key];
   const value = state.tuning[key];
-  const ratio = clamp((value - spec.min) / (spec.max - spec.min), 0, 1);
   const trackW = getSettingsSliderTrackWidth("tuning");
   const trackX = getSettingsSliderTrackX("tuning");
   const trackY = y + 34;
   const valueX = trackX + trackW + 28;
-  const shown = formatTuningSliderValue(key, value, spec);
   const active = state.pointer.dragging === `tuning:${key}`;
   ctx.save();
   ctx.fillStyle = active ? "rgba(183, 146, 255, 0.26)" : OVERLAY_READABILITY.surface.fillSoft;
@@ -345,33 +338,27 @@ function drawHandlingSlider(deps, labelText, helpText, key, x, y) {
   fitLabel(labelText, x + 18, y + 24, 190, 16, "#f3f2ea", 12, "900");
   wrapText(helpText, x + 18, y + 46, 205, 16, "rgba(238,244,252,0.58)", 11);
 
-  ctx.fillStyle = "rgba(1, 4, 10, 0.62)";
-  roundedRect(trackX, trackY, trackW, 14, 7, true, false);
-  const g = ctx.createLinearGradient(trackX, trackY, trackX + trackW, trackY);
-  g.addColorStop(0, "#7ef7ff");
-  g.addColorStop(0.58, "#b690ff");
-  g.addColorStop(1, "#fff0a6");
-  ctx.fillStyle = g;
-  roundedRect(trackX, trackY, trackW * ratio, 14, 7, true, false);
-  ctx.strokeStyle = active ? "rgba(255, 240, 166, 0.72)" : "rgba(231,244,255,0.3)";
-  ctx.lineWidth = 2;
-  roundedRect(trackX, trackY, trackW, 14, 7, false, true);
-
-  const knobX = trackX + ratio * trackW;
-  ctx.shadowColor = active ? "#fff0a6" : "#7ef7ff";
-  ctx.shadowBlur = active ? 16 : 9;
-  ctx.fillStyle = active ? "#fff4a8" : "#f3f2ea";
-  ctx.beginPath();
-  ctx.arc(knobX, trackY + 7, 12, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = "#101620";
-  ctx.lineWidth = 3;
-  ctx.stroke();
-
-  ctx.font = canvasFont("900", 15, shown, true);
-  ctx.fillStyle = active ? "#fff0a6" : "rgba(245,241,230,0.86)";
-  ctx.fillText(shown, valueX, trackY + 12);
+  drawElasticRiftSlider({
+    canvasFont,
+    ctx,
+    label,
+    roundedRect,
+    labelText: "",
+    value,
+    x: trackX,
+    y: trackY,
+    width: trackW,
+    key: `tuning:${key}`,
+    pointer: state.pointer,
+    now: state.debug?.lastDrawAt || 0,
+    min: spec.min,
+    max: spec.max,
+    showLabel: false,
+    valueX,
+    valueY: trackY + 12,
+    valueFontSize: 15,
+    formatValue: (nextValue) => formatTuningSliderValue(key, nextValue, spec),
+  });
   ctx.restore();
 }
 

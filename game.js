@@ -195,11 +195,24 @@ import {
   drawMenuTitleWake,
   getMenuButtonMotion,
 } from "./src/ui/menuMotion.js";
+import {
+  cleanupFeedback,
+  initFeedbackLayer,
+  setFeedbackMode,
+  showB2BFeedback,
+  showComboFeedback,
+  showDamageNumber,
+  showPerfectClearFeedback,
+  showTSpinFeedback,
+} from "./src/dom/gsapFeedback.js";
 import { drawMenuButtonPanel } from "./src/ui/panelDrawing.js";
 import {
   drawSettingsScreenOverlay,
   getControlDisplayValue,
 } from "./src/ui/settingsScreen.js";
+import {
+  getElasticRiftSliderValueFromPointer,
+} from "./src/ui/elasticRiftSlider.js";
 import { createCanvasFont, createTextLayout } from "./src/ui/textLayout.js";
 import {
   getTraitDetailTitle as getTraitDetailTitleForPanel,
@@ -745,6 +758,14 @@ const UI_LAYOUT = createHudLayout({
   tile: TILE,
 });
 
+const GSAP_FEEDBACK_POSITIONS = Object.freeze({
+  combo: { x: BOARD_X - 146, y: BOARD_Y + 196 },
+  b2b: { x: BOARD_X - 146, y: BOARD_Y + 250 },
+  tspin: { x: BOARD_X - 146, y: BOARD_Y + 304 },
+  perfect: { x: BOARD_X + (COLS * TILE) / 2, y: BOARD_Y + ROWS * TILE * 0.42 },
+  damage: { x: UI_LAYOUT.enemyStage.x + 34, y: UI_LAYOUT.enemyStage.y + 126 },
+});
+
 const MENU_HERO_DIALOGUE_KEYS = {
   hover: ["menuHeroHover1", "menuHeroHover2", "menuHeroHover3"],
   click: ["menuHeroClick1", "menuHeroClick2", "menuHeroClick3"],
@@ -1239,7 +1260,13 @@ const state = {
   language: "zh",
   controls: normalizeControlsMap(DEFAULT_CONTROLS),
   tuning: { ...DEFAULT_TUNING },
-  pointer: { x: 0, y: 0, down: false, dragging: null },
+  pointer: {
+    x: 0,
+    y: 0,
+    down: false,
+    dragging: null,
+    elasticSlider: { key: "", overflow: 0, releaseKey: "", releaseOverflow: 0, releaseStartedAt: 0 },
+  },
   countdownMs: 0,
   countdownCue: "",
   firstWaveHintMs: 0,
@@ -1433,6 +1460,11 @@ function getHiddenRowsDebugInfo() {
   };
 }
 
+function setGameMode(mode) {
+  state.mode = mode;
+  setFeedbackMode(mode);
+}
+
 function warnDefeatSource(source, messageKey) {
   console.warn("[T-Spin Traveler] Game Over", {
     source,
@@ -1593,7 +1625,7 @@ function triggerDefeat(messageKey, source = "triggerDefeat") {
   state.debug.lastDefeatMessageKey = messageKey;
   if (!shouldTriggerDefeat(state)) return;
   warnDefeatSource(source, messageKey);
-  state.mode = "defeat";
+  setGameMode("defeat");
   setMessage(messageKey);
   state.active = null;
   state.lockTimer = null;
@@ -1607,7 +1639,8 @@ function triggerDefeat(messageKey, source = "triggerDefeat") {
 
 function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   unlockAudio();
-  state.mode = "playing";
+  cleanupFeedback();
+  setGameMode("playing");
   state.pauseView = "menu";
   state.settingsOpen = false;
   state.bindingAction = null;
@@ -2122,6 +2155,10 @@ function damageEnemyFromUpgrade(amount, floaterKey, color, x = 920, y = 430) {
   state.stats.damage += damage;
   state.enemyHit = Math.max(state.enemyHit, 220);
   state.enemyHitIntensity = Math.max(state.enemyHitIntensity, 1.08);
+  showDamageNumber({
+    amount: damage,
+    position: GSAP_FEEDBACK_POSITIONS.damage,
+  });
   state.floaters.push({
     x,
     y,
@@ -2272,6 +2309,10 @@ function applyPlayerHit(hit) {
   const impact = getHitFeedbackIntensity(hit);
   state.enemyHit = Math.max(state.enemyHit, 230 + impact * 110);
   state.enemyHitIntensity = Math.max(state.enemyHitIntensity, impact);
+  showDamageNumber({
+    amount: damage,
+    position: GSAP_FEEDBACK_POSITIONS.damage,
+  });
   if (context.perfect) state.hitStopMs = Math.max(state.hitStopMs, PERFECT_HIT_STOP_MS);
   state.shake = Math.max(state.shake, hit.shake);
   state.floaters.push(...hit.floaters);
@@ -2425,6 +2466,10 @@ function applyEnemyHit(hit) {
       state.stats.damage += reflectDamage;
       state.enemyHit = Math.max(state.enemyHit, 220);
       state.enemyHitIntensity = Math.max(state.enemyHitIntensity, 1.05);
+      showDamageNumber({
+        amount: reflectDamage,
+        position: GSAP_FEEDBACK_POSITIONS.damage,
+      });
       state.floaters.push({
         x: 920,
         y: 430,
@@ -3312,11 +3357,53 @@ function applyDamageResult(result) {
     damage: result.damage,
     breakdown: result.breakdown,
   });
+  showBattleClearFeedback(result);
   if (result.damage <= 0) {
     finishPlayerTurnAfterHit(result.context);
     return false;
   }
   return true;
+}
+
+function showBattleClearFeedback(result) {
+  if (!result || result.lines <= 0) return;
+  const comboCount = result.context?.combo || 0;
+  if (comboCount >= 2) {
+    showComboFeedback({
+      combo: comboCount,
+      label: fmt("floaterCombo", { combo: comboCount }),
+      subtitle: result.damage > 0 ? `${result.damage} ${t("dmgShort")}` : "",
+      position: GSAP_FEEDBACK_POSITIONS.combo,
+    });
+  }
+
+  const isDifficultClear = result.lines === 4 || Boolean(result.spinType);
+  if (isDifficultClear && state.b2bActive) {
+    showB2BFeedback({
+      chain: state.b2bChain,
+      label: state.b2bChain > 1 ? fmt("b2bChain", { count: state.b2bChain }) : t("b2bReady"),
+      subtitle: result.damage > 0 ? `${result.damage} ${t("dmgShort")}` : "",
+      position: GSAP_FEEDBACK_POSITIONS.b2b,
+    });
+  }
+
+  const isTSpin = result.pieceType === "T" && (result.spinType === "full" || result.spinType === "mini");
+  if (isTSpin) {
+    showTSpinFeedback({
+      spinType: result.spinType,
+      label: result.spinType === "mini" ? t("hitTSpinMini") : t("hitTSpin"),
+      subtitle: result.damage > 0 ? `${result.damage} ${t("dmgShort")}` : "",
+      position: GSAP_FEEDBACK_POSITIONS.tspin,
+    });
+  }
+
+  if (result.context?.perfect) {
+    showPerfectClearFeedback({
+      label: t("perfectClearTitle"),
+      subtitle: result.damage > 0 ? `${result.damage} ${t("dmgShort")}` : "",
+      position: GSAP_FEEDBACK_POSITIONS.perfect,
+    });
+  }
 }
 
 function playDamageFeedback(result) {
@@ -4015,7 +4102,7 @@ function startNextWave() {
   recordRunEnemyDefeat(clearedBoss);
   state.defeated += 1;
   if (state.defeated >= RUN_MODES[state.runMode].targetWaves) {
-    state.mode = "victory";
+    setGameMode("victory");
     setMessage("messageVictory");
     state.shake = 10;
     finishRun("victory");
@@ -4033,7 +4120,7 @@ function startNextWave() {
   state.comboConstellationSecondUsed = false;
   state.upgradeChoices = [];
   state.upgradeSelectedIndex = 0;
-  state.mode = "playing";
+  setGameMode("playing");
   const beforeHeal = state.playerHp;
   const waveHeal = BALANCE.waveHeal + state.upgrades.waveHeal + getTraitBonus("Survival", [4, 8, 14]) + getSurvivalTraitBonus(getTraitSnapshot()).waveHeal;
   state.playerHp = Math.min(state.playerMaxHp, state.playerHp + waveHeal);
@@ -4139,7 +4226,7 @@ function triggerUpgradeIfReady(forceRelic = false, forceRare = false, reason = "
   state.upgradeChoices = createUpgradeChoices(forceRelic, forceRare);
   state.upgradeSelectedIndex = 0;
   state.upgradeDraftReason = reason;
-  state.mode = "upgrade";
+  setGameMode("upgrade");
   state.floaters.push({
     x: 454,
     y: 178,
@@ -4196,7 +4283,7 @@ function finishUpgradeSelection() {
   state.upgradeSelectedIndex = 0;
   state.currentBuildOpen = false;
   state.upgradePickConfirm = null;
-  state.mode = "playing";
+  setGameMode("playing");
   state.upgradeReady = state.upgradeMeter >= state.nextUpgradeAt;
   state.upgradeDraftReason = null;
   if (state.upgradeReady && triggerUpgradeIfReady(false, false, "progress")) return;
@@ -9215,7 +9302,7 @@ function drawMenuIdleParticles(anchorX, anchorY, pose, motion, now) {
 }
 
 function drawOverlay() {
-  if (state.mode === "art") state.mode = "start";
+  if (state.mode === "art") setGameMode("start");
   const overlayPath = getOverlayRenderPath(state);
   if (overlayPath === "none") return;
   if (overlayPath === "result") {
@@ -9570,7 +9657,7 @@ function getMetaUpgradeMessage() {
 function handleMetaUpgradePointerDown(x, y) {
   const back = getMetaUpgradeBackButtonRect();
   if (pointInRect(x, y, back.x, back.y, back.w, back.h)) {
-    state.mode = "start";
+    setGameMode("start");
     state.metaUpgradeMessage = { key: "", vars: {}, until: 0 };
     playSfx("hold");
     return true;
@@ -10543,6 +10630,11 @@ function drawImageFallbackBox(x, y, w, h, text = "MISSING IMAGE") {
   ctx.restore();
 }
 
+const HAS_POINTER_EVENTS = typeof window.PointerEvent !== "undefined";
+const CANVAS_POINTER_MOVE_EVENT = HAS_POINTER_EVENTS ? "pointermove" : "mousemove";
+const CANVAS_POINTER_DOWN_EVENT = HAS_POINTER_EVENTS ? "pointerdown" : "mousedown";
+const CANVAS_POINTER_UP_EVENT = HAS_POINTER_EVENTS ? "pointerup" : "mouseup";
+
 window.addEventListener("keydown", (event) => {
   const key = event.key;
   const code = event.code;
@@ -10601,12 +10693,12 @@ window.addEventListener("keydown", (event) => {
   }
   if (normalized !== "escape" && isActionKey("pause", key)) {
     if (state.mode === "playing") {
-      state.mode = "paused";
+      setGameMode("paused");
       state.pauseView = "menu";
       state.settingsOpen = false;
     }
     else if (state.mode === "paused") {
-      state.mode = "playing";
+      setGameMode("playing");
       state.pauseView = "menu";
     }
     return;
@@ -10615,7 +10707,7 @@ window.addEventListener("keydown", (event) => {
     unlockAudio();
     state.bindingAction = null;
     if (state.mode === "playing") {
-      state.mode = "paused";
+      setGameMode("paused");
       state.pauseView = "menu";
       state.settingsOpen = false;
     }
@@ -10624,11 +10716,11 @@ window.addEventListener("keydown", (event) => {
       if (state.settingsOpen) state.settingsTab = "controls";
     }
     else if (state.mode === "paused") {
-      state.mode = "playing";
+      setGameMode("playing");
       state.pauseView = "menu";
       state.settingsOpen = false;
     } else if (state.mode === "metaUpgrade" || state.mode === "guide" || state.mode === "victory" || state.mode === "defeat") {
-      state.mode = "start";
+      setGameMode("start");
       state.settingsOpen = false;
     } else {
       state.settingsOpen = !state.settingsOpen;
@@ -10698,25 +10790,34 @@ function normalizeControlKey(key) {
   return key.toLowerCase();
 }
 
-canvas.addEventListener("mousemove", (event) => {
+canvas.addEventListener(CANVAS_POINTER_MOVE_EVENT, (event) => {
   const p = getCanvasPoint(event);
   state.pointer.x = p.x;
   state.pointer.y = p.y;
   const heroHovered = updateMenuHeroHoverFromPointer(p.x, p.y);
   canvas.style.cursor = heroHovered ? "pointer" : "";
   if (state.pointer.down && state.pointer.dragging) {
+    event.preventDefault();
     updateSliderFromPointer(state.pointer.dragging, p.x);
   }
 });
 
-canvas.addEventListener("mousedown", (event) => {
+canvas.addEventListener(CANVAS_POINTER_DOWN_EVENT, (event) => {
+  event.preventDefault();
+  if (HAS_POINTER_EVENTS && typeof canvas.setPointerCapture === "function" && Number.isFinite(event.pointerId)) {
+    try {
+      canvas.setPointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture is a drag convenience; losing it should not block input.
+    }
+  }
   unlockAudio();
   const p = getCanvasPoint(event);
   state.pointer = { ...state.pointer, x: p.x, y: p.y, down: true };
   const b = UI_LAYOUT.pauseButton;
 
   if (state.mode === "playing" && pointInRect(p.x, p.y, b.x, b.y, b.w, b.h)) {
-    state.mode = "paused";
+    setGameMode("paused");
     state.pauseView = "menu";
     state.settingsOpen = false;
     state.bindingAction = null;
@@ -10769,13 +10870,13 @@ canvas.addEventListener("mousedown", (event) => {
       if (pointInRect(p.x, p.y, buttons.start.x, buttons.start.y, buttons.start.w, buttons.start.h)) resetGame("endless");
       else if (pointInRect(p.x, p.y, buttons.tutorial.x, buttons.tutorial.y, buttons.tutorial.w, buttons.tutorial.h)) startTutorial();
       else if (pointInRect(p.x, p.y, buttons.metaUpgrade.x, buttons.metaUpgrade.y, buttons.metaUpgrade.w, buttons.metaUpgrade.h)) {
-        state.mode = "metaUpgrade";
+        setGameMode("metaUpgrade");
         state.metaProgress = loadMetaProgress();
         state.metaUpgradeMessage = { key: "", vars: {}, until: 0 };
         playSfx("hold");
       }
       else if (pointInRect(p.x, p.y, buttons.guide.x, buttons.guide.y, buttons.guide.w, buttons.guide.h)) {
-        state.mode = "guide";
+        setGameMode("guide");
         playSfx("hold");
       }
       else if (pointInRect(p.x, p.y, buttons.settings.x, buttons.settings.y, buttons.settings.w, buttons.settings.h)) {
@@ -10786,12 +10887,12 @@ canvas.addEventListener("mousedown", (event) => {
       return;
     }
     if (state.mode === "guide" && pointInRect(p.x, p.y, 232, 606, 180, 40)) {
-      state.mode = "start";
+      setGameMode("start");
       playSfx("hold");
       return;
     }
     if (state.mode === "paused" && pointInRect(p.x, p.y, 384, 408, 178, 44)) {
-      state.mode = "playing";
+      setGameMode("playing");
       return;
     }
     if (state.mode === "paused" && pointInRect(p.x, p.y, 578, 408, 178, 44)) {
@@ -10799,7 +10900,7 @@ canvas.addEventListener("mousedown", (event) => {
       return;
     }
     if (state.mode === "paused" && pointInRect(p.x, p.y, 772, 408, 122, 44)) {
-      state.mode = "start";
+      setGameMode("start");
       return;
     }
     if (state.mode === "victory" || state.mode === "defeat") {
@@ -10809,14 +10910,14 @@ canvas.addEventListener("mousedown", (event) => {
         return;
       }
       if (pointInRect(p.x, p.y, buttons.upgrade.x, buttons.upgrade.y, buttons.upgrade.w, buttons.upgrade.h)) {
-        state.mode = "metaUpgrade";
+        setGameMode("metaUpgrade");
         state.metaProgress = loadMetaProgress();
         state.metaUpgradeMessage = { key: "", vars: {}, until: 0 };
         playSfx("hold");
         return;
       }
       if (pointInRect(p.x, p.y, buttons.menu.x, buttons.menu.y, buttons.menu.w, buttons.menu.h)) {
-        state.mode = "start";
+        setGameMode("start");
         playSfx("hold");
         return;
       }
@@ -10839,7 +10940,7 @@ function handlePausePointerDown(x, y) {
   }
   const m = UI_LAYOUT.pauseMenu;
   if (pointInRect(x, y, m.x + 56, m.y + 156, m.w - 112, 48)) {
-    state.mode = "playing";
+    setGameMode("playing");
     state.pauseView = "menu";
     playSfx("hold");
     return;
@@ -10855,7 +10956,7 @@ function handlePausePointerDown(x, y) {
     return;
   }
   if (pointInRect(x, y, m.x + 56, m.y + 324, m.w - 112, 44)) {
-    state.mode = "start";
+    setGameMode("start");
     state.pauseView = "menu";
     state.settingsOpen = false;
     playSfx("hold");
@@ -10984,7 +11085,18 @@ function openFeedbackLink(url) {
   if (opened) opened.opener = null;
 }
 
-window.addEventListener("mouseup", () => {
+window.addEventListener(CANVAS_POINTER_UP_EVENT, () => {
+  const dragging = state.pointer.dragging;
+  if (dragging?.startsWith("audio:") || dragging?.startsWith("tuning:")) {
+    const slider = state.pointer.elasticSlider || {};
+    state.pointer.elasticSlider = {
+      key: "",
+      overflow: 0,
+      releaseKey: dragging,
+      releaseOverflow: slider.key === dragging ? slider.overflow || 0 : 0,
+      releaseStartedAt: performance.now(),
+    };
+  }
   state.pointer.down = false;
   state.pointer.dragging = null;
 });
@@ -11026,12 +11138,40 @@ function updateSliderFromPointer(key, x) {
   const [kind, name] = key.split(":");
   const sliderX = getSettingsSliderTrackX(kind);
   const trackW = getSettingsSliderTrackWidth(kind);
-  const value = clamp((x - sliderX) / trackW, 0, 1);
   if (kind === "audio") {
-    audio[name] = value;
+    const result = getElasticRiftSliderValueFromPointer({
+      pointerX: x,
+      trackX: sliderX,
+      trackWidth: trackW,
+      min: 0,
+      max: 1,
+    });
+    audio[name] = result.value;
+    state.pointer.elasticSlider = {
+      key,
+      overflow: result.overflow,
+      releaseKey: "",
+      releaseOverflow: 0,
+      releaseStartedAt: 0,
+    };
   } else if (kind === "tuning") {
     const spec = TUNING_SLIDERS[name];
-    state.tuning[name] = Math.round(spec.min + value * (spec.max - spec.min));
+    const result = getElasticRiftSliderValueFromPointer({
+      pointerX: x,
+      trackX: sliderX,
+      trackWidth: trackW,
+      min: spec.min,
+      max: spec.max,
+      step: 1,
+    });
+    state.tuning[name] = result.value;
+    state.pointer.elasticSlider = {
+      key,
+      overflow: result.overflow,
+      releaseKey: "",
+      releaseOverflow: 0,
+      releaseStartedAt: 0,
+    };
   }
   applyAudioSettings();
   saveGame();
@@ -11056,6 +11196,8 @@ function hitControlBind(x, y) {
 
 applySavedSettings();
 syncControlHints();
+initFeedbackLayer({ canvasWidth: W, canvasHeight: H });
+setFeedbackMode(state.mode);
 try {
   draw();
 } catch (error) {
