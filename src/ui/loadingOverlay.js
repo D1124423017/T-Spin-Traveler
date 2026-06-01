@@ -24,6 +24,8 @@ export function createLoadingOverlayModel({
     now,
     elapsed,
     pulse: 0.5 + Math.sin(now * 0.006) * 0.5,
+    orbit: now * 0.0012,
+    scan: (now * 0.00018) % 1,
     progress,
     message: safeSummary.error > 0
       ? "Some assets failed to load. The game will use fallback visuals."
@@ -41,11 +43,12 @@ export function drawLoadingOverlay(ctx, model, {
   drawDimOverlay,
   roundedRect,
 }) {
-  const { rect, summary, elapsed, pulse, progress, message } = model;
+  const { rect, summary, elapsed, pulse, progress, message, orbit, scan } = model;
   const { x, y, w, h } = rect;
 
   drawDimOverlay(0.76);
   ctx.save();
+  drawLoadingBackdropDial(ctx, x + w / 2, y + 112, pulse, orbit);
   const glow = ctx.createLinearGradient(x, y, x + w, y + h);
   glow.addColorStop(0, "rgba(126, 231, 255, 0.16)");
   glow.addColorStop(0.48, "rgba(184, 141, 255, 0.18)");
@@ -57,6 +60,8 @@ export function drawLoadingOverlay(ctx, model, {
   ctx.shadowBlur = 0;
   ctx.fillStyle = glow;
   roundedRect(x + 8, y + 8, w - 16, h - 16, 8, true, false);
+  drawLoadingPanelScan(ctx, x, y, w, h, scan, roundedRect);
+  drawLoadingConstellation(ctx, x, y, w, h, pulse, orbit);
   ctx.strokeStyle = "rgba(255, 240, 166, 0.38)";
   ctx.lineWidth = 1.8;
   roundedRect(x, y, w, h, 10, false, true);
@@ -84,6 +89,7 @@ export function drawLoadingOverlay(ctx, model, {
   ctx.globalAlpha = 1;
   ctx.strokeStyle = "rgba(238,244,252,0.18)";
   roundedRect(barX, barY, barW, 12, 6, false, true);
+  drawLoadingBarSpark(ctx, barX, barY, barW, progress, pulse);
   for (let i = 0; i < 14; i += 1) {
     const a = model.now * 0.0018 + i * 0.55;
     const r = 72 + (i % 4) * 11;
@@ -105,5 +111,86 @@ export function drawLoadingOverlay(ctx, model, {
       ctx.fillText(`draw error: ${model.drawError.slice(0, 72)}`, x + 18, y + h - 10);
     }
   }
+  ctx.restore();
+}
+
+function drawLoadingBackdropDial(ctx, cx, cy, pulse, orbit) {
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.globalAlpha = 0.42;
+  for (let i = 0; i < 5; i += 1) {
+    const radius = 74 + i * 23 + Math.sin(orbit * 1.7 + i) * 2;
+    const start = orbit * (0.2 + i * 0.04) + i * 0.7;
+    const end = start + Math.PI * (0.44 + i * 0.04);
+    ctx.strokeStyle = i % 2 ? "rgba(126, 231, 255, 0.11)" : "rgba(216, 194, 255, 0.12)";
+    ctx.lineWidth = i === 0 ? 1.7 : 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, start, end);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 0.08 + pulse * 0.08;
+  ctx.fillStyle = "rgba(255, 240, 166, 0.64)";
+  ctx.beginPath();
+  ctx.arc(cx, cy, 5 + pulse * 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawLoadingPanelScan(ctx, x, y, w, h, scan, roundedRect) {
+  const sweepX = x + scan * (w + 140) - 94;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const beam = ctx.createLinearGradient(sweepX, y, sweepX + 86, y + h);
+  beam.addColorStop(0, "rgba(126, 231, 255, 0)");
+  beam.addColorStop(0.5, "rgba(126, 231, 255, 0.08)");
+  beam.addColorStop(1, "rgba(255, 240, 166, 0)");
+  ctx.fillStyle = beam;
+  roundedRect(x + 9, y + 9, w - 18, h - 18, 8, true, false);
+  ctx.restore();
+}
+
+function drawLoadingConstellation(ctx, x, y, w, h, pulse, orbit) {
+  const points = [
+    [x + 86, y + 58],
+    [x + 145, y + 42],
+    [x + 196, y + 70],
+    [x + w - 170, y + 52],
+    [x + w - 106, y + 76],
+    [x + w - 78, y + h - 56],
+    [x + 104, y + h - 48],
+  ];
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.strokeStyle = "rgba(126, 231, 255, 0.1)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const [x0, y0] = points[i];
+    const [x1, y1] = points[i + 1];
+    if (i === 0) ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+  }
+  ctx.stroke();
+  for (let i = 0; i < points.length; i += 1) {
+    const [px, py] = points[i];
+    const twinkle = 0.42 + Math.sin(orbit * 2.4 + i * 1.3) * 0.28 + pulse * 0.18;
+    ctx.fillStyle = i % 3 === 0 ? "rgba(255, 240, 166, 0.62)" : "rgba(126, 231, 255, 0.58)";
+    ctx.globalAlpha = Math.max(0.18, twinkle);
+    ctx.fillRect(px - 1.5, py - 1.5, 3, 3);
+  }
+  ctx.restore();
+}
+
+function drawLoadingBarSpark(ctx, barX, barY, barW, progress, pulse) {
+  if (progress <= 0) return;
+  const sparkX = barX + Math.max(10, Math.min(barW - 2, barW * progress));
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.shadowColor = "rgba(255, 240, 166, 0.76)";
+  ctx.shadowBlur = 16 + pulse * 8;
+  ctx.fillStyle = "rgba(255, 248, 214, 0.92)";
+  ctx.beginPath();
+  ctx.arc(sparkX, barY + 6, 4 + pulse * 1.8, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }

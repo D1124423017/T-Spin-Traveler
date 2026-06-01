@@ -1,5 +1,6 @@
 import {
   OVERLAY_READABILITY,
+  clamp,
   pointInRect,
 } from "../render/drawUtils.js";
 
@@ -21,6 +22,7 @@ export function drawMenuButtonPanel(ctx, {
   variant = "secondary",
   pointer = {},
   now = getNow(),
+  motion = null,
 }, {
   canvasFont,
   fitLabel,
@@ -31,7 +33,10 @@ export function drawMenuButtonPanel(ctx, {
     rect: { x, y, w, h },
     variant,
   });
+  const revealAlpha = clamp(motion?.alpha ?? 1, 0, 1);
+  const motionGlow = clamp(motion?.glow ?? 0, 0, 1);
   ctx.save();
+  ctx.globalAlpha *= revealAlpha;
   if (primary) {
     const fill = ctx.createLinearGradient(x, y, x + w, y + h);
     fill.addColorStop(0, hovered ? "rgba(255, 236, 180, 0.42)" : "rgba(255, 224, 162, 0.28)");
@@ -50,6 +55,17 @@ export function drawMenuButtonPanel(ctx, {
     : (hovered ? "rgba(255, 244, 168, 0.5)" : "rgba(145, 232, 222, 0.26)");
   ctx.lineWidth = primary ? 2.5 : 2;
   roundedRect(x, y, w, h, 8, false, true);
+  if (motionGlow > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha *= 0.24 * motionGlow;
+    ctx.shadowColor = primary ? "rgba(255, 240, 166, 0.84)" : "rgba(126, 231, 255, 0.64)";
+    ctx.shadowBlur = primary ? 22 : 15;
+    ctx.strokeStyle = primary ? "rgba(255, 240, 166, 0.72)" : "rgba(126, 231, 255, 0.48)";
+    ctx.lineWidth = primary ? 3 : 2;
+    roundedRect(x - 3, y - 3, w + 6, h + 6, 10, false, true);
+    ctx.restore();
+  }
   if (primary) {
     ctx.fillStyle = hovered ? "rgba(255, 240, 166, 0.78)" : "rgba(255, 240, 166, 0.58)";
     roundedRect(x + 14, y + 14, 5, h - 28, 4, true, false);
@@ -58,6 +74,14 @@ export function drawMenuButtonPanel(ctx, {
     sheen.addColorStop(0, "rgba(255,255,255,0)");
     sheen.addColorStop(0.5, "rgba(255,255,255,0.18)");
     sheen.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = sheen;
+    roundedRect(x + 4, y + 4, w - 8, h - 8, 7, true, false);
+  } else if (motionGlow > 0 || hovered) {
+    const shimmer = ((now * 0.00016) % 1) * (w + 110) - 92;
+    const sheen = ctx.createLinearGradient(x + shimmer, y, x + shimmer + 82, y + h);
+    sheen.addColorStop(0, "rgba(126, 231, 255, 0)");
+    sheen.addColorStop(0.5, `rgba(126, 231, 255, ${hovered ? 0.14 : 0.08 * motionGlow})`);
+    sheen.addColorStop(1, "rgba(216, 194, 255, 0)");
     ctx.fillStyle = sheen;
     roundedRect(x + 4, y + 4, w - 8, h - 8, 7, true, false);
   }

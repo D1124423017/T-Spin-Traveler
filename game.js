@@ -189,6 +189,12 @@ import {
   createLoadingOverlayModel,
   drawLoadingOverlay,
 } from "./src/ui/loadingOverlay.js";
+import {
+  createMenuMotionModel,
+  drawMenuAmbientMotion,
+  drawMenuTitleWake,
+  getMenuButtonMotion,
+} from "./src/ui/menuMotion.js";
 import { drawMenuButtonPanel } from "./src/ui/panelDrawing.js";
 import {
   drawSettingsScreenOverlay,
@@ -1210,6 +1216,7 @@ const state = {
   settingsOpen: false,
   settingsTab: "controls",
   pauseView: "menu",
+  menuRevealStartedAt: 0,
   bindingAction: null,
   menuSpecialIdleStartedAt: performance.now(),
   menuHeroInteraction: {
@@ -4487,6 +4494,7 @@ function updateAssetLoading(now = performance.now()) {
     maxMs: ASSET_LOADING_MAX_MS,
   })) {
     state.assetLoadingDone = true;
+    state.menuRevealStartedAt = now;
   }
 }
 
@@ -8629,12 +8637,17 @@ function drawAssetLoadingScreen() {
 }
 
 function drawStartMenuOverlay() {
+  const now = performance.now();
+  const menuMotion = createMenuMotionModel({
+    now,
+    startedAt: state.menuRevealStartedAt || state.assetLoadingStartedAt,
+  });
   const m = UI_LAYOUT.menu;
   const pad = m.padding || 36;
   const bx = m.x + pad;
   const bw = m.w - pad * 2;
   const buttons = getMainMenuButtonRects();
-  drawMainMenuScene();
+  drawMainMenuScene(menuMotion);
   drawMenuHeroShowcase();
   ctx.save();
   ctx.textAlign = "left";
@@ -8677,6 +8690,7 @@ function drawStartMenuOverlay() {
   ctx.moveTo(92, 178);
   ctx.lineTo(422, 178);
   ctx.stroke();
+  drawMenuTitleWake(ctx, menuMotion, { x: 92, y: 178, w: 330 });
   ctx.shadowColor = "rgba(126, 238, 255, 0.34)";
   ctx.shadowBlur = 10;
   label(t("startTagline").toUpperCase(), 106, 210, 17, "#e0d2ff");
@@ -8688,16 +8702,16 @@ function drawStartMenuOverlay() {
   drawCornerGlyph(m.x + m.w / 2, m.y - 2, "#9fb4ff");
   label(t("menuActions").toUpperCase(), bx, m.y + 58, 15, "#fff0a6");
   wrapText(t("startPanelHint"), bx, m.y + 88, bw, 19, "rgba(238,244,252,0.58)", 12);
-  drawMenuButton(buttons.start.x, buttons.start.y, buttons.start.w, buttons.start.h, menuActionText("startGame"), "Enter", "primary");
-  drawMenuButton(buttons.tutorial.x, buttons.tutorial.y, buttons.tutorial.w, buttons.tutorial.h, t("tutorialStart"), t("tutorialHintShort"));
-  drawMenuButton(buttons.metaUpgrade.x, buttons.metaUpgrade.y, buttons.metaUpgrade.w, buttons.metaUpgrade.h, menuActionText("upgradeMenu"), "");
-  drawMenuButton(buttons.guide.x, buttons.guide.y, buttons.guide.w, buttons.guide.h, menuActionText("moveGuide"), "Spin");
-  drawMenuButton(buttons.settings.x, buttons.settings.y, buttons.settings.w, buttons.settings.h, menuActionText("settings"), "");
+  drawMenuButton(buttons.start.x, buttons.start.y, buttons.start.w, buttons.start.h, menuActionText("startGame"), "Enter", "primary", { motion: getMenuButtonMotion(menuMotion, 0) });
+  drawMenuButton(buttons.tutorial.x, buttons.tutorial.y, buttons.tutorial.w, buttons.tutorial.h, t("tutorialStart"), t("tutorialHintShort"), "secondary", { motion: getMenuButtonMotion(menuMotion, 1) });
+  drawMenuButton(buttons.metaUpgrade.x, buttons.metaUpgrade.y, buttons.metaUpgrade.w, buttons.metaUpgrade.h, menuActionText("upgradeMenu"), "", "secondary", { motion: getMenuButtonMotion(menuMotion, 2) });
+  drawMenuButton(buttons.guide.x, buttons.guide.y, buttons.guide.w, buttons.guide.h, menuActionText("moveGuide"), "Spin", "secondary", { motion: getMenuButtonMotion(menuMotion, 3) });
+  drawMenuButton(buttons.settings.x, buttons.settings.y, buttons.settings.w, buttons.settings.h, menuActionText("settings"), "", "secondary", { motion: getMenuButtonMotion(menuMotion, 4) });
   label(t("startHint"), bx, m.y + m.h - 42, 13, "#9fb4ff");
   ctx.restore();
 }
 
-function drawMainMenuScene() {
+function drawMainMenuScene(menuMotion = null) {
   ctx.save();
   if (isImageReady(forestBg)) ctx.drawImage(forestBg, 0, 0, W, H);
   const g = ctx.createLinearGradient(0, 0, W, H);
@@ -8706,7 +8720,7 @@ function drawMainMenuScene() {
   g.addColorStop(1, "rgba(1, 2, 6, 0.92)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
-  drawMenuAmbientRift();
+  drawMenuAmbientRift(menuMotion);
   ctx.strokeStyle = "rgba(255, 240, 166, 0.18)";
   ctx.beginPath();
   ctx.moveTo(86, 642);
@@ -8922,8 +8936,10 @@ function drawMenuHeroDialogueBubble() {
   ctx.restore();
 }
 
-function drawMenuAmbientRift() {
-  const now = performance.now() * 0.001;
+function drawMenuAmbientRift(menuMotion = null) {
+  const nowMs = performance.now();
+  const now = nowMs * 0.001;
+  const motion = menuMotion || createMenuMotionModel({ now: nowMs, startedAt: nowMs - 1800 });
   const cx = 632;
   const cy = 318;
   const rift = ctx.createRadialGradient(cx, cy, 12, cx, cy, 270);
@@ -8954,6 +8970,7 @@ function drawMenuAmbientRift() {
   ctx.closePath();
   ctx.stroke();
   ctx.restore();
+  drawMenuAmbientMotion(ctx, motion, { cx, cy });
 }
 
 function drawMenuHeroShowcase() {
@@ -10306,11 +10323,12 @@ function drawGuideRow(x, y, title, text, color, width = 620) {
   ctx.restore();
 }
 
-function drawMenuButton(x, y, w, h, text, hint, variant = "secondary") {
+function drawMenuButton(x, y, w, h, text, hint, variant = "secondary", options = {}) {
   drawMenuButtonPanel(ctx, {
     x, y, w, h, text, hint, variant,
     pointer: state.pointer,
     now: performance.now(),
+    motion: options.motion,
   }, {
     canvasFont,
     fitLabel,

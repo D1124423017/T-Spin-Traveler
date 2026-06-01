@@ -19,6 +19,8 @@ describe("loading overlay helpers", () => {
     expect(model.progress).toBe(0.3);
     expect(model.message).toBe("Loading assets...");
     expect(model.counterText).toBe("3/10");
+    expect(model.orbit).toBeCloseTo(1.8);
+    expect(model.scan).toBeCloseTo(0.27);
     expect(model.debugEnabled).toBe(true);
     expect(model.debugBuild).toBe("debug-build");
   });
