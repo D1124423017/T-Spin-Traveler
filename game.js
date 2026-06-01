@@ -194,7 +194,11 @@ import {
   getMenuButtonMotion,
 } from "./src/ui/menuMotion.js";
 import {
-  cleanupFeedback,
+  cleanupDomOverlay,
+  initDomOverlayRoot,
+  setDomOverlayMode,
+} from "./src/dom/domOverlayRoot.js";
+import {
   initFeedbackLayer,
   setFeedbackMode,
   showB2BFeedback,
@@ -202,7 +206,9 @@ import {
   showDamageNumber,
   showPerfectClearFeedback,
   showTSpinFeedback,
-} from "./src/dom/gsapFeedback.js";
+} from "./src/dom/gameplayFeedbackLayer.js";
+import { showToast } from "./src/dom/toastLayer.js";
+import { showBondCallout } from "./src/dom/bondCalloutLayer.js";
 import { drawMenuButtonPanel } from "./src/ui/panelDrawing.js";
 import {
   drawSettingsScreenOverlay,
@@ -1468,6 +1474,7 @@ function getHiddenRowsDebugInfo() {
 
 function setGameMode(mode) {
   state.mode = mode;
+  setDomOverlayMode(mode);
   setFeedbackMode(mode);
 }
 
@@ -1651,8 +1658,9 @@ function triggerDefeat(messageKey, source = "triggerDefeat") {
 
 function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   unlockAudio();
-  cleanupFeedback();
+  cleanupDomOverlay();
   setGameMode("playing");
+  showToast({ type: "run-start", text: t("toastRunStart"), tone: "rift", durationMs: 1500 });
   state.pauseView = "menu";
   state.settingsOpen = false;
   state.bindingAction = null;
@@ -2551,6 +2559,30 @@ function getDevilBondTier() {
   return getSpecialBondTier("devil", getSpecialBondCountsForRun());
 }
 
+function showSpecialBondUpgradeCallout(preview) {
+  if (!preview?.activates) return;
+  showBondCallout({
+    family: preview.family.key,
+    text: fmt("bondHintUpgrade", {
+      bond: t(preview.family.labelKey),
+      before: preview.before,
+      after: preview.after,
+    }),
+    detail: t("bondCalloutActivated"),
+    durationMs: 1450,
+  });
+}
+
+function showSpecialBondEffectCallout(family, text) {
+  if (!text) return;
+  showBondCallout({
+    family,
+    text,
+    detail: t("bondCalloutEffect"),
+    durationMs: 1250,
+  });
+}
+
 function isPlayerLowHp() {
   return state.playerMaxHp > 0 && state.playerHp / state.playerMaxHp <= 0.4;
 }
@@ -2587,13 +2619,15 @@ function applyAngelClearRewards({ lines, spinType, highValueClear }) {
     const wardGain = (angelTier >= 1 ? 1 : 0) + (state.upgrades.angelHaloSanctuary > 0 ? 1 : 0);
     const gainedWard = grantAngelWard(wardGain);
     if (gainedWard > 0) {
+      const text = fmt("floaterAngelWard", { count: state.angelWard });
       state.floaters.push({
         x: 86,
         y: 306,
-        text: fmt("floaterAngelWard", { count: state.angelWard }),
+        text,
         color: "#dff7ff",
         life: 1050,
       });
+      showSpecialBondEffectCallout("angel", text);
     }
   }
 
@@ -2603,13 +2637,15 @@ function applyAngelClearRewards({ lines, spinType, highValueClear }) {
   const cleansed = cleansePendingGarbage(cleansePower);
   if (cleansed > 0) {
     const guardGain = grantGuardFromUpgrade(cleansed * (2 + angelTier), null);
+    const text = fmt("floaterAngelCleanse", { count: cleansed, guard: guardGain });
     state.floaters.push({
       x: BOARD_X + COLS * TILE + 34,
       y: BOARD_Y + 188,
-      text: fmt("floaterAngelCleanse", { count: cleansed, guard: guardGain }),
+      text,
       color: "#dff7ff",
       life: 1150,
     });
+    showSpecialBondEffectCallout("angel", text);
     playSfx("cancel");
   }
 
@@ -2619,13 +2655,15 @@ function applyAngelClearRewards({ lines, spinType, highValueClear }) {
     const chargeGain = state.lastPerfectClear ? 2 : 1;
     state.angelBlessingCharges = Math.min(maxCharges, before + chargeGain);
     if (state.angelBlessingCharges > before) {
+      const text = fmt("floaterAngelBenediction", { count: state.angelBlessingCharges });
       state.floaters.push({
         x: 86,
         y: 328,
-        text: fmt("floaterAngelBenediction", { count: state.angelBlessingCharges }),
+        text,
         color: "#fff7d2",
         life: 1050,
       });
+      showSpecialBondEffectCallout("angel", text);
     }
   }
 }
@@ -2666,13 +2704,15 @@ function applyAngelHitProtection(finalDamage, incomingGarbage) {
   }
 
   if (protectedAmount > 0 || cleansedGarbage > 0) {
+    const text = fmt("floaterAngelProtect", { block: protectedAmount, garbage: cleansedGarbage });
     state.floaters.push({
       x: 244,
       y: 248,
-      text: fmt("floaterAngelProtect", { block: protectedAmount, garbage: cleansedGarbage }),
+      text,
       color: "#dff7ff",
       life: 1050,
     });
+    showSpecialBondEffectCallout("angel", text);
     playSfx("shield");
   }
 
@@ -2722,13 +2762,15 @@ function applyDevilClearRewards({ lines, spinType, highValueClear, isDifficultCl
       extraDamage += pactDamage;
       marks += 2;
       addDamagePart(parts, sources, "damageDevilPact", pactDamage, "upgrade");
+      const text = fmt("floaterDevilPact", { hp: paid, damage: pactDamage });
       state.floaters.push({
         x: BOARD_X + COLS * TILE + 36,
         y: BOARD_Y + 316,
-        text: fmt("floaterDevilPact", { hp: paid, damage: pactDamage }),
+        text,
         color: "#ff8fca",
         life: 1100,
       });
+      showSpecialBondEffectCallout("devil", text);
     }
   }
 
@@ -2742,24 +2784,28 @@ function applyDevilClearRewards({ lines, spinType, highValueClear, isDifficultCl
 
   const sinResult = gainDevilSinMarks(marks);
   if (sinResult.gained > 0 && sinResult.burstDamage <= 0) {
+    const text = fmt("floaterDevilSin", { count: state.devilSinMarks, max: sinResult.threshold });
     state.floaters.push({
       x: BOARD_X + COLS * TILE + 36,
       y: BOARD_Y + 292,
-      text: fmt("floaterDevilSin", { count: state.devilSinMarks, max: sinResult.threshold }),
+      text,
       color: "#ff8fca",
       life: 950,
     });
+    showSpecialBondEffectCallout("devil", text);
   }
   if (sinResult.burstDamage > 0) {
     extraDamage += sinResult.burstDamage;
     addDamagePart(parts, sources, "damageDevilSinBurst", sinResult.burstDamage, "upgrade");
+    const text = fmt("floaterDevilSinBurst", { damage: sinResult.burstDamage });
     state.floaters.push({
       x: BOARD_X + COLS * TILE + 36,
       y: BOARD_Y + 292,
-      text: fmt("floaterDevilSinBurst", { damage: sinResult.burstDamage }),
+      text,
       color: "#ff6f9f",
       life: 1250,
     });
+    showSpecialBondEffectCallout("devil", text);
     state.bursts.push({ x: BOARD_X + COLS * TILE + 210, y: BOARD_Y + 278, radius: 20, color: "#ff4d9a", life: 500, duration: 500, intensity: 1.55 });
     playSfx("tspin");
   }
@@ -4311,8 +4357,10 @@ function chooseUpgrade(index) {
     selectedIndex: index,
     confirmedAt: performance.now(),
   };
+  const bondPreview = getSpecialBondPreview(upgrade, state.acquiredRelics);
   applyUpgrade(upgrade);
   recordAcquiredRelic(upgrade);
+  showSpecialBondUpgradeCallout(bondPreview);
   state.floaters.push({
     x: 454,
     y: 178,
@@ -9879,15 +9927,16 @@ function drawUpgradeChoiceCard({
   ctx.scale(scale, scale);
   const localCard = { x: -card.w / 2, y: -card.h / 2, w: card.w, h: card.h };
   const layout = getUpgradeCardContentLayout(localCard, layoutVariant);
+  const textTheme = getUpgradeCardTextTheme(upgrade, layoutVariant, rarity);
   drawUpgradeCardMotionAura(localCard, rarity, motion);
   drawUpgradeCardFrame(localCard.x, localCard.y, localCard.w, localCard.h, rarity, active, specialFrame);
   drawUpgradeCardReadabilityPanels(layout, rarity, hovered || selected);
   drawReadableUpgradeText(() => {
-    drawLimitedWrapText(upgradeName(upgrade), layout.title.x, layout.title.y, layout.title.w, layout.title.lineH, rarity.titleColor, layout.title.size, layout.title.maxLines || 2, "900", true);
-  }, 7);
-  drawUpgradeTagPills(getUpgradeTags(upgrade), layout.tags.x, layout.tags.y, layout.tags.w, layout.tags.maxTags || 2, 0.92);
-  drawUpgradeDivider(layout.divider.x, layout.divider.y, layout.divider.w, rarity.color, hovered ? 0.6 : selected ? 0.52 : 0.32);
-  drawUpgradeTraitHint(upgrade, localCard, layoutVariant);
+    drawLimitedWrapText(upgradeName(upgrade), layout.title.x, layout.title.y, layout.title.w, layout.title.lineH, textTheme.titleColor, layout.title.size, layout.title.maxLines || 2, "900", true);
+  }, textTheme.shadowBlur, textTheme.shadowColor, textTheme.shadowOffsetY);
+  drawUpgradeTagPills(getUpgradeTags(upgrade), layout.tags.x, layout.tags.y, layout.tags.w, layout.tags.maxTags || 2, 0.92, textTheme);
+  drawUpgradeDivider(layout.divider.x, layout.divider.y, layout.divider.w, textTheme.dividerColor, hovered ? 0.6 : selected ? 0.52 : 0.32);
+  drawUpgradeTraitHint(upgrade, localCard, layoutVariant, textTheme);
   drawUpgradePickHint(localCard.x + 16, localCard.y + localCard.h - 28, pickNumber, rarity);
   if (selected) drawUpgradeSelectionHighlight(localCard, rarity);
   drawUpgradeConfirmBurst(localCard, rarity, motion.confirmPulse || 0);
@@ -10050,11 +10099,11 @@ function drawUpgradeCardReadabilityPanels(layout, rarity, hovered = false) {
   ctx.restore();
 }
 
-function drawReadableUpgradeText(draw, blur = 6) {
+function drawReadableUpgradeText(draw, blur = 6, shadowColor = "rgba(0, 0, 0, 0.92)", shadowOffsetY = 1) {
   ctx.save();
-  ctx.shadowColor = "rgba(0, 0, 0, 0.92)";
+  ctx.shadowColor = shadowColor;
   ctx.shadowBlur = blur;
-  ctx.shadowOffsetY = 1;
+  ctx.shadowOffsetY = shadowOffsetY;
   draw();
   ctx.restore();
 }
@@ -10156,7 +10205,37 @@ function getUpgradeTraitPreview(upgrade) {
   };
 }
 
-function drawUpgradeTraitPreviewChip(preview, x, y, w, h, { compact = true, emphasis = preview?.emphasis } = {}) {
+function getUpgradeCardTextTheme(upgrade, layoutVariant = "default", rarity = getRarityVisual(upgrade?.rarity)) {
+  const specialHint = layoutVariant === "special" ? getSpecialBondPreview(upgrade, state.acquiredRelics) : null;
+  if (specialHint?.family?.key === "angel") {
+    return {
+      lightCard: true,
+      titleColor: "#2b2412",
+      dividerColor: "#8b7430",
+      shadowBlur: 2,
+      shadowColor: "rgba(255, 252, 229, 0.92)",
+      shadowOffsetY: 0,
+      tagFillAlpha: 0.72,
+      tagStrokeAlpha: 0.58,
+      tagTextColor: "#302914",
+      chipFillAlpha: 0.72,
+      chipStrokeAlpha: 0.66,
+      chipTextColor: "#302914",
+      chipGlyphColor: "#4f4521",
+      chipGlyphFillAlpha: 0.16,
+    };
+  }
+  return {
+    lightCard: false,
+    titleColor: rarity.titleColor,
+    dividerColor: rarity.color,
+    shadowBlur: 7,
+    shadowColor: "rgba(0, 0, 0, 0.92)",
+    shadowOffsetY: 1,
+  };
+}
+
+function drawUpgradeTraitPreviewChip(preview, x, y, w, h, { compact = true, emphasis = preview?.emphasis, theme = null } = {}) {
   if (!preview) return;
   const accent = preview.accent;
   const glyphSize = compact ? 15 : 18;
@@ -10165,27 +10244,44 @@ function drawUpgradeTraitPreviewChip(preview, x, y, w, h, { compact = true, emph
   ctx.save();
   if (emphasis) {
     ctx.shadowColor = hexToRgba(accent, 0.36);
-    ctx.shadowBlur = compact ? 10 : 13;
+    ctx.shadowBlur = theme?.lightCard ? 4 : compact ? 10 : 13;
   }
-  ctx.fillStyle = hexToRgba(accent, emphasis ? 0.24 : 0.15);
+  if (theme?.lightCard) {
+    const fill = ctx.createLinearGradient(x, y, x + w, y + h);
+    fill.addColorStop(0, "rgba(255, 250, 221, 0.78)");
+    fill.addColorStop(1, "rgba(202, 185, 121, 0.6)");
+    ctx.fillStyle = fill;
+  } else {
+    ctx.fillStyle = hexToRgba(accent, emphasis ? 0.24 : 0.15);
+  }
   roundedRect(x, y, w, h, compact ? 8 : 10, true, false);
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = hexToRgba(accent, emphasis ? 0.58 : 0.34);
+  ctx.strokeStyle = theme?.lightCard ? "rgba(80, 68, 30, 0.62)" : hexToRgba(accent, emphasis ? 0.58 : 0.34);
   ctx.lineWidth = emphasis ? 1.3 : 1;
   roundedRect(x, y, w, h, compact ? 8 : 10, false, true);
-  ctx.fillStyle = hexToRgba(accent, emphasis ? 0.34 : 0.22);
+  ctx.fillStyle = theme?.lightCard ? "rgba(66, 58, 27, 0.12)" : hexToRgba(accent, emphasis ? 0.34 : 0.22);
   roundedRect(glyphX, glyphY, glyphSize, glyphSize, compact ? 5 : 6, true, false);
-  fitLabel(preview.glyph, glyphX + 3, glyphY + glyphSize - 4, glyphSize - 6, compact ? 11 : 13, accent, 8, "900", true);
-  fitLabel(preview.text, glyphX + glyphSize + 8, y + h / 2 + 5, w - glyphSize - 26, compact ? 11 : 12, emphasis ? "#f5f1e6" : hexToRgba(accent, 0.84), compact ? 8 : 9, "900", true);
+  fitLabel(preview.glyph, glyphX + 3, glyphY + glyphSize - 4, glyphSize - 6, compact ? 11 : 13, theme?.lightCard ? theme.chipGlyphColor : accent, 8, "900", true);
+  fitLabel(
+    preview.text,
+    glyphX + glyphSize + 8,
+    y + h / 2 + 5,
+    w - glyphSize - 26,
+    compact ? 11 : 12,
+    theme?.lightCard ? theme.chipTextColor : emphasis ? "#f5f1e6" : hexToRgba(accent, 0.84),
+    compact ? 8 : 9,
+    "900",
+    true,
+  );
   ctx.restore();
 }
 
-function drawUpgradeTraitHint(upgrade, card, layoutVariant = "default") {
+function drawUpgradeTraitHint(upgrade, card, layoutVariant = "default", theme = null) {
   const preview = getUpgradeTraitPreview(upgrade);
   if (!preview) return;
   const layout = getUpgradeCardContentLayout(card, layoutVariant).trait;
   const { x, y, w, h } = layout;
-  drawUpgradeTraitPreviewChip(preview, x, y, w, h, { compact: true });
+  drawUpgradeTraitPreviewChip(preview, x, y, w, h, { compact: true, theme });
 }
 
 function drawUpgradeSelectedDetail(upgrade, rect, rarity, motion = {}, {
@@ -10466,7 +10562,7 @@ function getCurrentBuildDirectionText(stats) {
   return fmt("currentBuildDirection", { families });
 }
 
-function drawUpgradeTagPills(tags, x, y, maxWidth, maxTags = 2, alpha = 1) {
+function drawUpgradeTagPills(tags, x, y, maxWidth, maxTags = 2, alpha = 1, theme = null) {
   const visibleTags = getUpgradeTags({ tags }).slice(0, maxTags);
   let xx = x;
   ctx.save();
@@ -10478,23 +10574,30 @@ function drawUpgradeTagPills(tags, x, y, maxWidth, maxTags = 2, alpha = 1) {
     if (xx + pillW > x + maxWidth) break;
     ctx.save();
     ctx.globalAlpha = alpha;
-    drawUpgradePill(xx, y, pillW, 18, text, meta.color, 0.16);
+    drawUpgradePill(xx, y, pillW, 18, text, meta.color, theme?.lightCard ? theme.tagFillAlpha : 0.16, theme);
     ctx.restore();
     xx += pillW + 5;
   }
   ctx.restore();
 }
 
-function drawUpgradePill(x, y, w, h, text, color, fillAlpha = 0.14) {
+function drawUpgradePill(x, y, w, h, text, color, fillAlpha = 0.14, theme = null) {
   ctx.save();
-  ctx.fillStyle = hexToRgba(color, fillAlpha);
+  if (theme?.lightCard) {
+    const fill = ctx.createLinearGradient(x, y, x, y + h);
+    fill.addColorStop(0, "rgba(255, 252, 229, 0.82)");
+    fill.addColorStop(1, hexToRgba(color, 0.34));
+    ctx.fillStyle = fill;
+  } else {
+    ctx.fillStyle = hexToRgba(color, fillAlpha);
+  }
   roundedRect(x, y, w, h, 7, true, false);
-  ctx.strokeStyle = hexToRgba(color, 0.34);
+  ctx.strokeStyle = theme?.lightCard ? "rgba(76, 66, 32, 0.58)" : hexToRgba(color, 0.34);
   ctx.lineWidth = 1.2;
   roundedRect(x, y, w, h, 7, false, true);
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  fitLabel(text, x + 8, y + h / 2 + 0.5, w - 16, Math.min(10, h - 8), color, 8, "900", true);
+  fitLabel(text, x + 8, y + h / 2 + 0.5, w - 16, Math.min(10, h - 8), theme?.lightCard ? theme.tagTextColor : color, 8, "900", true);
   ctx.textBaseline = "alphabetic";
   ctx.restore();
 }
@@ -11355,6 +11458,7 @@ function hitControlBind(x, y) {
 
 applySavedSettings();
 syncControlHints();
+initDomOverlayRoot({ canvasWidth: W, canvasHeight: H });
 initFeedbackLayer({ canvasWidth: W, canvasHeight: H });
 setFeedbackMode(state.mode);
 try {

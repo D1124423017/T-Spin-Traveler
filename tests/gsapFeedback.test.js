@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   GSAP_FEEDBACK_CDN_URL,
   canvasPointToLayerPercent,
+  getComboFeedbackIntensity,
+  getDamageFeedbackStrength,
+  getFeedbackVisualProfile,
   makeFeedbackText,
 } from "../src/dom/gsapFeedback.js";
 
@@ -27,5 +30,24 @@ describe("gsap feedback helpers", () => {
     expect(makeFeedbackText("tspin", { spinType: "mini" })).toBe("T-SPIN MINI");
     expect(makeFeedbackText("perfect")).toBe("PERFECT CLEAR");
     expect(makeFeedbackText("damage", { amount: 128.8 })).toBe("-128");
+  });
+
+  it("assigns visual weight without changing gameplay values", () => {
+    expect(getComboFeedbackIntensity(2)).toBe("small");
+    expect(getComboFeedbackIntensity(4)).toBe("medium");
+    expect(getComboFeedbackIntensity(7)).toBe("high");
+    expect(getDamageFeedbackStrength(64)).toBe("normal");
+    expect(getDamageFeedbackStrength(128)).toBe("heavy");
+    expect(getDamageFeedbackStrength(640)).toBe("critical");
+  });
+
+  it("uses separate animation profiles for feedback types", () => {
+    expect(getFeedbackVisualProfile("combo", { combo: 8 })).toMatchObject({
+      intensity: "high",
+      durationMs: 860,
+    });
+    expect(getFeedbackVisualProfile("b2b", { chain: 1 }).intensity).toBe("medium");
+    expect(getFeedbackVisualProfile("tspin", { spinType: "full" }).intensity).toBe("high");
+    expect(getFeedbackVisualProfile("perfect").intensity).toBe("ultimate");
   });
 });
