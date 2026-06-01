@@ -16,7 +16,6 @@ import {
   heroRangedSheetV2,
   heroUltimateSheet,
   isImageReady,
-  legendaryUpgradeEmblems,
   metaUpgradeIcons,
   menuIdleCubeSheet,
   menuIdleMeditateSheet,
@@ -30,7 +29,6 @@ import {
   slimeArt,
   specialUpgradeCardFrames,
   upgradeCardFrames,
-  upgradeTypeIcons,
 } from "./src/data/assets.js";
 import { ENEMIES, MINI_BOSS_ENEMY_IDS } from "./src/data/enemies.js";
 import { translations } from "./src/data/i18n.js";
@@ -223,12 +221,18 @@ import {
   getCurrentBuildButtonRect,
   getCurrentBuildCloseRect,
   getCurrentBuildPanelRect,
+  getUpgradeDetailToggleRect,
   getUpgradeDraftLayout,
   getUpgradeCardContentLayout,
   getUpgradeCardRect,
   getUpgradeOverlayPanelRect,
   getNextUpgradeSelectionIndex,
 } from "./src/ui/upgradeCards.js";
+import {
+  getUpgradeCardMotion,
+  getUpgradeDetailMotion,
+  getUpgradeOverlayMotion,
+} from "./src/ui/upgradeMotion.js";
 import {
   DEBUG_HUD_BUILD,
   createDebugHudState,
@@ -1168,6 +1172,8 @@ const state = {
   acquiredRelics: [],
   currentBuildOpen: false,
   upgradePickConfirm: null,
+  upgradeMotion: null,
+  upgradeDetailOpen: false,
   spinSingularityStacks: 0,
   spinStarterWave: 0,
   spinStarterUses: 0,
@@ -1465,6 +1471,12 @@ function setGameMode(mode) {
   setFeedbackMode(mode);
 }
 
+function prefersReducedMotion() {
+  return typeof window !== "undefined"
+    && typeof window.matchMedia === "function"
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 function warnDefeatSource(source, messageKey) {
   console.warn("[T-Spin Traveler] Game Over", {
     source,
@@ -1716,6 +1728,8 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.acquiredRelics = [];
   state.currentBuildOpen = false;
   state.upgradePickConfirm = null;
+  state.upgradeMotion = null;
+  state.upgradeDetailOpen = false;
   state.spinSingularityStacks = 0;
   state.spinStarterWave = 0;
   state.spinStarterUses = 0;
@@ -4226,6 +4240,12 @@ function triggerUpgradeIfReady(forceRelic = false, forceRare = false, reason = "
   state.upgradeChoices = createUpgradeChoices(forceRelic, forceRare);
   state.upgradeSelectedIndex = 0;
   state.upgradeDraftReason = reason;
+  state.upgradeMotion = {
+    openedAt: performance.now(),
+    selectedAt: performance.now(),
+    selectedIndex: 0,
+  };
+  state.upgradeDetailOpen = false;
   setGameMode("upgrade");
   state.floaters.push({
     x: 454,
@@ -4249,7 +4269,35 @@ function applyUpgrade(upgrade) {
 function moveUpgradeSelection(direction) {
   const previous = state.upgradeSelectedIndex;
   state.upgradeSelectedIndex = getNextUpgradeSelectionIndex(previous, direction, state.upgradeChoices.length);
-  if (state.upgradeSelectedIndex !== previous) playSfx("hold");
+  if (state.upgradeSelectedIndex !== previous) {
+    markUpgradeSelectionChanged(state.upgradeSelectedIndex);
+    playSfx("hold");
+  }
+}
+
+function markUpgradeSelectionChanged(index) {
+  state.upgradeSelectedIndex = index;
+  state.upgradeMotion = {
+    ...(state.upgradeMotion || {}),
+    selectedAt: performance.now(),
+    selectedIndex: index,
+  };
+}
+
+function previewUpgradeChoice(index, { openDetail = true } = {}) {
+  const upgrade = state.upgradeChoices[index];
+  if (!upgrade) return false;
+  const wasSelected = state.upgradeSelectedIndex === index;
+  markUpgradeSelectionChanged(index);
+  state.upgradeDetailOpen = wasSelected ? !state.upgradeDetailOpen : Boolean(openDetail);
+  playSfx("hold");
+  return true;
+}
+
+function toggleUpgradeDetail() {
+  state.upgradeDetailOpen = !state.upgradeDetailOpen;
+  markUpgradeSelectionChanged(state.upgradeSelectedIndex);
+  playSfx("hold");
 }
 
 function chooseUpgrade(index) {
@@ -4257,6 +4305,12 @@ function chooseUpgrade(index) {
   const upgrade = state.upgradeChoices[index];
   if (!upgrade) return;
   state.upgradeSelectedIndex = index;
+  state.upgradeMotion = {
+    ...(state.upgradeMotion || {}),
+    selectedAt: performance.now(),
+    selectedIndex: index,
+    confirmedAt: performance.now(),
+  };
   applyUpgrade(upgrade);
   recordAcquiredRelic(upgrade);
   state.floaters.push({
@@ -4283,6 +4337,8 @@ function finishUpgradeSelection() {
   state.upgradeSelectedIndex = 0;
   state.currentBuildOpen = false;
   state.upgradePickConfirm = null;
+  state.upgradeMotion = null;
+  state.upgradeDetailOpen = false;
   setGameMode("playing");
   state.upgradeReady = state.upgradeMeter >= state.nextUpgradeAt;
   state.upgradeDraftReason = null;
@@ -9723,17 +9779,27 @@ function drawSpecialBondChip(family, count, x, y) {
 
 function drawUpgradeOverlay() {
   ctx.save();
+  const now = performance.now();
+  const reducedMotion = prefersReducedMotion();
+  const motionState = state.upgradeMotion || {
+    openedAt: now,
+    selectedAt: now,
+    selectedIndex: state.upgradeSelectedIndex,
+  };
+  const overlayMotion = getUpgradeOverlayMotion({
+    now,
+    openedAt: motionState.openedAt,
+    reducedMotion,
+  });
   drawDimOverlay(OVERLAY_READABILITY.scrim.upgrade);
+  ctx.save();
+  ctx.globalAlpha *= overlayMotion.alpha;
+  ctx.translate(0, overlayMotion.y);
   const draftLayout = getUpgradeDraftLayout();
   const panel = draftLayout.panel;
   drawCard(panel.x, panel.y, panel.w, panel.h);
-  fitLabel(t("relicDraft").toUpperCase(), draftLayout.title.x, draftLayout.title.y, draftLayout.title.w, draftLayout.title.size, "#f5f1e6", 24, "900", true);
-  const draftDetail = state.upgradeDraftReason === "progress"
-    ? t("upgradeProgressPick")
-    : fmt("waveClearPick", { wave: Math.max(1, state.wave - 1) });
-  drawLimitedWrapText(draftDetail, draftLayout.detail.x, draftLayout.detail.y, draftLayout.detail.w, draftLayout.detail.lineH, "rgba(238,244,252,0.66)", draftLayout.detail.size, 2, "800");
-  fitLabel(t("safeNodeDraft"), draftLayout.safeHint.x, draftLayout.safeHint.y, draftLayout.safeHint.w, draftLayout.safeHint.size, "#9df7da", 9, "900");
-  drawSpecialBondProgressSummary(panel.x + 628, panel.y + 90);
+  drawUpgradeMotionTitle(t("relicDraft").toUpperCase(), draftLayout.title, now, overlayMotion.glow);
+  drawSpecialBondProgressSummary(draftLayout.bondSummary.x, draftLayout.bondSummary.y);
   const buildButton = draftLayout.buildButton;
   drawMenuButton(buildButton.x, buildButton.y, buildButton.w, buildButton.h, t("currentBuild"), "");
   for (let i = 0; i < 3; i += 1) {
@@ -9745,27 +9811,113 @@ function drawUpgradeOverlay() {
     const selected = !state.upgradePickConfirm && state.upgradeSelectedIndex === i;
     const dimmed = state.upgradePickConfirm && state.upgradePickConfirm.index !== i;
     const specialFrame = getSpecialUpgradeCardFrame(upgrade);
-    const layout = getUpgradeCardContentLayout(card, specialFrame ? "special" : "default");
-    ctx.save();
-    if (dimmed) ctx.globalAlpha = 0.42;
-    drawUpgradeCardFrame(card.x, card.y, card.w, card.h, rarity, hovered || selected || state.upgradePickConfirm?.index === i, specialFrame);
-    drawUpgradeCardReadabilityPanels(layout, rarity, hovered || selected);
-    drawUpgradeEmblem(upgrade, layout.icon.x, layout.icon.y, rarity, layout.icon.size);
-    drawReadableUpgradeText(() => {
-      drawLimitedWrapText(upgradeName(upgrade), layout.title.x, layout.title.y, layout.title.w, layout.title.lineH, rarity.titleColor, layout.title.size, layout.title.maxLines || 2, "900", true);
-    }, 7);
-    drawUpgradeTagPills(getUpgradeTags(upgrade), layout.tags.x, layout.tags.y, layout.tags.w, layout.tags.maxTags || 2, 0.92);
-    drawUpgradeDivider(layout.divider.x, layout.divider.y, layout.divider.w, rarity.color, hovered ? 0.66 : 0.42);
-    drawReadableUpgradeText(() => {
-      drawLimitedWrapText(upgradeShortText(upgrade), layout.desc.x, layout.desc.y, layout.desc.w, layout.desc.lineH, "rgba(246,250,255,0.92)", layout.desc.size, layout.desc.maxLines || 3, "800");
-    }, 5);
-    drawUpgradeTraitHint(upgrade, card, specialFrame ? "special" : "default");
-    if (selected) drawUpgradeSelectionHighlight(card, rarity);
-    ctx.restore();
+    const cardMotion = getUpgradeCardMotion({
+      now,
+      openedAt: motionState.openedAt,
+      selectedAt: motionState.selectedIndex === i ? motionState.selectedAt : motionState.openedAt,
+      index: i,
+      selected,
+      hovered,
+      dimmed,
+      confirming: state.upgradePickConfirm?.index === i,
+      confirmElapsed: state.upgradePickConfirm?.elapsed || 0,
+      confirmDuration: state.upgradePickConfirm?.duration || 1,
+      reducedMotion,
+    });
+    drawUpgradeChoiceCard({
+      upgrade,
+      card,
+      rarity,
+      hovered,
+      selected,
+      active: hovered || selected || state.upgradePickConfirm?.index === i,
+      specialFrame,
+      layoutVariant: specialFrame ? "special" : "default",
+      motion: cardMotion,
+      pickNumber: i + 1,
+    });
   }
-  if (state.upgradePickConfirm) drawUpgradePickConfirmFx();
-  fitLabel(t("upgradeHelp"), draftLayout.help.x, draftLayout.help.y, draftLayout.help.w, draftLayout.help.size, "rgba(184, 202, 255, 0.82)", 10, "800");
+  const selectedUpgrade = state.upgradeChoices[state.upgradeSelectedIndex];
+  if (selectedUpgrade) {
+    drawUpgradeSelectedDetail(
+      selectedUpgrade,
+      draftLayout.selectedDetail,
+      getRarityVisual(selectedUpgrade.rarity),
+      getUpgradeDetailMotion({
+        now,
+        selectedAt: motionState.selectedAt,
+        reducedMotion,
+      }),
+      {
+        expanded: state.upgradeDetailOpen,
+        toggleRect: draftLayout.detailToggle,
+      },
+    );
+  }
+  drawUpgradeMotionHint(t("upgradeHelp"), draftLayout.help, now, overlayMotion.glow);
+  ctx.restore();
   if (state.currentBuildOpen) drawCurrentBuildPanel();
+  ctx.restore();
+}
+
+function drawUpgradeChoiceCard({
+  upgrade,
+  card,
+  rarity,
+  hovered = false,
+  selected = false,
+  active = false,
+  specialFrame = null,
+  layoutVariant = "default",
+  motion = {},
+  pickNumber = 1,
+} = {}) {
+  ctx.save();
+  ctx.globalAlpha *= motion.alpha ?? 1;
+  ctx.translate(card.x + card.w / 2, card.y + card.h / 2 + (motion.y || 0));
+  const scale = motion.scale || 1;
+  ctx.scale(scale, scale);
+  const localCard = { x: -card.w / 2, y: -card.h / 2, w: card.w, h: card.h };
+  const layout = getUpgradeCardContentLayout(localCard, layoutVariant);
+  drawUpgradeCardMotionAura(localCard, rarity, motion);
+  drawUpgradeCardFrame(localCard.x, localCard.y, localCard.w, localCard.h, rarity, active, specialFrame);
+  drawUpgradeCardReadabilityPanels(layout, rarity, hovered || selected);
+  drawReadableUpgradeText(() => {
+    drawLimitedWrapText(upgradeName(upgrade), layout.title.x, layout.title.y, layout.title.w, layout.title.lineH, rarity.titleColor, layout.title.size, layout.title.maxLines || 2, "900", true);
+  }, 7);
+  drawUpgradeTagPills(getUpgradeTags(upgrade), layout.tags.x, layout.tags.y, layout.tags.w, layout.tags.maxTags || 2, 0.92);
+  drawUpgradeDivider(layout.divider.x, layout.divider.y, layout.divider.w, rarity.color, hovered ? 0.6 : selected ? 0.52 : 0.32);
+  drawUpgradeTraitHint(upgrade, localCard, layoutVariant);
+  drawUpgradePickHint(localCard.x + 16, localCard.y + localCard.h - 28, pickNumber, rarity);
+  if (selected) drawUpgradeSelectionHighlight(localCard, rarity);
+  drawUpgradeConfirmBurst(localCard, rarity, motion.confirmPulse || 0);
+  ctx.restore();
+}
+
+function drawUpgradeMotionTitle(text, titleLayout, now, revealGlow = 0) {
+  const pulse = 0.5 + Math.sin(now * 0.006) * 0.5;
+  ctx.save();
+  ctx.shadowColor = "#7ef7ff";
+  ctx.shadowBlur = 8 + revealGlow * 12 + pulse * 5;
+  fitLabel(text, titleLayout.x, titleLayout.y, titleLayout.w, titleLayout.size, "#f5f1e6", 24, "900", true);
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 0.18 + pulse * 0.16;
+  fitLabel(text, titleLayout.x + 2, titleLayout.y, titleLayout.w, titleLayout.size, "#fff0a6", 24, "900", true);
+  ctx.globalAlpha = 0.14 + revealGlow * 0.12;
+  ctx.fillStyle = "#7ef7ff";
+  roundedRect(titleLayout.x, titleLayout.y + 11, Math.min(titleLayout.w, 228), 2, 1, true, false);
+  ctx.restore();
+}
+
+function drawUpgradeMotionHint(text, helpLayout, now, revealGlow = 0) {
+  const pulse = 0.5 + Math.sin(now * 0.005 + 1.3) * 0.5;
+  ctx.save();
+  ctx.shadowColor = "#8f70ff";
+  ctx.shadowBlur = 6 + pulse * 5 + revealGlow * 8;
+  ctx.globalAlpha = 0.68 + pulse * 0.16;
+  fitLabel(text, helpLayout.x, helpLayout.y, helpLayout.w, helpLayout.size, "rgba(184, 202, 255, 0.9)", 10, "800");
+  ctx.globalAlpha = 0.16 + pulse * 0.12;
+  fitLabel(text, helpLayout.x + 1, helpLayout.y, helpLayout.w, helpLayout.size, "#fff0a6", 10, "800");
   ctx.restore();
 }
 
@@ -9848,6 +10000,29 @@ function drawUpgradeSelectionHighlight(card, rarity) {
   ctx.strokeStyle = hexToRgba("#fff0a6", 0.28 + pulse * 0.18);
   ctx.lineWidth = 1.1;
   roundedRect(card.x + 7, card.y + 7, card.w - 14, card.h - 14, 10, false, true);
+  ctx.restore();
+}
+
+function drawUpgradeCardMotionAura(card, rarity, motion = {}) {
+  const glow = clamp(motion.glow || 0, 0, 1);
+  if (glow <= 0.02) return;
+  const pulse = 0.65 + Math.sin(performance.now() * 0.007) * 0.35;
+  ctx.save();
+  const baseAlpha = ctx.globalAlpha;
+  ctx.globalAlpha = baseAlpha * (0.16 + glow * 0.22);
+  ctx.shadowColor = rarity.glow;
+  ctx.shadowBlur = 22 + glow * 18;
+  ctx.strokeStyle = hexToRgba(rarity.border, 0.22 + glow * 0.24);
+  ctx.lineWidth = 1.2 + glow * 1.2;
+  roundedRect(card.x - 10 - pulse * 2, card.y - 10 - pulse * 2, card.w + 20 + pulse * 4, card.h + 20 + pulse * 4, 17, false, true);
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = baseAlpha * (0.08 + glow * 0.12);
+  const sweep = ctx.createLinearGradient(card.x, card.y, card.x + card.w, card.y + card.h);
+  sweep.addColorStop(0, "rgba(255,255,255,0)");
+  sweep.addColorStop(0.48, rarity.color);
+  sweep.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = sweep;
+  roundedRect(card.x + 8, card.y + 8, card.w - 16, card.h - 16, 12, true, false);
   ctx.restore();
 }
 
@@ -9946,127 +10121,148 @@ function drawUpgradeDivider(x, y, w, color, alpha = 0.5) {
   ctx.restore();
 }
 
-function getUpgradeTypeIcon(upgrade) {
-  const tags = getUpgradeTags(upgrade);
-  if (tags.includes("Spin")) return upgradeTypeIcons.spin;
-  if (tags.includes("Combo")) return upgradeTypeIcons.combo;
-  if (tags.includes("Garbage")) return upgradeTypeIcons.garbage;
-  if (tags.includes("Survival")) return upgradeTypeIcons.survival;
-  if (tags.includes("Defense")) return upgradeTypeIcons.guard;
-  if (tags.includes("Perfect")) return upgradeTypeIcons.rift;
-  if (tags.includes("B2B") || tags.includes("Burst") || tags.includes("Boss Killer")) return upgradeTypeIcons.attack;
-  if (tags.includes("Utility")) return upgradeTypeIcons.defense;
-  return upgradeTypeIcons.rift;
-}
-
 function getSpecialUpgradeCardFrame(upgrade) {
   return upgrade?.id ? specialUpgradeCardFrames[upgrade.id] : null;
 }
 
-function drawUpgradeEmblem(upgrade, x, y, rarity, size = 82) {
-  const icon = getUpgradeTypeIcon(upgrade);
-  const emblem = legendaryUpgradeEmblems[upgrade.id];
-  const box = Math.max(22, size * 1.28);
-  ctx.save();
-  ctx.shadowColor = rarity.glow;
-  ctx.shadowBlur = rarity.tier === "legendary" ? 18 : 12;
-  ctx.fillStyle = "rgba(2, 5, 12, 0.58)";
-  roundedRect(x - box / 2, y - box / 2, box, box, Math.min(10, box * 0.32), true, false);
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = hexToRgba(rarity.border, 0.42);
-  ctx.lineWidth = 1;
-  roundedRect(x - box / 2, y - box / 2, box, box, Math.min(10, box * 0.32), false, true);
-  if (isImageReady(icon)) {
-    ctx.globalAlpha = rarity.tier === "legendary" ? 0.98 : 0.92;
-    ctx.drawImage(icon, x - size / 2, y - size / 2, size, size);
-    if (isImageReady(emblem)) {
-      const small = size * 0.42;
-      ctx.globalAlpha = 0.78;
-      ctx.drawImage(emblem, x + size * 0.1, y + size * 0.08, small, small);
-    }
-    ctx.restore();
-    return;
-  }
-  if (isImageReady(emblem)) {
-    ctx.shadowColor = rarity.glow;
-    ctx.shadowBlur = rarity.tier === "legendary" ? 18 : 10;
-    ctx.globalAlpha = rarity.tier === "legendary" ? 0.96 : 0.84;
-    ctx.drawImage(emblem, x - size / 2, y - size / 2, size, size);
-    ctx.restore();
-    return;
-  }
-  drawUpgradeSigil(x, y, rarity.color, rarity.tier === "legendary" ? 1.08 : 1, rarity.emblemAlpha);
-  ctx.restore();
-}
-
-function drawUpgradeTraitHint(upgrade, card, layoutVariant = "default") {
+function getUpgradeTraitPreview(upgrade) {
   const specialHint = getSpecialBondPreview(upgrade, state.acquiredRelics);
   if (specialHint) {
-    drawSpecialBondUpgradeHint(specialHint, card, layoutVariant);
-    return;
+    const activated = specialHint.after > specialHint.before;
+    return {
+      accent: specialHint.family.color,
+      glyph: activated ? "✦" : "•",
+      text: activated
+        ? fmt("bondHintUpgrade", { bond: t(specialHint.family.labelKey), before: specialHint.before, after: specialHint.after })
+        : fmt("bondHintOwned", { bond: t(specialHint.family.labelKey), count: specialHint.after }),
+      emphasis: activated,
+    };
   }
   const hint = getTraitChangeHintsForUpgrade(upgrade)[0];
-  if (!hint) return;
+  if (!hint) return null;
   const isUpgrade = hint.type === "upgrade";
   const isActivate = hint.type === "activate";
   const isOvercap = hint.type === "overcap";
   const accent = isOvercap ? "#fff0a6" : isUpgrade ? "#fff0a6" : isActivate ? "#9df7da" : hint.color;
-  const text = isOvercap
-    ? `${t("traitOvercap")}: ${hint.label} ${fmt("traitOvercapCount", { count: hint.overcap })}`
-    : hint.type === "progress"
-    ? fmt(hint.stage > 0 ? "traitProgressUpgrade" : "traitProgressActivate", { tag: hint.label, remain: hint.remaining })
-    : `${t(isActivate ? "traitActivated" : "traitUpgrade")}: ${hint.label} ${hint.count}/${hint.next}`;
-  const layout = getUpgradeCardContentLayout(card, layoutVariant).trait;
-  const { x, y, w, h } = layout;
+  return {
+    accent,
+    glyph: isOvercap ? "+" : isUpgrade ? "↑" : isActivate ? "✦" : "+",
+    text: isOvercap
+      ? `${t("traitOvercap")}: ${hint.label} ${fmt("traitOvercapCount", { count: hint.overcap })}`
+      : hint.type === "progress"
+      ? fmt(hint.stage > 0 ? "traitProgressUpgrade" : "traitProgressActivate", { tag: hint.label, remain: hint.remaining })
+      : `${t(isActivate ? "traitActivated" : "traitUpgrade")}: ${hint.label} ${hint.count}/${hint.next}`,
+    emphasis: isActivate || isUpgrade || isOvercap,
+  };
+}
+
+function drawUpgradeTraitPreviewChip(preview, x, y, w, h, { compact = true, emphasis = preview?.emphasis } = {}) {
+  if (!preview) return;
+  const accent = preview.accent;
+  const glyphSize = compact ? 15 : 18;
+  const glyphX = x + (compact ? 9 : 12);
+  const glyphY = y + Math.max(8, h / 2 - glyphSize / 2 + 1);
   ctx.save();
-  if (isActivate || isUpgrade || isOvercap) {
-    ctx.shadowColor = hexToRgba(accent, isUpgrade || isOvercap ? 0.42 : 0.32);
-    ctx.shadowBlur = isUpgrade || isOvercap ? 12 : 9;
+  if (emphasis) {
+    ctx.shadowColor = hexToRgba(accent, 0.36);
+    ctx.shadowBlur = compact ? 10 : 13;
   }
-  ctx.fillStyle = hexToRgba(accent, isUpgrade || isOvercap ? 0.26 : isActivate ? 0.22 : 0.16);
-  roundedRect(x, y, w, h, 8, true, false);
+  ctx.fillStyle = hexToRgba(accent, emphasis ? 0.24 : 0.15);
+  roundedRect(x, y, w, h, compact ? 8 : 10, true, false);
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = hexToRgba(accent, isUpgrade || isOvercap ? 0.64 : isActivate ? 0.54 : 0.34);
-  ctx.lineWidth = isActivate || isUpgrade || isOvercap ? 1.4 : 1;
-  roundedRect(x, y, w, h, 8, false, true);
-  ctx.fillStyle = hexToRgba(accent, isUpgrade || isOvercap ? 0.34 : isActivate ? 0.26 : 0.18);
-  roundedRect(x + 9, y + 10, 15, 15, 5, true, false);
-  fitLabel(isOvercap ? "+" : isUpgrade ? "↑" : isActivate ? "✦" : "+", x + 12, y + 22, 9, 11, accent, 8, "900", true);
-  fitLabel(text, x + 32, y + 23, w - 44, 11, isActivate || isUpgrade || isOvercap ? "#f5f1e6" : hexToRgba(accent, 0.84), 8, "900", true);
+  ctx.strokeStyle = hexToRgba(accent, emphasis ? 0.58 : 0.34);
+  ctx.lineWidth = emphasis ? 1.3 : 1;
+  roundedRect(x, y, w, h, compact ? 8 : 10, false, true);
+  ctx.fillStyle = hexToRgba(accent, emphasis ? 0.34 : 0.22);
+  roundedRect(glyphX, glyphY, glyphSize, glyphSize, compact ? 5 : 6, true, false);
+  fitLabel(preview.glyph, glyphX + 3, glyphY + glyphSize - 4, glyphSize - 6, compact ? 11 : 13, accent, 8, "900", true);
+  fitLabel(preview.text, glyphX + glyphSize + 8, y + h / 2 + 5, w - glyphSize - 26, compact ? 11 : 12, emphasis ? "#f5f1e6" : hexToRgba(accent, 0.84), compact ? 8 : 9, "900", true);
   ctx.restore();
 }
 
-function drawSpecialBondUpgradeHint(hint, card, layoutVariant = "default") {
+function drawUpgradeTraitHint(upgrade, card, layoutVariant = "default") {
+  const preview = getUpgradeTraitPreview(upgrade);
+  if (!preview) return;
   const layout = getUpgradeCardContentLayout(card, layoutVariant).trait;
   const { x, y, w, h } = layout;
-  const accent = hint.family.color;
-  const activated = hint.after > hint.before;
-  const text = activated
-    ? fmt("bondHintUpgrade", { bond: t(hint.family.labelKey), before: hint.before, after: hint.after })
-    : fmt("bondHintOwned", { bond: t(hint.family.labelKey), count: hint.after });
+  drawUpgradeTraitPreviewChip(preview, x, y, w, h, { compact: true });
+}
+
+function drawUpgradeSelectedDetail(upgrade, rect, rarity, motion = {}, {
+  expanded = false,
+  toggleRect = getUpgradeDetailToggleRect(),
+} = {}) {
+  const preview = getUpgradeTraitPreview(upgrade);
+  const { x, y, w, h } = rect;
+  const toggleHovered = pointInRect(state.pointer.x, state.pointer.y, toggleRect.x, toggleRect.y, toggleRect.w, toggleRect.h);
   ctx.save();
-  ctx.shadowColor = hexToRgba(accent, activated ? 0.42 : 0.22);
-  ctx.shadowBlur = activated ? 12 : 7;
-  ctx.fillStyle = hexToRgba(accent, activated ? 0.24 : 0.14);
-  roundedRect(x, y, w, h, 8, true, false);
+  ctx.globalAlpha *= motion.alpha ?? 1;
+  ctx.translate(0, motion.y || 0);
+  ctx.shadowColor = rarity.glow;
+  ctx.shadowBlur = 12 + Math.max(0, motion.glow || 0) * 18;
+  const fill = ctx.createLinearGradient(x, y, x + w, y + h);
+  fill.addColorStop(0, "rgba(3, 8, 18, 0.82)");
+  fill.addColorStop(0.52, hexToRgba(rarity.color, 0.2));
+  fill.addColorStop(1, "rgba(7, 5, 18, 0.82)");
+  ctx.fillStyle = fill;
+  roundedRect(x, y, w, h, 12, true, false);
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = hexToRgba(accent, activated ? 0.62 : 0.34);
-  ctx.lineWidth = activated ? 1.4 : 1;
-  roundedRect(x, y, w, h, 8, false, true);
-  ctx.fillStyle = hexToRgba(accent, 0.3);
-  roundedRect(x + 9, y + 10, 15, 15, 5, true, false);
-  fitLabel(activated ? "✦" : "•", x + 12, y + 22, 9, 11, accent, 8, "900", true);
-  fitLabel(text, x + 32, y + 23, w - 44, 11, "#f5f1e6", 8, "900", true);
+  drawUpgradeDetailShimmer(rect, rarity, motion.shimmer || 0);
+  ctx.strokeStyle = hexToRgba(rarity.border, 0.42);
+  ctx.lineWidth = 1.3;
+  roundedRect(x, y, w, h, 12, false, true);
+  ctx.fillStyle = hexToRgba(rarity.color, 0.28);
+  roundedRect(x + 13, y + 12, 3, h - 24, 2, true, false);
+  fitLabel(t("selectedUpgrade"), x + 24, y + 20, 154, 11, "rgba(143,232,220,0.78)", 8, "900", true);
+  drawReadableUpgradeText(() => {
+    fitLabel(upgradeName(upgrade), x + 24, y + 45, 164, 19, rarity.titleColor, 12, "900", true);
+  }, 5);
+  if (preview) drawUpgradeTraitPreviewChip(preview, x + 24, y + 54, 164, 22, { compact: true, emphasis: false });
+  const descX = x + 214;
+  const descW = Math.max(160, toggleRect.x - descX - 18);
+  const detailText = expanded ? upgradeText(upgrade) : upgradeShortText(upgrade);
+  drawReadableUpgradeText(() => {
+    drawLimitedWrapText(detailText, descX, y + 26, descW, 16, "rgba(246,250,255,0.9)", expanded ? 13 : 14, expanded ? 3 : 2, "800");
+  }, 4);
+  drawUpgradeDetailToggleButton(toggleRect, rarity, expanded, toggleHovered);
   ctx.restore();
 }
 
-function drawUpgradePickConfirmFx() {
-  const pick = state.upgradePickConfirm;
-  if (!pick) return;
-  const card = getUpgradeCardRect(pick.index);
-  const rarity = getRarityVisual(pick.rarity);
-  const t = Math.min(1, pick.elapsed / pick.duration);
-  const pulse = Math.sin(t * Math.PI);
+function drawUpgradeDetailToggleButton(rect, rarity, expanded, hovered = false) {
+  const pulse = 0.5 + Math.sin(performance.now() * 0.006 + 0.4) * 0.5;
+  ctx.save();
+  ctx.shadowColor = rarity.glow;
+  ctx.shadowBlur = hovered ? 16 : 7 + pulse * 4;
+  ctx.fillStyle = hovered ? hexToRgba(rarity.color, 0.28) : "rgba(8, 13, 24, 0.76)";
+  roundedRect(rect.x, rect.y, rect.w, rect.h, 10, true, false);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = hovered ? hexToRgba("#fff0a6", 0.72) : hexToRgba(rarity.border, 0.46 + pulse * 0.14);
+  ctx.lineWidth = hovered ? 1.8 : 1.2;
+  roundedRect(rect.x, rect.y, rect.w, rect.h, 10, false, true);
+  fitLabel(t(expanded ? "upgradeDetailClose" : "upgradeDetailOpen"), rect.x + 17, rect.y + 22, rect.w - 34, 14, hovered ? "#fff0a6" : "rgba(246,250,255,0.86)", 10, "900", true);
+  ctx.restore();
+}
+
+function drawUpgradeDetailShimmer(rect, rarity, shimmer) {
+  const progress = clamp(shimmer, 0, 1);
+  if (progress <= 0 || progress >= 1) return;
+  const { x, y, w, h } = rect;
+  const stripeX = x + w * (progress * 1.25 - 0.18);
+  const alpha = 0.12 * (1 - Math.abs(progress - 0.52) * 1.6);
+  if (alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha *= alpha;
+  const beam = ctx.createLinearGradient(stripeX - 42, y, stripeX + 42, y + h);
+  beam.addColorStop(0, "rgba(255,255,255,0)");
+  beam.addColorStop(0.5, rarity.color);
+  beam.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = beam;
+  roundedRect(x + 6, y + 6, w - 12, h - 12, 10, true, false);
+  ctx.restore();
+}
+
+function drawUpgradeConfirmBurst(card, rarity, pulse = 0) {
+  if (pulse <= 0.01) return;
   ctx.save();
   ctx.shadowColor = rarity.glow;
   ctx.shadowBlur = 16 + pulse * 12;
@@ -10300,52 +10496,6 @@ function drawUpgradePill(x, y, w, h, text, color, fillAlpha = 0.14) {
   ctx.textBaseline = "middle";
   fitLabel(text, x + 8, y + h / 2 + 0.5, w - 16, Math.min(10, h - 8), color, 8, "900", true);
   ctx.textBaseline = "alphabetic";
-  ctx.restore();
-}
-
-function drawUpgradeSigil(x, y, color, scale = 1, alpha = 1) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(scale, scale);
-  ctx.globalAlpha = alpha;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 18;
-  ctx.strokeStyle = hexToRgba(color, 0.72);
-  ctx.lineWidth = 1.8;
-  ctx.beginPath();
-  ctx.arc(0, 0, 25, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(0, 0, 15, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.rotate(Math.PI / 4);
-  ctx.strokeRect(-14, -14, 28, 28);
-  ctx.rotate(-Math.PI / 4);
-  ctx.fillStyle = hexToRgba(color, 0.18);
-  ctx.beginPath();
-  ctx.arc(0, 0, 18, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = hexToRgba(color, 0.5);
-  ctx.beginPath();
-  ctx.moveTo(0, -24);
-  ctx.lineTo(7, -5);
-  ctx.lineTo(24, 0);
-  ctx.lineTo(7, 5);
-  ctx.lineTo(0, 24);
-  ctx.lineTo(-7, 5);
-  ctx.lineTo(-24, 0);
-  ctx.lineTo(-7, -5);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = hexToRgba("#ffffff", 0.38);
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, -16);
-  ctx.lineTo(5, 0);
-  ctx.lineTo(0, 16);
-  ctx.lineTo(-5, 0);
-  ctx.closePath();
-  ctx.stroke();
   ctx.restore();
 }
 
@@ -10669,6 +10819,10 @@ window.addEventListener("keydown", (event) => {
       moveUpgradeSelection(key === "ArrowLeft" ? -1 : 1);
       return;
     }
+    if (!event.repeat && isActionKey("hold", key)) {
+      toggleUpgradeDetail();
+      return;
+    }
     if (code === "Space" || key === " ") {
       chooseUpgrade(state.upgradeSelectedIndex);
       return;
@@ -10857,10 +11011,15 @@ canvas.addEventListener(CANVAS_POINTER_DOWN_EVENT, (event) => {
         playSfx("hold");
         return;
       }
+      const detailToggle = getUpgradeDetailToggleRect();
+      if (pointInRect(p.x, p.y, detailToggle.x, detailToggle.y, detailToggle.w, detailToggle.h)) {
+        toggleUpgradeDetail();
+        return;
+      }
       for (let i = 0; i < 3; i += 1) {
         const card = getUpgradeCardRect(i);
         if (pointInRect(p.x, p.y, card.x, card.y, card.w, card.h)) {
-          chooseUpgrade(i);
+          previewUpgradeChoice(i);
           return;
         }
       }

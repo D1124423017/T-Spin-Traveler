@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   clampUpgradeSelectionIndex,
+  getUpgradeCardContentLayout,
+  getUpgradeCardRect,
+  getUpgradeDetailToggleRect,
   getNextUpgradeSelectionIndex,
+  getUpgradeOverlayPanelRect,
+  getUpgradeSelectedDetailRect,
 } from "../src/ui/upgradeCards.js";
 import { translations } from "../src/data/i18n.js";
 
@@ -22,7 +27,40 @@ describe("upgrade card selection helpers", () => {
   });
 
   it("localizes the keyboard upgrade picker hint", () => {
-    expect(translations.zh.upgradeHelp).toBe("← / → 選擇　Space 確認　1 / 2 / 3 快速選擇");
-    expect(translations.en.upgradeHelp).toBe("← / → Select   Space Confirm   1 / 2 / 3 Quick Pick");
+    expect(translations.zh.upgradeHelp).toBe("← / → 選擇　Hold鍵 詳細/收合　Space 確認　1 / 2 / 3 快速選擇");
+    expect(translations.en.upgradeHelp).toBe("← / → Select   Hold toggles details   Space Confirm   1 / 2 / 3 Quick Pick");
+  });
+
+  it("localizes the selected upgrade detail label", () => {
+    expect(translations.zh.selectedUpgrade).toBe("目前選擇");
+    expect(translations.en.selectedUpgrade).toBe("Selected Upgrade");
+    expect(translations.zh.upgradeDetailOpen).toBe("詳細");
+    expect(translations.en.upgradeDetailOpen).toBe("Details");
+    expect(translations.zh.upgradeDetailClose).toBe("收合");
+    expect(translations.en.upgradeDetailClose).toBe("Collapse");
+  });
+
+  it("keeps card choices clear of the selected detail bar", () => {
+    const panel = getUpgradeOverlayPanelRect();
+    const detail = getUpgradeSelectedDetailRect();
+    const cards = [0, 1, 2].map(getUpgradeCardRect);
+    for (const card of cards) {
+      expect(card.y + card.h).toBeLessThanOrEqual(detail.y);
+      expect(card.x).toBeGreaterThan(panel.x);
+      expect(card.x + card.w).toBeLessThan(panel.x + panel.w);
+    }
+    expect(detail.y + detail.h).toBeLessThan(panel.y + panel.h);
+    expect(getUpgradeDetailToggleRect().x + getUpgradeDetailToggleRect().w).toBeLessThanOrEqual(detail.x + detail.w);
+    expect(getUpgradeDetailToggleRect().y).toBeGreaterThanOrEqual(detail.y);
+  });
+
+  it("uses the full card width for text after removing the small icon slot", () => {
+    const layout = getUpgradeCardContentLayout(getUpgradeCardRect(0));
+    expect(layout.icon).toBeUndefined();
+    expect(layout.panels.desc).toBeUndefined();
+    expect(layout.panels.title).toBeUndefined();
+    expect(layout.panels.tags).toBeUndefined();
+    expect(layout.title.w).toBeGreaterThan(160);
+    expect(layout.trait.w).toBeGreaterThan(160);
   });
 });

@@ -3,21 +3,19 @@ export const UPGRADE_CARD_ASSET_SIZE = Object.freeze({ w: 1024, h: 1536 });
 export const UPGRADE_CARD_SAFE_ZONES = Object.freeze({
   badge: Object.freeze({ x: 90, y: 70, w: 300, h: 80 }),
   skull: Object.freeze({ x: 362, y: 110, w: 300, h: 260 }),
-  icon: Object.freeze({ x: 748, y: 848, w: 150, h: 150 }),
-  title: Object.freeze({ x: 145, y: 852, w: 580, h: 95 }),
-  tags: Object.freeze({ x: 145, y: 960, w: 734, h: 78 }),
-  desc: Object.freeze({ x: 145, y: 1045, w: 734, h: 210 }),
-  trait: Object.freeze({ x: 145, y: 1340, w: 734, h: 72 }),
+  title: Object.freeze({ x: 120, y: 900, w: 784, h: 96 }),
+  tags: Object.freeze({ x: 120, y: 1034, w: 784, h: 78 }),
+  desc: Object.freeze({ x: 120, y: 1160, w: 784, h: 110 }),
+  trait: Object.freeze({ x: 120, y: 1318, w: 784, h: 84 }),
 });
 
 export const SPECIAL_UPGRADE_CARD_SAFE_ZONES = Object.freeze({
   badge: UPGRADE_CARD_SAFE_ZONES.badge,
   skull: UPGRADE_CARD_SAFE_ZONES.skull,
-  icon: Object.freeze({ x: 748, y: 1004, w: 150, h: 150 }),
-  title: Object.freeze({ x: 145, y: 1000, w: 580, h: 68 }),
-  tags: Object.freeze({ x: 145, y: 1078, w: 734, h: 70 }),
-  desc: Object.freeze({ x: 145, y: 1155, w: 734, h: 138 }),
-  trait: Object.freeze({ x: 145, y: 1368, w: 734, h: 64 }),
+  title: Object.freeze({ x: 120, y: 1020, w: 784, h: 76 }),
+  tags: Object.freeze({ x: 120, y: 1132, w: 784, h: 70 }),
+  desc: Object.freeze({ x: 120, y: 1228, w: 784, h: 72 }),
+  trait: Object.freeze({ x: 120, y: 1352, w: 784, h: 72 }),
 });
 
 function scaleCardZone(card, zone) {
@@ -28,15 +26,6 @@ function scaleCardZone(card, zone) {
     y: Math.round(card.y + zone.y * sy),
     w: Math.round(zone.w * sx),
     h: Math.round(zone.h * sy),
-  };
-}
-
-function expandRect(rect, xPad, yPad, minH = 0) {
-  return {
-    x: rect.x - xPad,
-    y: rect.y - yPad,
-    w: rect.w + xPad * 2,
-    h: Math.max(minH, rect.h + yPad * 2),
   };
 }
 
@@ -60,50 +49,54 @@ export function getUpgradeDraftLayout() {
   const panel = getUpgradeOverlayPanelRect();
   return {
     panel,
-    title: { x: panel.x + 62, y: panel.y + 82, w: 530, size: 34 },
-    detail: { x: panel.x + 64, y: panel.y + 116, w: 590, lineH: 18, size: 14 },
-    safeHint: { x: panel.x + 64, y: panel.y + 156, w: 360, size: 12 },
+    title: { x: panel.x + 62, y: panel.y + 62, w: 530, size: 36 },
+    bondSummary: { x: panel.x + 486, y: panel.y + 56 },
+    selectedDetail: getUpgradeSelectedDetailRect(),
+    detailToggle: getUpgradeDetailToggleRect(),
     buildButton: getCurrentBuildButtonRect(),
-    help: { x: panel.x + 64, y: panel.y + panel.h - 22, w: 470, size: 12 },
+    help: { x: panel.x + 64, y: panel.y + panel.h + 29, w: panel.w - 128, size: 12 },
   };
 }
 
 export function getUpgradeCardRect(index) {
   const panel = getUpgradeOverlayPanelRect();
-  const w = 246;
-  const h = 369;
-  const gap = 34;
+  const w = 224;
+  const h = 336;
+  const gap = 42;
   const totalW = w * 3 + gap * 2;
   const startX = panel.x + (panel.w - totalW) / 2;
-  return { x: startX + index * (w + gap), y: panel.y + 128, w, h };
+  return { x: startX + index * (w + gap), y: panel.y + 102, w, h };
+}
+
+export function getUpgradeSelectedDetailRect() {
+  const panel = getUpgradeOverlayPanelRect();
+  return { x: panel.x + 64, y: panel.y + 444, w: panel.w - 128, h: 82 };
+}
+
+export function getUpgradeDetailToggleRect() {
+  const detail = getUpgradeSelectedDetailRect();
+  return { x: detail.x + detail.w - 130, y: detail.y + 24, w: 108, h: 34 };
 }
 
 export function getUpgradeCardContentLayout(card, variant = "default") {
   const zones = variant === "special" ? SPECIAL_UPGRADE_CARD_SAFE_ZONES : UPGRADE_CARD_SAFE_ZONES;
   const badge = scaleCardZone(card, zones.badge);
-  const icon = scaleCardZone(card, zones.icon);
   const title = scaleCardZone(card, zones.title);
   const tags = scaleCardZone(card, zones.tags);
   const desc = scaleCardZone(card, zones.desc);
   const trait = scaleCardZone(card, zones.trait);
-  const titleText = { x: title.x, y: title.y + 7, w: title.w, lineH: 15, size: 13, maxLines: 2 };
+  const titleText = { x: title.x, y: title.y + 7, w: title.w, lineH: 14, size: 13, maxLines: 2 };
   const tagsText = { x: tags.x, y: tags.y + 4, w: tags.w, maxTags: 2 };
-  const descText = { x: desc.x, y: desc.y + 7, w: desc.w, lineH: 12, size: 10, maxLines: variant === "special" ? 3 : 4 };
+  const descText = { x: desc.x, y: desc.y + 7, w: desc.w, lineH: 12, size: 10, maxLines: variant === "special" ? 1 : 3 };
   const traitHint = { x: trait.x, y: trait.y, w: trait.w, h: Math.max(34, trait.h) };
   return {
     badge: { ...badge, h: Math.max(22, badge.h) },
-    icon: { x: icon.x + icon.w / 2, y: icon.y + icon.h / 2, size: Math.round(Math.min(icon.w, icon.h) * 0.78) },
     title: titleText,
     tags: tagsText,
     divider: { x: desc.x, y: desc.y - 10, w: desc.w },
     desc: descText,
     trait: traitHint,
-    panels: {
-      title: expandRect({ x: title.x, y: title.y + 3, w: title.w, h: title.h - 4 }, 8, 4, 44),
-      tags: expandRect({ x: tags.x, y: tags.y + 1, w: tags.w, h: tags.h - 3 }, 8, 3, 28),
-      desc: expandRect({ x: desc.x, y: desc.y + 4, w: desc.w, h: desc.h - 8 }, 8, 4, variant === "special" ? 46 : 58),
-      trait: expandRect(traitHint, 4, 3, 40),
-    },
+    panels: {},
   };
 }
 
