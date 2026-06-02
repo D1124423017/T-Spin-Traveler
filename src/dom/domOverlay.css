@@ -314,6 +314,22 @@
   color: #ffd4ff;
 }
 
+.tst-feedback-combo .tst-feedback-title,
+.tst-feedback-b2b .tst-feedback-title,
+.tst-feedback-tspin .tst-feedback-title {
+  font-size: 23px;
+  line-height: 0.98;
+  text-shadow:
+    0 0 12px color-mix(in srgb, var(--feedback-accent) 72%, transparent),
+    0 2px 0 rgba(7, 9, 18, 0.9);
+}
+
+.tst-feedback-combo .tst-feedback-subtitle,
+.tst-feedback-b2b .tst-feedback-subtitle,
+.tst-feedback-tspin .tst-feedback-subtitle {
+  font-size: 12px;
+}
+
 .tst-feedback-perfect .tst-feedback-title {
   position: relative;
   z-index: 2;

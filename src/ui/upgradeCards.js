@@ -18,6 +18,9 @@ export const SPECIAL_UPGRADE_CARD_SAFE_ZONES = Object.freeze({
   trait: Object.freeze({ x: 120, y: 1352, w: 784, h: 72 }),
 });
 
+const UPGRADE_CARD_TEXT_FRAME_ZONE = Object.freeze({ x: 120, y: 790, w: 784, h: 360 });
+const SPECIAL_UPGRADE_CARD_TEXT_FRAME_ZONE = Object.freeze({ x: 120, y: 780, w: 784, h: 380 });
+
 function scaleCardZone(card, zone) {
   const sx = card.w / UPGRADE_CARD_ASSET_SIZE.w;
   const sy = card.h / UPGRADE_CARD_ASSET_SIZE.h;
@@ -83,26 +86,21 @@ export function getUpgradeCardContentLayout(card, variant = "default") {
   const badge = scaleCardZone(card, zones.badge);
   const portrait = scaleCardZone(card, zones.portrait);
   const title = scaleCardZone(card, zones.title);
-  const tags = scaleCardZone(card, zones.tags);
-  const desc = scaleCardZone(card, zones.desc);
+  const textFrame = scaleCardZone(card, variant === "special" ? SPECIAL_UPGRADE_CARD_TEXT_FRAME_ZONE : UPGRADE_CARD_TEXT_FRAME_ZONE);
   const trait = scaleCardZone(card, zones.trait);
   const titleText = { x: title.x, y: title.y + 7, w: title.w, lineH: 14, size: 13, maxLines: 2 };
-  const tagsText = { x: title.x, y: title.y + 8, w: title.w, maxTags: 3 };
-  const descText = { x: desc.x, y: desc.y + 2, w: desc.w, lineH: 13, size: 10, maxLines: 2 };
+  const tagsText = { x: textFrame.x, y: textFrame.y + 4, w: textFrame.w, maxTags: 3 };
+  const descText = { x: textFrame.x, y: textFrame.y + 42, w: textFrame.w, lineH: 15, size: 12, maxLines: 2 };
   const traitHint = { x: trait.x, y: trait.y, w: trait.w, h: Math.max(34, trait.h) };
-  const descLines = Math.max(1, descText.maxLines || 1);
   return {
     badge: { ...badge, h: Math.max(22, badge.h) },
     portrait,
     title: titleText,
     tags: tagsText,
-    divider: { x: desc.x, y: desc.y - 10, w: desc.w },
+    divider: { x: textFrame.x, y: descText.y - 10, w: textFrame.w },
     desc: descText,
     trait: traitHint,
-    panels: {
-      tags: { x: title.x - 8, y: title.y - 3, w: title.w + 16, h: 28 },
-      desc: { x: desc.x - 10, y: desc.y - 5, w: desc.w + 20, h: descText.lineH * descLines + 12 },
-    },
+    panels: {},
   };
 }
 

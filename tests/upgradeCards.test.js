@@ -60,9 +60,9 @@ describe("upgrade card selection helpers", () => {
     expect(layout.emblem).toBeUndefined();
     expect(layout.portrait).toMatchObject({ w: expect.any(Number), h: expect.any(Number) });
     expect(layout.portrait.y).toBeLessThan(layout.title.y);
-    expect(layout.panels.desc).toBeDefined();
+    expect(layout.panels.desc).toBeUndefined();
     expect(layout.panels.title).toBeUndefined();
-    expect(layout.panels.tags).toBeDefined();
+    expect(layout.panels.tags).toBeUndefined();
     expect(layout.panels.trait).toBeUndefined();
     expect(layout.title.w).toBeGreaterThan(160);
     expect(layout.trait.w).toBeGreaterThan(160);

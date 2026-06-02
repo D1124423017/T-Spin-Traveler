@@ -498,12 +498,15 @@ def render_sfx(kind, duration, seed):
         add_noise(samples, 0.01, duration * 0.5, 0.035, seed, "low")
     elif kind.startswith("clear"):
         level = {"clear1": 1, "clear2": 2, "clear3": 3, "clear4": 4}[kind]
-        degrees = [12, 16, 19, 24, 28][: level + 1]
-        add_arpeggio(samples, 0.0, root, degrees, 0.09 + level * 0.018, 0.038)
-        add_noise(samples, 0.03, 0.08 + level * 0.03, 0.035 + level * 0.012, seed, "high")
+        degrees = [12, 19, 24, 28, 31][: level + 1]
+        add_stone_pulse(samples, 0.0, 0.052 + level * 0.01, 120 - level * 8)
+        add_arpeggio(samples, 0.012, root, degrees, 0.068 + level * 0.016, 0.032, "triangle")
+        add_noise(samples, 0.018, 0.045 + level * 0.018, 0.018 + level * 0.006, seed, "high", 0.002, 0.052)
+        add_soft_chime(samples, 0.055 + level * 0.008, note(root, 24 + level * 2), 0.018 + level * 0.006, 0.12 + level * 0.03)
         if level >= 4:
-            add_sweep(samples, 0.06, 0.28, 520, 1480, 0.09, "triangle")
-            add_deep_drum(samples, 0.0, 0.11, 92)
+            add_deep_drum(samples, 0.0, 0.075, 88)
+            add_sweep(samples, 0.055, 0.22, 480, 1180, 0.052, "triangle", 0.012, 0.13)
+            add_soft_chime(samples, 0.2, note(root, 36), 0.032, 0.22)
     elif kind.startswith("combo"):
         level = {"combo1": 1, "combo2": 2, "combo3": 3}[kind]
         add_arpeggio(samples, 0.0, root, [16, 19, 24, 28 + level], 0.09 + level * 0.02, 0.034, "square")

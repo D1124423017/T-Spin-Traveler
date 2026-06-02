@@ -30,6 +30,7 @@ import {
   slimeArt,
   specialUpgradeCardFrames,
   upgradeCardFrames,
+  upgradeTypeIcons,
 } from "./src/data/assets.js";
 import {
   BGM_PLAYLISTS,
@@ -10400,22 +10401,32 @@ function getUpgradeCardTextTheme(upgrade, layoutVariant = "default", rarity = ge
       tagFillAlpha: 0.72,
       tagStrokeAlpha: 0.58,
       tagTextColor: "#302914",
+      tagFontSize: 11,
+      tagTextSize: 10,
+      tagPillHeight: 22,
+      tagMaxPillWidth: 82,
+      tagPillGap: 6,
       chipFillAlpha: 0.72,
       chipStrokeAlpha: 0.66,
       chipTextColor: "#302914",
       chipGlyphColor: "#4f4521",
       chipGlyphFillAlpha: 0.16,
-      descColor: "rgba(44, 36, 18, 0.86)",
+      descColor: "rgba(44, 36, 18, 0.92)",
     };
   }
   return {
     lightCard: false,
     titleColor: rarity.titleColor,
-    descColor: "rgba(236, 244, 255, 0.78)",
+    descColor: "rgba(246, 250, 255, 0.9)",
     dividerColor: rarity.color,
     shadowBlur: 7,
     shadowColor: "rgba(0, 0, 0, 0.92)",
     shadowOffsetY: 1,
+    tagFontSize: 11,
+    tagTextSize: 10,
+    tagPillHeight: 22,
+    tagMaxPillWidth: 82,
+    tagPillGap: 6,
   };
 }
 
@@ -10468,6 +10479,60 @@ function drawUpgradeTraitHint(upgrade, card, layoutVariant = "default", theme = 
   drawUpgradeTraitPreviewChip(preview, x, y, w, h, { compact: true, theme });
 }
 
+const UPGRADE_DETAIL_ICON_TAG_PRIORITY = Object.freeze([
+  "Perfect",
+  "Combo",
+  "Spin",
+  "Defense",
+  "Survival",
+  "Garbage",
+  "B2B",
+  "Boss Killer",
+  "Burst",
+  "Utility",
+  "Devil",
+  "Angel",
+]);
+
+const UPGRADE_DETAIL_ICON_BY_TAG = Object.freeze({
+  Perfect: "rift",
+  Combo: "combo",
+  Spin: "spin",
+  Defense: "defense",
+  Survival: "survival",
+  Garbage: "garbage",
+  B2B: "attack",
+  "Boss Killer": "attack",
+  Burst: "attack",
+  Utility: "rift",
+  Devil: "attack",
+  Angel: "rift",
+});
+
+function getUpgradeDetailIconAsset(upgrade) {
+  const tags = getUpgradeTags(upgrade);
+  const tag = UPGRADE_DETAIL_ICON_TAG_PRIORITY.find((entry) => tags.includes(entry));
+  return upgradeTypeIcons[UPGRADE_DETAIL_ICON_BY_TAG[tag]] || upgradeTypeIcons.rift;
+}
+
+function drawUpgradeDetailTypeIcon(upgrade, x, y, size, rarity) {
+  const icon = getUpgradeDetailIconAsset(upgrade);
+  if (!isImageReady(icon)) return 0;
+  ctx.save();
+  ctx.shadowColor = rarity.glow;
+  ctx.shadowBlur = 9;
+  ctx.fillStyle = hexToRgba(rarity.color, 0.18);
+  roundedRect(x - 3, y - 3, size + 6, size + 6, 9, true, false);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = hexToRgba(rarity.border, 0.28);
+  ctx.lineWidth = 1;
+  roundedRect(x - 3, y - 3, size + 6, size + 6, 9, false, true);
+  ctx.globalAlpha = 0.96;
+  ctx.drawImage(icon, x, y, size, size);
+  ctx.restore();
+  return size + 10;
+}
+
 function drawUpgradeSelectedDetail(upgrade, rect, rarity, motion = {}, {
   expanded = false,
   toggleRect = getUpgradeDetailToggleRect(),
@@ -10494,10 +10559,11 @@ function drawUpgradeSelectedDetail(upgrade, rect, rarity, motion = {}, {
   ctx.fillStyle = hexToRgba(rarity.color, 0.28);
   roundedRect(x + 13, y + 12, 3, h - 24, 2, true, false);
   fitLabel(t("selectedUpgrade"), x + 24, y + 20, 154, 11, "rgba(143,232,220,0.78)", 8, "900", true);
+  const iconOffset = drawUpgradeDetailTypeIcon(upgrade, x + 24, y + 28, 26, rarity);
   drawReadableUpgradeText(() => {
-    fitLabel(upgradeName(upgrade), x + 24, y + 45, 164, 19, rarity.titleColor, 12, "900", true);
+    fitLabel(upgradeName(upgrade), x + 24 + iconOffset, y + 45, 164 - iconOffset, 19, rarity.titleColor, 12, "900", true);
   }, 5);
-  if (preview) drawUpgradeTraitPreviewChip(preview, x + 24, y + 54, 164, 22, { compact: true, emphasis: false });
+  if (preview) drawUpgradeTraitPreviewChip(preview, x + 24, y + 57, 164, 21, { compact: true, emphasis: false });
   const descX = x + 214;
   const descW = Math.max(160, toggleRect.x - descX - 18);
   const detailText = expanded ? upgradeText(upgrade) : upgradeShortText(upgrade);
@@ -10749,18 +10815,22 @@ function getCurrentBuildDirectionText(stats) {
 function drawUpgradeTagPills(tags, x, y, maxWidth, maxTags = 2, alpha = 1, theme = null) {
   const visibleTags = getUpgradeTags({ tags }).slice(0, maxTags);
   let xx = x;
+  const fontSize = theme?.tagFontSize || 9;
+  const pillH = theme?.tagPillHeight || 18;
+  const maxPillW = theme?.tagMaxPillWidth || 66;
+  const pillGap = theme?.tagPillGap || 5;
   ctx.save();
-  ctx.font = canvasFont("900", 9, "TAG", true);
+  ctx.font = canvasFont("900", fontSize, "TAG", true);
   for (const tag of visibleTags) {
     const meta = getBuildTagMeta(tag);
     const text = buildTagLabel(tag).toUpperCase();
-    const pillW = Math.min(66, Math.max(36, ctx.measureText(text).width + 16));
+    const pillW = Math.min(maxPillW, Math.max(38, ctx.measureText(text).width + 18));
     if (xx + pillW > x + maxWidth) break;
     ctx.save();
     ctx.globalAlpha = alpha;
-    drawUpgradePill(xx, y, pillW, 18, text, meta.color, theme?.lightCard ? theme.tagFillAlpha : 0.16, theme);
+    drawUpgradePill(xx, y, pillW, pillH, text, meta.color, theme?.lightCard ? theme.tagFillAlpha : 0.16, theme);
     ctx.restore();
-    xx += pillW + 5;
+    xx += pillW + pillGap;
   }
   ctx.restore();
 }
@@ -10781,7 +10851,7 @@ function drawUpgradePill(x, y, w, h, text, color, fillAlpha = 0.14, theme = null
   roundedRect(x, y, w, h, 7, false, true);
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  fitLabel(text, x + 8, y + h / 2 + 0.5, w - 16, Math.min(10, h - 8), theme?.lightCard ? theme.tagTextColor : color, 8, "900", true);
+  fitLabel(text, x + 8, y + h / 2 + 0.5, w - 16, theme?.tagTextSize || Math.min(10, h - 8), theme?.lightCard ? theme.tagTextColor : color, 8, "900", true);
   ctx.textBaseline = "alphabetic";
   ctx.restore();
 }

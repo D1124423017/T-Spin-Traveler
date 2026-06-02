@@ -148,9 +148,9 @@ describe("HUD and card layout helpers", () => {
     expect(card).toEqual({ x: 819, y: 200, w: 240, h: 360 });
     expect(cardLayout.portrait.y).toBeLessThan(cardLayout.title.y);
     expect(cardLayout.trait).toEqual({ x: 847, y: 509, w: 184, h: 34 });
-    expect(cardLayout.panels.desc).toBeDefined();
+    expect(cardLayout.panels.desc).toBeUndefined();
     expect(cardLayout.panels.title).toBeUndefined();
-    expect(cardLayout.panels.tags).toBeDefined();
+    expect(cardLayout.panels.tags).toBeUndefined();
     expect(cardLayout.panels.trait).toBeUndefined();
     expect(cardLayout.icon).toBeUndefined();
     expect(specialCardLayout.title.y).toBeGreaterThan(cardLayout.title.y);
