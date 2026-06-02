@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 import {
   GSAP_FEEDBACK_CDN_URL,
   canvasPointToLayerPercent,
@@ -7,6 +9,12 @@ import {
   getFeedbackVisualProfile,
   makeFeedbackText,
 } from "../src/dom/gsapFeedback.js";
+
+const projectRoot = process.cwd();
+
+function readDomOverlayCss() {
+  return fs.readFileSync(path.join(projectRoot, "src/dom/domOverlay.css"), "utf8");
+}
 
 describe("gsap feedback helpers", () => {
   it("uses a pinned CDN URL instead of a bare package import", () => {
@@ -49,5 +57,17 @@ describe("gsap feedback helpers", () => {
     expect(getFeedbackVisualProfile("b2b", { chain: 1 }).intensity).toBe("medium");
     expect(getFeedbackVisualProfile("tspin", { spinType: "full" }).intensity).toBe("high");
     expect(getFeedbackVisualProfile("perfect").intensity).toBe("ultimate");
+  });
+
+  it("keeps combo, B2B, T-Spin, and Perfect feedback frameless and icon-free", () => {
+    const css = readDomOverlayCss();
+    expect(css).toContain(".tst-feedback-combo .tst-feedback-rune");
+    expect(css).toContain(".tst-feedback-tspin .tst-feedback-streak");
+    expect(css).toContain(".tst-feedback-perfect .tst-feedback-rune");
+    expect(css).toContain(".tst-feedback-perfect .tst-feedback-ring");
+    expect(css).toContain("border: 0;");
+    expect(css).toContain("background: transparent;");
+    expect(css).toContain("box-shadow: none;");
+    expect(css).toContain("display: none;");
   });
 });

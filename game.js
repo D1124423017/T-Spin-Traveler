@@ -24,12 +24,18 @@ import {
   noaFeedbackBowArt,
   noaLevelUpSheet,
   noaMenuShowcaseArt,
+  oneShotAudioAssets,
   riftEnergyIcon,
   rosterArt,
   slimeArt,
   specialUpgradeCardFrames,
   upgradeCardFrames,
 } from "./src/data/assets.js";
+import {
+  BGM_PLAYLISTS,
+  SPIN_READY_COOLDOWN_MS,
+} from "./src/audio/audioEvents.js";
+import { createFileSfxPlayer } from "./src/audio/audioManager.js";
 import { ENEMIES, MINI_BOSS_ENEMY_IDS } from "./src/data/enemies.js";
 import { translations } from "./src/data/i18n.js";
 import {
@@ -381,9 +387,10 @@ const audio = {
   lastEnemyWarningAt: 0,
   lastEnemyWarningKey: "",
   musicStage: "menu",
-  musicLayers: { menu: 1, early: 0, mid: 0, late: 0, boss: 0, danger: 0 },
+  musicLayers: { menu: 1, early: 0, mid: 0, late: 0, boss: 0, upgrade: 0, danger: 0 },
   lastBossStingerWave: 0,
   lastDangerMusicPulseAt: 0,
+  lastSpinReadyAt: 0,
   musicLoopSources: new Map(),
   currentMusicLoopKey: "",
   selectedMusicLoopKey: "",
@@ -395,6 +402,13 @@ const audio = {
   lastLoopSyncAt: 0,
 };
 
+const fileSfxPlayer = createFileSfxPlayer({
+  assets: oneShotAudioAssets,
+  getContext: () => audio.ctx,
+  getDestination: () => audio.sfxGain,
+  getRecord: getAudioAssetRecordForElement,
+});
+
 const AUDIO_SETTINGS_REVISION = 5;
 const DEFAULT_AUDIO_SETTINGS = {
   muted: false,
@@ -405,20 +419,14 @@ const DEFAULT_AUDIO_SETTINGS = {
 const MUSIC_BPM = 105;
 const MUSIC_STEP_MS = 60000 / (MUSIC_BPM * 4);
 const MUSIC_ROOT = 146.83; // D minor, stable fantasy battle color.
-const MUSIC_STAGE_KEYS = ["menu", "early", "mid", "late", "boss"];
+const MUSIC_STAGE_KEYS = ["menu", "early", "mid", "late", "boss", "upgrade"];
 const MUSIC_LAYER_KEYS = [...MUSIC_STAGE_KEYS, "danger"];
 const MUSIC_LAYER_SMOOTHING = 0.1;
 const MUSIC_DANGER_SMOOTHING = 0.08;
 const MUSIC_ROTATION_MIN_MS = 60000;
 const MUSIC_ROTATION_MAX_MS = 90000;
 const MUSIC_LOOP_FADE_SMOOTHING = 0.18;
-const MUSIC_PLAYLISTS = {
-  menu: ["menuA", "menuB", "menuC", "menuD"],
-  early: ["forestA", "forestB", "forestC", "forestD"],
-  mid: ["ruinsA", "ruinsB", "ruinsC", "ruinsD"],
-  late: ["riftA", "riftB", "riftC", "riftD"],
-  boss: ["bossA", "bossB", "bossC", "bossD"],
-};
+const MUSIC_PLAYLISTS = BGM_PLAYLISTS;
 const MUSIC_STAGES = {
   menu: {
     energy: 0.22,
@@ -489,6 +497,20 @@ const MUSIC_STAGES = {
     noise: 0.32,
     rootOffset: -7,
     motif: "boss",
+  },
+  upgrade: {
+    energy: 0.32,
+    drone: 0.8,
+    bass: 0.18,
+    drums: 0.08,
+    hand: 0.04,
+    click: 0.1,
+    shaker: 0.02,
+    bell: 1.2,
+    pluck: 0.42,
+    noise: 0.06,
+    rootOffset: 0,
+    motif: "menu",
   },
 };
 
@@ -614,9 +636,13 @@ const SFX_COOLDOWNS = {
   softDrop: 105,
   rotate: 58,
   rotateT: 82,
+  spinReady: SPIN_READY_COOLDOWN_MS,
   drop: 120,
   lock: 90,
   hold: 95,
+  holdUnavailable: 180,
+  invalidMove: 160,
+  invalidRotate: 180,
   clear: 60,
   doubleClear: 70,
   tripleClear: 82,
@@ -637,7 +663,16 @@ const SFX_COOLDOWNS = {
   lowHp: 2500,
   wave: 360,
   upgrade: 220,
+  upgradeReveal: 320,
+  upgradeConfirm: 220,
   upgradeReady: 240,
+  metaUpgradeSuccess: 360,
+  metaUpgradeFail: 260,
+  riftEnergyComplete: 1200,
+  loadingComplete: 900,
+  victory: 1200,
+  bossEnter: 900,
+  bossDefeated: 1000,
   countdown: 180,
   countdownStart: 360,
   start: 360,
@@ -649,9 +684,13 @@ const SFX_DURATIONS = {
   softDrop: 48,
   rotate: 90,
   rotateT: 140,
+  spinReady: 300,
   drop: 150,
   lock: 110,
   hold: 150,
+  holdUnavailable: 180,
+  invalidMove: 130,
+  invalidRotate: 150,
   clear: 170,
   doubleClear: 210,
   tripleClear: 250,
@@ -672,7 +711,16 @@ const SFX_DURATIONS = {
   lowHp: 420,
   wave: 520,
   upgrade: 420,
+  upgradeReveal: 820,
+  upgradeConfirm: 640,
   upgradeReady: 260,
+  metaUpgradeSuccess: 860,
+  metaUpgradeFail: 280,
+  riftEnergyComplete: 10000,
+  loadingComplete: 500,
+  victory: 5600,
+  bossEnter: 900,
+  bossDefeated: 1050,
   countdown: 160,
   countdownStart: 360,
   start: 360,
@@ -684,7 +732,11 @@ const SFX_PRIORITY = {
   softDrop: 1,
   rotate: 1,
   rotateT: 2,
+  spinReady: 2,
   lock: 2,
+  holdUnavailable: 2,
+  invalidMove: 1,
+  invalidRotate: 1,
   clear: 3,
   doubleClear: 3,
   tripleClear: 3,
@@ -698,7 +750,38 @@ const SFX_PRIORITY = {
   enemyWarnStrong: 5,
   enemy: 5,
   lowHp: 3,
+  upgradeReveal: 4,
+  upgradeConfirm: 4,
+  metaUpgradeSuccess: 4,
+  riftEnergyComplete: 5,
+  victory: 6,
+  bossEnter: 5,
+  bossDefeated: 5,
   defeat: 6,
+};
+
+const SFX_SYNTH_FALLBACK_ALIASES = {
+  spinReady: "rotateT",
+  holdUnavailable: "cancel",
+  invalidMove: "lock",
+  invalidRotate: "rotate",
+  upgradeReveal: "upgrade",
+  upgradeConfirm: "upgrade",
+  metaUpgradeSuccess: "upgrade",
+  metaUpgradeFail: "hold",
+  riftEnergyComplete: "perfect",
+  loadingComplete: "upgradeReady",
+  victory: "wave",
+  waveVictory: "wave",
+  bossEnter: "enemyWarnStrong",
+  bossDefeated: "wave",
+  uiConfirm: "hold",
+  uiCancel: "cancel",
+  uiHover: "hold",
+  gameOver: "defeat",
+  playerAttackLight: "hitLight",
+  playerAttackHeavy: "hitHeavy",
+  playerAttackArcane: "hitArcane",
 };
 
 const LOW_HP_WARNING_RATIO = 0.3;
@@ -769,9 +852,9 @@ const UI_LAYOUT = createHudLayout({
 });
 
 const GSAP_FEEDBACK_POSITIONS = Object.freeze({
-  combo: { x: BOARD_X - 146, y: BOARD_Y + 196 },
-  b2b: { x: BOARD_X - 146, y: BOARD_Y + 250 },
-  tspin: { x: BOARD_X - 146, y: BOARD_Y + 304 },
+  combo: { x: BOARD_X - 92, y: BOARD_Y + 196 },
+  b2b: { x: BOARD_X - 92, y: BOARD_Y + 250 },
+  tspin: { x: BOARD_X - 92, y: BOARD_Y + 304 },
   perfect: { x: BOARD_X + (COLS * TILE) / 2, y: BOARD_Y + ROWS * TILE * 0.42 },
   damage: { x: UI_LAYOUT.enemyStage.x + 34, y: UI_LAYOUT.enemyStage.y + 126 },
 });
@@ -1822,6 +1905,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   applyMetaProgressToNewRun();
   refillQueue();
   spawnPiece();
+  playSfx("start");
   startBattleCountdown();
 }
 
@@ -1952,9 +2036,11 @@ function rotate(dir) {
       state.lastKickIndex = kickIndex;
       if (touchingGround()) resetLockDelay();
       playSfx(piece.type === "T" ? "rotateT" : "rotate");
+      triggerSpinReadyCue(piece, kickIndex);
       return;
     }
   }
+  playSfx("invalidRotate");
 }
 
 function rotate180() {
@@ -1975,9 +2061,20 @@ function rotate180() {
       state.lastKickIndex = kickIndex;
       if (touchingGround()) resetLockDelay();
       playSfx(piece.type === "T" ? "rotateT" : "rotate");
+      triggerSpinReadyCue(piece, kickIndex);
       return;
     }
   }
+  playSfx("invalidRotate");
+}
+
+function triggerSpinReadyCue(piece, kickIndex = 0) {
+  if (!piece || piece.type !== "T") return;
+  if (kickIndex <= 0 && !touchingGround()) return;
+  const now = performance.now();
+  if (now - audio.lastSpinReadyAt < SPIN_READY_COOLDOWN_MS) return;
+  audio.lastSpinReadyAt = now;
+  playSfx("spinReady");
 }
 
 function touchingGround() {
@@ -1999,7 +2096,11 @@ function hardDrop() {
 }
 
 function holdPiece() {
-  if (state.mode !== "playing" || !state.active || !state.canHold) return;
+  if (state.mode !== "playing" || !state.active) return;
+  if (!state.canHold) {
+    playSfx("holdUnavailable");
+    return;
+  }
   const current = state.active.type;
   if (!state.hold) {
     state.hold = current;
@@ -2458,7 +2559,7 @@ function applyEnemyHit(hit) {
   applyEnemyBoardEffect(enemy);
   state.playerHit = 300;
   state.shake = Math.max(state.shake, 9 + garbageAdded * 2);
-  if (blocked > 0) playSfx("shield");
+  if (blocked > 0) playSfx(state.guard <= 0 && finalDamage > 0 ? "shieldBreak" : "shield");
   if (finalDamage > 0 || garbageAdded > 0) playSfx("enemy");
   state.floaters.push({
     x: 244,
@@ -3468,6 +3569,7 @@ function showBattleClearFeedback(result) {
 
 function playDamageFeedback(result) {
   startHeroAttackAnimation(result.attackStyle);
+  playSfx(getPlayerAttackSfx(result));
   state.attacks.push({
     type: "player",
     x0: 244,
@@ -3505,6 +3607,12 @@ function playDamageFeedback(result) {
       intensity: state.lastPerfectClear ? 2.2 : 1.65,
     } : null,
   });
+}
+
+function getPlayerAttackSfx(result) {
+  if (result.context?.perfect || result.spinType || result.attackStyle === "ultimate") return "playerAttackArcane";
+  if (result.lines >= 3 || result.b2bHit || result.comboBurst) return "playerAttackHeavy";
+  return "playerAttackLight";
 }
 
 function getComboMilestoneDamage(combo) {
@@ -4166,7 +4274,7 @@ function startNextWave() {
     setMessage("messageVictory");
     state.shake = 10;
     finishRun("victory");
-    playSfx("wave");
+    playSfx("victory");
     return;
   }
   state.wave += 1;
@@ -4209,7 +4317,7 @@ function startNextWave() {
     duration: 820,
   });
   triggerUpgradeIfReady(clearedBoss, clearedMiniBoss);
-  playSfx("wave");
+  playSfx(clearedBoss ? "bossDefeated" : "waveVictory");
 }
 
 function recordRunEnemyDefeat(clearedBoss) {
@@ -4300,7 +4408,7 @@ function triggerUpgradeIfReady(forceRelic = false, forceRare = false, reason = "
     color: forceRelic ? "#fff0a6" : forceRare ? "#d7c2ff" : "#9df7da",
     life: 1300,
   });
-  playSfx("upgrade");
+  playSfx("upgradeReveal");
   return true;
 }
 
@@ -4317,7 +4425,7 @@ function moveUpgradeSelection(direction) {
   state.upgradeSelectedIndex = getNextUpgradeSelectionIndex(previous, direction, state.upgradeChoices.length);
   if (state.upgradeSelectedIndex !== previous) {
     markUpgradeSelectionChanged(state.upgradeSelectedIndex);
-    playSfx("hold");
+    playSfx("upgradeReady");
   }
 }
 
@@ -4336,7 +4444,7 @@ function previewUpgradeChoice(index, { openDetail = true } = {}) {
   const wasSelected = state.upgradeSelectedIndex === index;
   markUpgradeSelectionChanged(index);
   state.upgradeDetailOpen = wasSelected ? !state.upgradeDetailOpen : Boolean(openDetail);
-  playSfx("hold");
+  playSfx("upgradeReady");
   return true;
 }
 
@@ -4377,7 +4485,7 @@ function chooseUpgrade(index) {
     duration: 400,
   };
   state.currentBuildOpen = false;
-  playSfx("upgrade");
+  playSfx("upgradeConfirm");
 }
 
 function finishUpgradeSelection() {
@@ -4469,7 +4577,10 @@ function finishRun(outcome) {
   state.save.bestDamage = Math.max(state.save.bestDamage || 0, state.stats.damage);
   state.save.bestHit = Math.max(state.save.bestHit || 0, state.stats.bestHit);
   state.save.perfectClears = Math.max(state.save.perfectClears || 0, state.stats.perfectClears);
-  settleRunRiftEnergy();
+  const earned = settleRunRiftEnergy();
+  if (earned > 0 && typeof window !== "undefined") {
+    window.setTimeout(() => playSfx("riftEnergyComplete"), outcome === "victory" ? 760 : 920);
+  }
   saveGame();
 }
 
@@ -4686,6 +4797,7 @@ function updateAssetLoading(now = performance.now()) {
   })) {
     state.assetLoadingDone = true;
     state.menuRevealStartedAt = now;
+    playSfx("loadingComplete");
   }
 }
 
@@ -4784,6 +4896,7 @@ function pressHorizontal(dir) {
     state.input.das = 0;
     state.input.arr = 0;
     if (move(dir, 0)) playSfx("move");
+    else playSfx("invalidMove");
   }
 }
 
@@ -4806,6 +4919,7 @@ function unlockAudio() {
       audio.ctx.resume().then(updateMusicPlayback).catch(() => {});
     }
     startMusic();
+    fileSfxPlayer.preloadAll();
     return;
   }
   const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -4819,6 +4933,7 @@ function unlockAudio() {
   audio.sfxGain.connect(audio.master);
   audio.master.connect(audio.ctx.destination);
   startMusic();
+  fileSfxPlayer.preloadAll();
   if (audio.ctx.state === "suspended") {
     audio.ctx.resume().then(updateMusicPlayback).catch(() => {});
   }
@@ -4942,7 +5057,7 @@ function updateMusicPlayback() {
       continue;
     }
     const isTarget = key === targetKey && isMusicLoopAvailable(key);
-    const targetVolume = isTarget ? (stage === "boss" ? 0.84 : 0.76) : 0;
+    const targetVolume = isTarget ? (stage === "boss" ? 0.84 : stage === "upgrade" ? 0.68 : 0.76) : 0;
     element.volume += (targetVolume - element.volume) * MUSIC_LOOP_FADE_SMOOTHING;
     if (targetVolume > 0.01 && element.paused) {
       playMusicLoopElement(key, element);
@@ -5087,7 +5202,8 @@ function getMusicStageByWave(wave) {
 }
 
 function getCurrentMusicStage() {
-  if (state.mode === "start" || state.mode === "guide") return "menu";
+  if (state.mode === "start" || state.mode === "guide" || state.mode === "metaUpgrade" || state.mode === "victory" || state.mode === "defeat") return "menu";
+  if (state.mode === "upgrade") return "upgrade";
   return getMusicStageByWave(state.wave || 1);
 }
 
@@ -5144,6 +5260,7 @@ function getMusicChordPattern(stage) {
     mid: [0, -7, -5, -2, -9, -5, 3, -7],
     late: [0, -1, -7, -6, -10, -5, -8, -1],
     boss: [0, -12, -7, -10, -1, -12, -5, -7],
+    upgrade: [0, 3, -5, -2, 0, 7, 3, -5],
   }[stage] || [0, -5, -2, -7, 3, -5, 5, 0];
 }
 
@@ -5179,6 +5296,12 @@ function getMusicMotif(stage, section) {
       climax: [0, -1, 0, 5, null, 7, 5, 0, -1, 0, 5, null, 7, 5, 0, null],
       return: [0, null, -7, null, -12, null, -10, null, -7, null, -5, null, -7, null, null, null],
     },
+    upgrade: {
+      intro: [0, null, 7, null, 12, null, 10, null, 7, null, 3, null, 5, null, null, null],
+      build: [0, null, 7, 12, null, 15, null, 12, 10, null, 7, null, 5, null, 3, null],
+      climax: [7, null, 12, null, 19, null, 15, null, 12, null, 10, null, 7, null, 5, null],
+      return: [0, null, 5, null, 7, null, 3, null, 0, null, null, null, 3, null, null, null],
+    },
   };
   return (motifs[stage] || motifs.early)[section] || motifs.early.intro;
 }
@@ -5187,6 +5310,7 @@ function maybeTriggerBossStinger(stage, startTime) {
   if (stage !== "boss" || state.mode !== "playing" || isBattleCountdownActive()) return;
   if (!state.wave || audio.lastBossStingerWave === state.wave) return;
   audio.lastBossStingerWave = state.wave;
+  playSfx("bossEnter");
   playBossStinger(startTime);
 }
 
@@ -5234,113 +5358,115 @@ function playSfx(name) {
   if (!audio.ctx || audio.muted) return;
   if (!shouldPlaySfx(name)) return;
   const t = audio.ctx.currentTime;
-  const out = beginSfxBus(name);
+  if (fileSfxPlayer.play(name, { when: t })) return;
+  const synthName = SFX_SYNTH_FALLBACK_ALIASES[name] || name;
+  const out = beginSfxBus(synthName);
   audio.currentSfxBus = out;
-  if (name === "start") {
+  if (synthName === "start") {
     arpeggio([220, 293.66, 369.99, 440, 587.33], 0.04, "triangle", 0.16);
-  } else if (name === "countdown") {
+  } else if (synthName === "countdown") {
     tone(392, 0.075, "triangle", 0.13, out, t);
     tone(784, 0.055, "sine", 0.08, out, t + 0.012);
     filteredNoise(0.045, 0.035, "bandpass", 1800, 5, out, t);
-  } else if (name === "countdownStart") {
+  } else if (synthName === "countdownStart") {
     arpeggio([392, 587.33, 783.99, 1174.66], 0.035, "triangle", 0.18);
     sweep(240, 980, 0.18, "sawtooth", 0.1, t, out);
-  } else if (name === "move") {
+  } else if (synthName === "move") {
     tone(360, 0.024, "triangle", 0.04, out, t);
-  } else if (name === "softDrop") {
+  } else if (synthName === "softDrop") {
     tone(260, 0.018, "triangle", 0.025, out, t);
     filteredNoise(0.012, 0.012, "highpass", 2100, 0.7, out, t + 0.004);
-  } else if (name === "rotate") {
+  } else if (synthName === "rotate") {
     tone(520, 0.034, "square", 0.06, out, t);
     tone(780, 0.024, "triangle", 0.032, out, t + 0.012);
-  } else if (name === "rotateT") {
+  } else if (synthName === "rotateT") {
     arpeggio([392, 493.88, 739.99], 0.028, "triangle", 0.1, out, t);
-  } else if (name === "drop") {
+  } else if (synthName === "drop") {
     sweep(190, 54, 0.1, "sawtooth", 0.18, t, out);
     noise(0.04, 0.11, out, t);
-  } else if (name === "lock") {
+  } else if (synthName === "lock") {
     tone(128, 0.055, "sine", 0.08, out, t);
     filteredNoise(0.035, 0.035, "lowpass", 460, 0.9, out, t + 0.006);
-  } else if (name === "hold") {
+  } else if (synthName === "hold") {
     arpeggio([330, 247, 392], 0.032, "sine", 0.09, out, t);
-  } else if (name === "clear") {
+  } else if (synthName === "clear") {
     arpeggio([520, 659.25, 783.99], 0.03, "triangle", 0.095, out, t);
     filteredNoise(0.022, 0.026, "highpass", 1800, 2.4, out, t + 0.016);
-  } else if (name === "doubleClear") {
+  } else if (synthName === "doubleClear") {
     arpeggio([493.88, 659.25, 783.99, 987.77], 0.03, "triangle", 0.105, out, t);
     filteredNoise(0.028, 0.032, "highpass", 1950, 2.8, out, t + 0.02);
-  } else if (name === "tripleClear") {
+  } else if (synthName === "tripleClear") {
     arpeggio([493.88, 659.25, 783.99, 987.77, 1174.66], 0.03, "triangle", 0.115, out, t);
     sweep(760, 1180, 0.1, "triangle", 0.05, t + 0.035, out);
     filteredNoise(0.035, 0.04, "highpass", 2100, 2.4, out, t + 0.025);
-  } else if (name === "bigClear") {
+  } else if (synthName === "bigClear") {
     arpeggio([392, 493.88, 659.25, 880, 1174.66], 0.036, "triangle", 0.15, out, t);
     sweep(920, 1320, 0.15, "square", 0.085, t + 0.03, out);
     noise(0.06, 0.08, out, t + 0.04);
-  } else if (name === "b2b") {
+  } else if (synthName === "b2b") {
     arpeggio([554.37, 739.99, 987.77, 1479.98], 0.033, "square", 0.135, out, t);
     tone(196, 0.16, "sawtooth", 0.08, out, t);
-  } else if (name === "combo") {
+  } else if (synthName === "combo") {
     arpeggio([659.25, 783.99, 987.77, 1174.66], 0.028, "square", 0.105, out, t);
     sweep(620, 1440, 0.11, "triangle", 0.055, t + 0.026, out);
     filteredNoise(0.04, 0.055, "highpass", 2400, 1.2, out, t + 0.058);
-  } else if (name === "cancel") {
+  } else if (synthName === "cancel") {
     arpeggio([392, 523.25, 659.25, 783.99], 0.034, "sine", 0.105, out, t);
     sweep(720, 260, 0.11, "triangle", 0.064, t + 0.02, out);
-  } else if (name === "perfect") {
+  } else if (synthName === "perfect") {
     arpeggio([392, 523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98], 0.034, "triangle", 0.175, out, t);
     tone(130.81, 0.34, "sine", 0.12, out, t);
     sweep(420, 1680, 0.24, "sawtooth", 0.078, t + 0.045, out);
     filteredNoise(0.12, 0.085, "highpass", 1200, 0.8, out, t + 0.075);
-  } else if (name === "hitLight") {
+  } else if (synthName === "hitLight") {
     tone(680, 0.038, "triangle", 0.078, out, t);
     filteredNoise(0.026, 0.042, "bandpass", 1100, 3.2, out, t + 0.008);
-  } else if (name === "hitHeavy") {
+  } else if (synthName === "hitHeavy") {
     tone(110, 0.12, "sawtooth", 0.13, out, t);
     sweep(420, 1180, 0.13, "triangle", 0.105, t + 0.014, out);
     filteredNoise(0.064, 0.084, "bandpass", 740, 2.8, out, t + 0.02);
-  } else if (name === "hitArcane") {
+  } else if (synthName === "hitArcane") {
     arpeggio([392, 523.25, 783.99, 1046.5], 0.034, "triangle", 0.13, out, t);
     tone(98, 0.32, "sine", 0.13, out, t);
     filteredNoise(0.14, 0.105, "bandpass", 1400, 4, out, t + 0.04);
-  } else if (name === "upgrade") {
+  } else if (synthName === "upgrade") {
     arpeggio([293.66, 369.99, 440, 587.33, 739.99], 0.052, "triangle", 0.13, out, t);
-  } else if (name === "upgradeReady") {
+  } else if (synthName === "upgradeReady") {
     arpeggio([369.99, 440, 587.33], 0.042, "triangle", 0.095, out, t);
-  } else if (name === "tspin") {
+  } else if (synthName === "tspin") {
     arpeggio([493.88, 659.25, 987.77, 1318.51], 0.034, "square", 0.16, out, t);
     tone(164.81, 0.22, "sine", 0.09, out, t);
     sweep(220, 1260, 0.22, "sawtooth", 0.105, t + 0.032, out);
     sweep(1260, 360, 0.18, "triangle", 0.052, t + 0.095, out);
     filteredNoise(0.11, 0.075, "bandpass", 1500, 4.2, out, t + 0.072);
-  } else if (name === "enemy") {
+  } else if (synthName === "enemy") {
     sweep(220, 70, 0.24, "sawtooth", 0.18, t, out);
     noise(0.09, 0.12, out, t + 0.02);
-  } else if (name === "weakness") {
+  } else if (synthName === "weakness") {
     arpeggio([783.99, 987.77, 1174.66], 0.03, "triangle", 0.12, out, t);
     sweep(520, 1480, 0.13, "square", 0.08, t + 0.02);
-  } else if (name === "shield") {
+  } else if (synthName === "shield") {
     tone(740, 0.06, "sine", 0.095, out, t);
     tone(1110, 0.045, "triangle", 0.052, out, t + 0.018);
     sweep(980, 520, 0.14, "triangle", 0.055, t + 0.02, out);
     filteredNoise(0.055, 0.035, "highpass", 2600, 1.4, out, t + 0.012);
-  } else if (name === "enemyWarn") {
+  } else if (synthName === "enemyWarn") {
     tone(330, 0.07, "triangle", 0.09, out, t);
     tone(440, 0.055, "sine", 0.052, out, t + 0.09);
     filteredNoise(0.035, 0.026, "bandpass", 1200, 3.8, out, t + 0.012);
-  } else if (name === "enemyWarnStrong") {
+  } else if (synthName === "enemyWarnStrong") {
     tone(98, 0.16, "sine", 0.1, out, t);
     sweep(520, 180, 0.2, "sawtooth", 0.082, t + 0.012, out);
     tone(660, 0.065, "triangle", 0.07, out, t + 0.08);
     filteredNoise(0.075, 0.055, "bandpass", 760, 2.5, out, t + 0.035);
-  } else if (name === "lowHp") {
+  } else if (synthName === "lowHp") {
     tone(92, 0.22, "sine", 0.1, out, t);
     tone(184, 0.075, "triangle", 0.042, out, t + 0.04);
     filteredNoise(0.08, 0.035, "lowpass", 360, 0.9, out, t + 0.01);
-  } else if (name === "wave") {
+  } else if (synthName === "wave") {
     arpeggio([196, 246.94, 293.66, 392, 493.88, 587.33], 0.058, "triangle", 0.135, out, t);
     tone(98, 0.36, "sawtooth", 0.1, out, t);
-  } else if (name === "defeat") {
+  } else if (synthName === "defeat") {
     arpeggio([220, 174.61, 146.83, 110, 73.42], 0.11, "sine", 0.145, out, t);
     noise(0.18, 0.08, out, t + 0.08);
   }
@@ -9789,7 +9915,7 @@ function purchaseMetaUpgrade(id) {
       vars: { name: def ? t(def.nameKey) : "" },
       until: performance.now() + 2200,
     };
-    playSfx("upgrade");
+    playSfx("metaUpgradeSuccess");
     return true;
   }
   state.metaUpgradeMessage = {
@@ -9797,7 +9923,7 @@ function purchaseMetaUpgrade(id) {
     vars: {},
     until: performance.now() + 1800,
   };
-  playSfx("hold");
+  playSfx("metaUpgradeFail");
   return false;
 }
 
@@ -10910,7 +11036,7 @@ window.addEventListener("keydown", (event) => {
   if (state.mode === "upgrade" && state.currentBuildOpen) {
     if (key === "Escape") {
       state.currentBuildOpen = false;
-      playSfx("hold");
+      playSfx("uiCancel");
     }
     return;
   }
@@ -10982,7 +11108,7 @@ window.addEventListener("keydown", (event) => {
     } else {
       state.settingsOpen = !state.settingsOpen;
     }
-    playSfx("hold");
+    playSfx("uiCancel");
     return;
   }
   if (isActionKey("mute", key)) {
@@ -11078,7 +11204,7 @@ canvas.addEventListener(CANVAS_POINTER_DOWN_EVENT, (event) => {
     state.pauseView = "menu";
     state.settingsOpen = false;
     state.bindingAction = null;
-    playSfx("hold");
+    playSfx("uiConfirm");
     return;
   }
 
@@ -11111,7 +11237,7 @@ canvas.addEventListener(CANVAS_POINTER_DOWN_EVENT, (event) => {
       const buildButton = getCurrentBuildButtonRect();
       if (pointInRect(p.x, p.y, buildButton.x, buildButton.y, buildButton.w, buildButton.h)) {
         state.currentBuildOpen = true;
-        playSfx("hold");
+        playSfx("uiConfirm");
         return;
       }
       const detailToggle = getUpgradeDetailToggleRect();
@@ -11135,22 +11261,22 @@ canvas.addEventListener(CANVAS_POINTER_DOWN_EVENT, (event) => {
         setGameMode("metaUpgrade");
         state.metaProgress = loadMetaProgress();
         state.metaUpgradeMessage = { key: "", vars: {}, until: 0 };
-        playSfx("hold");
+        playSfx("uiConfirm");
       }
       else if (pointInRect(p.x, p.y, buttons.guide.x, buttons.guide.y, buttons.guide.w, buttons.guide.h)) {
         setGameMode("guide");
-        playSfx("hold");
+        playSfx("uiConfirm");
       }
       else if (pointInRect(p.x, p.y, buttons.settings.x, buttons.settings.y, buttons.settings.w, buttons.settings.h)) {
         state.settingsOpen = true;
         state.settingsTab = "controls";
-        playSfx("hold");
+        playSfx("uiConfirm");
       }
       return;
     }
     if (state.mode === "guide" && pointInRect(p.x, p.y, 232, 606, 180, 40)) {
       setGameMode("start");
-      playSfx("hold");
+      playSfx("uiCancel");
       return;
     }
     if (state.mode === "paused" && pointInRect(p.x, p.y, 384, 408, 178, 44)) {
@@ -11175,12 +11301,12 @@ canvas.addEventListener(CANVAS_POINTER_DOWN_EVENT, (event) => {
         setGameMode("metaUpgrade");
         state.metaProgress = loadMetaProgress();
         state.metaUpgradeMessage = { key: "", vars: {}, until: 0 };
-        playSfx("hold");
+        playSfx("uiConfirm");
         return;
       }
       if (pointInRect(p.x, p.y, buttons.menu.x, buttons.menu.y, buttons.menu.w, buttons.menu.h)) {
         setGameMode("start");
-        playSfx("hold");
+        playSfx("uiCancel");
         return;
       }
     }
@@ -11191,7 +11317,7 @@ function handleCurrentBuildPointerDown(x, y) {
   const closeRect = getCurrentBuildCloseRect();
   if (pointInRect(x, y, closeRect.x, closeRect.y, closeRect.w, closeRect.h)) {
     state.currentBuildOpen = false;
-    playSfx("hold");
+    playSfx("uiCancel");
   }
 }
 
@@ -11204,7 +11330,7 @@ function handlePausePointerDown(x, y) {
   if (pointInRect(x, y, m.x + 56, m.y + 156, m.w - 112, 48)) {
     setGameMode("playing");
     state.pauseView = "menu";
-    playSfx("hold");
+    playSfx("uiConfirm");
     return;
   }
   if (pointInRect(x, y, m.x + 56, m.y + 216, m.w - 112, 44)) {
@@ -11214,14 +11340,14 @@ function handlePausePointerDown(x, y) {
   if (pointInRect(x, y, m.x + 56, m.y + 270, m.w - 112, 44)) {
     state.pauseView = "settings";
     state.settingsTab = "controls";
-    playSfx("hold");
+    playSfx("uiConfirm");
     return;
   }
   if (pointInRect(x, y, m.x + 56, m.y + 324, m.w - 112, 44)) {
     setGameMode("start");
     state.pauseView = "menu";
     state.settingsOpen = false;
-    playSfx("hold");
+    playSfx("uiCancel");
   }
 }
 
@@ -11231,27 +11357,27 @@ function handleSettingsPointerDown(x, y, source) {
     state.bindingAction = null;
     if (source === "start") state.settingsOpen = false;
     else state.pauseView = "menu";
-    playSfx("hold");
+    playSfx("uiCancel");
     return;
   }
   const tab = hitSettingsTab(x, y);
   if (tab) {
     state.settingsTab = tab;
     state.bindingAction = null;
-    playSfx("hold");
+    playSfx("uiConfirm");
     return;
   }
   const resetAction = hitSettingsResetButton(x, y);
   if (resetAction) {
     if (resetAction === "keybinds") resetKeybindsToDefault();
     else if (resetAction === "handling") resetHandlingToDefault();
-    playSfx("hold");
+    playSfx("uiConfirm");
     return;
   }
   const feedbackUrl = hitSettingsFeedbackLink(x, y);
   if (feedbackUrl) {
     openFeedbackLink(feedbackUrl);
-    playSfx("hold");
+    playSfx("uiConfirm");
     return;
   }
   const slider = hitSlider(x, y);

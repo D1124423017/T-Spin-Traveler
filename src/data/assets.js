@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-01-formal-upgrade-cards";
+export const ASSET_VERSION = "2026-06-02-formal-audio";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -215,26 +215,79 @@ export const enemyAttackSheets = {
 };
 
 export const musicLoopAssets = {
-  menuA: registerAudioAsset("music-loop-menu-a", "assets/audio/music_menu_loop.wav", { loop: true }),
-  menuB: registerAudioAsset("music-loop-menu-b", "assets/audio/music_menu_loop_b.wav", { loop: true }),
-  menuC: registerAudioAsset("music-loop-menu-c", "assets/audio/music_menu_loop_c.wav", { loop: true }),
-  menuD: registerAudioAsset("music-loop-menu-d", "assets/audio/music_menu_loop_d.wav", { loop: true }),
-  forestA: registerAudioAsset("music-loop-forest-a", "assets/audio/music_forest_loop.wav", { loop: true }),
-  forestB: registerAudioAsset("music-loop-forest-b", "assets/audio/music_forest_loop_b.wav", { loop: true }),
-  forestC: registerAudioAsset("music-loop-forest-c", "assets/audio/music_forest_loop_c.wav", { loop: true }),
-  forestD: registerAudioAsset("music-loop-forest-d", "assets/audio/music_forest_loop_d.wav", { loop: true }),
-  ruinsA: registerAudioAsset("music-loop-ruins-a", "assets/audio/music_ruins_loop.wav", { loop: true }),
-  ruinsB: registerAudioAsset("music-loop-ruins-b", "assets/audio/music_ruins_loop_b.wav", { loop: true }),
-  ruinsC: registerAudioAsset("music-loop-ruins-c", "assets/audio/music_ruins_loop_c.wav", { loop: true }),
-  ruinsD: registerAudioAsset("music-loop-ruins-d", "assets/audio/music_ruins_loop_d.wav", { loop: true }),
-  riftA: registerAudioAsset("music-loop-rift-a", "assets/audio/music_rift_loop.wav", { loop: true }),
-  riftB: registerAudioAsset("music-loop-rift-b", "assets/audio/music_rift_loop_b.wav", { loop: true }),
-  riftC: registerAudioAsset("music-loop-rift-c", "assets/audio/music_rift_loop_c.wav", { loop: true }),
-  riftD: registerAudioAsset("music-loop-rift-d", "assets/audio/music_rift_loop_d.wav", { loop: true }),
-  bossA: registerAudioAsset("music-loop-boss-a", "assets/audio/music_boss_loop.wav", { loop: true }),
-  bossB: registerAudioAsset("music-loop-boss-b", "assets/audio/music_boss_loop_b.wav", { loop: true }),
-  bossC: registerAudioAsset("music-loop-boss-c", "assets/audio/music_boss_loop_c.wav", { loop: true }),
-  bossD: registerAudioAsset("music-loop-boss-d", "assets/audio/music_boss_loop_d.wav", { loop: true }),
+  menuAncientRift: registerAudioAsset("bgm-menu-ancient-rift-loop", "assets/audio/bgm/bgm_menu_ancient_rift_loop.wav", { loop: true }),
+  battleForestRuins: registerAudioAsset("bgm-battle-forest-ruins-loop", "assets/audio/bgm/bgm_battle_forest_ruins_loop.wav", { loop: true }),
+  battleDeepRuins: registerAudioAsset("bgm-battle-deep-ruins-loop", "assets/audio/bgm/bgm_battle_deep_ruins_loop.wav", { loop: true }),
+  battleRiftPressure: registerAudioAsset("bgm-battle-rift-pressure-loop", "assets/audio/bgm/bgm_battle_rift_pressure_loop.wav", { loop: true }),
+  bossAncientRiftColossus: registerAudioAsset("bgm-boss-ancient-rift-colossus-loop", "assets/audio/bgm/bgm_boss_ancient_rift_colossus_loop.wav", { loop: true }),
+  upgradeRelicCards: registerAudioAsset("bgm-upgrade-relic-cards-loop", "assets/audio/bgm/bgm_upgrade_relic_cards_loop.wav", { loop: true }),
+};
+
+export const jingleAudioAssets = {
+  jingleRiftEnergySettlement: registerAudioAsset("jingle-rift-energy-settlement", "assets/audio/jingles/jingle_rift_energy_settlement.wav"),
+  jingleVictoryRelicCleansed: registerAudioAsset("jingle-victory-relic-cleansed", "assets/audio/jingles/jingle_victory_relic_cleansed.wav"),
+  jingleDefeatRiftCollapse: registerAudioAsset("jingle-defeat-rift-collapse", "assets/audio/jingles/jingle_defeat_rift_collapse.wav"),
+};
+
+export const sfxAudioAssets = {
+  sfxBlockMove01: registerAudioAsset("sfx-block-move-01", "assets/audio/sfx/sfx_block_move_01.wav"),
+  sfxBlockMove02: registerAudioAsset("sfx-block-move-02", "assets/audio/sfx/sfx_block_move_02.wav"),
+  sfxBlockMove03: registerAudioAsset("sfx-block-move-03", "assets/audio/sfx/sfx_block_move_03.wav"),
+  sfxBlockRotate01: registerAudioAsset("sfx-block-rotate-01", "assets/audio/sfx/sfx_block_rotate_01.wav"),
+  sfxBlockRotate02: registerAudioAsset("sfx-block-rotate-02", "assets/audio/sfx/sfx_block_rotate_02.wav"),
+  sfxTPieceRotateSpecial01: registerAudioAsset("sfx-t-piece-rotate-special-01", "assets/audio/sfx/sfx_t_piece_rotate_special_01.wav"),
+  sfxSoftDrop01: registerAudioAsset("sfx-soft-drop-01", "assets/audio/sfx/sfx_soft_drop_01.wav"),
+  sfxHardDrop01: registerAudioAsset("sfx-hard-drop-01", "assets/audio/sfx/sfx_hard_drop_01.wav"),
+  sfxBlockLock01: registerAudioAsset("sfx-block-lock-01", "assets/audio/sfx/sfx_block_lock_01.wav"),
+  sfxHold01: registerAudioAsset("sfx-hold-01", "assets/audio/sfx/sfx_hold_01.wav"),
+  sfxHoldUnavailable01: registerAudioAsset("sfx-hold-unavailable-01", "assets/audio/sfx/sfx_hold_unavailable_01.wav"),
+  sfxInvalidMove01: registerAudioAsset("sfx-invalid-move-01", "assets/audio/sfx/sfx_invalid_move_01.wav"),
+  sfxInvalidRotate01: registerAudioAsset("sfx-invalid-rotate-01", "assets/audio/sfx/sfx_invalid_rotate_01.wav"),
+  sfxLineClear1: registerAudioAsset("sfx-line-clear-1", "assets/audio/sfx/sfx_line_clear_1.wav"),
+  sfxLineClear2: registerAudioAsset("sfx-line-clear-2", "assets/audio/sfx/sfx_line_clear_2.wav"),
+  sfxLineClear3: registerAudioAsset("sfx-line-clear-3", "assets/audio/sfx/sfx_line_clear_3.wav"),
+  sfxLineClear4Tetris: registerAudioAsset("sfx-line-clear-4-tetris", "assets/audio/sfx/sfx_line_clear_4_tetris.wav"),
+  sfxCombo1: registerAudioAsset("sfx-combo-1", "assets/audio/sfx/sfx_combo_1.wav"),
+  sfxCombo2: registerAudioAsset("sfx-combo-2", "assets/audio/sfx/sfx_combo_2.wav"),
+  sfxCombo3Plus: registerAudioAsset("sfx-combo-3-plus", "assets/audio/sfx/sfx_combo_3_plus.wav"),
+  sfxBackToBack: registerAudioAsset("sfx-back-to-back", "assets/audio/sfx/sfx_back_to_back.wav"),
+  sfxTspinSuccess: registerAudioAsset("sfx-tspin-success", "assets/audio/sfx/sfx_tspin_success.wav"),
+  sfxSpinSuccess: registerAudioAsset("sfx-spin-success", "assets/audio/sfx/sfx_spin_success.wav"),
+  sfxPerfectClear: registerAudioAsset("sfx-perfect-clear", "assets/audio/sfx/sfx_perfect_clear.wav"),
+  sfxSpinReady01: registerAudioAsset("sfx-spin-ready-01", "assets/audio/sfx/sfx_spin_ready_01.wav"),
+  sfxSpinReady02: registerAudioAsset("sfx-spin-ready-02", "assets/audio/sfx/sfx_spin_ready_02.wav"),
+  sfxPlayerAttackLight01: registerAudioAsset("sfx-player-attack-light-01", "assets/audio/sfx/sfx_player_attack_light_01.wav"),
+  sfxPlayerAttackHeavy01: registerAudioAsset("sfx-player-attack-heavy-01", "assets/audio/sfx/sfx_player_attack_heavy_01.wav"),
+  sfxPlayerAttackArcane01: registerAudioAsset("sfx-player-attack-arcane-01", "assets/audio/sfx/sfx_player_attack_arcane_01.wav"),
+  sfxEnemyHurtLight01: registerAudioAsset("sfx-enemy-hurt-light-01", "assets/audio/sfx/sfx_enemy_hurt_light_01.wav"),
+  sfxEnemyHurtHeavy01: registerAudioAsset("sfx-enemy-hurt-heavy-01", "assets/audio/sfx/sfx_enemy_hurt_heavy_01.wav"),
+  sfxEnemyAttackWarn01: registerAudioAsset("sfx-enemy-attack-warn-01", "assets/audio/sfx/sfx_enemy_attack_warn_01.wav"),
+  sfxEnemyAttackHit01: registerAudioAsset("sfx-enemy-attack-hit-01", "assets/audio/sfx/sfx_enemy_attack_hit_01.wav"),
+  sfxPlayerHurt01: registerAudioAsset("sfx-player-hurt-01", "assets/audio/sfx/sfx_player_hurt_01.wav"),
+  sfxShieldBlock01: registerAudioAsset("sfx-shield-block-01", "assets/audio/sfx/sfx_shield_block_01.wav"),
+  sfxShieldBreak01: registerAudioAsset("sfx-shield-break-01", "assets/audio/sfx/sfx_shield_break_01.wav"),
+  sfxUpgradeReveal01: registerAudioAsset("sfx-upgrade-reveal-01", "assets/audio/sfx/sfx_upgrade_reveal_01.wav"),
+  sfxUpgradeHover01: registerAudioAsset("sfx-upgrade-hover-01", "assets/audio/sfx/sfx_upgrade_hover_01.wav"),
+  sfxUpgradeConfirm01: registerAudioAsset("sfx-upgrade-confirm-01", "assets/audio/sfx/sfx_upgrade_confirm_01.wav"),
+  sfxMetaUpgradePurchaseSuccess01: registerAudioAsset("sfx-meta-upgrade-purchase-success-01", "assets/audio/sfx/sfx_meta_upgrade_purchase_success_01.wav"),
+  sfxMetaUpgradePurchaseFail01: registerAudioAsset("sfx-meta-upgrade-purchase-fail-01", "assets/audio/sfx/sfx_meta_upgrade_purchase_fail_01.wav"),
+  sfxRiftEnergyTick01: registerAudioAsset("sfx-rift-energy-tick-01", "assets/audio/sfx/sfx_rift_energy_tick_01.wav"),
+  sfxRiftEnergyComplete01: registerAudioAsset("sfx-rift-energy-complete-01", "assets/audio/sfx/sfx_rift_energy_complete_01.wav"),
+  sfxWaveStart01: registerAudioAsset("sfx-wave-start-01", "assets/audio/sfx/sfx_wave_start_01.wav"),
+  sfxWaveVictory01: registerAudioAsset("sfx-wave-victory-01", "assets/audio/sfx/sfx_wave_victory_01.wav"),
+  sfxBossEnter01: registerAudioAsset("sfx-boss-enter-01", "assets/audio/sfx/sfx_boss_enter_01.wav"),
+  sfxBossDefeated01: registerAudioAsset("sfx-boss-defeated-01", "assets/audio/sfx/sfx_boss_defeated_01.wav"),
+  sfxGameStart01: registerAudioAsset("sfx-game-start-01", "assets/audio/sfx/sfx_game_start_01.wav"),
+  sfxGameOver01: registerAudioAsset("sfx-game-over-01", "assets/audio/sfx/sfx_game_over_01.wav"),
+  sfxUiHover01: registerAudioAsset("sfx-ui-hover-01", "assets/audio/sfx/sfx_ui_hover_01.wav"),
+  sfxUiConfirm01: registerAudioAsset("sfx-ui-confirm-01", "assets/audio/sfx/sfx_ui_confirm_01.wav"),
+  sfxUiCancel01: registerAudioAsset("sfx-ui-cancel-01", "assets/audio/sfx/sfx_ui_cancel_01.wav"),
+  sfxLoadingComplete01: registerAudioAsset("sfx-loading-complete-01", "assets/audio/sfx/sfx_loading_complete_01.wav"),
+};
+
+export const oneShotAudioAssets = {
+  ...jingleAudioAssets,
+  ...sfxAudioAssets,
 };
 
 export const BACKGROUND_STAGES = [

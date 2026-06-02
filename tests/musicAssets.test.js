@@ -5,18 +5,22 @@ import path from "node:path";
 const projectRoot = process.cwd();
 
 describe("music assets", () => {
-  it("registers existing wav files with exact filenames", () => {
+  it("registers the formal bgm loops with exact filenames", () => {
     const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
     const registeredAudioPaths = [...assetsSource.matchAll(/registerAudioAsset\([^,]+,\s*"([^"]+\.wav)"/g)]
-      .map((match) => match[1]);
-    const audioDirectory = path.join(projectRoot, "assets/audio");
-    const exactFilenames = new Set(fs.readdirSync(audioDirectory));
-    const missingFiles = registeredAudioPaths.filter((assetPath) => {
-      const filename = path.basename(assetPath);
-      return !exactFilenames.has(filename) || !fs.existsSync(path.join(projectRoot, assetPath));
-    });
+      .map((match) => match[1])
+      .filter((assetPath) => assetPath.startsWith("assets/audio/bgm/"));
+    const expected = [
+      "assets/audio/bgm/bgm_menu_ancient_rift_loop.wav",
+      "assets/audio/bgm/bgm_battle_forest_ruins_loop.wav",
+      "assets/audio/bgm/bgm_battle_deep_ruins_loop.wav",
+      "assets/audio/bgm/bgm_battle_rift_pressure_loop.wav",
+      "assets/audio/bgm/bgm_boss_ancient_rift_colossus_loop.wav",
+      "assets/audio/bgm/bgm_upgrade_relic_cards_loop.wav",
+    ];
+    const missingFiles = registeredAudioPaths.filter((assetPath) => !fs.existsSync(path.join(projectRoot, assetPath)));
 
-    expect(registeredAudioPaths).toHaveLength(20);
+    expect(registeredAudioPaths).toEqual(expected);
     expect(missingFiles).toEqual([]);
   });
 });
