@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-02-formal-audio";
+export const ASSET_VERSION = "2026-06-02-alien-rank-cards";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";

@@ -2,7 +2,7 @@ export const UPGRADE_CARD_ASSET_SIZE = Object.freeze({ w: 1024, h: 1536 });
 
 export const UPGRADE_CARD_SAFE_ZONES = Object.freeze({
   badge: Object.freeze({ x: 90, y: 70, w: 300, h: 80 }),
-  skull: Object.freeze({ x: 362, y: 110, w: 300, h: 260 }),
+  portrait: Object.freeze({ x: 120, y: 70, w: 784, h: 430 }),
   title: Object.freeze({ x: 120, y: 900, w: 784, h: 96 }),
   tags: Object.freeze({ x: 120, y: 1034, w: 784, h: 78 }),
   desc: Object.freeze({ x: 120, y: 1160, w: 784, h: 110 }),
@@ -11,7 +11,7 @@ export const UPGRADE_CARD_SAFE_ZONES = Object.freeze({
 
 export const SPECIAL_UPGRADE_CARD_SAFE_ZONES = Object.freeze({
   badge: UPGRADE_CARD_SAFE_ZONES.badge,
-  skull: UPGRADE_CARD_SAFE_ZONES.skull,
+  portrait: Object.freeze({ x: 120, y: 70, w: 784, h: 560 }),
   title: Object.freeze({ x: 120, y: 1020, w: 784, h: 76 }),
   tags: Object.freeze({ x: 120, y: 1132, w: 784, h: 70 }),
   desc: Object.freeze({ x: 120, y: 1228, w: 784, h: 72 }),
@@ -60,12 +60,12 @@ export function getUpgradeDraftLayout() {
 
 export function getUpgradeCardRect(index) {
   const panel = getUpgradeOverlayPanelRect();
-  const w = 224;
-  const h = 336;
-  const gap = 42;
+  const w = 240;
+  const h = 360;
+  const gap = 34;
   const totalW = w * 3 + gap * 2;
   const startX = panel.x + (panel.w - totalW) / 2;
-  return { x: startX + index * (w + gap), y: panel.y + 102, w, h };
+  return { x: startX + index * (w + gap), y: panel.y + 82, w, h };
 }
 
 export function getUpgradeSelectedDetailRect() {
@@ -81,22 +81,28 @@ export function getUpgradeDetailToggleRect() {
 export function getUpgradeCardContentLayout(card, variant = "default") {
   const zones = variant === "special" ? SPECIAL_UPGRADE_CARD_SAFE_ZONES : UPGRADE_CARD_SAFE_ZONES;
   const badge = scaleCardZone(card, zones.badge);
+  const portrait = scaleCardZone(card, zones.portrait);
   const title = scaleCardZone(card, zones.title);
   const tags = scaleCardZone(card, zones.tags);
   const desc = scaleCardZone(card, zones.desc);
   const trait = scaleCardZone(card, zones.trait);
   const titleText = { x: title.x, y: title.y + 7, w: title.w, lineH: 14, size: 13, maxLines: 2 };
-  const tagsText = { x: tags.x, y: tags.y + 4, w: tags.w, maxTags: 2 };
-  const descText = { x: desc.x, y: desc.y + 7, w: desc.w, lineH: 12, size: 10, maxLines: variant === "special" ? 1 : 3 };
+  const tagsText = { x: title.x, y: title.y + 8, w: title.w, maxTags: 3 };
+  const descText = { x: desc.x, y: desc.y + 2, w: desc.w, lineH: 13, size: 10, maxLines: 2 };
   const traitHint = { x: trait.x, y: trait.y, w: trait.w, h: Math.max(34, trait.h) };
+  const descLines = Math.max(1, descText.maxLines || 1);
   return {
     badge: { ...badge, h: Math.max(22, badge.h) },
+    portrait,
     title: titleText,
     tags: tagsText,
     divider: { x: desc.x, y: desc.y - 10, w: desc.w },
     desc: descText,
     trait: traitHint,
-    panels: {},
+    panels: {
+      tags: { x: title.x - 8, y: title.y - 3, w: title.w + 16, h: 28 },
+      desc: { x: desc.x - 10, y: desc.y - 5, w: desc.w + 20, h: descText.lineH * descLines + 12 },
+    },
   };
 }
 

@@ -98,21 +98,31 @@ const metaUpgradeIcons = [
 ];
 
 const upgradeTypeIcons = [
-  "assets/ui/upgrades/upgrade_icon_attack.png",
-  "assets/ui/upgrades/upgrade_icon_defense.png",
-  "assets/ui/upgrades/upgrade_icon_survival.png",
-  "assets/ui/upgrades/upgrade_icon_guard.png",
-  "assets/ui/upgrades/upgrade_icon_combo.png",
-  "assets/ui/upgrades/upgrade_icon_spin.png",
-  "assets/ui/upgrades/upgrade_icon_garbage.png",
-  "assets/ui/upgrades/upgrade_icon_rift.png",
+  "assets/ui/upgrade_cards/icons/upgrade_icon_attack.png",
+  "assets/ui/upgrade_cards/icons/upgrade_icon_defense.png",
+  "assets/ui/upgrade_cards/icons/upgrade_icon_survival.png",
+  "assets/ui/upgrade_cards/icons/upgrade_icon_guard.png",
+  "assets/ui/upgrade_cards/icons/upgrade_icon_combo.png",
+  "assets/ui/upgrade_cards/icons/upgrade_icon_spin.png",
+  "assets/ui/upgrade_cards/icons/upgrade_icon_garbage.png",
+  "assets/ui/upgrade_cards/icons/upgrade_icon_rift.png",
 ];
 
 const upgradeCardFrames = [
-  "assets/ui/relic_cards/upgrade_card_common_alien_frame.png",
-  "assets/ui/relic_cards/upgrade_card_rare_alien_frame.png",
-  "assets/ui/relic_cards/upgrade_card_relic_alien_frame.png",
-  "assets/ui/relic_cards/upgrade_card_legendary_alien_frame.png",
+  "assets/ui/upgrade_cards/frames/formal_common_frame.png",
+  "assets/ui/upgrade_cards/frames/formal_rare_frame.png",
+  "assets/ui/upgrade_cards/frames/formal_epic_frame.png",
+  "assets/ui/upgrade_cards/frames/formal_relic_frame.png",
+  "assets/ui/upgrade_cards/special/formal_angel_card.png",
+  "assets/ui/upgrade_cards/special/formal_devil_card.png",
+];
+
+const legendaryUpgradeEmblems = [
+  "assets/ui/upgrade_cards/emblems/upgrade_emblem_singularity_spin_core.png",
+  "assets/ui/upgrade_cards/emblems/upgrade_emblem_combo_constellation.png",
+  "assets/ui/upgrade_cards/emblems/upgrade_emblem_aegis_star_mirror.png",
+  "assets/ui/upgrade_cards/emblems/upgrade_emblem_garbage_alchemy_core.png",
+  "assets/ui/upgrade_cards/emblems/upgrade_emblem_perfect_rift_crown.png",
 ];
 
 const enemyBattlePortraits = [
@@ -205,6 +215,12 @@ describe("image assets", () => {
   it("keeps upgrade type icons as 512px alpha PNGs", () => {
     for (const icon of upgradeTypeIcons) {
       expect(readPngInfo(icon)).toEqual({ width: 512, height: 512, colorType: 6 });
+    }
+  });
+
+  it("keeps legendary upgrade emblems as 512px alpha PNGs", () => {
+    for (const emblem of legendaryUpgradeEmblems) {
+      expect(readPngInfo(emblem)).toEqual({ width: 512, height: 512, colorType: 6 });
     }
   });
 

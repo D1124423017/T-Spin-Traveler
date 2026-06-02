@@ -10038,7 +10038,7 @@ function drawUpgradeOverlay() {
     drawUpgradeSelectedDetail(
       selectedUpgrade,
       draftLayout.selectedDetail,
-      getRarityVisual(selectedUpgrade.rarity),
+      getUpgradeCardAccentVisual(selectedUpgrade, getRarityVisual(selectedUpgrade.rarity)),
       getUpgradeDetailMotion({
         now,
         selectedAt: motionState.selectedAt,
@@ -10075,19 +10075,19 @@ function drawUpgradeChoiceCard({
   ctx.scale(scale, scale);
   const localCard = { x: -card.w / 2, y: -card.h / 2, w: card.w, h: card.h };
   const layout = getUpgradeCardContentLayout(localCard, layoutVariant);
-  const textTheme = getUpgradeCardTextTheme(upgrade, layoutVariant, rarity);
-  drawUpgradeCardMotionAura(localCard, rarity, motion);
-  drawUpgradeCardFrame(localCard.x, localCard.y, localCard.w, localCard.h, rarity, active, specialFrame);
-  drawUpgradeCardReadabilityPanels(layout, rarity, hovered || selected);
-  drawReadableUpgradeText(() => {
-    drawLimitedWrapText(upgradeName(upgrade), layout.title.x, layout.title.y, layout.title.w, layout.title.lineH, textTheme.titleColor, layout.title.size, layout.title.maxLines || 2, "900", true);
-  }, textTheme.shadowBlur, textTheme.shadowColor, textTheme.shadowOffsetY);
+  const accent = getUpgradeCardAccentVisual(upgrade, rarity);
+  const textTheme = getUpgradeCardTextTheme(upgrade, layoutVariant, accent);
+  drawUpgradeCardMotionAura(localCard, accent, motion);
+  drawUpgradeCardFrame(localCard.x, localCard.y, localCard.w, localCard.h, accent, active, specialFrame);
+  drawUpgradeCardReadabilityPanels(layout, accent, hovered || selected, textTheme);
   drawUpgradeTagPills(getUpgradeTags(upgrade), layout.tags.x, layout.tags.y, layout.tags.w, layout.tags.maxTags || 2, 0.92, textTheme);
   drawUpgradeDivider(layout.divider.x, layout.divider.y, layout.divider.w, textTheme.dividerColor, hovered ? 0.6 : selected ? 0.52 : 0.32);
-  drawUpgradeTraitHint(upgrade, localCard, layoutVariant, textTheme);
-  drawUpgradePickHint(localCard.x + 16, localCard.y + localCard.h - 28, pickNumber, rarity);
-  if (selected) drawUpgradeSelectionHighlight(localCard, rarity);
-  drawUpgradeConfirmBurst(localCard, rarity, motion.confirmPulse || 0);
+  drawReadableUpgradeText(() => {
+    drawLimitedWrapText(upgradeShortText(upgrade), layout.desc.x, layout.desc.y, layout.desc.w, layout.desc.lineH, textTheme.descColor, layout.desc.size, layout.desc.maxLines || 2, "800");
+  }, textTheme.shadowBlur, textTheme.shadowColor, textTheme.shadowOffsetY);
+  drawUpgradePickHint(localCard.x + 16, localCard.y + localCard.h - 28, pickNumber, accent);
+  if (selected) drawUpgradeSelectionHighlight(localCard, accent);
+  drawUpgradeConfirmBurst(localCard, accent, motion.confirmPulse || 0);
   ctx.restore();
 }
 
@@ -10223,7 +10223,7 @@ function drawUpgradeCardMotionAura(card, rarity, motion = {}) {
   ctx.restore();
 }
 
-function drawUpgradeCardReadabilityPanels(layout, rarity, hovered = false) {
+function drawUpgradeCardReadabilityPanels(layout, rarity, hovered = false, theme = null) {
   if (!layout?.panels) return;
   const panels = [
     { rect: layout.panels.title, fill: hovered ? 0.7 : 0.64, stroke: hovered ? 0.24 : 0.16, radius: 8 },
@@ -10235,16 +10235,50 @@ function drawUpgradeCardReadabilityPanels(layout, rarity, hovered = false) {
   for (const panel of panels) {
     if (!panel.rect) continue;
     const { x, y, w, h } = panel.rect;
-    const fill = ctx.createLinearGradient(x, y, x, y + h);
-    fill.addColorStop(0, `rgba(2, 5, 12, ${panel.fill})`);
-    fill.addColorStop(1, `rgba(8, 12, 22, ${Math.min(0.82, panel.fill + 0.06)})`);
-    ctx.fillStyle = fill;
+    if (theme?.lightCard) {
+      const fill = ctx.createLinearGradient(x, y, x, y + h);
+      fill.addColorStop(0, `rgba(255, 251, 226, ${Math.min(0.78, panel.fill + 0.04)})`);
+      fill.addColorStop(1, `rgba(216, 200, 144, ${Math.min(0.72, panel.fill)})`);
+      ctx.fillStyle = fill;
+    } else {
+      const fill = ctx.createLinearGradient(x, y, x, y + h);
+      fill.addColorStop(0, `rgba(2, 5, 12, ${panel.fill})`);
+      fill.addColorStop(1, `rgba(8, 12, 22, ${Math.min(0.82, panel.fill + 0.06)})`);
+      ctx.fillStyle = fill;
+    }
     roundedRect(x, y, w, h, panel.radius, true, false);
-    ctx.strokeStyle = hexToRgba(rarity.border, panel.stroke);
+    ctx.strokeStyle = theme?.lightCard ? "rgba(108, 91, 39, 0.34)" : hexToRgba(rarity.border, panel.stroke);
     ctx.lineWidth = 1;
     roundedRect(x, y, w, h, panel.radius, false, true);
   }
   ctx.restore();
+}
+
+function getUpgradeCardAccentVisual(upgrade, rarity) {
+  const tags = getUpgradeTags(upgrade);
+  if (tags.includes("Devil")) {
+    return {
+      ...rarity,
+      color: "#ff5b86",
+      border: "#ff4f7a",
+      glow: "rgba(255, 54, 96, 0.62)",
+      badgeFill: "rgba(255, 54, 96, 0.22)",
+      badgeText: "#ffd6df",
+      lineWidth: Math.max(2.8, rarity.lineWidth || 2),
+    };
+  }
+  if (tags.includes("Angel")) {
+    return {
+      ...rarity,
+      color: "#dff7ff",
+      border: "#f4e6b4",
+      glow: "rgba(210, 247, 255, 0.56)",
+      badgeFill: "rgba(244, 230, 180, 0.26)",
+      badgeText: "#3b3218",
+      lineWidth: Math.max(2.6, rarity.lineWidth || 2),
+    };
+  }
+  return rarity;
 }
 
 function drawReadableUpgradeText(draw, blur = 6, shadowColor = "rgba(0, 0, 0, 0.92)", shadowOffsetY = 1) {
@@ -10371,11 +10405,13 @@ function getUpgradeCardTextTheme(upgrade, layoutVariant = "default", rarity = ge
       chipTextColor: "#302914",
       chipGlyphColor: "#4f4521",
       chipGlyphFillAlpha: 0.16,
+      descColor: "rgba(44, 36, 18, 0.86)",
     };
   }
   return {
     lightCard: false,
     titleColor: rarity.titleColor,
+    descColor: "rgba(236, 244, 255, 0.78)",
     dividerColor: rarity.color,
     shadowBlur: 7,
     shadowColor: "rgba(0, 0, 0, 0.92)",
