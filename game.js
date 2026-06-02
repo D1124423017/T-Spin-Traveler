@@ -8014,15 +8014,22 @@ function drawHoldLockedOverlay(x, y, w, h) {
   ctx.strokeStyle = "rgba(176, 199, 224, 0.22)";
   ctx.lineWidth = 1.1;
   roundedRect(x + 1, y + 1, w - 2, h - 2, 9, false, true);
+  ctx.save();
+  holdOverlayClipPath(x + 2, y + 2, w - 4, h - 4, 8);
+  ctx.clip();
   ctx.globalAlpha = 0.36;
   ctx.strokeStyle = "rgba(223, 243, 255, 0.34)";
   ctx.lineWidth = 1;
-  for (let sx = x - h; sx < x + w; sx += 12) {
+  const inset = 6;
+  const lineTop = y + inset;
+  const lineBottom = y + h - inset;
+  for (let sx = x - h + inset; sx < x + w - inset; sx += 12) {
     ctx.beginPath();
-    ctx.moveTo(sx, y + h);
-    ctx.lineTo(sx + h, y);
+    ctx.moveTo(sx, lineBottom);
+    ctx.lineTo(sx + h - inset * 2, lineTop);
     ctx.stroke();
   }
+  ctx.restore();
   ctx.globalAlpha = 0.82;
   ctx.strokeStyle = "rgba(215, 194, 255, 0.72)";
   ctx.lineWidth = 2;
@@ -8033,6 +8040,21 @@ function drawHoldLockedOverlay(x, y, w, h) {
   ctx.arc(cx, cy - 2, 7, Math.PI, 0);
   ctx.stroke();
   ctx.restore();
+}
+
+function holdOverlayClipPath(x, y, w, h, radius) {
+  const r = Math.max(0, Math.min(radius, w / 2, h / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
 }
 
 function drawOperationReadouts() {

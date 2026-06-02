@@ -19,13 +19,13 @@ BGM_SPECS = [
         "seed": 101,
         "energy": 0.24,
         "drums": 0.055,
-        "bells": 0.18,
-        "pluck": 0.22,
+        "bells": 0.12,
+        "pluck": 0.18,
         "noise": 0.04,
         "drone": 0.68,
         "choir": 0.52,
         "chords": [0, -5, 3, -2, 0, -7, -5, 0],
-        "motif": [0, None, 7, None, 10, None, 7, 3, 0, None, 5, None, 10, 12, None, 7],
+        "motif": [0, None, None, None, 7, None, None, None, 5, None, None, None, 3, None, None, None],
     },
     {
         "filename": "bgm_battle_forest_ruins_loop.wav",
@@ -36,13 +36,13 @@ BGM_SPECS = [
         "seed": 117,
         "energy": 0.48,
         "drums": 0.42,
-        "bells": 0.16,
-        "pluck": 0.52,
+        "bells": 0.11,
+        "pluck": 0.42,
         "noise": 0.06,
         "drone": 0.52,
         "choir": 0.26,
         "chords": [0, -5, -2, -7, 3, -5, 5, 0],
-        "motif": [0, 3, None, 7, 10, None, 12, 10, 7, None, 5, 7, 10, None, 7, 3],
+        "motif": [0, None, 3, None, 7, None, 5, None, 0, None, 5, None, 7, None, 3, None],
     },
     {
         "filename": "bgm_battle_deep_ruins_loop.wav",
@@ -53,13 +53,13 @@ BGM_SPECS = [
         "seed": 123,
         "energy": 0.58,
         "drums": 0.58,
-        "bells": 0.13,
-        "pluck": 0.42,
+        "bells": 0.09,
+        "pluck": 0.34,
         "noise": 0.08,
         "drone": 0.72,
         "choir": 0.36,
         "chords": [0, -7, -5, -2, -9, -5, 3, -7],
-        "motif": [0, None, 5, 7, None, 10, 12, None, 15, 12, None, 10, 7, None, 5, None],
+        "motif": [0, None, None, -5, None, 3, None, 7, 0, None, None, -7, None, 5, None, 3],
     },
     {
         "filename": "bgm_battle_rift_pressure_loop.wav",
@@ -70,13 +70,13 @@ BGM_SPECS = [
         "seed": 131,
         "energy": 0.68,
         "drums": 0.66,
-        "bells": 0.12,
-        "pluck": 0.36,
+        "bells": 0.08,
+        "pluck": 0.3,
         "noise": 0.11,
         "drone": 0.84,
         "choir": 0.4,
         "chords": [0, -1, -7, -6, -10, -5, -8, -1],
-        "motif": [0, None, 1, 7, None, 6, None, 10, 13, None, 12, 8, None, 7, 1, None],
+        "motif": [0, None, 1, None, 7, None, 6, None, 0, None, -1, None, 7, None, 1, None],
     },
     {
         "filename": "bgm_boss_ancient_rift_colossus_loop.wav",
@@ -88,12 +88,12 @@ BGM_SPECS = [
         "energy": 0.82,
         "drums": 0.86,
         "bells": 0.1,
-        "pluck": 0.24,
+        "pluck": 0.22,
         "noise": 0.1,
         "drone": 0.96,
         "choir": 0.54,
         "chords": [0, -12, -7, -10, -1, -12, -5, -7],
-        "motif": [0, None, -12, None, -7, None, -10, None, 0, -1, None, -7, -12, None, -5, None],
+        "motif": [0, None, None, -12, None, -7, None, -10, 0, None, -1, None, -7, None, -12, None],
     },
     {
         "filename": "bgm_upgrade_relic_cards_loop.wav",
@@ -104,13 +104,13 @@ BGM_SPECS = [
         "seed": 151,
         "energy": 0.2,
         "drums": 0.025,
-        "bells": 0.2,
-        "pluck": 0.18,
+        "bells": 0.14,
+        "pluck": 0.16,
         "noise": 0.035,
         "drone": 0.5,
         "choir": 0.48,
         "chords": [0, 3, -5, -2],
-        "motif": [0, None, 7, None, 12, None, 10, None, 7, None, 3, None, 5, None, None, None],
+        "motif": [0, None, None, None, 7, None, None, None, 12, None, None, None, 5, None, None, None],
     },
 ]
 
@@ -322,6 +322,49 @@ def add_soft_pluck(samples, start, freq, volume, duration=0.36):
     add_tone(samples, start + 0.008, duration * 0.58, freq * 2.0, volume * 0.08, "sine", 0.012, duration * 0.48)
 
 
+def add_echoed_pluck(samples, start, freq, volume, echoes=2):
+    add_soft_pluck(samples, start, freq, volume, 0.34)
+    for echo in range(1, echoes + 1):
+        add_soft_pluck(samples, start + echo * 0.18, freq, volume * (0.34 ** echo), 0.28)
+
+
+def add_chord_pad(samples, start, duration, root, chord, volume):
+    tones = [chord, chord + 7, chord + 12]
+    for index, degree in enumerate(tones):
+        freq = note(root / 2, degree)
+        add_tone(
+            samples,
+            start,
+            duration,
+            quantized_frequency(freq, max(duration, 0.1)),
+            volume * (1.0 - index * 0.22),
+            "sine",
+            min(0.9, duration * 0.18),
+            min(1.2, duration * 0.24),
+        )
+
+
+def add_bass_ostinato(samples, start, root, degree, volume, duration=0.42):
+    freq = note(root / 2, degree)
+    add_tone(samples, start, duration, freq, volume, "sine", 0.02, duration * 0.72)
+    add_tone(samples, start + 0.01, duration * 0.48, freq * 2, volume * 0.16, "triangle", 0.018, duration * 0.38)
+
+
+def add_frame_drum(samples, start, volume, pitch=84.0, accent=1.0):
+    add_sweep(samples, start, 0.16, pitch, max(46.0, pitch * 0.58), volume * accent, "sine", 0.005, 0.11)
+    add_noise(samples, start + 0.004, 0.05, volume * 0.12 * accent, int(start * 10000) + 43, "low", 0.003, 0.035)
+
+
+def add_soft_tick(samples, start, volume, seed):
+    add_tone(samples, start, 0.038, 520, volume * 0.28, "triangle", 0.003, 0.03)
+    add_noise(samples, start, 0.036, volume, seed, "high", 0.002, 0.028)
+
+
+def add_rift_breath(samples, start, duration, root, volume):
+    add_sweep(samples, start, duration, root * 0.34, root * 0.52, volume, "sine", duration * 0.16, duration * 0.42)
+    add_tone(samples, start, duration, quantized_frequency(root / 4, duration), volume * 0.45, "sine", duration * 0.2, duration * 0.48)
+
+
 def render_bgm(spec):
     duration = spec["duration"]
     total = int(duration * SAMPLE_RATE)
@@ -331,6 +374,13 @@ def render_bgm(spec):
     add_continuous_layer(samples, duration, root, spec)
 
     chord_span = max(1, spec["beats"] // len(spec["chords"]))
+    for chord_index, chord in enumerate(spec["chords"]):
+        start = chord_index * chord_span * beat
+        pad_duration = chord_span * beat + beat * 1.5
+        add_chord_pad(samples, start, pad_duration, root, chord, 0.026 * spec["choir"] * (0.8 + spec["energy"] * 0.35))
+        if chord_index % 2 == 0:
+            add_rift_breath(samples, start + beat * 2.5, beat * 5.0, root, 0.014 * spec["drone"] * (0.7 + spec["energy"]))
+
     for beat_index in range(spec["beats"]):
         start = beat_index * beat
         chord = spec["chords"][(beat_index // chord_span) % len(spec["chords"])]
@@ -339,25 +389,30 @@ def render_bgm(spec):
         phrase = 0.9 + 0.1 * math.sin(math.tau * beat_index / spec["beats"])
         energy = spec["energy"] * phrase
 
-        if beat_index % 4 == 0 and spec["drums"] > 0.04:
-            add_stone_pulse(samples, start, 0.095 * spec["drums"] * (0.8 + energy * 0.35), 66 + spec["energy"] * 24)
-        if spec["drums"] > 0.35 and bar_pos in (8,):
-            add_stone_pulse(samples, start + beat * 0.04, 0.062 * spec["drums"], 82)
-        if spec["drums"] > 0.5 and bar_pos in (6, 14):
-            add_noise(samples, start + beat * 0.1, beat * 0.38, 0.012 * spec["drums"], spec["seed"] + beat_index, "low", 0.01, beat * 0.3)
+        if spec["drums"] > 0.04 and bar_pos == 0:
+            add_frame_drum(samples, start, 0.105 * spec["drums"] * (0.86 + energy * 0.3), 66 + spec["energy"] * 22, 1.0)
+        if spec["drums"] > 0.3 and bar_pos == 8:
+            add_frame_drum(samples, start + beat * 0.03, 0.072 * spec["drums"], 78 + spec["energy"] * 18, 0.76)
+        if spec["drums"] > 0.48 and bar_pos in (4, 12):
+            add_soft_tick(samples, start + beat * 0.08, 0.018 * spec["drums"], spec["seed"] + beat_index)
+        if spec["drums"] > 0.64 and bar_pos in (6, 14):
+            add_frame_drum(samples, start + beat * 0.1, 0.04 * spec["drums"], 102, 0.58)
+
+        if spec["pluck"] > 0.2 and bar_pos in (0, 8):
+            bass_degree = chord if bar_pos == 0 else chord + 7
+            add_bass_ostinato(samples, start + beat * 0.04, root, bass_degree, 0.036 * spec["pluck"] * (0.8 + energy * 0.3), beat * 0.65)
 
         if motif is not None:
-            pitch = note(root, motif + chord * 0.08)
-            if bar_pos in (0, 4, 8, 12) or spec["pluck"] > 0.45:
-                add_soft_pluck(samples, start + beat * 0.04, pitch, 0.038 * spec["pluck"] * (0.85 + energy * 0.25))
-        if bar_pos in (4, 12) and spec["bells"] > 0.08:
-            chime_degree = (motif if motif is not None else 7) + 12
-            add_soft_chime(samples, start + beat * 0.22, note(root, chime_degree), 0.022 * spec["bells"], 0.5)
-        if spec["noise"] > 0.09 and bar_pos in (0, 8):
-            add_sweep(samples, start + beat * 0.2, beat * 1.45, root * 0.45, root * 0.72, 0.012 * spec["noise"], "triangle", 0.04, beat * 0.9)
+            pitch = note(root, motif + 12)
+            add_echoed_pluck(samples, start + beat * 0.06, pitch, 0.028 * spec["pluck"] * (0.82 + energy * 0.24), 2)
+        if bar_pos == 12 and spec["bells"] > 0.07:
+            chime_degree = (motif if motif is not None else 7) + 19
+            add_soft_chime(samples, start + beat * 0.18, note(root, chime_degree), 0.016 * spec["bells"], 0.58)
+        if spec["noise"] > 0.09 and bar_pos == 0:
+            add_sweep(samples, start + beat * 0.35, beat * 2.2, root * 0.36, root * 0.6, 0.008 * spec["noise"], "sine", 0.12, beat * 1.2)
 
-    make_loop_edges_safe(samples, int(0.18 * SAMPLE_RATE))
-    return finalize(samples, 0.72)
+    make_loop_edges_safe(samples, int(0.28 * SAMPLE_RATE))
+    return finalize(samples, 0.68)
 
 
 def make_loop_edges_safe(samples, fade_samples):
