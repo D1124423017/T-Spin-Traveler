@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-03-noa-canonical-upgrade-vfx";
+export const ASSET_VERSION = "2026-06-04-sprite-sheet-regeneration";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
