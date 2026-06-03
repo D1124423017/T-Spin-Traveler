@@ -11,9 +11,13 @@ export function getComboAttackStyle(combo) {
 
 export function getHeroAttackStyle(lines, spinType, perfectClear, b2bBonus, comboAttackStyle = "") {
   if (perfectClear) return "ultimate";
-  if (!perfectClear && comboAttackStyle) return comboAttackStyle;
-  if (spinType || b2bBonus > 0 || lines >= 4) return "melee";
-  if (lines > 0) return "ranged";
+  if (comboAttackStyle) return "combo";
+  if (spinType) return "tspin";
+  if (b2bBonus > 0) return "b2b";
+  if (lines >= 4) return "tetris";
+  if (lines === 3) return "tripleSlash";
+  if (lines === 2) return "doubleSlash";
+  if (lines === 1) return "slash";
   return "ranged";
 }
 

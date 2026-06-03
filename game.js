@@ -4,16 +4,18 @@ import {
   BOSS_BACKGROUND_STAGE,
   enemyAttackSheets,
   enemyBattlePortraits,
-  enemyConceptSheetA,
-  enemyConceptSheetB,
   forestBg,
   getImageAssetRecord,
-  heroCombo1Sheet,
-  heroCombo2Sheet,
-  heroCombo3Sheet,
+  heroB2BSheet,
+  heroComboSheet,
+  heroDoubleSlashSheet,
   heroIdleArt,
   heroMeleeSheetV2,
   heroRangedSheetV2,
+  heroSlashSheet,
+  heroTetrisSheet,
+  heroTripleSlashSheet,
+  heroTSpinSheet,
   heroUltimateSheet,
   isImageReady,
   metaUpgradeIcons,
@@ -298,44 +300,103 @@ const HERO_ANIMATIONS = {
     draw: { x: -336, y: -264, w: 672, h: 384 },
     noKeying: true,
   },
-  combo1: {
-    id: "combo1",
-    image: heroCombo1Sheet,
+  slash: {
+    id: "slash",
+    image: heroSlashSheet,
+    columns: 4,
+    rows: 4,
+    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    frameMs: 58,
+    timing: [70, 66, 60, 56, 52, 48, 46, 50, 58, 64, 68, 70, 72, 76, 82, 86],
+    hitFrame: 9,
+    label: "Slash",
+    draw: { x: -172, y: -252, w: 344, h: 458 },
+    noKeying: true,
+    cropInset: 0,
+  },
+  doubleSlash: {
+    id: "doubleSlash",
+    image: heroDoubleSlashSheet,
+    columns: 4,
+    rows: 4,
+    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    frameMs: 56,
+    timing: [68, 64, 58, 54, 50, 48, 50, 58, 56, 52, 48, 54, 64, 72, 80, 86],
+    hitFrame: 11,
+    label: "Double Slash",
+    draw: { x: -172, y: -252, w: 344, h: 458 },
+    noKeying: true,
+    cropInset: 0,
+  },
+  tripleSlash: {
+    id: "tripleSlash",
+    image: heroTripleSlashSheet,
+    columns: 4,
+    rows: 4,
+    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    frameMs: 54,
+    timing: [66, 62, 56, 52, 48, 46, 48, 54, 50, 48, 46, 52, 62, 70, 78, 84],
+    hitFrame: 12,
+    label: "Triple Slash",
+    draw: { x: -172, y: -252, w: 344, h: 458 },
+    noKeying: true,
+    cropInset: 0,
+  },
+  tetris: {
+    id: "tetris",
+    image: heroTetrisSheet,
     columns: 4,
     rows: 4,
     frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     frameMs: 64,
-    timing: [74, 70, 66, 60, 54, 50, 48, 58, 74, 70, 64, 64, 70, 76, 82, 86],
-    hitFrame: 7,
-    label: "Combo Blade I",
-    draw: { x: -160, y: -232, w: 320, h: 448 },
+    timing: [74, 70, 66, 62, 58, 54, 50, 54, 62, 70, 76, 82, 82, 84, 88, 92],
+    hitFrame: 12,
+    label: "TETRIS",
+    draw: { x: -176, y: -258, w: 352, h: 468 },
     noKeying: true,
+    cropInset: 0,
   },
-  combo2: {
-    id: "combo2",
-    image: heroCombo2Sheet,
+  tspin: {
+    id: "tspin",
+    image: heroTSpinSheet,
     columns: 4,
     rows: 4,
     frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 62,
-    timing: [72, 68, 64, 58, 52, 48, 46, 56, 70, 68, 62, 62, 68, 74, 80, 84],
-    hitFrame: 7,
-    label: "Combo Blade II",
-    draw: { x: -160, y: -232, w: 320, h: 448 },
+    frameMs: 58,
+    timing: [68, 64, 60, 56, 52, 48, 48, 54, 58, 62, 66, 72, 76, 80, 84, 88],
+    hitFrame: 10,
+    label: "T-SPIN",
+    draw: { x: -172, y: -252, w: 344, h: 458 },
     noKeying: true,
+    cropInset: 0,
   },
-  combo3: {
-    id: "combo3",
-    image: heroCombo3Sheet,
+  combo: {
+    id: "combo",
+    image: heroComboSheet,
+    columns: 4,
+    rows: 4,
+    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    frameMs: 54,
+    timing: [64, 60, 56, 52, 48, 46, 48, 52, 50, 48, 48, 54, 62, 70, 78, 84],
+    hitFrame: 12,
+    label: "COMBO",
+    draw: { x: -172, y: -252, w: 344, h: 458 },
+    noKeying: true,
+    cropInset: 0,
+  },
+  b2b: {
+    id: "b2b",
+    image: heroB2BSheet,
     columns: 4,
     rows: 4,
     frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     frameMs: 60,
-    timing: [70, 66, 62, 56, 50, 46, 44, 52, 68, 66, 60, 60, 66, 72, 78, 82],
-    hitFrame: 8,
-    label: "Combo Blade III",
-    draw: { x: -160, y: -232, w: 320, h: 448 },
+    timing: [70, 66, 62, 58, 54, 50, 48, 52, 60, 66, 72, 78, 80, 82, 86, 90],
+    hitFrame: 11,
+    label: "B2B",
+    draw: { x: -174, y: -256, w: 348, h: 462 },
     noKeying: true,
+    cropInset: 0,
   },
   ultimate: {
     id: "ultimate",
@@ -3871,8 +3932,7 @@ function pushCombatPopup(lines, pieceType, spinType, meta = {}) {
     lines >= 4 ? "tetris" :
     "lineClear";
   const popupBase = {
-    x: BOARD_X + COLS * TILE + 86,
-    y: BOARD_Y + 336,
+    ...getCombatPopupAnchor(type),
     life: 980,
     maxLife: 980,
     seed: Math.random() * 1000,
@@ -3885,8 +3945,7 @@ function pushCombatPopup(lines, pieceType, spinType, meta = {}) {
       ...popupBase,
       text: title,
       subText: damageText,
-      x: BOARD_X + COLS * TILE + 52,
-      y: BOARD_Y + 210,
+      ...getCombatPopupAnchor("perfect"),
       color: "#fff0a6",
       accent: "#8ff7ff",
       scale: 1.18,
@@ -3963,14 +4022,31 @@ function getHitPopupAccent(type) {
   }[type] || "#8ff7ff";
 }
 
+function getCombatPopupAnchor(type) {
+  const x = BOARD_X - 104;
+  const baseY = BOARD_Y + 404;
+  return {
+    x,
+    y: baseY + ({
+      perfect: -120,
+      tspin: -56,
+      spin: -48,
+      b2b: -34,
+      combo: -18,
+      tetris: -8,
+      lineClear: 0,
+    }[type] || 0),
+  };
+}
+
 function getHitPopupScale(type, combo = 0) {
   if (type === "perfect") return 1.18;
   if (type === "tspin") return 1.06;
-  if (type === "spin") return 0.96;
-  if (type === "b2b") return 0.98;
-  if (type === "combo") return 0.88 + Math.min(0.2, combo * 0.026);
-  if (type === "tetris") return 0.9;
-  return 0.72;
+  if (type === "spin") return 1;
+  if (type === "b2b") return 1;
+  if (type === "combo") return 0.98 + Math.min(0.2, combo * 0.026);
+  if (type === "tetris") return 1.02;
+  return 0.92;
 }
 
 function getHitPopupLife(type) {
@@ -3987,11 +4063,11 @@ function getHitPopupLife(type) {
 
 function getLineClearPopupText(lines) {
   return {
-    1: "Single",
-    2: "Double",
-    3: "Triple",
-    4: "Tetris",
-  }[lines] || `${lines} Lines`;
+    1: t("hitSingle"),
+    2: t("hitDouble"),
+    3: t("hitTriple"),
+    4: t("hitTetris"),
+  }[lines] || fmt("line.generic", { lines });
 }
 
 function getOperationTitle(lines, pieceType, spinType, perfect) {
@@ -6415,13 +6491,12 @@ function drawHeroIdleBase(context = "battle") {
     }
   }
   if (context !== "menu" && isImageReady(noaBattleIdleArt)) {
-    drawImageContain(noaBattleIdleArt, -138, -224, 276, 414);
+    drawImageContain(noaBattleIdleArt, -150, -280, 300, 450);
     return;
   } else if (isImageReady(rosterArt)) {
     drawRosterSprite("noa", -118, -214, 236, 402);
   } else if (isImageReady(heroIdleArt)) {
-    // Concept sheet fallback: crop the clearest full-body pose from the lower stance strip.
-    drawKeyedImageCropContain(heroIdleArt, 820, 1198, 178, 312, -114, -206, 228, 390, "idle-concept");
+    drawImageContain(heroIdleArt, -150, -280, 300, 450);
   } else if (isImageReady(HERO_ANIMATIONS.melee.image)) {
     drawSpriteSheetFrame(HERO_ANIMATIONS.melee, 0, -132, -222, 264, 410);
   } else {
@@ -6469,7 +6544,7 @@ function drawHeroLevelUpEffect() {
 }
 
 function drawFallbackHeroAttackAnimation(kind, progress, frameIndex) {
-  const meleeLike = kind === "melee" || kind === "ultimate" || kind.startsWith("combo");
+  const meleeLike = isHeroMeleeAttackStyle(kind);
   const strike = Math.sin(progress * Math.PI);
   ctx.save();
   ctx.translate(meleeLike ? strike * 8 : -strike * 3, 0);
@@ -6605,7 +6680,8 @@ function drawSpriteAnimationFrame(config, elapsed, x, y, w, h) {
 
 function drawSpriteSheetFrame(config, frame, x, y, w, h, alpha = 1) {
   const img = config.image;
-  const rect = insetSpriteFrameRect(getSpriteFrameRect(config, frame), img, SPRITE_FRAME_CROP_INSET);
+  const cropInset = config.cropInset ?? SPRITE_FRAME_CROP_INSET;
+  const rect = insetSpriteFrameRect(getSpriteFrameRect(config, frame), img, cropInset);
   const keyed = getKeyedSpriteFrame(config, frame, rect);
   ctx.save();
   ctx.globalAlpha *= alpha;
@@ -6849,6 +6925,7 @@ function drawNoaAttackPose(attack) {
   const special = attack.special || "clear";
   const color =
     special === "perfect" ? "#8ff7ff" :
+    special === "combo" ? "#ffbe5f" :
     special === "spin" ? "#caa2ff" :
     special === "b2b" || special === "tetris" ? "#ffbe5f" :
     "#9fb4ff";
@@ -7117,10 +7194,7 @@ function drawBossPhaseBar(x, y) {
 
 function drawEnemyConceptArt(enemy, hit) {
   const battlePortrait = enemyBattlePortraits[enemy.battleArt || enemy.id];
-  const hasBattlePortrait = isImageReady(battlePortrait);
-  const sheet = enemy.artSheet === "enemy02" ? enemyConceptSheetB : enemyConceptSheetA;
-  if (!hasBattlePortrait && (!isImageReady(sheet) || !enemy.artRect)) return false;
-  const rect = enemy.artRect;
+  if (!isImageReady(battlePortrait)) return false;
   const draw = alignDrawBoxToBaseline(enemy.artDraw || { x: -130, y: -150, w: 260, h: 240 }, CHARACTER_BASELINES.enemy.localY);
   ctx.save();
   ctx.shadowColor = hexToRgba(enemy.color, hit ? 0.82 : 0.56);
@@ -7130,11 +7204,7 @@ function drawEnemyConceptArt(enemy, hit) {
     ctx.globalCompositeOperation = "lighter";
     ctx.globalAlpha = 0.88;
   }
-  if (hasBattlePortrait) {
-    drawImageContain(battlePortrait, draw.x, draw.y, draw.w, draw.h);
-  } else {
-    drawKeyedImageCropContain(sheet, rect.x, rect.y, rect.w, rect.h, draw.x, draw.y, draw.w, draw.h, enemy.artKey || enemy.id);
-  }
+  drawImageContain(battlePortrait, draw.x, draw.y, draw.w, draw.h);
   ctx.restore();
   return true;
 }
@@ -7168,48 +7238,8 @@ function drawEnemyAttackAnimationFrame(enemy, hit) {
     ctx.restore();
     return true;
   }
-
-  const sheet = config.sheet === "enemy02" ? enemyConceptSheetB : enemyConceptSheetA;
-  if (!isImageReady(sheet)) {
-    ctx.restore();
-    return false;
-  }
-  const frameInfo = getAnimationFrameInfo(config, elapsed);
-  const frameIndex = frameInfo.frameIndex;
-  const local = frameInfo.local;
-  const rect = config.frames[frameIndex];
-  const nextFrameIndex = Math.min(config.frames.length - 1, frameIndex + 1);
-  const nextRect = config.frames[nextFrameIndex];
-  drawKeyedImageCropContain(
-    sheet,
-    rect.x,
-    rect.y,
-    rect.w,
-    rect.h,
-    draw.x,
-    draw.y,
-    draw.w,
-    draw.h,
-    `${enemy.artKey || enemy.id}-attack-${frameIndex}`
-  );
-  const blend = config.blendFrames === true ? clamp((local - 0.68) / 0.32, 0, 1) : 0;
-  if (blend > 0 && nextFrameIndex !== frameIndex) {
-    drawKeyedImageCropContain(
-      sheet,
-      nextRect.x,
-      nextRect.y,
-      nextRect.w,
-      nextRect.h,
-      draw.x,
-      draw.y,
-      draw.w,
-      draw.h,
-      `${enemy.artKey || enemy.id}-attack-${nextFrameIndex}`,
-      blend * 0.36
-    );
-  }
   ctx.restore();
-  return true;
+  return false;
 }
 
 function drawEnemySilhouette(enemy, hit) {
@@ -8216,7 +8246,7 @@ function drawPlayerAttack(attack, x, y, t) {
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   const special = attack.special || (attack.spin ? "spin" : "clear");
-  const melee = attack.heroStyle === "melee" || attack.heroStyle === "ultimate" || String(attack.heroStyle || "").startsWith("combo");
+  const melee = isHeroMeleeAttackStyle(attack.heroStyle);
   const glow =
     special === "perfect" ? "#8ff7ff" :
     special === "combo" ? "#ffbe5f" :
@@ -8711,40 +8741,40 @@ function drawCombatPopup(popup) {
   const accent = popup.accent || "#8ff7ff";
   const perfect = popup.type === "perfect";
   const big = popup.type === "tspin" || popup.type === "perfect";
-  const titleSize = perfect ? 36 : big ? 34 : popup.type === "b2b" ? 28 : 24;
-  const subSize = perfect ? 17 : 20;
+  const titleSize = perfect ? 36 : big ? 34 : popup.type === "b2b" ? 31 : 30;
+  const subSize = perfect ? 17 : 22;
 
   ctx.save();
-  ctx.globalAlpha = alpha;
+  ctx.globalAlpha = alpha * (perfect ? 0.88 : 0.78);
   ctx.translate(x, y);
   ctx.rotate(perfect ? 0 : -0.08);
   ctx.scale(scale, scale);
-  ctx.globalCompositeOperation = "lighter";
+  ctx.globalCompositeOperation = "source-over";
 
   drawCombatPopupGlyphs(popup, progress, primary, accent);
   drawCombatPopupTrail(popup, primary, accent, progress);
 
   ctx.shadowColor = primary;
-  ctx.shadowBlur = perfect ? 28 : big ? 24 : 16;
-  ctx.lineWidth = perfect ? 5 : big ? 4 : 3;
-  ctx.strokeStyle = hexToRgba(accent, 0.68);
+  ctx.shadowBlur = perfect ? 18 : big ? 15 : 10;
+  ctx.lineWidth = perfect ? 4 : big ? 3 : 2.4;
+  ctx.strokeStyle = hexToRgba(accent, perfect ? 0.46 : 0.34);
   ctx.font = canvasFont("900", titleSize, popup.text, true);
   ctx.strokeText(popup.text, 0, 0);
 
   const gradient = ctx.createLinearGradient(0, -titleSize, 220, 8);
-  gradient.addColorStop(0, "#ffffff");
-  gradient.addColorStop(0.5, primary);
-  gradient.addColorStop(1, accent);
+  gradient.addColorStop(0, perfect ? "rgba(255, 248, 214, 0.94)" : "rgba(239, 246, 255, 0.9)");
+  gradient.addColorStop(0.55, hexToRgba(primary, 0.9));
+  gradient.addColorStop(1, hexToRgba(accent, 0.72));
   ctx.fillStyle = gradient;
   ctx.fillText(popup.text, 0, 0);
 
   if (popup.subText) {
-    ctx.shadowBlur = 16;
+    ctx.shadowBlur = 8;
     ctx.font = canvasFont("900", subSize, popup.subText, true);
-    ctx.strokeStyle = "rgba(10, 8, 24, 0.64)";
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(10, 8, 24, 0.72)";
+    ctx.lineWidth = 2.2;
     ctx.strokeText(popup.subText, 4, subSize + 14);
-    ctx.fillStyle = popup.type === "b2b" ? "#fff0a6" : "#f5d6ff";
+    ctx.fillStyle = popup.type === "b2b" ? "rgba(255, 240, 166, 0.82)" : "rgba(235, 224, 255, 0.82)";
     ctx.fillText(popup.subText, 4, subSize + 14);
   }
   ctx.restore();
@@ -8754,8 +8784,8 @@ function drawCombatPopupTrail(popup, primary, accent, progress) {
   const lineCount = popup.type === "perfect" ? 5 : popup.type === "lineClear" ? 2 : 4;
   for (let i = 0; i < lineCount; i += 1) {
     const offset = i * 12;
-    ctx.strokeStyle = hexToRgba(i % 2 ? accent : primary, 0.42 * (1 - progress));
-    ctx.lineWidth = popup.type === "perfect" ? 2.4 : 1.8;
+    ctx.strokeStyle = hexToRgba(i % 2 ? accent : primary, (popup.type === "perfect" ? 0.28 : 0.18) * (1 - progress));
+    ctx.lineWidth = popup.type === "perfect" ? 1.9 : 1.35;
     ctx.beginPath();
     ctx.moveTo(-72 - offset, 10 + i * 8);
     ctx.quadraticCurveTo(-30 - offset * 0.4, -8 - i * 4, 142 + offset * 0.2, -28 + i * 10);
@@ -8776,9 +8806,9 @@ function drawCombatPopupGlyphs(popup, progress, primary, accent) {
     ctx.save();
     ctx.translate(sx, sy);
     ctx.rotate(angle);
-    ctx.fillStyle = i % 3 === 0 ? accent : primary;
+    ctx.fillStyle = hexToRgba(i % 3 === 0 ? accent : primary, popup.type === "perfect" ? 0.72 : 0.48);
     ctx.shadowColor = ctx.fillStyle;
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = popup.type === "perfect" ? 8 : 5;
     ctx.beginPath();
     ctx.moveTo(0, -size);
     ctx.lineTo(size, 0);
@@ -8795,16 +8825,16 @@ function drawSpinPopupSigil(progress, primary, accent) {
   ctx.save();
   ctx.translate(88, -30);
   ctx.rotate(rotation);
-  ctx.strokeStyle = hexToRgba(accent, 0.46 * (1 - progress * 0.35));
-  ctx.lineWidth = 2.4;
+  ctx.strokeStyle = hexToRgba(accent, 0.24 * (1 - progress * 0.35));
+  ctx.lineWidth = 1.8;
   ctx.beginPath();
   ctx.arc(0, 0, 32, -0.85, Math.PI * 1.45);
   ctx.stroke();
   for (let i = 0; i < 4; i += 1) {
     const a = i * Math.PI * 0.5;
-    ctx.fillStyle = i % 2 ? accent : primary;
+    ctx.fillStyle = hexToRgba(i % 2 ? accent : primary, 0.56);
     ctx.shadowColor = ctx.fillStyle;
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 5;
     ctx.fillRect(Math.cos(a) * 32 - 4, Math.sin(a) * 32 - 4, 8, 8);
   }
   ctx.restore();
@@ -9948,6 +9978,20 @@ function purchaseMetaUpgrade(id) {
   };
   playSfx("metaUpgradeFail");
   return false;
+}
+
+function isHeroMeleeAttackStyle(style) {
+  return [
+    "melee",
+    "ultimate",
+    "slash",
+    "doubleSlash",
+    "tripleSlash",
+    "tetris",
+    "tspin",
+    "combo",
+    "b2b",
+  ].includes(String(style || ""));
 }
 
 function drawSpecialBondProgressSummary(x, y) {

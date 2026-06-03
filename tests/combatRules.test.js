@@ -27,9 +27,13 @@ describe("combat rule helpers", () => {
     expect(getComboAttackStyle(2)).toBe("combo1");
     expect(getComboAttackStyle(4)).toBe("combo3");
     expect(getHeroAttackStyle(0, null, true, 0, "")).toBe("ultimate");
-    expect(getHeroAttackStyle(1, null, false, 0, "combo2")).toBe("combo2");
-    expect(getHeroAttackStyle(4, null, false, 0, "")).toBe("melee");
-    expect(getHeroAttackStyle(1, null, false, 0, "")).toBe("ranged");
+    expect(getHeroAttackStyle(1, null, false, 0, "combo2")).toBe("combo");
+    expect(getHeroAttackStyle(1, "full", false, 0, "")).toBe("tspin");
+    expect(getHeroAttackStyle(4, null, false, 1, "")).toBe("b2b");
+    expect(getHeroAttackStyle(4, null, false, 0, "")).toBe("tetris");
+    expect(getHeroAttackStyle(3, null, false, 0, "")).toBe("tripleSlash");
+    expect(getHeroAttackStyle(2, null, false, 0, "")).toBe("doubleSlash");
+    expect(getHeroAttackStyle(1, null, false, 0, "")).toBe("slash");
   });
 
   it("formats rotation bonuses without global state", () => {

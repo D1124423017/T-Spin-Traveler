@@ -28,6 +28,13 @@ const runtimeAnimationSheets = [
   { path: "assets/images/clean/hero_combo_02_16_spritesheet_alpha.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/hero_combo_03_16_spritesheet_alpha.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/hero_ultimate_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/hero_attack_slash_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/hero_attack_double_slash_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/hero_attack_triple_slash_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/hero_attack_tetris_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/hero_attack_tspin_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/hero_attack_combo_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/hero_attack_b2b_16_spritesheet_alpha.png", columns: 4, rows: 4 },
   { path: "assets/effects/noa_level_up_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/noa_menu_idle_cube_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/noa_menu_idle_meditate_16.png", columns: 4, rows: 4 },
@@ -82,12 +89,31 @@ const legacyAnimationNames = [
   "enemy_attack_wisp_moth_16.png",
   "enemy_attack_ruin_sentinel_16.png",
   "enemy_attack_king_16.png",
+  "Enemy01_alpha.png",
+  "Enemy02_alpha.png",
+  "noa_battle_idle.png",
+  "noa_feedback_bow.png",
+];
+
+const heroPresentationAssets = [
+  { path: "assets/images/clean/ET_Character_fullbody_alpha.png", width: 1024, height: 1536 },
+  { path: "assets/images/clean/noa_feedback_thanks_alpha.png", width: 1024, height: 1536 },
 ];
 
 const heroCombatSheets = [
   "assets/images/clean/hero_melee_combat_16_spritesheet_alpha.png",
   "assets/images/clean/hero_ranged_combat_16_spritesheet_alpha.png",
   "assets/images/clean/hero_ultimate_16_spritesheet_alpha.png",
+];
+
+const heroClearAttackSheets = [
+  "assets/images/clean/hero_attack_slash_16_spritesheet_alpha.png",
+  "assets/images/clean/hero_attack_double_slash_16_spritesheet_alpha.png",
+  "assets/images/clean/hero_attack_triple_slash_16_spritesheet_alpha.png",
+  "assets/images/clean/hero_attack_tetris_16_spritesheet_alpha.png",
+  "assets/images/clean/hero_attack_tspin_16_spritesheet_alpha.png",
+  "assets/images/clean/hero_attack_combo_16_spritesheet_alpha.png",
+  "assets/images/clean/hero_attack_b2b_16_spritesheet_alpha.png",
 ];
 
 const metaUpgradeIcons = [
@@ -179,6 +205,12 @@ describe("image assets", () => {
     }
   });
 
+  it("uses 384 x 512 cells for generated hero clear attack sheets", () => {
+    for (const sheet of heroClearAttackSheets) {
+      expect(readPngInfo(sheet)).toEqual({ width: 1536, height: 2048, colorType: 6 });
+    }
+  });
+
   it("does not keep legacy animation sheets in the clean asset folder", () => {
     const cleanDir = path.join(projectRoot, "assets/images/clean");
     const existing = new Set(fs.readdirSync(cleanDir));
@@ -209,6 +241,14 @@ describe("image assets", () => {
   it("keeps generated Rift Energy and meta upgrade icons as 512px alpha PNGs", () => {
     for (const icon of metaUpgradeIcons) {
       expect(readPngInfo(icon)).toEqual({ width: 512, height: 512, colorType: 6 });
+    }
+  });
+
+  it("keeps canonical NOA presentation art as alpha PNGs", () => {
+    const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
+    for (const asset of heroPresentationAssets) {
+      expect(assetsSource).toContain(asset.path);
+      expect(readPngInfo(asset.path)).toEqual({ width: asset.width, height: asset.height, colorType: 6 });
     }
   });
 

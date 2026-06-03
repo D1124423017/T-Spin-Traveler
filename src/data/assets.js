@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-03-line-clear-feedback";
+export const ASSET_VERSION = "2026-06-03-noa-canonical-upgrade-vfx";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -127,10 +127,10 @@ export const stageMayaEclipseTempleRiftBg = registerImageAsset("stage-maya-eclip
 export const stageAtlantisSunkenCrystalTempleRiftBg = registerImageAsset("stage-atlantis-sunken-crystal-temple-rift", "assets/backgrounds/atlantis_sunken_crystal_temple_rift_bg.png");
 export const slimeArt = registerImageAsset("fallback-enemy-battle-portrait", "assets/enemies/battle/enemy_scarab_scout_battle.png");
 export const rosterArt = registerImageAsset("character-roster", "assets/character-roster-v4-alpha.png");
-export const heroIdleArt = registerImageAsset("hero-idle-concept", "assets/images/clean/ET_Character_alpha.png");
+export const heroIdleArt = registerImageAsset("hero-idle-canonical", "assets/images/clean/ET_Character_fullbody_alpha.png");
 export const noaMenuShowcaseArt = registerImageAsset("noa-menu-showcase", "assets/images/clean/noa_menu_showcase.png");
-export const noaBattleIdleArt = registerImageAsset("noa-battle-idle", "assets/images/clean/noa_battle_idle.png");
-export const noaFeedbackBowArt = registerImageAsset("noa-feedback-bow", "assets/images/clean/noa_feedback_bow.png");
+export const noaBattleIdleArt = registerImageAsset("noa-battle-idle-canonical", "assets/images/clean/ET_Character_fullbody_alpha.png");
+export const noaFeedbackBowArt = registerImageAsset("noa-feedback-thanks-canonical", "assets/images/clean/noa_feedback_thanks_alpha.png");
 export const menuIdleCubeSheet = registerImageAsset("menu-idle-cube-sheet-16", "assets/images/clean/noa_menu_idle_cube_16.png");
 export const menuIdleMeditateSheet = registerImageAsset("menu-idle-meditate-sheet-16", "assets/images/clean/noa_menu_idle_meditate_16.png");
 export const heroMeleeSheetV2 = registerImageAsset("hero-melee-sheet-16", "assets/images/clean/hero_melee_combat_16_spritesheet_alpha.png");
@@ -139,10 +139,14 @@ export const heroCombo1Sheet = registerImageAsset("hero-combo-1-sheet-16", "asse
 export const heroCombo2Sheet = registerImageAsset("hero-combo-2-sheet-16", "assets/images/clean/hero_combo_02_16_spritesheet_alpha.png");
 export const heroCombo3Sheet = registerImageAsset("hero-combo-3-sheet-16", "assets/images/clean/hero_combo_03_16_spritesheet_alpha.png");
 export const heroUltimateSheet = registerImageAsset("hero-ultimate-sheet", "assets/images/clean/hero_ultimate_16_spritesheet_alpha.png");
+export const heroSlashSheet = registerImageAsset("hero-slash-sheet-16", "assets/images/clean/hero_attack_slash_16_spritesheet_alpha.png");
+export const heroDoubleSlashSheet = registerImageAsset("hero-double-slash-sheet-16", "assets/images/clean/hero_attack_double_slash_16_spritesheet_alpha.png");
+export const heroTripleSlashSheet = registerImageAsset("hero-triple-slash-sheet-16", "assets/images/clean/hero_attack_triple_slash_16_spritesheet_alpha.png");
+export const heroTetrisSheet = registerImageAsset("hero-tetris-sheet-16", "assets/images/clean/hero_attack_tetris_16_spritesheet_alpha.png");
+export const heroTSpinSheet = registerImageAsset("hero-tspin-sheet-16", "assets/images/clean/hero_attack_tspin_16_spritesheet_alpha.png");
+export const heroComboSheet = registerImageAsset("hero-combo-sheet-16", "assets/images/clean/hero_attack_combo_16_spritesheet_alpha.png");
+export const heroB2BSheet = registerImageAsset("hero-b2b-sheet-16", "assets/images/clean/hero_attack_b2b_16_spritesheet_alpha.png");
 export const noaLevelUpSheet = registerImageAsset("noa-level-up-sheet-16", "assets/effects/noa_level_up_16.png");
-export const enemyConceptSheetA = registerImageAsset("enemy-concept-sheet-a", "assets/images/clean/Enemy01_alpha.png");
-export const enemyConceptSheetB = registerImageAsset("enemy-concept-sheet-b", "assets/images/clean/Enemy02_alpha.png");
-
 export const enemyBattlePortraits = {
   egyptScarabScout: registerImageAsset("enemy-battle-egypt-scarab-scout-left", "assets/enemies/battle/enemy_scarab_scout_battle.png"),
   sandTombMummyPriest: registerImageAsset("enemy-battle-sand-tomb-mummy-priest-left", "assets/enemies/battle/enemy_sand_tomb_mummy_priest_battle.png"),
