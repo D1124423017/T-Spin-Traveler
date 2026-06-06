@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
+import { SPRITE_SHEET_CATALOG } from "../src/debug/spriteSheetCatalog.js";
 
 const projectRoot = process.cwd();
 
@@ -22,19 +23,16 @@ function readPngInfo(relativePath) {
 }
 
 const runtimeAnimationSheets = [
-  { path: "assets/images/clean/hero_melee_combat_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_ranged_combat_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_combo_01_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_combo_02_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_combo_03_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_ultimate_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_attack_slash_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_attack_double_slash_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_attack_triple_slash_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_attack_tetris_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_attack_tspin_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_attack_combo_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_attack_b2b_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/hero_line_clear_slash_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/hero_attack_combo_01_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/hero_attack_combo_02_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/hero_attack_combo_03_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/hero_tetris_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/hero_tspin_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/hero_b2b_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/hero_ultimate_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/effects/hero_sword_wave_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/effects/hero_impact_burst_16_spritesheet_alpha.png", columns: 4, rows: 4 },
   { path: "assets/effects/noa_level_up_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/noa_menu_idle_cube_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/noa_menu_idle_meditate_16.png", columns: 4, rows: 4 },
@@ -93,6 +91,19 @@ const legacyAnimationNames = [
   "Enemy02_alpha.png",
   "noa_battle_idle.png",
   "noa_feedback_bow.png",
+  "hero_melee_combat_16_spritesheet_alpha.png",
+  "hero_ranged_combat_16_spritesheet_alpha.png",
+  "hero_combo_01_16_spritesheet_alpha.png",
+  "hero_combo_02_16_spritesheet_alpha.png",
+  "hero_combo_03_16_spritesheet_alpha.png",
+  "hero_ultimate_16_spritesheet_alpha.png",
+  "hero_attack_slash_16_spritesheet_alpha.png",
+  "hero_attack_double_slash_16_spritesheet_alpha.png",
+  "hero_attack_triple_slash_16_spritesheet_alpha.png",
+  "hero_attack_tetris_16_spritesheet_alpha.png",
+  "hero_attack_tspin_16_spritesheet_alpha.png",
+  "hero_attack_combo_16_spritesheet_alpha.png",
+  "hero_attack_b2b_16_spritesheet_alpha.png",
 ];
 
 const heroPresentationAssets = [
@@ -100,20 +111,33 @@ const heroPresentationAssets = [
   { path: "assets/images/clean/noa_feedback_thanks_alpha.png", width: 1024, height: 1536 },
 ];
 
-const heroCombatSheets = [
-  "assets/images/clean/hero_melee_combat_16_spritesheet_alpha.png",
-  "assets/images/clean/hero_ranged_combat_16_spritesheet_alpha.png",
-  "assets/images/clean/hero_ultimate_16_spritesheet_alpha.png",
+const heroAttackVfxSheets = [
+  "assets/images/clean/hero_line_clear_slash_16_spritesheet_alpha.png",
+  "assets/images/clean/hero_attack_combo_01_16_spritesheet_alpha.png",
+  "assets/images/clean/hero_attack_combo_02_16_spritesheet_alpha.png",
+  "assets/images/clean/hero_attack_combo_03_16_spritesheet_alpha.png",
+  "assets/images/clean/hero_tetris_attack_16_spritesheet_alpha.png",
+  "assets/images/clean/hero_tspin_attack_16_spritesheet_alpha.png",
+  "assets/images/clean/hero_b2b_attack_16_spritesheet_alpha.png",
+  "assets/images/clean/hero_ultimate_attack_16_spritesheet_alpha.png",
+  "assets/effects/hero_sword_wave_16_spritesheet_alpha.png",
+  "assets/effects/hero_impact_burst_16_spritesheet_alpha.png",
 ];
 
-const heroClearAttackSheets = [
-  "assets/images/clean/hero_attack_slash_16_spritesheet_alpha.png",
-  "assets/images/clean/hero_attack_double_slash_16_spritesheet_alpha.png",
-  "assets/images/clean/hero_attack_triple_slash_16_spritesheet_alpha.png",
-  "assets/images/clean/hero_attack_tetris_16_spritesheet_alpha.png",
-  "assets/images/clean/hero_attack_tspin_16_spritesheet_alpha.png",
-  "assets/images/clean/hero_attack_combo_16_spritesheet_alpha.png",
-  "assets/images/clean/hero_attack_b2b_16_spritesheet_alpha.png",
+const formalHeroCatalogIds = [
+  "hero-line-clear-slash-sheet-16",
+  "hero-combo-1-sheet-16",
+  "hero-combo-2-sheet-16",
+  "hero-combo-3-sheet-16",
+  "hero-tetris-sheet-16",
+  "hero-tspin-sheet-16",
+  "hero-b2b-sheet-16",
+  "hero-ultimate-sheet-16",
+];
+
+const formalPlayerVfxCatalogIds = [
+  "hero-sword-wave-sheet-16",
+  "hero-impact-burst-sheet-16",
 ];
 
 const metaUpgradeIcons = [
@@ -199,16 +223,26 @@ describe("image assets", () => {
     }
   });
 
-  it("uses the normalized hero combat frame grid", () => {
-    for (const sheet of heroCombatSheets) {
-      expect(readPngSize(sheet)).toEqual({ width: 3584, height: 2048 });
+  it("uses 512 x 768 cells for formal player attack and VFX sheets", () => {
+    for (const sheet of heroAttackVfxSheets) {
+      expect(readPngInfo(sheet)).toEqual({ width: 2048, height: 3072, colorType: 6 });
     }
   });
 
-  it("uses 384 x 512 cells for generated hero clear attack sheets", () => {
-    for (const sheet of heroClearAttackSheets) {
-      expect(readPngInfo(sheet)).toEqual({ width: 1536, height: 2048, colorType: 6 });
-    }
+  it("keeps only formal player attack sheets in the sprite-test hero catalog", () => {
+    const ids = SPRITE_SHEET_CATALOG
+      .filter((sheet) => sheet.groupKey === "spriteTestGroupHero")
+      .map((sheet) => sheet.id);
+
+    expect(ids).toEqual(formalHeroCatalogIds);
+  });
+
+  it("keeps only formal player VFX sheets under hero effect ids", () => {
+    const ids = SPRITE_SHEET_CATALOG
+      .filter((sheet) => sheet.groupKey === "spriteTestGroupEffect" && sheet.id.startsWith("hero-"))
+      .map((sheet) => sheet.id);
+
+    expect(ids).toEqual(formalPlayerVfxCatalogIds);
   });
 
   it("does not keep legacy animation sheets in the clean asset folder", () => {
@@ -219,12 +253,13 @@ describe("image assets", () => {
     expect(leftovers).toEqual([]);
   });
 
-  it("does not register legacy hero combat sheet paths", () => {
+  it("does not register superseded player attack sheet paths", () => {
     const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
     const legacyHeroSheets = [
       "hero_melee_16_spritesheet_alpha.png",
       "hero_ranged_16_spritesheet_alpha.png",
       "hero_perfect_clear_ultimate_alpha.png",
+      ...legacyAnimationNames.filter((name) => name.startsWith("hero_")),
     ];
 
     for (const sheetName of legacyHeroSheets) {

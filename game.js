@@ -6,17 +6,7 @@ import {
   enemyBattlePortraits,
   forestBg,
   getImageAssetRecord,
-  heroB2BSheet,
-  heroComboSheet,
-  heroDoubleSlashSheet,
   heroIdleArt,
-  heroMeleeSheetV2,
-  heroRangedSheetV2,
-  heroSlashSheet,
-  heroTetrisSheet,
-  heroTripleSlashSheet,
-  heroTSpinSheet,
-  heroUltimateSheet,
   isImageReady,
   metaUpgradeIcons,
   menuIdleCubeSheet,
@@ -170,6 +160,10 @@ import {
   getAnimationHitDelay,
 } from "./src/render/animationTiming.js";
 import {
+  PLAYER_ATTACK_HERO_ANIMATIONS,
+  resolvePlayerAttackVfx,
+} from "./src/render/playerAttackVfx.js";
+import {
   createHudLayout,
   getControlsResetButtonRect as getControlsResetButtonRectForLayout,
   getHandlingResetButtonRect as getHandlingResetButtonRectForLayout,
@@ -272,145 +266,7 @@ const {
 } = createTextLayout(ctx, { canvasFont, uiFontStack: UI_FONT_STACK });
 const roundedRect = (...args) => drawRoundedRect(ctx, ...args);
 
-const HERO_ANIMATIONS = {
-  // Runtime character animations are standardized to 16 frames.
-  melee: {
-    id: "melee",
-    image: heroMeleeSheetV2,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 62,
-    timing: [82, 72, 70, 64, 58, 52, 48, 48, 58, 82, 72, 66, 70, 78, 86, 90],
-    hitFrame: 8,
-    label: "Tetr Blade",
-    draw: { x: -336, y: -264, w: 672, h: 384 },
-    noKeying: true,
-  },
-  ranged: {
-    id: "ranged",
-    image: heroRangedSheetV2,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 56,
-    timing: [72, 68, 64, 60, 56, 52, 48, 48, 68, 78, 62, 58, 66, 76, 84, 88],
-    hitFrame: 8,
-    label: "Tetr Pistol",
-    draw: { x: -336, y: -264, w: 672, h: 384 },
-    noKeying: true,
-  },
-  slash: {
-    id: "slash",
-    image: heroSlashSheet,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 58,
-    timing: [70, 66, 60, 56, 52, 48, 46, 50, 58, 64, 68, 70, 72, 76, 82, 86],
-    hitFrame: 9,
-    label: "Slash",
-    draw: { x: -172, y: -252, w: 344, h: 458 },
-    noKeying: true,
-    cropInset: 0,
-  },
-  doubleSlash: {
-    id: "doubleSlash",
-    image: heroDoubleSlashSheet,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 56,
-    timing: [68, 64, 58, 54, 50, 48, 50, 58, 56, 52, 48, 54, 64, 72, 80, 86],
-    hitFrame: 11,
-    label: "Double Slash",
-    draw: { x: -172, y: -252, w: 344, h: 458 },
-    noKeying: true,
-    cropInset: 0,
-  },
-  tripleSlash: {
-    id: "tripleSlash",
-    image: heroTripleSlashSheet,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 54,
-    timing: [66, 62, 56, 52, 48, 46, 48, 54, 50, 48, 46, 52, 62, 70, 78, 84],
-    hitFrame: 12,
-    label: "Triple Slash",
-    draw: { x: -172, y: -252, w: 344, h: 458 },
-    noKeying: true,
-    cropInset: 0,
-  },
-  tetris: {
-    id: "tetris",
-    image: heroTetrisSheet,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 64,
-    timing: [74, 70, 66, 62, 58, 54, 50, 54, 62, 70, 76, 82, 82, 84, 88, 92],
-    hitFrame: 12,
-    label: "TETRIS",
-    draw: { x: -176, y: -258, w: 352, h: 468 },
-    noKeying: true,
-    cropInset: 0,
-  },
-  tspin: {
-    id: "tspin",
-    image: heroTSpinSheet,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 58,
-    timing: [68, 64, 60, 56, 52, 48, 48, 54, 58, 62, 66, 72, 76, 80, 84, 88],
-    hitFrame: 10,
-    label: "T-SPIN",
-    draw: { x: -172, y: -252, w: 344, h: 458 },
-    noKeying: true,
-    cropInset: 0,
-  },
-  combo: {
-    id: "combo",
-    image: heroComboSheet,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 54,
-    timing: [64, 60, 56, 52, 48, 46, 48, 52, 50, 48, 48, 54, 62, 70, 78, 84],
-    hitFrame: 12,
-    label: "COMBO",
-    draw: { x: -172, y: -252, w: 344, h: 458 },
-    noKeying: true,
-    cropInset: 0,
-  },
-  b2b: {
-    id: "b2b",
-    image: heroB2BSheet,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 60,
-    timing: [70, 66, 62, 58, 54, 50, 48, 52, 60, 66, 72, 78, 80, 82, 86, 90],
-    hitFrame: 11,
-    label: "B2B",
-    draw: { x: -174, y: -256, w: 348, h: 462 },
-    noKeying: true,
-    cropInset: 0,
-  },
-  ultimate: {
-    id: "ultimate",
-    image: heroUltimateSheet,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 85,
-    hitRatio: 0.55,
-    label: "Perfect Clear Rift",
-    draw: { x: -352, y: -276, w: 704, h: 402 },
-    noKeying: true,
-  },
-};
+const HERO_ANIMATIONS = PLAYER_ATTACK_HERO_ANIMATIONS;
 
 const HERO_LEVEL_UP_EFFECT = {
   id: "levelUp",
@@ -2405,14 +2261,12 @@ function triggerLastStarProtocol(projectedHp = state.playerHp) {
   return gained;
 }
 
-function getHeroAnimationDuration(kind) {
-  const config = HERO_ANIMATIONS[kind] || HERO_ANIMATIONS.ranged;
-  return getAnimationDuration(config);
+function getHeroAnimationDuration(kind, comboAttackStyle = "") {
+  return resolvePlayerAttackVfx(kind, comboAttackStyle).totalDurationMs;
 }
 
-function getHeroHitDelay(kind) {
-  const config = HERO_ANIMATIONS[kind] || HERO_ANIMATIONS.ranged;
-  return getAnimationHitDelay(config, 0.55);
+function getHeroHitDelay(kind, comboAttackStyle = "") {
+  return resolvePlayerAttackVfx(kind, comboAttackStyle).hitDelayMs;
 }
 
 function getEnemyAnimationDuration(kind) {
@@ -3514,7 +3368,7 @@ function calculateDamage(context, snapshot) {
   };
   const comboAttackStyle = getComboAttackStyle(state.combo);
   const attackStyle = getHeroAttackStyle(lines, spinType, state.lastPerfectClear, b2bBonus, comboAttackStyle);
-  const attackDuration = getHeroAnimationDuration(attackStyle);
+  const attackDuration = getHeroAnimationDuration(attackStyle, comboAttackStyle);
   const special = state.lastPerfectClear ? "perfect" : comboAttackStyle ? "combo" : spinType ? "spin" : b2bBonus > 0 ? "b2b" : lines >= 4 ? "tetris" : "clear";
   if (damage <= 0) {
     return {
@@ -3630,7 +3484,8 @@ function showBattleClearFeedback(result) {
 }
 
 function playDamageFeedback(result) {
-  startHeroAttackAnimation(result.attackStyle);
+  const vfx = resolvePlayerAttackVfx(result.attackStyle, result.comboAttackStyle);
+  startHeroAttackAnimation(result.attackStyle, result.comboAttackStyle);
   playSfx(getPlayerAttackSfx(result));
   state.attacks.push({
     type: "player",
@@ -3638,17 +3493,19 @@ function playDamageFeedback(result) {
     y0: 358,
     x1: 994,
     y1: 346,
-    life: result.attackDuration,
-    duration: result.attackDuration,
+    life: vfx.totalDurationMs,
+    duration: vfx.totalDurationMs,
     damage: result.damage,
     spin: result.isTSpin,
     heroStyle: result.attackStyle,
+    comboStyle: result.comboAttackStyle,
+    vfxStyle: vfx.style,
     special: result.special,
     lines: result.lines,
   });
   schedulePendingHit({
     type: "player",
-    delay: getHeroHitDelay(result.attackStyle),
+    delay: getHeroHitDelay(result.attackStyle, result.comboAttackStyle),
     damage: result.damage,
     heal: result.heal,
     context: result.context,
@@ -3852,10 +3709,11 @@ function duckMusic(depth = 0.5, seconds = 0.8) {
   audio.musicGain.gain.linearRampToValueAtTime(base, now + seconds);
 }
 
-function startHeroAttackAnimation(kind) {
-  const config = HERO_ANIMATIONS[kind] || HERO_ANIMATIONS.ranged;
+function startHeroAttackAnimation(kind, comboAttackStyle = "") {
+  const vfx = resolvePlayerAttackVfx(kind, comboAttackStyle);
+  const config = vfx.heroConfig || HERO_ANIMATIONS.slash;
   state.heroAnimation = {
-    kind,
+    kind: vfx.heroKind,
     startedAt: performance.now(),
     duration: getAnimationDuration(config),
   };
@@ -6362,8 +6220,7 @@ function drawPlayer() {
   ctx.save();
   if (hit) ctx.translate(-10, 0);
   const bob = Math.sin(performance.now() * 0.0025) * 1.2;
-  const attackMotion = playerAttack ? Math.sin((playerAttack.life / playerAttack.duration) * Math.PI) * 10 : 0;
-  ctx.translate(attackMotion, bob);
+  ctx.translate(0, bob);
   if (hit) scaleAroundBaseline(1.08, 0.92, pose.localY);
   drawHeroSprite(hit);
   if (playerAttack) drawNoaAttackPose(playerAttack);
@@ -6497,8 +6354,8 @@ function drawHeroIdleBase(context = "battle") {
     drawRosterSprite("noa", -118, -214, 236, 402);
   } else if (isImageReady(heroIdleArt)) {
     drawImageContain(heroIdleArt, -150, -280, 300, 450);
-  } else if (isImageReady(HERO_ANIMATIONS.melee.image)) {
-    drawSpriteSheetFrame(HERO_ANIMATIONS.melee, 0, -132, -222, 264, 410);
+  } else if (isImageReady(HERO_ANIMATIONS.slash.image)) {
+    drawSpriteSheetFrame(HERO_ANIMATIONS.slash, 0, -132, -222, 264, 410);
   } else {
     drawNoaFallback(false);
   }
@@ -6518,7 +6375,7 @@ function drawHeroAnimationFrame() {
   if (isImageReady(config.image)) {
     const draw = alignDrawBoxToBaseline(config.draw || { x: -132, y: -222, w: 264, h: 410 }, CHARACTER_BASELINES.player.localY, {
       scale: CHARACTER_BASELINES.player.animationScale,
-      bottomOffset: CHARACTER_BASELINES.player.animationBottomOffset,
+      bottomOffset: config.bottomOffset ?? CHARACTER_BASELINES.player.animationBottomOffset,
     });
     drawSpriteAnimationFrame(config, elapsed, draw.x, draw.y, draw.w, draw.h);
   } else {
@@ -8254,37 +8111,94 @@ function drawPlayerAttack(attack, x, y, t) {
     special === "b2b" || special === "tetris" ? "#ffbe5f" :
     "#9fb4ff";
   const core = special === "perfect" ? "#ffffff" : special === "combo" ? "#fff0a6" : special === "spin" ? "#f1d36b" : "#d9f0ff";
-  if (melee) drawMeleeAttackPath(attack, x, y, t, glow, core, special);
-  else drawRangedAttackPath(attack, x, y, t, glow, core, special);
-  ctx.shadowColor = glow;
-  ctx.shadowBlur = special === "clear" ? 18 : 32;
-  ctx.fillStyle = glow;
-  ctx.beginPath();
-  ctx.arc(x, y, special === "clear" ? 11 : 17, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = core;
-  ctx.beginPath();
-  ctx.arc(x, y, special === "clear" ? 4 : 6, 0, Math.PI * 2);
-  ctx.fill();
-  if (special === "spin" || special === "b2b" || special === "perfect" || special === "combo") {
-    ctx.strokeStyle = hexToRgba(core, 0.9);
-    ctx.lineWidth = special === "perfect" ? 4 : 3;
+  const elapsed = attack.duration - attack.life;
+  const vfx = resolvePlayerAttackVfx(attack.heroStyle, attack.comboStyle);
+  const drewProjectile = drawPlayerAttackProjectile(attack, vfx, elapsed, glow, core, special);
+  if (!drewProjectile) {
+    if (melee) drawMeleeAttackPath(attack, x, y, t, glow, core, special);
+    else drawRangedAttackPath(attack, x, y, t, glow, core, special);
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = special === "clear" ? 18 : 32;
+    ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(x, y, 28 + Math.sin(t * Math.PI) * 12, t * 8, t * 8 + Math.PI * 1.35);
-    ctx.stroke();
+    ctx.arc(x, y, special === "clear" ? 11 : 17, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = core;
     ctx.beginPath();
-    ctx.ellipse(attack.x1, attack.y1, 46 + t * 10, 16 + t * 4, -0.4, 0, Math.PI * 1.6);
-    ctx.stroke();
-  }
-  if (special === "perfect") {
-    for (let i = 0; i < 6; i += 1) {
-      const a = t * 5 + (Math.PI * 2 * i) / 6;
-      ctx.fillStyle = i % 2 ? "#c7a7ff" : "#8ff7ff";
-      ctx.fillRect(attack.x1 + Math.cos(a) * 42, attack.y1 + Math.sin(a) * 28, 6, 6);
+    ctx.arc(x, y, special === "clear" ? 4 : 6, 0, Math.PI * 2);
+    ctx.fill();
+    if (special === "spin" || special === "b2b" || special === "perfect" || special === "combo") {
+      ctx.strokeStyle = hexToRgba(core, 0.9);
+      ctx.lineWidth = special === "perfect" ? 4 : 3;
+      ctx.beginPath();
+      ctx.arc(x, y, 28 + Math.sin(t * Math.PI) * 12, t * 8, t * 8 + Math.PI * 1.35);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(attack.x1, attack.y1, 46 + t * 10, 16 + t * 4, -0.4, 0, Math.PI * 1.6);
+      ctx.stroke();
+    }
+    if (special === "perfect") {
+      for (let i = 0; i < 6; i += 1) {
+        const a = t * 5 + (Math.PI * 2 * i) / 6;
+        ctx.fillStyle = i % 2 ? "#c7a7ff" : "#8ff7ff";
+        ctx.fillRect(attack.x1 + Math.cos(a) * 42, attack.y1 + Math.sin(a) * 28, 6, 6);
+      }
     }
   }
-  if (t > 0.78) drawImpactBurst(attack.x1, attack.y1, glow, t, special, 0.78);
+  if (!drawPlayerAttackImpact(attack, vfx, elapsed, glow) && t > 0.78) {
+    drawImpactBurst(attack.x1, attack.y1, glow, t, special, 0.78);
+  }
   ctx.restore();
+}
+
+function drawPlayerAttackProjectile(attack, vfx, elapsed, glow, core, special) {
+  const projectile = vfx.projectile;
+  if (!isImageReady(projectile.image)) return false;
+  const localElapsed = elapsed - projectile.startMs;
+  if (localElapsed < 0 || localElapsed > projectile.durationMs) return true;
+  const localT = clamp(localElapsed / projectile.durationMs, 0, 1);
+  const eased = 1 - Math.pow(1 - localT, 3);
+  const arc = Math.sin(localT * Math.PI);
+  const x = lerp(attack.x0 + 24, attack.x1 - 18, eased);
+  const y = lerp(attack.y0 - 10, attack.y1, eased) - arc * 44;
+  const fade = localT > 0.88 ? clamp((1 - localT) / 0.12, 0, 1) : 1;
+  const scale = projectile.scale * (1 + arc * 0.08);
+  const w = 190 * scale * (special === "perfect" ? 1.2 : 1);
+  const h = 116 * scale * (special === "perfect" ? 1.12 : 1);
+  ctx.save();
+  ctx.globalAlpha *= projectile.alpha * fade;
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = 22 + vfx.intensity * 10;
+  ctx.translate(x, y);
+  if (projectile.spin) ctx.rotate(-0.18 + localT * 0.36);
+  drawSpriteAnimationFrame(projectile, localElapsed, -w * 0.5, -h * 0.5, w, h);
+  ctx.globalAlpha *= 0.32 * fade;
+  ctx.strokeStyle = hexToRgba(core, 0.62);
+  ctx.lineWidth = 2 + vfx.intensity;
+  ctx.beginPath();
+  ctx.moveTo(-w * 0.48, h * 0.18);
+  ctx.quadraticCurveTo(-w * 0.18, -h * 0.4, w * 0.42, -h * 0.08);
+  ctx.stroke();
+  ctx.restore();
+  return true;
+}
+
+function drawPlayerAttackImpact(attack, vfx, elapsed, glow) {
+  const impact = vfx.impact;
+  if (!isImageReady(impact.image)) return false;
+  const localElapsed = elapsed - impact.startMs;
+  if (localElapsed < 0 || localElapsed > impact.durationMs) return true;
+  const localT = clamp(localElapsed / impact.durationMs, 0, 1);
+  const fade = localT > 0.86 ? clamp((1 - localT) / 0.14, 0, 1) : 1;
+  const bloom = Math.sin(localT * Math.PI);
+  const size = 126 * impact.scale * (1 + bloom * 0.18);
+  ctx.save();
+  ctx.globalAlpha *= fade;
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = 24 + vfx.intensity * 12;
+  drawSpriteAnimationFrame(impact, localElapsed, attack.x1 - size / 2, attack.y1 - size / 2, size, size);
+  ctx.restore();
+  return true;
 }
 
 function drawRangedAttackPath(attack, x, y, t, glow, core, special) {
@@ -8610,7 +8524,7 @@ function drawPerfectClearFx() {
     ctx.stroke();
   }
 
-  if (isImageReady(heroUltimateSheet)) {
+  if (isImageReady(HERO_ANIMATIONS.ultimate.image)) {
     ctx.save();
     ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = 0.96 * alpha;
@@ -9990,6 +9904,9 @@ function isHeroMeleeAttackStyle(style) {
     "tetris",
     "tspin",
     "combo",
+    "combo1",
+    "combo2",
+    "combo3",
     "b2b",
   ].includes(String(style || ""));
 }
