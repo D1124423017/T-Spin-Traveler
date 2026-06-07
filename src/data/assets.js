@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-07-suno-global-bgm-v1";
+export const ASSET_VERSION = "2026-06-07-grey-alien-meta-icons-v1";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";

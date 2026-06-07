@@ -321,9 +321,9 @@ describe("image assets", () => {
     }
   });
 
-  it("keeps generated Rift Energy and meta upgrade icons as 512px alpha PNGs", () => {
+  it("keeps generated Rift Energy and meta upgrade icons as 1024px alpha PNGs", () => {
     for (const icon of metaUpgradeIcons) {
-      expect(readPngInfo(icon)).toEqual({ width: 512, height: 512, colorType: 6 });
+      expect(readPngInfo(icon)).toEqual({ width: 1024, height: 1024, colorType: 6 });
     }
   });
 
