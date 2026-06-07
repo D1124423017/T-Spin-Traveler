@@ -138,8 +138,8 @@ describe("HUD and card layout helpers", () => {
     expect(draftLayout.title).toEqual({ x: 260, y: 180, w: 530, size: 36 });
     expect(draftLayout.bondSummary).toEqual({ x: 684, y: 174 });
     expect(draftLayout.buildButton).toEqual({ x: 942, y: 170, w: 150, h: 36 });
-    expect(draftLayout.selectedDetail).toEqual({ x: 262, y: 562, w: 806, h: 82 });
-    expect(getUpgradeDetailToggleRect()).toEqual({ x: 938, y: 586, w: 108, h: 34 });
+    expect(draftLayout.selectedDetail).toEqual({ x: 262, y: 562, w: 806, h: 90 });
+    expect(getUpgradeDetailToggleRect()).toEqual({ x: 938, y: 589, w: 108, h: 36 });
     expect(draftLayout.help.y).toBeGreaterThan(draftLayout.panel.y + draftLayout.panel.h);
     expect(UPGRADE_CARD_ASSET_SIZE).toEqual({ w: 1024, h: 1536 });
     expect(UPGRADE_CARD_SAFE_ZONES.desc).toEqual({ x: 120, y: 1160, w: 784, h: 110 });
@@ -148,10 +148,10 @@ describe("HUD and card layout helpers", () => {
     expect(card).toEqual({ x: 819, y: 200, w: 240, h: 360 });
     expect(cardLayout.portrait.y).toBeLessThan(cardLayout.title.y);
     expect(cardLayout.trait).toEqual({ x: 847, y: 509, w: 184, h: 34 });
-    expect(cardLayout.panels.desc).toBeUndefined();
     expect(cardLayout.panels.title).toBeUndefined();
-    expect(cardLayout.panels.tags).toBeUndefined();
     expect(cardLayout.panels.trait).toBeUndefined();
+    expect(cardLayout.panels.tags).toEqual({ x: 848, y: 395, w: 183, h: 28 });
+    expect(cardLayout.panels.desc).toEqual({ x: 847, y: 436, w: 185, h: 45 });
     expect(cardLayout.icon).toBeUndefined();
     expect(specialCardLayout.title.y).toBeGreaterThan(cardLayout.title.y);
     expect(specialCardLayout.trait.y).toBeGreaterThan(specialCardLayout.tags.y);

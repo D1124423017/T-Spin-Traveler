@@ -18,8 +18,8 @@ export const SPECIAL_UPGRADE_CARD_SAFE_ZONES = Object.freeze({
   trait: Object.freeze({ x: 120, y: 1352, w: 784, h: 72 }),
 });
 
-const UPGRADE_CARD_TEXT_FRAME_ZONE = Object.freeze({ x: 120, y: 790, w: 784, h: 360 });
-const SPECIAL_UPGRADE_CARD_TEXT_FRAME_ZONE = Object.freeze({ x: 120, y: 780, w: 784, h: 380 });
+const UPGRADE_CARD_TEXT_FRAME_ZONE = Object.freeze({ x: 148, y: 850, w: 728, h: 338 });
+const SPECIAL_UPGRADE_CARD_TEXT_FRAME_ZONE = Object.freeze({ x: 138, y: 930, w: 748, h: 300 });
 
 function scaleCardZone(card, zone) {
   const sx = card.w / UPGRADE_CARD_ASSET_SIZE.w;
@@ -73,12 +73,12 @@ export function getUpgradeCardRect(index) {
 
 export function getUpgradeSelectedDetailRect() {
   const panel = getUpgradeOverlayPanelRect();
-  return { x: panel.x + 64, y: panel.y + 444, w: panel.w - 128, h: 82 };
+  return { x: panel.x + 64, y: panel.y + 444, w: panel.w - 128, h: 90 };
 }
 
 export function getUpgradeDetailToggleRect() {
   const detail = getUpgradeSelectedDetailRect();
-  return { x: detail.x + detail.w - 130, y: detail.y + 24, w: 108, h: 34 };
+  return { x: detail.x + detail.w - 130, y: detail.y + 27, w: 108, h: 36 };
 }
 
 export function getUpgradeCardContentLayout(card, variant = "default") {
@@ -88,9 +88,17 @@ export function getUpgradeCardContentLayout(card, variant = "default") {
   const title = scaleCardZone(card, zones.title);
   const textFrame = scaleCardZone(card, variant === "special" ? SPECIAL_UPGRADE_CARD_TEXT_FRAME_ZONE : UPGRADE_CARD_TEXT_FRAME_ZONE);
   const trait = scaleCardZone(card, zones.trait);
+  const isSpecial = variant === "special";
   const titleText = { x: title.x, y: title.y + 7, w: title.w, lineH: 14, size: 13, maxLines: 2 };
-  const tagsText = { x: textFrame.x, y: textFrame.y + 4, w: textFrame.w, maxTags: 3 };
-  const descText = { x: textFrame.x, y: textFrame.y + 42, w: textFrame.w, lineH: 15, size: 12, maxLines: 2 };
+  const tagsText = { x: textFrame.x, y: textFrame.y + (isSpecial ? 2 : 0), w: textFrame.w, maxTags: 3 };
+  const descText = {
+    x: textFrame.x,
+    y: textFrame.y + (isSpecial ? 39 : 44),
+    w: textFrame.w,
+    lineH: isSpecial ? 14 : 15,
+    size: isSpecial ? 11 : 12,
+    maxLines: 2,
+  };
   const traitHint = { x: trait.x, y: trait.y, w: trait.w, h: Math.max(34, trait.h) };
   return {
     badge: { ...badge, h: Math.max(22, badge.h) },
@@ -100,7 +108,15 @@ export function getUpgradeCardContentLayout(card, variant = "default") {
     divider: { x: textFrame.x, y: descText.y - 10, w: textFrame.w },
     desc: descText,
     trait: traitHint,
-    panels: {},
+    panels: {
+      tags: { x: tagsText.x - 6, y: tagsText.y - 4, w: tagsText.w + 12, h: 28 },
+      desc: {
+        x: descText.x - 7,
+        y: descText.y - 7,
+        w: descText.w + 14,
+        h: descText.lineH * descText.maxLines + 15,
+      },
+    },
   };
 }
 

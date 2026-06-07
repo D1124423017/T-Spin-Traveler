@@ -36,16 +36,20 @@ const runtimeAnimationSheets = [
   { path: "assets/effects/noa_level_up_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/noa_menu_idle_cube_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/noa_menu_idle_meditate_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_egypt_scarab_scout_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_sand_tomb_mummy_priest_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_anubis_rift_guard_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_maya_stone_beast_scout_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_maya_eclipse_priest_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_maya_feathered_serpent_guard_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_atlantis_crystal_jellyfish_scout_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_atlantis_tidal_shell_guard_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_atlantis_rift_jellyfish_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_attack_atlantis_crystal_temple_sentinel_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/hero_hit_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/enemy_egypt_rift_scarab_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/enemy_egypt_mummy_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/enemy_egypt_priest_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/enemy_egypt_anubis_guard_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/enemy_egypt_sphinx_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/enemy_egypt_pharaoh_king_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/effects/enemy_rift_projectile_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/effects/enemy_impact_physical_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/effects/enemy_impact_arcane_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/effects/enemy_impact_stone_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/effects/enemy_pharaoh_projectile_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/effects/enemy_pharaoh_impact_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/effects/enemy_death_16_spritesheet_alpha.png", columns: 4, rows: 4 },
 ];
 
 const upgradedBackgrounds = [
@@ -133,11 +137,31 @@ const formalHeroCatalogIds = [
   "hero-tspin-sheet-16",
   "hero-b2b-sheet-16",
   "hero-ultimate-sheet-16",
+  "hero-hit-sheet-16",
 ];
 
 const formalPlayerVfxCatalogIds = [
   "hero-sword-wave-sheet-16",
   "hero-impact-burst-sheet-16",
+];
+
+const formalEnemyCatalogIds = [
+  "enemy-egypt-rift-scarab-attack-sheet-16",
+  "enemy-egypt-mummy-attack-sheet-16",
+  "enemy-egypt-priest-attack-sheet-16",
+  "enemy-egypt-anubis-guard-attack-sheet-16",
+  "enemy-egypt-sphinx-attack-sheet-16",
+  "enemy-egypt-pharaoh-king-attack-sheet-16",
+];
+
+const formalEnemyVfxCatalogIds = [
+  "enemy-rift-projectile-sheet-16",
+  "enemy-impact-physical-sheet-16",
+  "enemy-impact-arcane-sheet-16",
+  "enemy-impact-stone-sheet-16",
+  "enemy-pharaoh-projectile-sheet-16",
+  "enemy-pharaoh-impact-sheet-16",
+  "enemy-death-sheet-16",
 ];
 
 const metaUpgradeIcons = [
@@ -176,15 +200,12 @@ const legendaryUpgradeEmblems = [
 ];
 
 const enemyBattlePortraits = [
-  { path: "assets/enemies/battle/enemy_scarab_scout_battle.png", width: 1437, height: 1095 },
-  { path: "assets/enemies/battle/enemy_sand_tomb_mummy_priest_battle.png", width: 1414, height: 1112 },
-  { path: "assets/enemies/battle/enemy_anubis_rift_guard_battle.png", width: 1402, height: 1122 },
-  { path: "assets/enemies/battle/enemy_maya_stone_beast_scout_battle.png", width: 1366, height: 1151 },
-  { path: "assets/enemies/battle/enemy_maya_eclipse_priest_battle.png", width: 1149, height: 1368 },
-  { path: "assets/enemies/battle/enemy_maya_feathered_serpent_guard_battle.png", width: 1106, height: 1422 },
-  { path: "assets/enemies/battle/enemy_atlantis_crystal_jellyfish_scout_battle.png", width: 1160, height: 1355 },
-  { path: "assets/enemies/battle/enemy_atlantis_tidal_shell_guard_battle.png", width: 1139, height: 1381 },
-  { path: "assets/enemies/battle/enemy_atlantis_crystal_temple_sentinel_battle.png", width: 1151, height: 1366 },
+  { path: "assets/enemies/battle/enemy_egypt_rift_scarab_scout_battle.png", width: 1193, height: 895 },
+  { path: "assets/enemies/battle/enemy_egypt_sand_tomb_mummy_battle.png", width: 605, height: 1208 },
+  { path: "assets/enemies/battle/enemy_egyptian_priest_battle.png", width: 875, height: 1249 },
+  { path: "assets/enemies/battle/enemy_egypt_anubis_guard_battle.png", width: 913, height: 1301 },
+  { path: "assets/enemies/battle/enemy_egypt_sphinx_stone_guardian_battle.png", width: 1148, height: 1053 },
+  { path: "assets/enemies/battle/enemy_egypt_pharaoh_king_battle.png", width: 997, height: 1193 },
 ];
 
 describe("image assets", () => {
@@ -229,6 +250,17 @@ describe("image assets", () => {
     }
   });
 
+  it("keeps the Pharaoh body and two effect sheets at production alpha dimensions", () => {
+    expect(readPngInfo("assets/images/clean/enemy_egypt_pharaoh_king_attack_16_spritesheet_alpha.png"))
+      .toEqual({ width: 1536, height: 2048, colorType: 6 });
+    for (const sheet of [
+      "assets/effects/enemy_pharaoh_projectile_16_spritesheet_alpha.png",
+      "assets/effects/enemy_pharaoh_impact_16_spritesheet_alpha.png",
+    ]) {
+      expect(readPngInfo(sheet)).toEqual({ width: 2048, height: 2048, colorType: 6 });
+    }
+  });
+
   it("keeps only formal player attack sheets in the sprite-test hero catalog", () => {
     const ids = SPRITE_SHEET_CATALOG
       .filter((sheet) => sheet.groupKey === "spriteTestGroupHero")
@@ -243,6 +275,22 @@ describe("image assets", () => {
       .map((sheet) => sheet.id);
 
     expect(ids).toEqual(formalPlayerVfxCatalogIds);
+  });
+
+  it("keeps only active Egypt attack sheets in the sprite-test enemy catalog", () => {
+    const ids = SPRITE_SHEET_CATALOG
+      .filter((sheet) => sheet.groupKey === "spriteTestGroupEnemy")
+      .map((sheet) => sheet.id);
+
+    expect(ids).toEqual(formalEnemyCatalogIds);
+  });
+
+  it("registers the shared enemy projectile, impact, and death sheets in sprite-test", () => {
+    const ids = SPRITE_SHEET_CATALOG
+      .filter((sheet) => sheet.groupKey === "spriteTestGroupEffect" && sheet.id.startsWith("enemy-"))
+      .map((sheet) => sheet.id);
+
+    expect(ids).toEqual(formalEnemyVfxCatalogIds);
   });
 
   it("does not keep legacy animation sheets in the clean asset folder", () => {
@@ -346,22 +394,32 @@ describe("image assets", () => {
     }
   });
 
-  it("keeps ancient civilization enemy attack sheets at the requested 384 x 512 frame grid", () => {
+  it("keeps active Egypt enemy attack sheets at the requested 384 x 512 frame grid", () => {
     const sheets = [
-      "assets/images/clean/enemy_attack_egypt_scarab_scout_16.png",
-      "assets/images/clean/enemy_attack_sand_tomb_mummy_priest_16.png",
-      "assets/images/clean/enemy_attack_anubis_rift_guard_16.png",
-      "assets/images/clean/enemy_attack_maya_stone_beast_scout_16.png",
-      "assets/images/clean/enemy_attack_maya_eclipse_priest_16.png",
-      "assets/images/clean/enemy_attack_maya_feathered_serpent_guard_16.png",
-      "assets/images/clean/enemy_attack_atlantis_crystal_jellyfish_scout_16.png",
-      "assets/images/clean/enemy_attack_atlantis_tidal_shell_guard_16.png",
-      "assets/images/clean/enemy_attack_atlantis_rift_jellyfish_16.png",
-      "assets/images/clean/enemy_attack_atlantis_crystal_temple_sentinel_16.png",
+      "assets/images/clean/enemy_egypt_rift_scarab_attack_16_spritesheet_alpha.png",
+      "assets/images/clean/enemy_egypt_mummy_attack_16_spritesheet_alpha.png",
+      "assets/images/clean/enemy_egypt_priest_attack_16_spritesheet_alpha.png",
+      "assets/images/clean/enemy_egypt_anubis_guard_attack_16_spritesheet_alpha.png",
+      "assets/images/clean/enemy_egypt_sphinx_attack_16_spritesheet_alpha.png",
     ];
 
     for (const sheet of sheets) {
       expect(readPngInfo(sheet)).toEqual({ width: 1536, height: 2048, colorType: 6 });
+    }
+  });
+
+  it("keeps hero hit at 512 x 768 per frame and enemy VFX at 512 x 512 per frame", () => {
+    expect(readPngInfo("assets/images/clean/hero_hit_16_spritesheet_alpha.png"))
+      .toEqual({ width: 2048, height: 3072, colorType: 6 });
+
+    for (const sheet of [
+      "assets/effects/enemy_rift_projectile_16_spritesheet_alpha.png",
+      "assets/effects/enemy_impact_physical_16_spritesheet_alpha.png",
+      "assets/effects/enemy_impact_arcane_16_spritesheet_alpha.png",
+      "assets/effects/enemy_impact_stone_16_spritesheet_alpha.png",
+      "assets/effects/enemy_death_16_spritesheet_alpha.png",
+    ]) {
+      expect(readPngInfo(sheet)).toEqual({ width: 2048, height: 2048, colorType: 6 });
     }
   });
 });

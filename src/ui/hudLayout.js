@@ -6,7 +6,7 @@ function clampRatio(value) {
 export function createHudLayout({ boardX, boardY, cols, rows, tile }) {
   return {
     panelPadding: 24,
-    playerPanel: { x: 38, y: 84, w: 312, h: 190 },
+    playerPanel: { x: 38, y: 84, w: 312, h: 154 },
     enemyPanel: { x: 884, y: 84, w: 356, h: 254 },
     playerStage: { x: 18, y: 188, w: 380, h: 392 },
     enemyStage: { x: 858, y: 246, w: 410, h: 320 },
@@ -21,7 +21,7 @@ export function createHudLayout({ boardX, boardY, cols, rows, tile }) {
       titleY: 104,
       subtitleY: 154,
       primaryY: 250,
-      tutorialY: 330,
+      mainStageY: 330,
       utilityY: 386,
       primaryH: 64,
       buttonH: 44,
@@ -70,7 +70,7 @@ export function getMainMenuButtonRects(menuLayout) {
   const bw = menuLayout.w - pad * 2;
   return {
     start: { x: bx, y: menuLayout.primaryY, w: bw, h: menuLayout.primaryH },
-    tutorial: { x: bx, y: menuLayout.tutorialY, w: bw, h: menuLayout.buttonH },
+    mainStage: { x: bx, y: menuLayout.mainStageY, w: bw, h: menuLayout.buttonH },
     metaUpgrade: { x: bx, y: menuLayout.utilityY, w: bw, h: menuLayout.buttonH },
     guide: { x: bx, y: menuLayout.utilityY + menuLayout.buttonH + menuLayout.buttonGap, w: bw, h: menuLayout.buttonH },
     settings: { x: bx, y: menuLayout.utilityY + (menuLayout.buttonH + menuLayout.buttonGap) * 2, w: bw, h: menuLayout.buttonH },

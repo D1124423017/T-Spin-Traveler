@@ -11,34 +11,61 @@ describe("enemy data", () => {
     expect(runtimeFacingFlips).toEqual([]);
   });
 
-  it("keeps the Egyptian rift slice on early enemy slots without changing values", () => {
+  it("keeps the Egypt mainline roster at five normal enemies and one Pharaoh boss", () => {
     const scarabScout = ENEMIES.find((enemy) => enemy.id === "blue_slime");
-    const mummyPriest = ENEMIES.find((enemy) => enemy.id === "slime");
+    const mummy = ENEMIES.find((enemy) => enemy.id === "slime");
+    const priest = ENEMIES.find((enemy) => enemy.id === "mushroom");
     const anubisGuard = ENEMIES.find((enemy) => enemy.id === "beetle");
+    const sphinx = ENEMIES.find((enemy) => enemy.id === "vine");
+    const pharaoh = ENEMIES.find((enemy) => enemy.id === "king");
 
-    expect(ENEMIES[0].id).toBe("blue_slime");
+    expect(ENEMIES.map((enemy) => enemy.id)).toEqual(["blue_slime", "slime", "mushroom", "beetle", "vine", "king"]);
     expect(scarabScout).toMatchObject({
-      name: "SCARAB SCOUT",
-      trait: "RIFT CARAPACE",
-      battleArt: "egyptScarabScout",
+      name: "RIFT SCARAB SCOUT",
+      trait: "SAND-RUNE CARAPACE",
+      battleArt: "egyptRiftScarabScout",
       garbage: 0,
+      attackSprite: true,
     });
     expect(scarabScout.hp).toBe(128);
     expect(scarabScout.damage).toBe(7);
-    expect(mummyPriest).toMatchObject({
-      name: "SAND TOMB MUMMY PRIEST",
-      trait: "STAR TOMB HEX",
-      battleArt: "sandTombMummyPriest",
+    expect(mummy).toMatchObject({
+      name: "SAND TOMB MUMMY",
+      trait: "RUNE BANDAGES",
+      battleArt: "sandTombMummy",
       hp: 120,
       damage: 8,
     });
+    expect(priest).toMatchObject({
+      name: "EGYPTIAN PRIEST",
+      trait: "SOLAR HEX",
+      battleArt: "egyptianPriest",
+      hp: 110,
+      damage: 6,
+    });
     expect(anubisGuard).toMatchObject({
-      name: "ANUBIS RIFT GUARD",
+      name: "ANUBIS GUARD",
       trait: "OBELISK GUARD",
-      battleArt: "anubisRiftGuard",
+      battleArt: "anubisGuard",
       hp: 210,
       damage: 10,
     });
+    expect(sphinx).toMatchObject({
+      name: "SPHINX STONE GUARDIAN",
+      trait: "STONE SENTINEL",
+      battleArt: "sphinxStoneGuardian",
+      hp: 165,
+      damage: 9,
+    });
+    expect(pharaoh).toMatchObject({
+      name: "PHARAOH KING",
+      trait: "BOSS: ROYAL PRESSURE",
+      battleArt: "pharaohKing",
+      hp: 360,
+      damage: 14,
+      attackSprite: false,
+    });
+    expect(ENEMIES.filter((enemy) => enemy.id !== "king").every((enemy) => enemy.attackSprite)).toBe(true);
   });
 
   it("does not reference removed forest battle portrait keys", () => {
@@ -53,6 +80,15 @@ describe("enemy data", () => {
       "wisp",
       "sentinel",
       "king",
+      "egyptScarabScout",
+      "sandTombMummyPriest",
+      "anubisRiftGuard",
+      "mayaStoneBeastScout",
+      "mayaEclipsePriest",
+      "mayaFeatheredSerpentGuard",
+      "atlantisCrystalJellyfishScout",
+      "atlantisTidalShellGuard",
+      "atlantisCrystalTempleSentinel",
     ]);
     const removedReferences = ENEMIES
       .filter((enemy) => removedBattleArtKeys.has(enemy.battleArt))
@@ -61,23 +97,20 @@ describe("enemy data", () => {
     expect(removedReferences).toEqual([]);
   });
 
-  it("wires ancient civilization battle portraits without changing enemy values", () => {
+  it("wires the active Egypt battle portraits without old civilization battle art", () => {
     const expected = {
-      blue_slime: { battleArt: "egyptScarabScout", hp: 128, damage: 7, countdown: 6, garbage: 0 },
-      slime: { battleArt: "sandTombMummyPriest", hp: 120, damage: 8, countdown: 7, garbage: 0 },
-      vine: { battleArt: "mayaStoneBeastScout", hp: 150, damage: 7, countdown: 7, garbage: 1 },
-      mushroom: { battleArt: "mayaEclipsePriest", hp: 110, damage: 6, countdown: 5, garbage: 0 },
-      beetle: { battleArt: "anubisRiftGuard", hp: 210, damage: 10, countdown: 8, garbage: 1 },
-      mist: { battleArt: "atlantisCrystalJellyfishScout", hp: 145, damage: 8, countdown: 6, garbage: 1 },
-      thorn: { battleArt: "atlantisTidalShellGuard", hp: 165, damage: 9, countdown: 6, garbage: 1 },
-      wisp: { battleArt: "atlantisCrystalJellyfishScout", hp: 130, damage: 8, countdown: 5, garbage: 0 },
-      sentinel: { battleArt: "mayaFeatheredSerpentGuard", hp: 245, damage: 11, countdown: 8, garbage: 1 },
-      king: { battleArt: "atlantisCrystalTempleSentinel", hp: 360, damage: 14, countdown: 7, garbage: 1 },
+      blue_slime: { battleArt: "egyptRiftScarabScout", hp: 128, damage: 7, countdown: 6, garbage: 0 },
+      slime: { battleArt: "sandTombMummy", hp: 120, damage: 8, countdown: 7, garbage: 0 },
+      mushroom: { battleArt: "egyptianPriest", hp: 110, damage: 6, countdown: 5, garbage: 0 },
+      beetle: { battleArt: "anubisGuard", hp: 210, damage: 10, countdown: 8, garbage: 1 },
+      vine: { battleArt: "sphinxStoneGuardian", hp: 165, damage: 9, countdown: 7, garbage: 1 },
+      king: { battleArt: "pharaohKing", hp: 360, damage: 14, countdown: 7, garbage: 1 },
     };
 
     for (const [id, expectation] of Object.entries(expected)) {
       expect(ENEMIES.find((enemy) => enemy.id === id)).toMatchObject(expectation);
     }
+    expect(ENEMIES).toHaveLength(6);
   });
 
   it("keeps visible world copy on the ancient rift direction", () => {
@@ -85,12 +118,12 @@ describe("enemy data", () => {
     expect(translations.en.navigationCore).toBe("Navigation Core: Ancient Rift");
     expect(translations.zh.messageVictory).toContain("古文明裂隙航道");
     expect(translations.en.messageVictory).toContain("Ancient Rift Route");
-    expect(translations.zh.floaterRootPressure).toBe("裂隙壓迫");
-    expect(translations.en.floaterRootPressure).toBe("RIFT PRESSURE");
+    expect(translations.zh.floaterRootPressure).toBe("石像壓迫");
+    expect(translations.en.floaterRootPressure).toBe("STONE GUARDIAN PRESSURE");
     expect(translations.zh.floaterMistHolesDrift).toBe("星霧洞漂移");
     expect(translations.en.floaterMistHolesDrift).toBe("STAR-MIST HOLES DRIFT");
-    expect(translations.zh.floaterVineBlocksRemoved).toBe("遺跡障礙清除");
-    expect(translations.en.floaterVineBlocksRemoved).toBe("RELIC BLOCKS REMOVED");
+    expect(translations.zh.floaterVineBlocksRemoved).toBe("石像障礙清除");
+    expect(translations.en.floaterVineBlocksRemoved).toBe("STONE BLOCKS REMOVED");
 
     const visibleCopyLines = [
       translations.zh.menuHeroClick2,

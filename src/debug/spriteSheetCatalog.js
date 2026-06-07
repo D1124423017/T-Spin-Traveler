@@ -23,6 +23,35 @@ const HERO_ULTIMATE_GRID = Object.freeze({
   frameRects: fixedFrameRects(512, 768, { x: 72, y: 448, w: 368, h: 320 }),
 });
 
+const FIXED_90_GRID = Object.freeze({
+  ...GRID_4_BY_4,
+  timing: Object.freeze(GRID_4_BY_4.frames.map(() => 90)),
+});
+
+const FIXED_80_GRID = Object.freeze({
+  ...GRID_4_BY_4,
+  timing: Object.freeze(GRID_4_BY_4.frames.map(() => 80)),
+});
+
+const FIXED_60_GRID = Object.freeze({
+  ...GRID_4_BY_4,
+  timing: Object.freeze(GRID_4_BY_4.frames.map(() => 60)),
+});
+
+const HERO_HIT_GRID = Object.freeze({
+  ...FIXED_60_GRID,
+});
+
+const ENEMY_DEATH_GRID = Object.freeze({
+  ...GRID_4_BY_4,
+  timing: Object.freeze([
+    54, 56, 58, 60,
+    62, 66, 70, 74,
+    78, 82, 80, 76,
+    72, 68, 64, 60,
+  ]),
+});
+
 function sheet(id, groupKey, path, frameMs, grid = GRID_4_BY_4) {
   return Object.freeze({
     id,
@@ -44,17 +73,21 @@ export const SPRITE_SHEET_CATALOG = Object.freeze([
   sheet("hero-tspin-sheet-16", "spriteTestGroupHero", "assets/images/clean/hero_tspin_attack_16_spritesheet_alpha.png", 58, HERO_ATTACK_GRID),
   sheet("hero-b2b-sheet-16", "spriteTestGroupHero", "assets/images/clean/hero_b2b_attack_16_spritesheet_alpha.png", 60, HERO_ATTACK_GRID),
   sheet("hero-ultimate-sheet-16", "spriteTestGroupHero", "assets/images/clean/hero_ultimate_attack_16_spritesheet_alpha.png", 85, HERO_ULTIMATE_GRID),
+  sheet("hero-hit-sheet-16", "spriteTestGroupHero", "assets/images/clean/hero_hit_16_spritesheet_alpha.png", 60, HERO_HIT_GRID),
   sheet("hero-sword-wave-sheet-16", "spriteTestGroupEffect", "assets/effects/hero_sword_wave_16_spritesheet_alpha.png", 42),
   sheet("hero-impact-burst-sheet-16", "spriteTestGroupEffect", "assets/effects/hero_impact_burst_16_spritesheet_alpha.png", 36),
+  sheet("enemy-rift-projectile-sheet-16", "spriteTestGroupEffect", "assets/effects/enemy_rift_projectile_16_spritesheet_alpha.png", 60, FIXED_60_GRID),
+  sheet("enemy-impact-physical-sheet-16", "spriteTestGroupEffect", "assets/effects/enemy_impact_physical_16_spritesheet_alpha.png", 60, FIXED_60_GRID),
+  sheet("enemy-impact-arcane-sheet-16", "spriteTestGroupEffect", "assets/effects/enemy_impact_arcane_16_spritesheet_alpha.png", 60, FIXED_60_GRID),
+  sheet("enemy-impact-stone-sheet-16", "spriteTestGroupEffect", "assets/effects/enemy_impact_stone_16_spritesheet_alpha.png", 60, FIXED_60_GRID),
+  sheet("enemy-pharaoh-projectile-sheet-16", "spriteTestGroupEffect", "assets/effects/enemy_pharaoh_projectile_16_spritesheet_alpha.png", 60, FIXED_60_GRID),
+  sheet("enemy-pharaoh-impact-sheet-16", "spriteTestGroupEffect", "assets/effects/enemy_pharaoh_impact_16_spritesheet_alpha.png", 60, FIXED_60_GRID),
+  sheet("enemy-death-sheet-16", "spriteTestGroupEffect", "assets/effects/enemy_death_16_spritesheet_alpha.png", 68, ENEMY_DEATH_GRID),
   sheet("noa-level-up-sheet-16", "spriteTestGroupEffect", "assets/effects/noa_level_up_16.png", 52),
-  sheet("enemy-attack-egypt-scarab-scout-16", "spriteTestGroupEnemy", "assets/images/clean/enemy_attack_egypt_scarab_scout_16.png", 60),
-  sheet("enemy-attack-sand-tomb-mummy-priest-16", "spriteTestGroupEnemy", "assets/images/clean/enemy_attack_sand_tomb_mummy_priest_16.png", 60),
-  sheet("enemy-attack-anubis-rift-guard-16", "spriteTestGroupEnemy", "assets/images/clean/enemy_attack_anubis_rift_guard_16.png", 60),
-  sheet("enemy-attack-maya-stone-beast-scout-16", "spriteTestGroupEnemy", "assets/images/clean/enemy_attack_maya_stone_beast_scout_16.png", 60),
-  sheet("enemy-attack-maya-eclipse-priest-16", "spriteTestGroupEnemy", "assets/images/clean/enemy_attack_maya_eclipse_priest_16.png", 60),
-  sheet("enemy-attack-maya-feathered-serpent-guard-16", "spriteTestGroupEnemy", "assets/images/clean/enemy_attack_maya_feathered_serpent_guard_16.png", 62),
-  sheet("enemy-attack-atlantis-crystal-jellyfish-scout-16", "spriteTestGroupEnemy", "assets/images/clean/enemy_attack_atlantis_crystal_jellyfish_scout_16.png", 60),
-  sheet("enemy-attack-atlantis-tidal-shell-guard-16", "spriteTestGroupEnemy", "assets/images/clean/enemy_attack_atlantis_tidal_shell_guard_16.png", 60),
-  sheet("enemy-attack-atlantis-rift-jellyfish-16", "spriteTestGroupEnemy", "assets/images/clean/enemy_attack_atlantis_rift_jellyfish_16.png", 60),
-  sheet("enemy-attack-atlantis-crystal-temple-sentinel-16", "spriteTestGroupEnemy", "assets/images/clean/enemy_attack_atlantis_crystal_temple_sentinel_16.png", 62),
+  sheet("enemy-egypt-rift-scarab-attack-sheet-16", "spriteTestGroupEnemy", "assets/images/clean/enemy_egypt_rift_scarab_attack_16_spritesheet_alpha.png", 80, FIXED_80_GRID),
+  sheet("enemy-egypt-mummy-attack-sheet-16", "spriteTestGroupEnemy", "assets/images/clean/enemy_egypt_mummy_attack_16_spritesheet_alpha.png", 90, FIXED_90_GRID),
+  sheet("enemy-egypt-priest-attack-sheet-16", "spriteTestGroupEnemy", "assets/images/clean/enemy_egypt_priest_attack_16_spritesheet_alpha.png", 90, FIXED_90_GRID),
+  sheet("enemy-egypt-anubis-guard-attack-sheet-16", "spriteTestGroupEnemy", "assets/images/clean/enemy_egypt_anubis_guard_attack_16_spritesheet_alpha.png", 90, FIXED_90_GRID),
+  sheet("enemy-egypt-sphinx-attack-sheet-16", "spriteTestGroupEnemy", "assets/images/clean/enemy_egypt_sphinx_attack_16_spritesheet_alpha.png", 90, FIXED_90_GRID),
+  sheet("enemy-egypt-pharaoh-king-attack-sheet-16", "spriteTestGroupEnemy", "assets/images/clean/enemy_egypt_pharaoh_king_attack_16_spritesheet_alpha.png", 90, FIXED_90_GRID),
 ]);

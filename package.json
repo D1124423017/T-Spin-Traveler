@@ -1,6 +1,7 @@
 {
   "type": "module",
   "scripts": {
+    "dev": "vite --host 127.0.0.1",
     "check": "node --check game.js",
     "test": "vitest run"
   },

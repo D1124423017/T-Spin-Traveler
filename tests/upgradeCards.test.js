@@ -54,16 +54,18 @@ describe("upgrade card selection helpers", () => {
     expect(getUpgradeDetailToggleRect().y).toBeGreaterThanOrEqual(detail.y);
   });
 
-  it("keeps full-width text while reserving the top of the card for baked alien rank art", () => {
+  it("keeps readable text zones while reserving the top of the card for baked alien rank art", () => {
     const layout = getUpgradeCardContentLayout(getUpgradeCardRect(0));
     expect(layout.icon).toBeUndefined();
     expect(layout.emblem).toBeUndefined();
     expect(layout.portrait).toMatchObject({ w: expect.any(Number), h: expect.any(Number) });
     expect(layout.portrait.y).toBeLessThan(layout.title.y);
-    expect(layout.panels.desc).toBeUndefined();
     expect(layout.panels.title).toBeUndefined();
-    expect(layout.panels.tags).toBeUndefined();
     expect(layout.panels.trait).toBeUndefined();
+    expect(layout.panels.tags).toMatchObject({ x: expect.any(Number), y: expect.any(Number), w: expect.any(Number), h: 28 });
+    expect(layout.panels.desc).toMatchObject({ x: expect.any(Number), y: expect.any(Number), w: expect.any(Number), h: expect.any(Number) });
+    expect(layout.tags.x).toBeGreaterThan(getUpgradeCardRect(0).x + 24);
+    expect(layout.desc.x).toBeGreaterThan(getUpgradeCardRect(0).x + 24);
     expect(layout.title.w).toBeGreaterThan(160);
     expect(layout.trait.w).toBeGreaterThan(160);
   });

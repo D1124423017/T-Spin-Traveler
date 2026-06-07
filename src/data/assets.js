@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-06-player-attack-vfx-qa";
+export const ASSET_VERSION = "2026-06-06-pharaoh-boss-attack-v1";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -125,7 +125,7 @@ export const stageEgyptStarTombExteriorRiftBg = registerImageAsset("stage-egypt-
 export const stageEgyptPyramidObservatoryRiftBg = registerImageAsset("stage-egypt-pyramid-observatory-rift", "assets/backgrounds/egypt_pyramid_observatory_rift_bg.png");
 export const stageMayaEclipseTempleRiftBg = registerImageAsset("stage-maya-eclipse-temple-rift", "assets/backgrounds/maya_eclipse_temple_rift_bg.png");
 export const stageAtlantisSunkenCrystalTempleRiftBg = registerImageAsset("stage-atlantis-sunken-crystal-temple-rift", "assets/backgrounds/atlantis_sunken_crystal_temple_rift_bg.png");
-export const slimeArt = registerImageAsset("fallback-enemy-battle-portrait", "assets/enemies/battle/enemy_scarab_scout_battle.png");
+export const slimeArt = registerImageAsset("fallback-enemy-battle-portrait", "assets/enemies/battle/enemy_egypt_rift_scarab_scout_battle.png");
 export const rosterArt = registerImageAsset("character-roster", "assets/character-roster-v4-alpha.png");
 export const heroIdleArt = registerImageAsset("hero-idle-canonical", "assets/images/clean/ET_Character_fullbody_alpha.png");
 export const noaMenuShowcaseArt = registerImageAsset("noa-menu-showcase", "assets/images/clean/noa_menu_showcase.png");
@@ -143,17 +143,22 @@ export const heroTSpinSheet = registerImageAsset("hero-tspin-sheet-16", "assets/
 export const heroB2BSheet = registerImageAsset("hero-b2b-sheet-16", "assets/images/clean/hero_b2b_attack_16_spritesheet_alpha.png");
 export const heroSwordWaveSheet = registerImageAsset("hero-sword-wave-sheet-16", "assets/effects/hero_sword_wave_16_spritesheet_alpha.png");
 export const heroImpactBurstSheet = registerImageAsset("hero-impact-burst-sheet-16", "assets/effects/hero_impact_burst_16_spritesheet_alpha.png");
+export const heroHitSheet = registerImageAsset("hero-hit-sheet-16", "assets/images/clean/hero_hit_16_spritesheet_alpha.png");
+export const enemyRiftProjectileSheet = registerImageAsset("enemy-rift-projectile-sheet-16", "assets/effects/enemy_rift_projectile_16_spritesheet_alpha.png");
+export const enemyImpactPhysicalSheet = registerImageAsset("enemy-impact-physical-sheet-16", "assets/effects/enemy_impact_physical_16_spritesheet_alpha.png");
+export const enemyImpactArcaneSheet = registerImageAsset("enemy-impact-arcane-sheet-16", "assets/effects/enemy_impact_arcane_16_spritesheet_alpha.png");
+export const enemyImpactStoneSheet = registerImageAsset("enemy-impact-stone-sheet-16", "assets/effects/enemy_impact_stone_16_spritesheet_alpha.png");
+export const enemyDeathSheet = registerImageAsset("enemy-death-sheet-16", "assets/effects/enemy_death_16_spritesheet_alpha.png");
+export const enemyPharaohProjectileSheet = registerImageAsset("enemy-pharaoh-projectile-sheet-16", "assets/effects/enemy_pharaoh_projectile_16_spritesheet_alpha.png");
+export const enemyPharaohImpactSheet = registerImageAsset("enemy-pharaoh-impact-sheet-16", "assets/effects/enemy_pharaoh_impact_16_spritesheet_alpha.png");
 export const noaLevelUpSheet = registerImageAsset("noa-level-up-sheet-16", "assets/effects/noa_level_up_16.png");
 export const enemyBattlePortraits = {
-  egyptScarabScout: registerImageAsset("enemy-battle-egypt-scarab-scout-left", "assets/enemies/battle/enemy_scarab_scout_battle.png"),
-  sandTombMummyPriest: registerImageAsset("enemy-battle-sand-tomb-mummy-priest-left", "assets/enemies/battle/enemy_sand_tomb_mummy_priest_battle.png"),
-  anubisRiftGuard: registerImageAsset("enemy-battle-anubis-rift-guard-left", "assets/enemies/battle/enemy_anubis_rift_guard_battle.png"),
-  mayaStoneBeastScout: registerImageAsset("enemy-battle-maya-stone-beast-scout-left", "assets/enemies/battle/enemy_maya_stone_beast_scout_battle.png"),
-  mayaEclipsePriest: registerImageAsset("enemy-battle-maya-eclipse-priest-left", "assets/enemies/battle/enemy_maya_eclipse_priest_battle.png"),
-  mayaFeatheredSerpentGuard: registerImageAsset("enemy-battle-maya-feathered-serpent-guard-left", "assets/enemies/battle/enemy_maya_feathered_serpent_guard_battle.png"),
-  atlantisCrystalJellyfishScout: registerImageAsset("enemy-battle-atlantis-crystal-jellyfish-scout-left", "assets/enemies/battle/enemy_atlantis_crystal_jellyfish_scout_battle.png"),
-  atlantisTidalShellGuard: registerImageAsset("enemy-battle-atlantis-tidal-shell-guard-left", "assets/enemies/battle/enemy_atlantis_tidal_shell_guard_battle.png"),
-  atlantisCrystalTempleSentinel: registerImageAsset("enemy-battle-atlantis-crystal-temple-sentinel-left", "assets/enemies/battle/enemy_atlantis_crystal_temple_sentinel_battle.png"),
+  egyptRiftScarabScout: registerImageAsset("enemy-battle-egypt-rift-scarab-scout-left", "assets/enemies/battle/enemy_egypt_rift_scarab_scout_battle.png"),
+  sandTombMummy: registerImageAsset("enemy-battle-egypt-sand-tomb-mummy-left", "assets/enemies/battle/enemy_egypt_sand_tomb_mummy_battle.png"),
+  egyptianPriest: registerImageAsset("enemy-battle-egyptian-priest-left", "assets/enemies/battle/enemy_egyptian_priest_battle.png"),
+  anubisGuard: registerImageAsset("enemy-battle-egypt-anubis-guard-left", "assets/enemies/battle/enemy_egypt_anubis_guard_battle.png"),
+  sphinxStoneGuardian: registerImageAsset("enemy-battle-egypt-sphinx-stone-guardian-left", "assets/enemies/battle/enemy_egypt_sphinx_stone_guardian_battle.png"),
+  pharaohKing: registerImageAsset("enemy-battle-egypt-pharaoh-king-left", "assets/enemies/battle/enemy_egypt_pharaoh_king_battle.png"),
 };
 
 export const upgradeCardFrames = {
@@ -203,16 +208,12 @@ export const metaUpgradeIcons = {
 };
 
 export const enemyAttackSheets = {
-  egyptScarabScout16: registerImageAsset("enemy-attack-egypt-scarab-scout-16", "assets/images/clean/enemy_attack_egypt_scarab_scout_16.png"),
-  sandTombMummyPriest16: registerImageAsset("enemy-attack-sand-tomb-mummy-priest-16", "assets/images/clean/enemy_attack_sand_tomb_mummy_priest_16.png"),
-  anubisRiftGuard16: registerImageAsset("enemy-attack-anubis-rift-guard-16", "assets/images/clean/enemy_attack_anubis_rift_guard_16.png"),
-  mayaStoneBeastScout16: registerImageAsset("enemy-attack-maya-stone-beast-scout-16", "assets/images/clean/enemy_attack_maya_stone_beast_scout_16.png"),
-  mayaEclipsePriest16: registerImageAsset("enemy-attack-maya-eclipse-priest-16", "assets/images/clean/enemy_attack_maya_eclipse_priest_16.png"),
-  mayaFeatheredSerpentGuard16: registerImageAsset("enemy-attack-maya-feathered-serpent-guard-16", "assets/images/clean/enemy_attack_maya_feathered_serpent_guard_16.png"),
-  atlantisCrystalJellyfishScout16: registerImageAsset("enemy-attack-atlantis-crystal-jellyfish-scout-16", "assets/images/clean/enemy_attack_atlantis_crystal_jellyfish_scout_16.png"),
-  atlantisTidalShellGuard16: registerImageAsset("enemy-attack-atlantis-tidal-shell-guard-16", "assets/images/clean/enemy_attack_atlantis_tidal_shell_guard_16.png"),
-  atlantisRiftJellyfish16: registerImageAsset("enemy-attack-atlantis-rift-jellyfish-16", "assets/images/clean/enemy_attack_atlantis_rift_jellyfish_16.png"),
-  atlantisCrystalTempleSentinel16: registerImageAsset("enemy-attack-atlantis-crystal-temple-sentinel-16", "assets/images/clean/enemy_attack_atlantis_crystal_temple_sentinel_16.png"),
+  riftScarab16: registerImageAsset("enemy-egypt-rift-scarab-attack-sheet-16", "assets/images/clean/enemy_egypt_rift_scarab_attack_16_spritesheet_alpha.png"),
+  mummy16: registerImageAsset("enemy-egypt-mummy-attack-sheet-16", "assets/images/clean/enemy_egypt_mummy_attack_16_spritesheet_alpha.png"),
+  priest16: registerImageAsset("enemy-egypt-priest-attack-sheet-16", "assets/images/clean/enemy_egypt_priest_attack_16_spritesheet_alpha.png"),
+  anubisGuard16: registerImageAsset("enemy-egypt-anubis-guard-attack-sheet-16", "assets/images/clean/enemy_egypt_anubis_guard_attack_16_spritesheet_alpha.png"),
+  sphinx16: registerImageAsset("enemy-egypt-sphinx-attack-sheet-16", "assets/images/clean/enemy_egypt_sphinx_attack_16_spritesheet_alpha.png"),
+  pharaohKing16: registerImageAsset("enemy-egypt-pharaoh-king-attack-sheet-16", "assets/images/clean/enemy_egypt_pharaoh_king_attack_16_spritesheet_alpha.png"),
 };
 
 export const musicLoopAssets = {
@@ -303,7 +304,7 @@ export const BACKGROUND_STAGES = [
   },
   {
     id: "egypt-pyramid-observatory-rift",
-    startWave: 5,
+    startWave: 2,
     image: stageEgyptPyramidObservatoryRiftBg,
     fallback: forestBg,
     dim: 0.3,
@@ -312,34 +313,24 @@ export const BACKGROUND_STAGES = [
     tint: "rgba(120, 80, 34, 0.06)",
   },
   {
-    id: "maya-eclipse-temple-rift",
-    startWave: 10,
-    image: stageMayaEclipseTempleRiftBg,
+    id: "egypt-star-tomb-rift",
+    startWave: 3,
+    image: stageEgyptStarTombRiftBg,
     fallback: forestBg,
-    dim: 0.34,
-    vignette: 0.6,
+    dim: 0.36,
+    vignette: 0.62,
     centerDim: 0.12,
-    tint: "rgba(48, 112, 78, 0.07)",
-  },
-  {
-    id: "atlantis-sunken-crystal-temple-rift",
-    startWave: 15,
-    image: stageAtlantisSunkenCrystalTempleRiftBg,
-    fallback: forestBg,
-    dim: 0.38,
-    vignette: 0.64,
-    centerDim: 0.12,
-    tint: "rgba(42, 104, 170, 0.1)",
+    tint: "rgba(120, 76, 36, 0.08)",
   },
 ];
 
 export const BOSS_BACKGROUND_STAGE = {
-  id: "atlantis-sunken-crystal-temple-rift-boss",
+  id: "egypt-star-tomb-rift-boss",
   bossOnly: true,
-  image: stageAtlantisSunkenCrystalTempleRiftBg,
+  image: stageEgyptStarTombRiftBg,
   fallback: forestBg,
-  dim: 0.5,
-  vignette: 0.74,
+  dim: 0.46,
+  vignette: 0.7,
   centerDim: 0.24,
-  tint: "rgba(88, 54, 190, 0.16)",
+  tint: "rgba(142, 94, 36, 0.14)",
 };

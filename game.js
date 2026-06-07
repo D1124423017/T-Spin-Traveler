@@ -2,7 +2,6 @@ import {
   ASSET_REGISTRY,
   BACKGROUND_STAGES,
   BOSS_BACKGROUND_STAGE,
-  enemyAttackSheets,
   enemyBattlePortraits,
   forestBg,
   getImageAssetRecord,
@@ -157,12 +156,26 @@ import {
 import {
   getAnimationDuration,
   getAnimationFrameInfo,
-  getAnimationHitDelay,
 } from "./src/render/animationTiming.js";
 import {
   PLAYER_ATTACK_HERO_ANIMATIONS,
   resolvePlayerAttackVfx,
 } from "./src/render/playerAttackVfx.js";
+import {
+  ENEMY_ATTACK_BODY_ANIMATIONS,
+  ENEMY_HIT_DELAY_MS,
+  resolveEnemyAttackVfx,
+} from "./src/render/enemyAttackVfx.js";
+import {
+  ENEMY_DEATH_ANIMATION,
+  ENEMY_DEATH_DURATION_MS,
+  ENEMY_DEATH_TRANSITION,
+  getEnemyDeathTransitionState,
+} from "./src/render/enemyDeathVfx.js";
+import {
+  HERO_HIT_DURATION_MS,
+  PLAYER_HIT_ANIMATION,
+} from "./src/render/playerHitVfx.js";
 import {
   createHudLayout,
   getControlsResetButtonRect as getControlsResetButtonRectForLayout,
@@ -245,7 +258,9 @@ import {
 import {
   DEBUG_HUD_BUILD,
   createDebugHudState,
+  getDebugArtTuning,
   isDebugHudEnabled,
+  updateDebugArtTuningDom,
   updateDebugDomHud,
 } from "./src/debug/debugHud.js";
 
@@ -746,7 +761,14 @@ const RUN_MODES = {
     targetWaves: Infinity,
     descriptionKey: "endlessDescription",
   },
+  storyEgypt: {
+    label: "Egypt",
+    targetWaves: 11,
+    descriptionKey: "mainStageEgyptDescription",
+  },
 };
+
+const NORMAL_ENEMY_CYCLES_BEFORE_BOSS = 2;
 
 const DEFAULT_CONTROLS = {
   left: ["arrowleft"],
@@ -799,7 +821,7 @@ const CHARACTER_BASELINES = {
     groundY: UI_LAYOUT.playerStage.y + STAGE_BASELINE_OFFSETS.player.groundY,
     centerOffsetX: STAGE_BASELINE_OFFSETS.player.centerX,
     localY: 120,
-    scale: 1.08,
+    scale: 0.88,
     glowRadius: 150,
     sigilRadius: 116,
     sigilYOffset: -2,
@@ -811,7 +833,7 @@ const CHARACTER_BASELINES = {
     groundY: UI_LAYOUT.enemyStage.y + STAGE_BASELINE_OFFSETS.enemy.groundY,
     centerOffsetX: STAGE_BASELINE_OFFSETS.enemy.centerX,
     localY: 104,
-    scale: 1.28,
+    scale: 1,
     glowRadius: 176,
     sigilRadius: 144,
     sigilYOffset: -2,
@@ -974,128 +996,7 @@ const CHALLENGE_REWARDS = {
 
 
 
-const ENEMY_ATTACK_ANIMATIONS = {
-  slime: {
-    id: "enemy-attack-sand-tomb-mummy-priest",
-    image: enemyAttackSheets.sandTombMummyPriest16,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 60,
-    timing: [78, 76, 72, 68, 64, 58, 52, 50, 78, 84, 72, 68, 72, 78, 84, 88],
-    draw: { x: -198, y: -320, w: 396, h: 500 },
-    hitFrame: 8,
-    noKeying: true,
-  },
-  blue_slime: {
-    id: "enemy-attack-egypt-scarab-scout",
-    image: enemyAttackSheets.egyptScarabScout16,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 60,
-    timing: [78, 76, 72, 68, 62, 56, 52, 50, 58, 84, 76, 70, 72, 78, 84, 88],
-    draw: { x: -196, y: -304, w: 392, h: 612 },
-    hitFrame: 8,
-    noKeying: true,
-  },
-  vine: {
-    id: "enemy-attack-maya-stone-beast-scout",
-    image: enemyAttackSheets.mayaStoneBeastScout16,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 60,
-    timing: [80, 78, 74, 70, 64, 58, 52, 50, 58, 86, 74, 70, 72, 78, 84, 88],
-    draw: { x: -198, y: -300, w: 396, h: 500 },
-    hitFrame: 9,
-    noKeying: true,
-  },
-  mushroom: {
-    id: "enemy-attack-maya-eclipse-priest",
-    image: enemyAttackSheets.mayaEclipsePriest16,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 60,
-    timing: [82, 78, 76, 70, 66, 60, 54, 52, 58, 86, 78, 72, 74, 80, 86, 90],
-    draw: { x: -198, y: -320, w: 396, h: 500 },
-    hitFrame: 9,
-    noKeying: true,
-  },
-  beetle: {
-    id: "enemy-attack-anubis-rift-guard",
-    image: enemyAttackSheets.anubisRiftGuard16,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 60,
-    timing: [84, 82, 78, 72, 66, 60, 54, 50, 56, 90, 80, 74, 76, 82, 88, 92],
-    draw: { x: -218, y: -350, w: 436, h: 560 },
-    hitFrame: 9,
-    noKeying: true,
-  },
-  mist: {
-    id: "enemy-attack-atlantis-crystal-jellyfish-scout",
-    image: enemyAttackSheets.atlantisCrystalJellyfishScout16,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 60,
-    timing: [78, 76, 72, 68, 62, 58, 52, 50, 56, 84, 76, 70, 72, 78, 84, 88],
-    draw: { x: -198, y: -300, w: 396, h: 500 },
-    hitFrame: 9,
-    noKeying: true,
-  },
-  thorn: {
-    id: "enemy-attack-atlantis-tidal-shell-guard",
-    image: enemyAttackSheets.atlantisTidalShellGuard16,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 60,
-    timing: [82, 80, 78, 72, 62, 54, 48, 48, 66, 88, 72, 68, 72, 78, 86, 90],
-    draw: { x: -218, y: -340, w: 436, h: 540 },
-    hitFrame: 9,
-    noKeying: true,
-  },
-  wisp: {
-    id: "enemy-attack-atlantis-rift-jellyfish",
-    image: enemyAttackSheets.atlantisRiftJellyfish16,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 60,
-    timing: [78, 74, 70, 66, 62, 58, 52, 50, 56, 82, 76, 70, 70, 76, 82, 86],
-    draw: { x: -198, y: -300, w: 396, h: 500 },
-    hitFrame: 9,
-    noKeying: true,
-  },
-  sentinel: {
-    id: "enemy-attack-maya-feathered-serpent-guard",
-    image: enemyAttackSheets.mayaFeatheredSerpentGuard16,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 62,
-    timing: [86, 82, 80, 78, 72, 66, 58, 52, 56, 92, 82, 76, 78, 82, 88, 92],
-    draw: { x: -218, y: -350, w: 436, h: 560 },
-    hitFrame: 9,
-    noKeying: true,
-  },
-  king: {
-    id: "enemy-attack-atlantis-crystal-temple-sentinel",
-    image: enemyAttackSheets.atlantisCrystalTempleSentinel16,
-    columns: 4,
-    rows: 4,
-    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    frameMs: 62,
-    timing: [92, 88, 84, 80, 74, 68, 60, 54, 60, 96, 86, 80, 82, 88, 94, 100],
-    draw: { x: -224, y: -352, w: 448, h: 560 },
-    hitFrame: 9,
-    noKeying: true,
-  },
-};
+const ENEMY_ATTACK_ANIMATIONS = ENEMY_ATTACK_BODY_ANIMATIONS;
 
 const state = {
   mode: "start",
@@ -1139,6 +1040,7 @@ const state = {
   heroAnimation: null,
   heroLevelUpFx: null,
   enemyAnimation: null,
+  enemyDeathVfx: null,
   placed: 0,
   combo: 0,
   pendingGarbage: 0,
@@ -1697,6 +1599,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.heroAnimation = null;
   state.heroLevelUpFx = null;
   state.enemyAnimation = null;
+  state.enemyDeathVfx = null;
   state.placed = 0;
   state.combo = 0;
   state.pendingGarbage = 0;
@@ -2270,14 +2173,12 @@ function getHeroHitDelay(kind, comboAttackStyle = "") {
 }
 
 function getEnemyAnimationDuration(kind) {
-  const config = ENEMY_ATTACK_ANIMATIONS[kind];
-  return config ? getAnimationDuration(config) : ENEMY_ATTACK_DURATION_MS;
+  const vfx = resolveEnemyAttackVfx(kind);
+  return vfx?.bodyDurationMs || ENEMY_ATTACK_DURATION_MS;
 }
 
-function getEnemyHitDelay(kind) {
-  const config = ENEMY_ATTACK_ANIMATIONS[kind];
-  if (!config) return Math.floor(ENEMY_ATTACK_DURATION_MS * 0.78);
-  return getAnimationHitDelay(config, 0.78);
+function getEnemyHitDelay() {
+  return ENEMY_HIT_DELAY_MS;
 }
 
 function schedulePendingHit(hit) {
@@ -2473,7 +2374,7 @@ function applyEnemyHit(hit) {
   state.pendingGarbage += garbageAdded;
   if (garbageAdded > 0) state.garbageGrace = getGarbageDelayForWave();
   applyEnemyBoardEffect(enemy);
-  state.playerHit = 300;
+  state.playerHit = HERO_HIT_DURATION_MS;
   state.shake = Math.max(state.shake, 9 + garbageAdded * 2);
   if (blocked > 0) playSfx(state.guard <= 0 && finalDamage > 0 ? "shieldBreak" : "shield");
   if (finalDamage > 0 || garbageAdded > 0) playSfx("enemy");
@@ -3726,11 +3627,12 @@ function startHeroLevelUpEffect() {
   };
 }
 
-function startEnemyAttackAnimation(kind) {
-  const config = ENEMY_ATTACK_ANIMATIONS[kind];
+function startEnemyAttackAnimation(kind, resolvedConfig = null) {
+  const config = resolvedConfig || ENEMY_ATTACK_ANIMATIONS[kind];
   if (!config) return;
   state.enemyAnimation = {
     kind,
+    config,
     startedAt: performance.now(),
     duration: getAnimationDuration(config),
   };
@@ -4051,17 +3953,22 @@ function completeChallenge(config) {
 
 function resolveEnemyAttack() {
   const enemy = state.enemyType;
+  const bossPhase = enemy.id === "king" ? getBossPhase() : 1;
+  const enemyVfx = resolveEnemyAttackVfx(enemy.id, bossPhase);
   const garbageAdded = getEnemyAttackGarbage(enemy);
   const damageTaken = Math.max(1, state.enemyAttackDamage - state.upgrades.defense);
   state.enemyCountdown = getEnemyCountdownForWave();
   if (enemy.id === "king" && getBossPhase() >= 3) state.enemyCountdown = Math.max(4, state.enemyCountdown - 1);
   if (enemy.id === "king" && getBossPhase() >= 4) state.enemyCountdown = Math.max(3, state.enemyCountdown - 1);
-  if (enemy.id === "king") startBossWindup(getBossPhase());
-  startEnemyAttackAnimation(enemy.id);
-  const enemyAttackDuration = getEnemyAnimationDuration(enemy.id);
+  if (enemy.id === "king") startBossWindup(bossPhase, enemyVfx?.shake);
+  if (enemy.attackSprite === false && !enemyVfx) state.enemyAnimation = null;
+  else startEnemyAttackAnimation(enemy.id, enemyVfx?.bodyConfig);
+  const enemyAttackDuration = enemyVfx?.totalDurationMs
+    || (enemy.attackSprite === false ? 860 : getEnemyAnimationDuration(enemy.id));
   state.attacks.push({
     type: "enemy",
     attackKind: enemy.id,
+    bossPhase,
     x0: 994,
     y0: 344,
     x1: 266,
@@ -4071,7 +3978,7 @@ function resolveEnemyAttack() {
   });
   schedulePendingHit({
     type: "enemy",
-    delay: getEnemyHitDelay(enemy.id),
+    delay: getEnemyHitDelay(),
     enemy,
     damageTaken,
     garbageAdded,
@@ -4163,7 +4070,7 @@ function getBossPhase() {
   return getBossPhaseByHp(state.enemyHp, state.enemyMaxHp);
 }
 
-function startBossWindup(phase = getBossPhase()) {
+function startBossWindup(phase = getBossPhase(), shake = 8 + phase * 2) {
   if (state.enemyType?.id !== "king") return;
   state.bossWindup = {
     phase,
@@ -4171,7 +4078,7 @@ function startBossWindup(phase = getBossPhase()) {
     duration: BOSS_WINDUP_MS,
     startedAt: performance.now(),
   };
-  state.shake = Math.max(state.shake, 8 + phase * 2);
+  state.shake = Math.max(state.shake, shake);
 }
 
 function triggerBossPhaseSignal(phase) {
@@ -4199,9 +4106,50 @@ function checkBossPhaseTransition(beforeHp, afterHp) {
   if (afterPhase > beforePhase && afterPhase > state.lastBossPhase) triggerBossPhaseSignal(afterPhase);
 }
 
+function spawnEnemyDeathParticles(enemy) {
+  const pose = CHARACTER_BASELINES.enemy;
+  const centerX = UI_LAYOUT.enemyStage.x + UI_LAYOUT.enemyStage.w / 2 + pose.centerOffsetX;
+  const centerY = pose.groundY - 150 * pose.scale;
+  const colors = ["#a972ff", "#68dcff", "#5f7cff", "#fff0a6", enemy.color || "#c7a7ff"];
+
+  for (let index = 0; index < ENEMY_DEATH_TRANSITION.particleCount; index += 1) {
+    const angle = (Math.PI * 2 * index) / ENEMY_DEATH_TRANSITION.particleCount
+      + (Math.random() - 0.5) * 0.34;
+    const speed = 1.8 + Math.random() * 3.8;
+    state.particles.push({
+      kind: "enemy-death",
+      x: centerX + (Math.random() - 0.5) * 70,
+      y: centerY + (Math.random() - 0.5) * 90,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 1.2,
+      gravity: 0.018,
+      size: 2.4 + Math.random() * 4.8,
+      rotation: Math.random() * Math.PI,
+      spin: (Math.random() - 0.5) * 0.18,
+      color: colors[index % colors.length],
+      life: 760 + Math.random() * 300,
+    });
+  }
+}
+
+function startEnemyDeathTransition(enemy, revealNext) {
+  if (!enemy) return;
+  state.enemyDeathVfx = {
+    enemy,
+    revealNext,
+    startedAt: performance.now(),
+    duration: ENEMY_DEATH_DURATION_MS,
+  };
+  state.enemyAnimation = null;
+  spawnEnemyDeathParticles(enemy);
+}
+
 function startNextWave() {
   const clearedBoss = state.enemyType.id === "king";
   const clearedMiniBoss = state.miniBoss;
+  const nextDefeated = state.defeated + 1;
+  const revealNext = nextDefeated < RUN_MODES[state.runMode].targetWaves;
+  startEnemyDeathTransition(state.enemyType, revealNext);
   recordRunEnemyDefeat(clearedBoss);
   state.defeated += 1;
   if (state.defeated >= RUN_MODES[state.runMode].targetWaves) {
@@ -4539,19 +4487,19 @@ function getStandardEnemyPool() {
 }
 
 function getEnemyForWave(wave) {
-  if (wave % 10 === 0) return findEnemyById("king");
-  if (wave % 5 === 0) {
-    const miniIndex = Math.floor(wave / 5 - 1) % MINI_BOSS_ENEMY_IDS.length;
-    return findEnemyById(MINI_BOSS_ENEMY_IDS[miniIndex]);
-  }
   const pool = getStandardEnemyPool();
-  return pool[(wave - 1) % pool.length];
+  const normalCycleLength = Math.max(1, pool.length * NORMAL_ENEMY_CYCLES_BEFORE_BOSS);
+  const cycleLength = normalCycleLength + 1;
+  const slot = (wave - 1) % cycleLength;
+  if (slot >= normalCycleLength) return findEnemyById("king");
+  return pool[slot % pool.length] || ENEMIES[0];
 }
 
 function configureEnemyForWave() {
   const enemy = getEnemyForWave(state.wave);
-  const tier = Math.floor((state.wave - 1) / ENEMIES.length);
-  state.miniBoss = state.wave % 5 === 0 && state.wave % 10 !== 0;
+  const cycleLength = Math.max(1, getStandardEnemyPool().length * NORMAL_ENEMY_CYCLES_BEFORE_BOSS + 1);
+  const tier = Math.floor((state.wave - 1) / cycleLength);
+  state.miniBoss = MINI_BOSS_ENEMY_IDS.includes(enemy.id);
   state.enemyType = enemy;
   const bossMultiplier = enemy.id === "king" ? BALANCE.bossMultiplier : state.miniBoss ? BALANCE.miniBossMultiplier : 1;
   state.enemyMaxHp = Math.floor((enemy.hp + tier * enemy.hpScale + Math.floor((state.wave - 1) * BALANCE.enemyWaveHp)) * bossMultiplier);
@@ -4712,6 +4660,10 @@ function update(time) {
         debugState: state.debug,
         readers: getDebugHudReaders(time),
         now: time,
+      });
+      updateDebugArtTuningDom({
+        enabled: DEBUG_HUD_ENABLED,
+        tuning: getDebugArtTuning({ enabled: DEBUG_HUD_ENABLED }),
       });
     }
     draw();
@@ -5588,6 +5540,12 @@ function tickEffects(dt) {
     state.bossWindup.life -= dt;
     if (state.bossWindup.life <= 0) state.bossWindup = null;
   }
+  if (
+    state.enemyDeathVfx
+    && performance.now() - state.enemyDeathVfx.startedAt >= state.enemyDeathVfx.duration
+  ) {
+    state.enemyDeathVfx = null;
+  }
   state.attacks = state.attacks
     .map((a) => ({ ...a, life: a.life - dt }))
     .filter((a) => a.life > 0);
@@ -5602,7 +5560,8 @@ function tickEffects(dt) {
       ...p,
       x: p.x + p.vx,
       y: p.y + p.vy,
-      vy: p.vy + 0.08,
+      vy: p.vy + (p.gravity ?? 0.08),
+      rotation: (p.rotation || 0) + (p.spin || 0),
       life: p.life - dt,
     }))
     .filter((p) => p.life > 0);
@@ -5725,11 +5684,10 @@ function drawBackground() {
 }
 
 function getBackgroundForWave(wave) {
-  if (wave > 0 && wave % 10 === 0) return BOSS_BACKGROUND_STAGE;
-  for (let i = BACKGROUND_STAGES.length - 1; i >= 0; i -= 1) {
-    if (wave >= BACKGROUND_STAGES[i].startWave) return BACKGROUND_STAGES[i];
-  }
-  return BACKGROUND_STAGES[0];
+  const enemyCycleLength = Math.max(1, getStandardEnemyPool().length * NORMAL_ENEMY_CYCLES_BEFORE_BOSS + 1);
+  if (wave > 0 && (wave - 1) % enemyCycleLength === enemyCycleLength - 1) return BOSS_BACKGROUND_STAGE;
+  if (!BACKGROUND_STAGES.length) return BOSS_BACKGROUND_STAGE;
+  return BACKGROUND_STAGES[Math.max(0, wave - 1) % BACKGROUND_STAGES.length];
 }
 
 function getStageBackgroundImage(stage) {
@@ -6206,22 +6164,21 @@ function drawPlayer() {
   const innerW = panel.w - pad * 2;
   drawHpBar(left, panel.y + 84, innerW, 20, state.playerHp, state.playerMaxHp, hit ? "#ff7782" : "#76d4ff", t("hp"));
   drawGuardMeter(left, panel.y + 122, innerW);
-  drawBuildChip(left, panel.y + 156, innerW);
   ctx.save();
   const pose = CHARACTER_BASELINES.player;
+  const artTuning = getDebugArtTuning({ enabled: DEBUG_HUD_ENABLED });
+  const playerScale = pose.scale * artTuning.playerScale;
   const centerX = stage.x + stage.w / 2 + pose.centerOffsetX;
-  const anchorY = getBaselineAnchorY(pose.groundY, pose.localY, pose.scale);
+  const anchorY = getBaselineAnchorY(pose.groundY, pose.localY, playerScale);
   drawStageGlow(centerX, pose.groundY, pose.glowRadius, "#6de8ff");
   drawPresentationSigil(centerX, pose.groundY + pose.sigilYOffset, pose.sigilRadius, "#6de8ff");
   ctx.translate(centerX, anchorY);
-  ctx.scale(pose.scale, pose.scale);
+  ctx.scale(playerScale, playerScale);
   drawCharacterShadow(0, pose.localY, pose.shadowW, "#6de8ff");
 
   ctx.save();
-  if (hit) ctx.translate(-10, 0);
-  const bob = Math.sin(performance.now() * 0.0025) * 1.2;
+  const bob = hit ? 0 : Math.sin(performance.now() * 0.0025) * 1.2;
   ctx.translate(0, bob);
-  if (hit) scaleAroundBaseline(1.08, 0.92, pose.localY);
   drawHeroSprite(hit);
   if (playerAttack) drawNoaAttackPose(playerAttack);
   ctx.restore();
@@ -6323,6 +6280,12 @@ function drawHeroSprite(hit) {
   ctx.save();
   ctx.shadowColor = "rgba(98, 221, 255, 0.45)";
   ctx.shadowBlur = 24;
+
+  if (drawPlayerHitAnimationFrame()) {
+    ctx.restore();
+    return;
+  }
+
   if (hit) {
     ctx.globalCompositeOperation = "lighter";
     ctx.globalAlpha = 0.82;
@@ -6337,6 +6300,22 @@ function drawHeroSprite(hit) {
   drawHeroIdleEnergy();
   drawHeroLevelUpEffect();
   ctx.restore();
+}
+
+function drawPlayerHitAnimationFrame() {
+  if (state.playerHit <= 0 || !isImageReady(PLAYER_HIT_ANIMATION.image)) return false;
+  const elapsed = clamp(HERO_HIT_DURATION_MS - state.playerHit, 0, HERO_HIT_DURATION_MS);
+  const artTuning = getDebugArtTuning({ enabled: DEBUG_HUD_ENABLED });
+  const draw = alignDrawBoxToBaseline(
+    PLAYER_HIT_ANIMATION.draw,
+    CHARACTER_BASELINES.player.localY,
+    {
+      scale: CHARACTER_BASELINES.player.animationScale * artTuning.heroAttackScale,
+      bottomOffset: PLAYER_HIT_ANIMATION.bottomOffset,
+    },
+  );
+  drawSpriteAnimationFrame(PLAYER_HIT_ANIMATION, elapsed, draw.x, draw.y, draw.w, draw.h);
+  return true;
 }
 
 function drawHeroIdleBase(context = "battle") {
@@ -6373,8 +6352,9 @@ function drawHeroAnimationFrame() {
   }
   const frameIndex = getAnimationFrameInfo(config, elapsed).frameIndex;
   if (isImageReady(config.image)) {
+    const artTuning = getDebugArtTuning({ enabled: DEBUG_HUD_ENABLED });
     const draw = alignDrawBoxToBaseline(config.draw || { x: -132, y: -222, w: 264, h: 410 }, CHARACTER_BASELINES.player.localY, {
-      scale: CHARACTER_BASELINES.player.animationScale,
+      scale: CHARACTER_BASELINES.player.animationScale * artTuning.heroAttackScale,
       bottomOffset: config.bottomOffset ?? CHARACTER_BASELINES.player.animationBottomOffset,
     });
     drawSpriteAnimationFrame(config, elapsed, draw.x, draw.y, draw.w, draw.h);
@@ -6927,12 +6907,14 @@ function drawEnemy() {
   drawEnemyBehaviorChips(left, intentY + 96, enemy, innerW);
   ctx.save();
   const pose = CHARACTER_BASELINES.enemy;
+  const artTuning = getDebugArtTuning({ enabled: DEBUG_HUD_ENABLED });
+  const enemyScale = pose.scale * artTuning.enemyScale;
   const centerX = stage.x + stage.w / 2 + pose.centerOffsetX;
-  const anchorY = getBaselineAnchorY(pose.groundY, pose.localY, pose.scale);
+  const anchorY = getBaselineAnchorY(pose.groundY, pose.localY, enemyScale);
   drawStageGlow(centerX, pose.groundY, pose.glowRadius, enemy.color);
   drawPresentationSigil(centerX, pose.groundY + pose.sigilYOffset, pose.sigilRadius, enemy.color);
   ctx.translate(centerX, anchorY);
-  ctx.scale(pose.scale, pose.scale);
+  ctx.scale(enemyScale, enemyScale);
   drawCharacterShadow(0, pose.localY, pose.shadowW, enemy.color);
 
   ctx.save();
@@ -6944,7 +6926,9 @@ function drawEnemy() {
   const pulse = 1 + Math.sin(performance.now() * 0.006) * 0.018;
   scaleAroundBaseline(pulse, pulse, pose.localY);
   if (hit) scaleAroundBaseline(1.08, 0.92, pose.localY);
-  if (drawEnemyAttackAnimationFrame(enemy, hit)) {
+  if (drawEnemyDeathTransitionFrame(enemy)) {
+    // Keep the defeated enemy visible while the next enemy fades in.
+  } else if (drawEnemyAttackAnimationFrame(enemy, hit)) {
     // Enemy attack animations use the standardized 16-frame sheets.
   } else if (drawEnemyConceptArt(enemy, hit)) {
     // Project-local concept sheets are the primary idle enemy source.
@@ -7066,21 +7050,70 @@ function drawEnemyConceptArt(enemy, hit) {
   return true;
 }
 
+function drawEnemyDeathTransitionFrame(enemy) {
+  const transition = state.enemyDeathVfx;
+  if (!transition) return false;
+  const elapsed = performance.now() - transition.startedAt;
+  if (elapsed >= transition.duration) {
+    state.enemyDeathVfx = null;
+    return false;
+  }
+
+  const phase = getEnemyDeathTransitionState(elapsed, transition.revealNext);
+  if (phase.oldAlpha > 0) {
+    ctx.save();
+    ctx.globalAlpha *= phase.oldAlpha;
+    ctx.translate(0, -phase.oldLift);
+    scaleAroundBaseline(phase.oldScale, phase.oldScale, CHARACTER_BASELINES.enemy.localY);
+    drawEnemyConceptArt(transition.enemy, false);
+    ctx.restore();
+  }
+
+  if (isImageReady(ENEMY_DEATH_ANIMATION.image) && phase.effectAlpha > 0) {
+    const draw = ENEMY_DEATH_ANIMATION.draw;
+    ctx.save();
+    ctx.globalAlpha *= phase.effectAlpha * 0.76;
+    ctx.globalCompositeOperation = "screen";
+    ctx.shadowColor = "#8f7cff";
+    ctx.shadowBlur = 22;
+    drawSpriteAnimationFrame(
+      ENEMY_DEATH_ANIMATION,
+      phase.elapsed,
+      draw.x,
+      draw.y,
+      draw.w,
+      draw.h,
+    );
+    ctx.restore();
+  }
+
+  if (phase.nextAlpha > 0) {
+    ctx.save();
+    ctx.globalAlpha *= phase.nextAlpha;
+    ctx.translate(0, phase.nextLift);
+    drawEnemyConceptArt(enemy, false);
+    ctx.restore();
+  }
+  return true;
+}
+
 function drawEnemyAttackAnimationFrame(enemy, hit) {
   if (!state.enemyAnimation || state.enemyAnimation.kind !== enemy.id) return false;
-  const config = ENEMY_ATTACK_ANIMATIONS[enemy.id];
+  const config = state.enemyAnimation.config || ENEMY_ATTACK_ANIMATIONS[enemy.id];
   if (!config) return false;
   const elapsed = performance.now() - state.enemyAnimation.startedAt;
   if (elapsed >= state.enemyAnimation.duration) {
     state.enemyAnimation = null;
     return false;
   }
-  const draw = alignDrawBoxToBaseline(config.draw || enemy.artDraw || { x: -140, y: -150, w: 280, h: 240 }, CHARACTER_BASELINES.enemy.localY);
+  const artTuning = getDebugArtTuning({ enabled: DEBUG_HUD_ENABLED });
+  const draw = alignDrawBoxToBaseline(config.draw || enemy.artDraw || { x: -140, y: -150, w: 280, h: 240 }, CHARACTER_BASELINES.enemy.localY, {
+    scale: artTuning.enemyAttackScale * (config.renderScale || 1),
+    bottomOffset: config.bottomOffset || 0,
+  });
   ctx.save();
-  const anticipation = Math.sin((elapsed / state.enemyAnimation.duration) * Math.PI);
-  ctx.translate(anticipation * (enemy.id === "beetle" || enemy.id === "vine" ? -10 : 0), 0);
   ctx.shadowColor = hexToRgba(enemy.color, hit ? 0.86 : 0.62);
-  ctx.shadowBlur = hit ? 38 : 26;
+  ctx.shadowBlur = (hit ? 38 : 26) * (config.intensity || 1);
   ctx.filter = config.noKeying ? "none" : enemy.filter;
   if (hit) {
     ctx.globalCompositeOperation = "lighter";
@@ -8246,6 +8279,64 @@ function drawMeleeAttackPath(attack, x, y, t, glow, core, special) {
 }
 
 function drawEnemyAttack(attack, x, y, t) {
+  const vfx = resolveEnemyAttackVfx(attack.attackKind, attack.bossPhase || 1);
+  const ready = vfx
+    && isImageReady(vfx.impact.image)
+    && (!vfx.projectile || isImageReady(vfx.projectile.image));
+  if (!ready) {
+    drawEnemyAttackFallback(attack, x, y, t);
+    return;
+  }
+
+  const elapsed = attack.duration - attack.life;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  if (vfx.projectile) drawEnemyProjectileSprite(attack, vfx.projectile, elapsed);
+  drawEnemyImpactSprite(attack, vfx.impact, elapsed);
+  ctx.restore();
+}
+
+function drawEnemyProjectileSprite(attack, projectile, elapsed) {
+  const localElapsed = elapsed - projectile.startMs;
+  if (localElapsed < 0 || localElapsed > projectile.durationMs) return;
+  const progress = clamp(localElapsed / projectile.durationMs, 0, 1);
+  const eased = 1 - Math.pow(1 - progress, 3);
+  const x = lerp(attack.x0, attack.x1, eased);
+  const y = lerp(attack.y0 - 8, attack.y1 - 4, eased) - Math.sin(progress * Math.PI) * 34;
+  const size = 148 * (projectile.scale || 1);
+  ctx.save();
+  ctx.shadowColor = "#b98cff";
+  ctx.shadowBlur = 24 * (projectile.intensity || 1);
+  drawSpriteAnimationFrame(
+    projectile,
+    localElapsed,
+    x - size / 2,
+    y - size / 2,
+    size,
+    size,
+  );
+  ctx.restore();
+}
+
+function drawEnemyImpactSprite(attack, impact, elapsed) {
+  const localElapsed = elapsed - impact.startMs;
+  if (localElapsed < 0 || localElapsed > impact.durationMs) return;
+  const size = 182 * (impact.scale || 1);
+  ctx.save();
+  ctx.shadowColor = "#c7a7ff";
+  ctx.shadowBlur = 28 * (impact.intensity || 1);
+  drawSpriteAnimationFrame(
+    impact,
+    localElapsed,
+    attack.x1 - size / 2,
+    attack.y1 - size / 2,
+    size,
+    size,
+  );
+  ctx.restore();
+}
+
+function drawEnemyAttackFallback(attack, x, y, t) {
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   const kind = attack.attackKind || "slime";
@@ -8585,11 +8676,29 @@ function drawParticles() {
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   for (const p of state.particles) {
-    ctx.globalAlpha = Math.min(0.72, p.life / 260);
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-    ctx.fill();
+    if (p.kind === "enemy-death") {
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.9, p.life / 260);
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 10;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation || 0);
+      ctx.beginPath();
+      ctx.moveTo(0, -p.size * 1.6);
+      ctx.lineTo(p.size * 0.72, 0);
+      ctx.lineTo(0, p.size * 1.6);
+      ctx.lineTo(-p.size * 0.72, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    } else {
+      ctx.globalAlpha = Math.min(0.72, p.life / 260);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
   ctx.restore();
   ctx.globalAlpha = 1;
@@ -8897,6 +9006,7 @@ function drawFirstWaveCombatHint() {
 function menuActionText(key) {
   if (state.language !== "en") return t(key);
   if (key === "startGame") return "START";
+  if (key === "mainStageStart") return "MAIN STAGE";
   if (key === "settings") return "SETTINGS";
   if (key === "moveGuide") return "MOVE GUIDE";
   return t(key).toUpperCase();
@@ -8987,7 +9097,7 @@ function drawStartMenuOverlay() {
   label(t("menuActions").toUpperCase(), bx, m.y + 58, 15, "#fff0a6");
   wrapText(t("startPanelHint"), bx, m.y + 88, bw, 19, "rgba(238,244,252,0.58)", 12);
   drawMenuButton(buttons.start.x, buttons.start.y, buttons.start.w, buttons.start.h, menuActionText("startGame"), "Enter", "primary", { motion: getMenuButtonMotion(menuMotion, 0) });
-  drawMenuButton(buttons.tutorial.x, buttons.tutorial.y, buttons.tutorial.w, buttons.tutorial.h, t("tutorialStart"), t("tutorialHintShort"), "secondary", { motion: getMenuButtonMotion(menuMotion, 1) });
+  drawMenuButton(buttons.mainStage.x, buttons.mainStage.y, buttons.mainStage.w, buttons.mainStage.h, menuActionText("mainStageStart"), t("mainStageEgyptShort"), "secondary", { motion: getMenuButtonMotion(menuMotion, 1) });
   drawMenuButton(buttons.metaUpgrade.x, buttons.metaUpgrade.y, buttons.metaUpgrade.w, buttons.metaUpgrade.h, menuActionText("upgradeMenu"), "", "secondary", { motion: getMenuButtonMotion(menuMotion, 2) });
   drawMenuButton(buttons.guide.x, buttons.guide.y, buttons.guide.w, buttons.guide.h, menuActionText("moveGuide"), "Spin", "secondary", { motion: getMenuButtonMotion(menuMotion, 3) });
   drawMenuButton(buttons.settings.x, buttons.settings.y, buttons.settings.w, buttons.settings.h, menuActionText("settings"), "", "secondary", { motion: getMenuButtonMotion(menuMotion, 4) });
@@ -9563,7 +9673,7 @@ function drawOverlay() {
   wrapText(sub, 384, 260, 504, 28, "rgba(238,244,252,0.76)", 19);
   if (state.mode === "start") {
     drawMenuButton(384, 318, 510, 54, t("endless"), "Enter");
-    drawMenuButton(384, 386, 510, 44, t("tutorialStart"), "3 min");
+    drawMenuButton(384, 386, 510, 44, t("mainStageStart"), t("mainStageEgyptShort"));
     drawMenuButton(384, 454, 244, 44, t("settings"), "Esc");
     drawMenuButton(650, 454, 244, 44, t("practice"), "spins");
     label(t("startHint"), 384, 534, 18, "#9fb4ff");
@@ -10045,7 +10155,7 @@ function drawUpgradeChoiceCard({
   drawUpgradeTagPills(getUpgradeTags(upgrade), layout.tags.x, layout.tags.y, layout.tags.w, layout.tags.maxTags || 2, 0.92, textTheme);
   drawUpgradeDivider(layout.divider.x, layout.divider.y, layout.divider.w, textTheme.dividerColor, hovered ? 0.6 : selected ? 0.52 : 0.32);
   drawReadableUpgradeText(() => {
-    drawLimitedWrapText(upgradeShortText(upgrade), layout.desc.x, layout.desc.y, layout.desc.w, layout.desc.lineH, textTheme.descColor, layout.desc.size, layout.desc.maxLines || 2, "800");
+    drawLimitedWrapText(upgradeShortText(upgrade), layout.desc.x, layout.desc.y, layout.desc.w, layout.desc.lineH, textTheme.descColor, layout.desc.size, layout.desc.maxLines || 2, "900");
   }, textTheme.shadowBlur, textTheme.shadowColor, textTheme.shadowOffsetY);
   drawUpgradePickHint(localCard.x + 16, localCard.y + localCard.h - 28, pickNumber, accent);
   if (selected) drawUpgradeSelectionHighlight(localCard, accent);
@@ -10372,13 +10482,13 @@ function getUpgradeCardTextTheme(upgrade, layoutVariant = "default", rarity = ge
       chipTextColor: "#302914",
       chipGlyphColor: "#4f4521",
       chipGlyphFillAlpha: 0.16,
-      descColor: "rgba(44, 36, 18, 0.92)",
+      descColor: "#251a08",
     };
   }
   return {
     lightCard: false,
     titleColor: rarity.titleColor,
-    descColor: "rgba(246, 250, 255, 0.9)",
+    descColor: "#fff4cf",
     dividerColor: rarity.color,
     shadowBlur: 7,
     shadowColor: "rgba(0, 0, 0, 0.92)",
@@ -10519,17 +10629,21 @@ function drawUpgradeSelectedDetail(upgrade, rect, rarity, motion = {}, {
   roundedRect(x, y, w, h, 12, false, true);
   ctx.fillStyle = hexToRgba(rarity.color, 0.28);
   roundedRect(x + 13, y + 12, 3, h - 24, 2, true, false);
-  fitLabel(t("selectedUpgrade"), x + 24, y + 20, 154, 11, "rgba(143,232,220,0.78)", 8, "900", true);
-  const iconOffset = drawUpgradeDetailTypeIcon(upgrade, x + 24, y + 28, 26, rarity);
+  const iconSize = 54;
+  const iconX = x + 24;
+  const iconY = y + 17;
+  const textX = x + 94;
+  fitLabel(t("selectedUpgrade"), textX, y + 21, 194, 11, "rgba(143,232,220,0.78)", 8, "900", true);
+  drawUpgradeDetailTypeIcon(upgrade, iconX, iconY, iconSize, rarity);
   drawReadableUpgradeText(() => {
-    fitLabel(upgradeName(upgrade), x + 24 + iconOffset, y + 45, 164 - iconOffset, 19, rarity.titleColor, 12, "900", true);
+    fitLabel(upgradeName(upgrade), textX, y + 47, 194, 19, rarity.titleColor, 12, "900", true);
   }, 5);
-  if (preview) drawUpgradeTraitPreviewChip(preview, x + 24, y + 57, 164, 21, { compact: true, emphasis: false });
-  const descX = x + 214;
+  if (preview) drawUpgradeTraitPreviewChip(preview, textX, y + 57, 188, 22, { compact: true, emphasis: false });
+  const descX = x + 308;
   const descW = Math.max(160, toggleRect.x - descX - 18);
   const detailText = expanded ? upgradeText(upgrade) : upgradeShortText(upgrade);
   drawReadableUpgradeText(() => {
-    drawLimitedWrapText(detailText, descX, y + 26, descW, 16, "rgba(246,250,255,0.9)", expanded ? 13 : 14, expanded ? 3 : 2, "800");
+    drawLimitedWrapText(detailText, descX, y + 27, descW, 16, "#fff4cf", expanded ? 13 : 14, expanded ? 3 : 2, "900");
   }, 4);
   drawUpgradeDetailToggleButton(toggleRect, rarity, expanded, toggleHovered);
   ctx.restore();
@@ -11156,7 +11270,7 @@ window.addEventListener("keydown", (event) => {
     return;
   }
   if (normalized === "r" && (state.mode === "victory" || state.mode === "defeat")) {
-    resetGame("endless");
+    resetGame(state.runMode);
     return;
   }
   if (normalized === "r" && state.mode === "paused" && state.pauseView === "menu") {
@@ -11345,7 +11459,7 @@ canvas.addEventListener(CANVAS_POINTER_DOWN_EVENT, (event) => {
     if (state.mode === "start" && state.assetLoadingDone) {
       const buttons = getMainMenuButtonRects();
       if (pointInRect(p.x, p.y, buttons.start.x, buttons.start.y, buttons.start.w, buttons.start.h)) resetGame("endless");
-      else if (pointInRect(p.x, p.y, buttons.tutorial.x, buttons.tutorial.y, buttons.tutorial.w, buttons.tutorial.h)) startTutorial();
+      else if (pointInRect(p.x, p.y, buttons.mainStage.x, buttons.mainStage.y, buttons.mainStage.w, buttons.mainStage.h)) resetGame("storyEgypt");
       else if (pointInRect(p.x, p.y, buttons.metaUpgrade.x, buttons.metaUpgrade.y, buttons.metaUpgrade.w, buttons.metaUpgrade.h)) {
         setGameMode("metaUpgrade");
         state.metaProgress = loadMetaProgress();
@@ -11383,7 +11497,7 @@ canvas.addEventListener(CANVAS_POINTER_DOWN_EVENT, (event) => {
     if (state.mode === "victory" || state.mode === "defeat") {
       const buttons = getResultButtonRects();
       if (pointInRect(p.x, p.y, buttons.retry.x, buttons.retry.y, buttons.retry.w, buttons.retry.h)) {
-        resetGame("endless");
+        resetGame(state.runMode);
         return;
       }
       if (pointInRect(p.x, p.y, buttons.upgrade.x, buttons.upgrade.y, buttons.upgrade.w, buttons.upgrade.h)) {
@@ -11689,6 +11803,10 @@ if (DEBUG_HUD_ENABLED) {
     debugState: state.debug,
     readers: getDebugHudReaders(initialDebugNow),
     now: initialDebugNow,
+  });
+  updateDebugArtTuningDom({
+    enabled: DEBUG_HUD_ENABLED,
+    tuning: getDebugArtTuning({ enabled: DEBUG_HUD_ENABLED }),
   });
 }
 requestAnimationFrame(update);
