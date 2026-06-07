@@ -5,12 +5,20 @@ import path from "node:path";
 const projectRoot = process.cwd();
 
 describe("music assets", () => {
-  it("registers the formal bgm loops with exact filenames", () => {
+  it("registers the temporary global rotation and preserves the legacy bgm registry", () => {
     const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
     const registeredAudioPaths = [...assetsSource.matchAll(/registerAudioAsset\([^,]+,\s*"([^"]+\.wav)"/g)]
       .map((match) => match[1])
       .filter((assetPath) => assetPath.startsWith("assets/audio/bgm/"));
-    const expected = [
+    const temporaryGlobalRotation = [
+      "assets/audio/bgm/bgm_menu_01.wav",
+      "assets/audio/bgm/bgm_menu_02.wav",
+      "assets/audio/bgm/bgm_menu_03.wav",
+      "assets/audio/bgm/bgm_menu_04.wav",
+      "assets/audio/bgm/bgm_menu_05.wav",
+      "assets/audio/bgm/bgm_menu_06.wav",
+    ];
+    const legacy = [
       "assets/audio/bgm/bgm_menu_ancient_rift_loop.wav",
       "assets/audio/bgm/bgm_battle_forest_ruins_loop.wav",
       "assets/audio/bgm/bgm_battle_deep_ruins_loop.wav",
@@ -18,6 +26,7 @@ describe("music assets", () => {
       "assets/audio/bgm/bgm_boss_ancient_rift_colossus_loop.wav",
       "assets/audio/bgm/bgm_upgrade_relic_cards_loop.wav",
     ];
+    const expected = [...temporaryGlobalRotation, ...legacy];
     const missingFiles = registeredAudioPaths.filter((assetPath) => !fs.existsSync(path.join(projectRoot, assetPath)));
 
     expect(registeredAudioPaths).toEqual(expected);

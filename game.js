@@ -26,6 +26,7 @@ import {
 import {
   BGM_PLAYLISTS,
   SPIN_READY_COOLDOWN_MS,
+  pickNextBgmAssetKey,
 } from "./src/audio/audioEvents.js";
 import { createFileSfxPlayer } from "./src/audio/audioManager.js";
 import { ENEMIES, MINI_BOSS_ENEMY_IDS } from "./src/data/enemies.js";
@@ -328,8 +329,6 @@ const audio = {
   currentMusicLoopKey: "",
   selectedMusicLoopKey: "",
   musicPlaylistStage: "",
-  musicNextRotationAt: 0,
-  musicLastTrackByStage: {},
   musicFallbackWarned: new Set(),
   musicPlayBlockedWarned: new Set(),
   lastLoopSyncAt: 0,
@@ -356,8 +355,6 @@ const MUSIC_STAGE_KEYS = ["menu", "early", "mid", "late", "boss", "upgrade"];
 const MUSIC_LAYER_KEYS = [...MUSIC_STAGE_KEYS, "danger"];
 const MUSIC_LAYER_SMOOTHING = 0.1;
 const MUSIC_DANGER_SMOOTHING = 0.08;
-const MUSIC_ROTATION_MIN_MS = 60000;
-const MUSIC_ROTATION_MAX_MS = 90000;
 const MUSIC_LOOP_FADE_SMOOTHING = 0.18;
 const MUSIC_PLAYLISTS = BGM_PLAYLISTS;
 const MUSIC_STAGES = {
@@ -4852,8 +4849,9 @@ function setupMusicLoopSources() {
     try {
       const source = audio.ctx.createMediaElementSource(element);
       source.connect(audio.musicGain);
-      element.loop = true;
+      element.loop = false;
       element.volume = 0;
+      element.addEventListener("ended", () => handleMusicLoopEnded(key));
       audio.musicLoopSources.set(key, source);
     } catch (error) {
       console.warn(`[TST assets] Music loop source failed: ${key}`, error);
@@ -4880,19 +4878,9 @@ function getAvailableMusicLoopKeys(stage) {
   return getMusicPlaylistForStage(stage).filter(isMusicLoopAvailable);
 }
 
-function randomMusicRotationDelay() {
-  return MUSIC_ROTATION_MIN_MS + Math.random() * (MUSIC_ROTATION_MAX_MS - MUSIC_ROTATION_MIN_MS);
-}
-
 function pickNextMusicLoopKey(stage, previousKey = "") {
   const available = getAvailableMusicLoopKeys(stage);
-  if (!available.length) return "";
-  if (available.length === 1) return available[0];
-  const lastForStage = audio.musicLastTrackByStage[stage] || "";
-  let candidates = available.filter((key) => key !== previousKey && key !== lastForStage);
-  if (!candidates.length) candidates = available.filter((key) => key !== previousKey);
-  if (!candidates.length) candidates = available;
-  return candidates[Math.floor(Math.random() * candidates.length)];
+  return pickNextBgmAssetKey(available, previousKey);
 }
 
 function warnMissingMusicPlaylistOnce(stage) {
@@ -4902,28 +4890,35 @@ function warnMissingMusicPlaylistOnce(stage) {
 }
 
 function selectMusicLoopForStage(stage) {
-  const now = performance.now();
   const available = getAvailableMusicLoopKeys(stage);
   if (!available.length) {
     audio.selectedMusicLoopKey = "";
     audio.currentMusicLoopKey = "";
     audio.musicPlaylistStage = stage;
-    audio.musicNextRotationAt = now + MUSIC_ROTATION_MAX_MS;
     warnMissingMusicPlaylistOnce(stage);
     return "";
   }
 
-  const stageChanged = audio.musicPlaylistStage !== stage;
   const currentInvalid = !available.includes(audio.selectedMusicLoopKey);
-  const shouldRotate = !stageChanged && available.length > 1 && now >= audio.musicNextRotationAt;
-  if (stageChanged || currentInvalid || shouldRotate) {
+  if (currentInvalid) {
     const nextKey = pickNextMusicLoopKey(stage, audio.selectedMusicLoopKey || audio.currentMusicLoopKey);
     audio.selectedMusicLoopKey = nextKey;
-    audio.musicPlaylistStage = stage;
-    audio.musicLastTrackByStage[stage] = nextKey;
-    audio.musicNextRotationAt = now + randomMusicRotationDelay();
   }
+  audio.musicPlaylistStage = stage;
   return audio.selectedMusicLoopKey;
+}
+
+function handleMusicLoopEnded(key) {
+  if (key !== audio.selectedMusicLoopKey) return;
+  const endedElement = musicLoopAssets[key];
+  if (endedElement) {
+    endedElement.pause();
+    endedElement.volume = 0;
+  }
+  const stage = audio.musicPlaylistStage || getCurrentMusicStage();
+  audio.selectedMusicLoopKey = pickNextMusicLoopKey(stage, key);
+  audio.currentMusicLoopKey = "";
+  updateMusicPlayback();
 }
 
 function updateMusicPlayback() {
@@ -4962,6 +4957,9 @@ function updateMusicPlayback() {
 }
 
 function playMusicLoopElement(key, element) {
+  if (element.ended || (Number.isFinite(element.duration) && element.currentTime >= element.duration - 0.05)) {
+    element.currentTime = 0;
+  }
   const playPromise = element.play();
   if (!playPromise || typeof playPromise.then !== "function") return;
   playPromise

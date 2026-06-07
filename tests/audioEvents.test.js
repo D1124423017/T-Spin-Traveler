@@ -4,9 +4,12 @@ import path from "node:path";
 import {
   BGM_PLAYLISTS,
   FILE_SFX_EVENTS,
+  LEGACY_BGM_PLAYLISTS,
   SPIN_READY_COOLDOWN_MS,
   getFileSfxAssetKeys,
+  pickNextBgmAssetKey,
   pickFileSfxAssetKey,
+  temporaryGlobalBgmRotation,
 } from "../src/audio/audioEvents.js";
 
 const projectRoot = process.cwd();
@@ -21,6 +24,35 @@ describe("audio event maps", () => {
     const registered = getRegisteredAudioKeys();
     const missing = Object.values(BGM_PLAYLISTS).flat().filter((key) => !registered.has(key));
     expect(missing).toEqual([]);
+  });
+
+  it("routes every game music stage through the six-track temporary global rotation", () => {
+    expect(temporaryGlobalBgmRotation).toEqual([
+      "bgmMenu01",
+      "bgmMenu02",
+      "bgmMenu03",
+      "bgmMenu04",
+      "bgmMenu05",
+      "bgmMenu06",
+    ]);
+    expect(Object.values(BGM_PLAYLISTS).every((playlist) => playlist === temporaryGlobalBgmRotation)).toBe(true);
+  });
+
+  it("keeps the legacy stage playlists available for future civilization music", () => {
+    expect(LEGACY_BGM_PLAYLISTS).toEqual({
+      menu: ["menuAncientRift"],
+      early: ["battleForestRuins"],
+      mid: ["battleDeepRuins"],
+      late: ["battleRiftPressure"],
+      boss: ["bossAncientRiftColossus"],
+      upgrade: ["upgradeRelicCards"],
+    });
+  });
+
+  it("advances the temporary bgm rotation sequentially and wraps", () => {
+    expect(pickNextBgmAssetKey(temporaryGlobalBgmRotation)).toBe("bgmMenu01");
+    expect(pickNextBgmAssetKey(temporaryGlobalBgmRotation, "bgmMenu01")).toBe("bgmMenu02");
+    expect(pickNextBgmAssetKey(temporaryGlobalBgmRotation, "bgmMenu06")).toBe("bgmMenu01");
   });
 
   it("points every file sfx event key to a registered audio asset", () => {

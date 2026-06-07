@@ -4,7 +4,16 @@ import path from "node:path";
 
 const projectRoot = process.cwd();
 
-const EXPECTED_BGM = [
+const TEMPORARY_GLOBAL_BGM = [
+  "assets/audio/bgm/bgm_menu_01.wav",
+  "assets/audio/bgm/bgm_menu_02.wav",
+  "assets/audio/bgm/bgm_menu_03.wav",
+  "assets/audio/bgm/bgm_menu_04.wav",
+  "assets/audio/bgm/bgm_menu_05.wav",
+  "assets/audio/bgm/bgm_menu_06.wav",
+];
+
+const LEGACY_BGM = [
   "assets/audio/bgm/bgm_menu_ancient_rift_loop.wav",
   "assets/audio/bgm/bgm_battle_forest_ruins_loop.wav",
   "assets/audio/bgm/bgm_battle_deep_ruins_loop.wav",
@@ -12,6 +21,8 @@ const EXPECTED_BGM = [
   "assets/audio/bgm/bgm_boss_ancient_rift_colossus_loop.wav",
   "assets/audio/bgm/bgm_upgrade_relic_cards_loop.wav",
 ];
+
+const EXPECTED_BGM = [...TEMPORARY_GLOBAL_BGM, ...LEGACY_BGM];
 
 const EXPECTED_JINGLES = [
   "assets/audio/jingles/jingle_rift_energy_settlement.wav",
@@ -117,7 +128,7 @@ describe("formal audio assets", () => {
     for (const assetPath of [...EXPECTED_BGM, ...EXPECTED_JINGLES, ...EXPECTED_SFX]) {
       const info = readWavInfo(assetPath);
       expect(info.bytes).toBeGreaterThan(1000);
-      expect(info.channels).toBe(1);
+      expect([1, 2]).toContain(info.channels);
       expect(info.sampleRate).toBeGreaterThanOrEqual(22050);
       expect(info.bitsPerSample).toBe(16);
       if (assetPath.includes("/bgm/")) expect(info.seconds).toBeGreaterThanOrEqual(assetPath.includes("upgrade") ? 20 : 45);
@@ -126,7 +137,9 @@ describe("formal audio assets", () => {
   });
 
   it("keeps the requested formal audio counts", () => {
-    expect(EXPECTED_BGM).toHaveLength(6);
+    expect(TEMPORARY_GLOBAL_BGM).toHaveLength(6);
+    expect(LEGACY_BGM).toHaveLength(6);
+    expect(EXPECTED_BGM).toHaveLength(12);
     expect(EXPECTED_JINGLES).toHaveLength(3);
     expect(EXPECTED_SFX).toHaveLength(53);
   });

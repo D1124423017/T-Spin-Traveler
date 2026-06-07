@@ -1,4 +1,13 @@
-export const BGM_PLAYLISTS = Object.freeze({
+export const temporaryGlobalBgmRotation = Object.freeze([
+  "bgmMenu01",
+  "bgmMenu02",
+  "bgmMenu03",
+  "bgmMenu04",
+  "bgmMenu05",
+  "bgmMenu06",
+]);
+
+export const LEGACY_BGM_PLAYLISTS = Object.freeze({
   menu: Object.freeze(["menuAncientRift"]),
   early: Object.freeze(["battleForestRuins"]),
   mid: Object.freeze(["battleDeepRuins"]),
@@ -6,6 +15,21 @@ export const BGM_PLAYLISTS = Object.freeze({
   boss: Object.freeze(["bossAncientRiftColossus"]),
   upgrade: Object.freeze(["upgradeRelicCards"]),
 });
+
+export const BGM_PLAYLISTS = Object.freeze({
+  menu: temporaryGlobalBgmRotation,
+  early: temporaryGlobalBgmRotation,
+  mid: temporaryGlobalBgmRotation,
+  late: temporaryGlobalBgmRotation,
+  boss: temporaryGlobalBgmRotation,
+  upgrade: temporaryGlobalBgmRotation,
+});
+
+export function pickNextBgmAssetKey(playlist, currentKey = "") {
+  if (!playlist?.length) return "";
+  const currentIndex = playlist.indexOf(currentKey);
+  return playlist[(currentIndex + 1) % playlist.length];
+}
 
 export const FILE_SFX_EVENTS = Object.freeze({
   start: Object.freeze(["sfxGameStart01"]),

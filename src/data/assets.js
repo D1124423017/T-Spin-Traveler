@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-06-pharaoh-boss-attack-v1";
+export const ASSET_VERSION = "2026-06-07-suno-global-bgm-v1";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -217,6 +217,12 @@ export const enemyAttackSheets = {
 };
 
 export const musicLoopAssets = {
+  bgmMenu01: registerAudioAsset("bgm-menu-01", "assets/audio/bgm/bgm_menu_01.wav"),
+  bgmMenu02: registerAudioAsset("bgm-menu-02", "assets/audio/bgm/bgm_menu_02.wav"),
+  bgmMenu03: registerAudioAsset("bgm-menu-03", "assets/audio/bgm/bgm_menu_03.wav"),
+  bgmMenu04: registerAudioAsset("bgm-menu-04", "assets/audio/bgm/bgm_menu_04.wav"),
+  bgmMenu05: registerAudioAsset("bgm-menu-05", "assets/audio/bgm/bgm_menu_05.wav"),
+  bgmMenu06: registerAudioAsset("bgm-menu-06", "assets/audio/bgm/bgm_menu_06.wav"),
   menuAncientRift: registerAudioAsset("bgm-menu-ancient-rift-loop", "assets/audio/bgm/bgm_menu_ancient_rift_loop.wav", { loop: true }),
   battleForestRuins: registerAudioAsset("bgm-battle-forest-ruins-loop", "assets/audio/bgm/bgm_battle_forest_ruins_loop.wav", { loop: true }),
   battleDeepRuins: registerAudioAsset("bgm-battle-deep-ruins-loop", "assets/audio/bgm/bgm_battle_deep_ruins_loop.wav", { loop: true }),
