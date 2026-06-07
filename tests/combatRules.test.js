@@ -159,6 +159,7 @@ describe("combat rule helpers", () => {
 
   it("keeps upgrade, pause, countdown, and loading paths separate from result overlays", () => {
     expect(getOverlayRenderPath({ mode: "upgrade" })).toBe("upgrade");
+    expect(getOverlayRenderPath({ mode: "ascensionResult" })).toBe("ascensionResult");
     expect(getOverlayRenderPath({ mode: "paused" })).toBe("pause");
     expect(getOverlayRenderPath({ mode: "start", assetLoadingDone: false })).toBe("assetLoading");
     expect(getOverlayRenderPath({ mode: "start", assetLoadingDone: true })).toBe("start");

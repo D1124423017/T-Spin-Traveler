@@ -145,6 +145,7 @@ export function shouldTriggerDefeat({ mode = "playing", runFinalized = false } =
 export function getOverlayRenderPath({ mode = "playing", assetLoadingDone = true } = {}) {
   if (mode === "playing") return "none";
   if (mode === "victory" || mode === "defeat") return "result";
+  if (mode === "ascensionResult") return "ascensionResult";
   if (mode === "metaUpgrade") return "metaUpgrade";
   if (mode === "upgrade") return "upgrade";
   if (mode === "guide") return "guide";

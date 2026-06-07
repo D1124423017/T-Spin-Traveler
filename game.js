@@ -135,6 +135,18 @@ import {
   saveMetaProgress,
 } from "./src/core/metaProgress.js";
 import {
+  advanceAscensionChallengeRun,
+  applyAscensionChallengeResult,
+  canUnlockAscensionChallenge,
+  createAscensionChallengeRun,
+  failAscensionChallengeRun,
+  getAscensionMaxLevel,
+  getAscensionStageName,
+  getNextAscensionChallenge,
+  recordAscensionChallengeLines,
+  startAscensionChallengeRun,
+} from "./src/core/ascensionChallenge.js";
+import {
   getAssetLoadingSummary,
   isAssetLoadingComplete,
 } from "./src/core/assetReadiness.js";
@@ -179,9 +191,11 @@ import {
 } from "./src/render/playerHitVfx.js";
 import {
   createHudLayout,
+  getAscensionResultButtonRects,
   getControlsResetButtonRect as getControlsResetButtonRectForLayout,
   getHandlingResetButtonRect as getHandlingResetButtonRectForLayout,
   getMainMenuButtonRects as getMainMenuButtonRectsForLayout,
+  getMetaAscensionEntryRect,
   getMetaUpgradeBackButtonRect,
   getMetaUpgradeRowRects,
   getResultButtonRects,
@@ -763,6 +777,11 @@ const RUN_MODES = {
     targetWaves: 11,
     descriptionKey: "mainStageEgyptDescription",
   },
+  ascension: {
+    label: "Ascension",
+    targetWaves: Infinity,
+    descriptionKey: "ascensionChallengeGoal",
+  },
 };
 
 const NORMAL_ENEMY_CYCLES_BEFORE_BOSS = 2;
@@ -1071,6 +1090,7 @@ const state = {
   playingStallWarned: false,
   debug: createDebugHudState(),
   challenge: null,
+  ascensionRun: null,
   tutorial: null,
   upgradeChoices: [],
   upgradeSelectedIndex: 0,
@@ -1316,7 +1336,7 @@ function resolvePlayingFlowSafety(source = "playingFlowSafety") {
   warnPlayingStallOnce(result.reason, source, { activeOverlapsBoard, activeAboveVisible, activeGroundedAboveVisible });
   if (result.action === "defeat") {
     triggerDefeat(result.messageKey, `${source}.${result.reason}`);
-    return state.mode === "defeat";
+    return state.mode === "defeat" || state.mode === "ascensionResult";
   }
   if (result.action === "spawn") {
     state.active = null;
@@ -1338,7 +1358,7 @@ function checkDefeatState(source = "checkDefeatState", { spawnPiece = null, spaw
   if (priority.result.playerHp !== state.playerHp) state.playerHp = priority.result.playerHp;
   if (priority.result.defeated) {
     triggerDefeat(priority.result.messageKey, `${source}.${priority.result.reason}`);
-    return state.mode === "defeat";
+    return state.mode === "defeat" || state.mode === "ascensionResult";
   }
 
   if (priority.shouldRunPlayingFlowSafety && resolvePlayingFlowSafety(source)) return true;
@@ -1352,7 +1372,7 @@ function checkDefeatState(source = "checkDefeatState", { spawnPiece = null, spaw
   if (result.playerHp !== state.playerHp) state.playerHp = result.playerHp;
   if (!result.defeated) return false;
   triggerDefeat(result.messageKey, `${source}.${result.reason}`);
-  return state.mode === "defeat";
+  return state.mode === "defeat" || state.mode === "ascensionResult";
 }
 
 function getActivePieceDebugInfo() {
@@ -1544,6 +1564,12 @@ function triggerDefeat(messageKey, source = "triggerDefeat") {
   state.debug.lastDefeatMessageKey = messageKey;
   if (!shouldTriggerDefeat(state)) return;
   warnDefeatSource(source, messageKey);
+  if (isAscensionRunInProgress()) {
+    const failureReason = messageKey === "messagePlayerDefeat" ? "defeat" : "topOut";
+    state.ascensionRun = failAscensionChallengeRun(state.ascensionRun, failureReason);
+    completeAscensionChallenge(false);
+    return;
+  }
   setGameMode("defeat");
   setMessage(messageKey);
   state.active = null;
@@ -1560,7 +1586,12 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   unlockAudio();
   cleanupDomOverlay();
   setGameMode("playing");
-  showToast({ type: "run-start", text: t("toastRunStart"), tone: "rift", durationMs: 1500 });
+  showToast({
+    type: "run-start",
+    text: t(runMode === "ascension" ? "ascensionChallengeStarted" : "toastRunStart"),
+    tone: "rift",
+    durationMs: 1500,
+  });
   state.pauseView = "menu";
   state.settingsOpen = false;
   state.bindingAction = null;
@@ -1630,6 +1661,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.debug.lastUpdateAt = performance.now();
   state.debug.lastDrawAt = performance.now();
   state.challenge = challengeId ? makeChallengeState(challengeId) : null;
+  state.ascensionRun = null;
   state.tutorial = null;
   state.upgradeChoices = [];
   state.upgradeSelectedIndex = 0;
@@ -1721,6 +1753,11 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   audio.lastBossStingerWave = 0;
   resetInputRepeat();
   applyMetaProgressToNewRun();
+  if (state.runMode === "ascension") {
+    state.ascensionRun = createAscensionChallengeRun(
+      getNextAscensionChallenge(state.metaProgress),
+    );
+  }
   refillQueue();
   spawnPiece();
   playSfx("start");
@@ -2436,6 +2473,7 @@ function applyEnemyHit(hit) {
 }
 
 function applyBattle(lines, pieceType, spinType) {
+  if (recordAscensionClear(lines)) return;
   const result = calculateDamage(
     { lines, pieceType, spinType },
     createBattleSnapshot(),
@@ -4246,6 +4284,7 @@ function isUpgradeAvailableForDraft(upgrade) {
 }
 
 function addUpgradeProgress(effectiveLines) {
+  if (isAscensionRunInProgress()) return;
   if (effectiveLines <= 0) return;
   const wasReady = state.upgradeReady;
   state.upgradeMeter += effectiveLines;
@@ -4264,6 +4303,7 @@ function addUpgradeProgress(effectiveLines) {
 }
 
 function triggerUpgradeIfReady(forceRelic = false, forceRare = false, reason = "wave") {
+  if (state.runMode === "ascension") return false;
   if (state.mode !== "playing") return false;
   const ready = state.upgradeMeter >= state.nextUpgradeAt;
   if (!ready && !forceRelic && !forceRare) return false;
@@ -4607,40 +4647,46 @@ function spawnGarbageParticles(hole) {
 }
 
 function update(time) {
-  const dt = Math.min(34, time - (state.lastTime || time));
+  const elapsedMs = Math.max(0, time - (state.lastTime || time));
+  const dt = Math.min(34, elapsedMs);
   state.lastTime = time;
   state.debug.lastUpdateAt = time;
 
   try {
     updateAssetLoading(time);
+    if (state.mode === "paused" && state.ascensionRun?.status === "active") {
+      updateAscensionChallengeTimer(elapsedMs);
+    }
     if (state.mode === "playing") {
       purgeLegacyVineBlocks();
       if (!checkDefeatState("update.safety")) {
         if (isBattleCountdownActive()) {
           updateBattleCountdown(dt);
         } else {
-          if (state.firstWaveHintMs > 0) state.firstWaveHintMs = Math.max(0, state.firstWaveHintMs - dt);
-          if (state.hitStopMs > 0) {
-            state.hitStopMs = Math.max(0, state.hitStopMs - dt);
-          } else {
-            if (state.ultimateActive) {
-              state.ultimateTimer = Math.max(0, state.ultimateTimer - dt);
-              if (state.ultimateTimer <= 0) endUltimateMode();
-            }
-            updateHorizontalInput(dt);
-            if (state.input.softDrop) updateSoftDrop(dt);
-            state.dropTimer += dt;
-            if (state.dropTimer >= getGravityMsForWave()) {
-              state.dropTimer = 0;
-              if (!move(0, 1) && state.lockTimer === null) {
-                state.lockTimer = time;
-              }
-            }
-            if (touchingGround()) {
-              if (state.lockTimer === null) state.lockTimer = time;
-              if (time - state.lockTimer >= state.tuning.lockDelay) lockPiece();
+          if (!updateAscensionChallengeTimer(elapsedMs)) {
+            if (state.firstWaveHintMs > 0) state.firstWaveHintMs = Math.max(0, state.firstWaveHintMs - dt);
+            if (state.hitStopMs > 0) {
+              state.hitStopMs = Math.max(0, state.hitStopMs - dt);
             } else {
-              state.lockTimer = null;
+              if (state.ultimateActive) {
+                state.ultimateTimer = Math.max(0, state.ultimateTimer - dt);
+                if (state.ultimateTimer <= 0) endUltimateMode();
+              }
+              updateHorizontalInput(dt);
+              if (state.input.softDrop) updateSoftDrop(dt);
+              state.dropTimer += dt;
+              if (state.dropTimer >= getGravityMsForWave()) {
+                state.dropTimer = 0;
+                if (!move(0, 1) && state.lockTimer === null) {
+                  state.lockTimer = time;
+                }
+              }
+              if (touchingGround()) {
+                if (state.lockTimer === null) state.lockTimer = time;
+                if (time - state.lockTimer >= state.tuning.lockDelay) lockPiece();
+              } else {
+                state.lockTimer = null;
+              }
             }
           }
         }
@@ -4702,6 +4748,9 @@ function updateBattleCountdown(dt) {
     state.dropTimer = 0;
     state.firstWaveHintMs = FIRST_WAVE_HINT_MS;
     resetInputRepeat();
+    if (state.ascensionRun?.status === "waiting") {
+      state.ascensionRun = startAscensionChallengeRun(state.ascensionRun);
+    }
   }
 }
 
@@ -5984,6 +6033,10 @@ function drawBoardFrame(x, y, w, h) {
 }
 
 function drawTopQuestBar() {
+  if (state.runMode === "ascension" && state.ascensionRun) {
+    drawAscensionChallengeHud();
+    return;
+  }
   ctx.save();
   ctx.fillStyle = "rgba(4, 7, 14, 0.8)";
   roundedRect(404, 10, 472, 38, 10, true, false);
@@ -9627,6 +9680,10 @@ function drawOverlay() {
     drawResultOverlay();
     return;
   }
+  if (overlayPath === "ascensionResult") {
+    drawAscensionResultOverlay();
+    return;
+  }
   if (overlayPath === "metaUpgrade") {
     drawMetaUpgradeScreen();
     return;
@@ -9862,47 +9919,240 @@ function getRatingColor(rating) {
 
 function drawMetaUpgradeScreen() {
   const progress = state.metaProgress;
+  const stageName = getAscensionStageName(progress);
   ctx.save();
   drawMainMenuScene();
   drawDimOverlay(OVERLAY_READABILITY.scrim.standard);
   drawCard(166, 68, 948, 586);
   drawCornerGlyph(640, 88, "#fff0a6");
-  label(t("metaUpgradeTitle").toUpperCase(), 224, 136, 42, "#f5f1e6");
+  const upgradeTitle = t("metaUpgradeTitle").toUpperCase();
+  label(upgradeTitle, 224, 136, 42, "#f5f1e6");
+  ctx.font = canvasFont("900", 42, upgradeTitle, true);
+  const stageX = Math.min(690, 224 + ctx.measureText(upgradeTitle).width + 34);
+  ctx.strokeStyle = "rgba(255, 240, 166, 0.28)";
+  ctx.beginPath();
+  ctx.moveTo(stageX - 16, 113);
+  ctx.lineTo(stageX - 16, 137);
+  ctx.stroke();
+  label(fmt("metaUpgradeStage", { stage: stageName }).toUpperCase(), stageX, 132, 14, "#fff0a6");
   wrapText(t("metaUpgradeHelp"), 224, 172, 710, 22, "rgba(238,244,252,0.68)", 15);
-  drawRiftEnergyBadge(812, 118, 240, 58, progress.riftEnergy);
+  drawRiftEnergyDisplay(822, 96, progress.riftEnergy);
 
   const rows = getMetaUpgradeRowRects();
   for (const def of Object.values(META_UPGRADE_DEFS)) {
     drawMetaUpgradeRow(def, rows[def.id], progress);
   }
   const message = getMetaUpgradeMessage();
-  if (message) label(message, 224, 590, 15, "#fff0a6");
+  if (message) fitLabel(message, 224, 211, 540, 14, "#fff0a6", 11, "900", true);
+  drawMetaAscensionEntry();
   const back = getMetaUpgradeBackButtonRect();
   drawMenuButton(back.x, back.y, back.w, back.h, t("backToMenu"), "Esc");
   ctx.restore();
 }
 
-function drawRiftEnergyBadge(x, y, w, h, amount) {
+function drawAscensionResultOverlay() {
+  const run = state.ascensionRun;
+  const succeeded = run?.status === "success";
+  const buttons = getAscensionResultButtonRects();
+  const accent = succeeded ? "#fff0a6" : "#ff8f98";
   ctx.save();
-  const hovered = pointInRect(state.pointer.x, state.pointer.y, x, y, w, h);
-  ctx.fillStyle = hovered ? "rgba(50, 30, 86, 0.72)" : "rgba(9, 12, 24, 0.72)";
-  ctx.shadowColor = "rgba(184, 141, 255, 0.35)";
-  ctx.shadowBlur = 16;
-  roundedRect(x, y, w, h, 10, true, false);
+  drawDimOverlay(OVERLAY_READABILITY.scrim.result);
+  drawCard(342, 126, 596, 424);
+  drawCornerGlyph(640, 150, accent);
+  label(
+    t(succeeded ? "ascensionChallengeSuccessTitle" : "ascensionChallengeFailedTitle"),
+    400,
+    214,
+    38,
+    "#f5f1e6",
+  );
+  wrapText(getMessage(), 402, 258, 476, 25, "rgba(238,244,252,0.72)", 17);
+  ctx.fillStyle = "rgba(15, 10, 29, 0.68)";
+  roundedRect(402, 320, 476, 86, 10, true, false);
+  ctx.strokeStyle = succeeded
+    ? "rgba(255, 240, 166, 0.34)"
+    : "rgba(255, 143, 152, 0.34)";
+  roundedRect(402, 320, 476, 86, 10, false, true);
+  label(
+    fmt("ascensionChallengeLinesHud", {
+      current: run?.linesCleared || 0,
+      target: run?.targetLines || 0,
+    }),
+    430,
+    354,
+    18,
+    "#9df7da",
+  );
+  label(
+    succeeded
+      ? fmt("metaUpgradeStage", { stage: getAscensionStageName(state.metaProgress) })
+      : fmt("ascensionChallengeTimeHud", {
+        seconds: Math.ceil(Math.max(0, run?.remainingMs || 0) / 1000),
+      }),
+    430,
+    386,
+    18,
+    accent,
+  );
+  drawMenuButton(
+    succeeded ? buttons.single.x : buttons.primary.x,
+    succeeded ? buttons.single.y : buttons.primary.y,
+    succeeded ? buttons.single.w : buttons.primary.w,
+    succeeded ? buttons.single.h : buttons.primary.h,
+    t("ascensionReturnToUpgrades"),
+    succeeded ? "Enter" : "Esc",
+    "primary",
+  );
+  if (!succeeded) {
+    drawMenuButton(
+      buttons.secondary.x,
+      buttons.secondary.y,
+      buttons.secondary.w,
+      buttons.secondary.h,
+      t("ascensionRetry"),
+      "Enter",
+    );
+  }
+  ctx.restore();
+}
+
+function drawAscensionChallengeHud() {
+  const run = state.ascensionRun;
+  const remainingSeconds = Math.ceil(Math.max(0, run.remainingMs || 0) / 1000);
+  const urgent = run.status === "active" && remainingSeconds <= 15;
+  ctx.save();
+  ctx.fillStyle = "rgba(14, 8, 28, 0.88)";
+  roundedRect(404, 8, 472, 42, 10, true, false);
+  ctx.strokeStyle = urgent ? "rgba(255, 111, 124, 0.72)" : "rgba(184, 141, 255, 0.58)";
+  ctx.lineWidth = 1.7;
+  roundedRect(404, 8, 472, 42, 10, false, true);
+  fitLabel(
+    fmt("ascensionChallengeGoal", {
+      seconds: Math.round(run.durationMs / 1000),
+      lines: run.targetLines,
+    }),
+    424,
+    25,
+    238,
+    13,
+    "#d7c2ff",
+    10,
+    "900",
+    true,
+  );
+  fitLabel(
+    fmt("ascensionChallengeTimeHud", { seconds: remainingSeconds }),
+    672,
+    25,
+    92,
+    14,
+    urgent ? "#ff8f98" : "#fff0a6",
+    11,
+    "900",
+    true,
+  );
+  fitLabel(
+    fmt("ascensionChallengeLinesHud", {
+      current: run.linesCleared,
+      target: run.targetLines,
+    }),
+    770,
+    25,
+    86,
+    14,
+    "#9df7da",
+    11,
+    "900",
+    true,
+  );
+  ctx.restore();
+}
+
+function startAscensionChallenge() {
+  state.metaProgress = loadMetaProgress();
+  if (!canUnlockAscensionChallenge(state.metaProgress)) {
+    state.metaUpgradeMessage = {
+      key: getNextAscensionChallenge(state.metaProgress)
+        ? "metaAscensionLockedHint"
+        : "metaAscensionNoChallenge",
+      vars: {},
+      until: performance.now() + 2200,
+    };
+    playSfx("metaUpgradeFail");
+    return false;
+  }
+  resetGame("ascension");
+  return true;
+}
+
+function isAscensionRunInProgress() {
+  return state.runMode === "ascension"
+    && ["waiting", "active"].includes(state.ascensionRun?.status);
+}
+
+function completeAscensionChallenge(succeeded) {
+  const run = state.ascensionRun;
+  if (!run || !["success", "failed"].includes(run.status)) return false;
+  if (succeeded) {
+    state.metaProgress = applyAscensionChallengeResult(
+      state.metaProgress,
+      run.challengeId,
+      true,
+    );
+    saveMetaProgress(state.metaProgress);
+  }
+  state.runFinalized = true;
+  state.active = null;
+  state.lockTimer = null;
+  state.countdownMs = 0;
+  state.hitStopMs = 0;
+  state.pendingHits = [];
+  resetInputRepeat();
+  setGameMode("ascensionResult");
+  setMessage(
+    succeeded ? "ascensionChallengeSuccessMessage" : getAscensionFailureMessageKey(run.failureReason),
+  );
+  playSfx(succeeded ? "upgrade" : "defeat");
+  return true;
+}
+
+function getAscensionFailureMessageKey(reason) {
+  if (reason === "time") return "ascensionChallengeFailedTime";
+  if (reason === "topOut") return "ascensionChallengeFailedTopOut";
+  return "ascensionChallengeFailedDefeat";
+}
+
+function updateAscensionChallengeTimer(dt) {
+  if (state.ascensionRun?.status !== "active") return false;
+  state.ascensionRun = advanceAscensionChallengeRun(state.ascensionRun, dt);
+  if (state.ascensionRun.status !== "failed") return false;
+  return completeAscensionChallenge(false);
+}
+
+function recordAscensionClear(lines) {
+  if (state.ascensionRun?.status !== "active" || lines <= 0) return false;
+  state.ascensionRun = recordAscensionChallengeLines(state.ascensionRun, lines);
+  if (state.ascensionRun.status !== "success") return false;
+  return completeAscensionChallenge(true);
+}
+
+function drawRiftEnergyDisplay(x, y, amount) {
+  ctx.save();
+  ctx.shadowColor = "rgba(184, 141, 255, 0.48)";
+  ctx.shadowBlur = 18;
+  drawImageContain(riftEnergyIcon, x, y, 68, 68);
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = "rgba(215, 194, 255, 0.42)";
-  ctx.lineWidth = 1.6;
-  roundedRect(x, y, w, h, 10, false, true);
-  drawImageContain(riftEnergyIcon, x + 10, y + 5, 48, 48);
-  fitLabel(fmt("riftEnergyAmount", { amount }), x + 66, y + 35, w - 82, 17, "#f8f3cf", 13, "900", true);
+  label(t("riftEnergy").toUpperCase(), x + 78, y + 22, 11, "#d7c2ff");
+  fitLabel(String(amount), x + 78, y + 55, 150, 28, "#fff0a6", 18, "900", true);
   ctx.restore();
 }
 
 function drawMetaUpgradeRow(def, rect, progress) {
   if (!def || !rect) return;
   const level = progress.metaUpgrades[def.levelKey] || 0;
-  const cost = getMetaUpgradeCost(def.id, level);
-  const maxed = level >= def.maxLevel;
+  const maxLevel = getAscensionMaxLevel(progress);
+  const cost = getMetaUpgradeCost(def.id, level, progress);
+  const maxed = level >= maxLevel;
   const canBuy = cost !== null && progress.riftEnergy >= cost;
   const hovered = pointInRect(state.pointer.x, state.pointer.y, rect.x, rect.y, rect.w, rect.h);
   ctx.save();
@@ -9915,17 +10165,54 @@ function drawMetaUpgradeRow(def, rect, progress) {
   ctx.strokeStyle = hovered ? "rgba(255, 240, 166, 0.48)" : "rgba(145, 232, 222, 0.2)";
   ctx.lineWidth = 1.5;
   roundedRect(rect.x, rect.y, rect.w, rect.h, 10, false, true);
-  drawImageContain(metaUpgradeIcons[def.iconKey], rect.x + 16, rect.y + 14, 64, 64);
-  fitLabel(t(def.nameKey), rect.x + 96, rect.y + 31, 200, 20, "#f5f1e6", 15, "900", true);
-  label(fmt("metaUpgradeLevel", { level, max: def.maxLevel }), rect.x + 96, rect.y + 57, 14, "#9fb4ff");
+  drawImageContain(metaUpgradeIcons[def.iconKey], rect.x + 12, rect.y + 10, 72, 72);
+  fitLabel(t(def.nameKey), rect.x + 104, rect.y + 31, 190, 20, "#f5f1e6", 15, "900", true);
+  label(fmt("metaUpgradeLevel", { level, max: maxLevel }), rect.x + 104, rect.y + 57, 14, "#9fb4ff");
   label(fmt("metaUpgradeCurrent", { value: formatMetaUpgradeEffect(def, level) }), rect.x + 318, rect.y + 33, 14, "rgba(238,244,252,0.72)");
-  const nextText = maxed
-    ? t("metaUpgradeMaxed")
-    : fmt("metaUpgradeNext", { value: formatMetaUpgradeEffect(def, level + 1) });
-  label(nextText, rect.x + 318, rect.y + 59, 14, maxed ? "#fff0a6" : "rgba(238,244,252,0.72)");
-  const costText = maxed ? t("metaUpgradeMaxed") : fmt("metaUpgradeCost", { cost });
-  label(costText, rect.x + 610, rect.y + 57, 13, canBuy || maxed ? "#fff0a6" : "#ffb7bd");
+  if (!maxed) {
+    label(fmt("metaUpgradeNext", { value: formatMetaUpgradeEffect(def, level + 1) }), rect.x + 318, rect.y + 59, 14, "rgba(238,244,252,0.72)");
+    label(fmt("metaUpgradeCost", { cost }), rect.x + 610, rect.y + 57, 13, canBuy ? "#fff0a6" : "#ffb7bd");
+  }
   drawMetaUpgradeBuyButton(rect, maxed, canBuy);
+  ctx.restore();
+}
+
+function drawMetaAscensionEntry() {
+  const rect = getMetaAscensionEntryRect();
+  const challenge = getNextAscensionChallenge(state.metaProgress);
+  const unlocked = canUnlockAscensionChallenge(state.metaProgress);
+  const completed = !challenge && state.metaProgress.ascensionTier > 0;
+  const hovered = pointInRect(state.pointer.x, state.pointer.y, rect.x, rect.y, rect.w, rect.h);
+  const interactiveHover = hovered && unlocked;
+  const statusKey = completed
+    ? "metaAscensionComplete"
+    : unlocked
+      ? "metaAscensionReady"
+      : "metaAscensionLocked";
+  const requirementText = completed
+    ? t("metaAscensionNoChallenge")
+    : unlocked
+      ? fmt("ascensionChallengeGoal", {
+        seconds: challenge.durationSeconds,
+        lines: challenge.targetLines,
+      })
+      : t("metaAscensionUnlockRequirement");
+  const accent = unlocked ? "#fff0a6" : completed ? "#9df7da" : "rgba(215, 194, 255, 0.58)";
+  ctx.save();
+  ctx.fillStyle = interactiveHover ? "rgba(48, 31, 76, 0.58)" : "rgba(11, 15, 27, 0.34)";
+  ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+  ctx.strokeStyle = interactiveHover ? "rgba(255, 240, 166, 0.5)" : "rgba(145, 232, 222, 0.16)";
+  ctx.beginPath();
+  ctx.moveTo(rect.x, rect.y);
+  ctx.lineTo(rect.x + rect.w, rect.y);
+  ctx.moveTo(rect.x, rect.y + rect.h);
+  ctx.lineTo(rect.x + rect.w, rect.y + rect.h);
+  ctx.stroke();
+  label("◇", rect.x + 16, rect.y + 43, 26, accent);
+  fitLabel(t("metaAscensionTitle"), rect.x + 52, rect.y + 23, 340, 16, "#f5f1e6", 13, "900", true);
+  fitLabel(requirementText, rect.x + 52, rect.y + 44, 380, 12, "rgba(238,244,252,0.64)", 10, "800", true);
+  fitLabel(t("metaAscensionCapRule"), rect.x + 52, rect.y + 62, 390, 11, "#9fb4ff", 9, "800", true);
+  fitLabel(t(statusKey).toUpperCase(), rect.x + rect.w - 108, rect.y + 41, 88, 13, accent, 10, "900", true);
   ctx.restore();
 }
 
@@ -9967,6 +10254,11 @@ function handleMetaUpgradePointerDown(x, y) {
     playSfx("hold");
     return true;
   }
+  const ascension = getMetaAscensionEntryRect();
+  if (pointInRect(x, y, ascension.x, ascension.y, ascension.w, ascension.h)) {
+    startAscensionChallenge();
+    return true;
+  }
   const rows = getMetaUpgradeRowRects();
   for (const def of Object.values(META_UPGRADE_DEFS)) {
     const rect = rows[def.id];
@@ -9974,6 +10266,43 @@ function handleMetaUpgradePointerDown(x, y) {
       purchaseMetaUpgrade(def.id);
       return true;
     }
+  }
+  return false;
+}
+
+function returnToMetaUpgradeFromAscension() {
+  setGameMode("metaUpgrade");
+  state.metaProgress = loadMetaProgress();
+  state.metaUpgradeMessage = {
+    key: state.ascensionRun?.status === "success"
+      ? "ascensionChallengeSuccessMessage"
+      : "",
+    vars: {},
+    until: performance.now() + 2600,
+  };
+  playSfx("uiConfirm");
+}
+
+function handleAscensionResultPointerDown(x, y) {
+  const buttons = getAscensionResultButtonRects();
+  const primary = state.ascensionRun?.status === "success" ? buttons.single : buttons.primary;
+  if (pointInRect(x, y, primary.x, primary.y, primary.w, primary.h)) {
+    returnToMetaUpgradeFromAscension();
+    return true;
+  }
+  if (
+    state.ascensionRun?.status === "failed"
+    && pointInRect(
+      x,
+      y,
+      buttons.secondary.x,
+      buttons.secondary.y,
+      buttons.secondary.w,
+      buttons.secondary.h,
+    )
+  ) {
+    startAscensionChallenge();
+    return true;
   }
   return false;
 }
@@ -11097,12 +11426,13 @@ function drawSettings() {
 }
 
 function drawRunRiftEnergyHud() {
+  if (state.runMode === "ascension") return;
   const amount = getCurrentRunRiftEnergyEarned();
   const b = UI_LAYOUT.pauseButton;
-  const w = 116;
-  const h = 36;
-  const x = b.x - w - 12;
-  const y = b.y + 1;
+  const w = 128;
+  const h = 42;
+  const x = b.x - w - 10;
+  const y = b.y - 2;
   const pulse = amount > 0 ? 0.5 + Math.sin(performance.now() * 0.007) * 0.5 : 0;
   ctx.save();
   ctx.fillStyle = amount > 0 ? "rgba(25, 15, 46, 0.72)" : "rgba(8, 13, 20, 0.58)";
@@ -11113,8 +11443,8 @@ function drawRunRiftEnergyHud() {
   ctx.strokeStyle = amount > 0 ? "rgba(255, 240, 166, 0.38)" : "rgba(145, 232, 222, 0.22)";
   ctx.lineWidth = 1.5;
   roundedRect(x, y, w, h, 10, false, true);
-  drawImageContain(riftEnergyIcon, x + 8, y + 4, 28, 28);
-  fitLabel(String(amount), x + 43, y + 23, w - 54, 19, amount > 0 ? "#fff0a6" : "rgba(238,244,252,0.72)", 14, "900", true);
+  drawImageContain(riftEnergyIcon, x + 5, y + 1, 40, 40);
+  fitLabel(String(amount), x + 51, y + 28, w - 61, 21, amount > 0 ? "#fff0a6" : "rgba(238,244,252,0.72)", 15, "900", true);
   ctx.restore();
 }
 
@@ -11264,7 +11594,15 @@ window.addEventListener("keydown", (event) => {
   }
   if (key === "Enter" && state.mode !== "playing") {
     if (state.mode === "upgrade") chooseUpgrade(state.upgradeSelectedIndex);
+    else if (state.mode === "ascensionResult") {
+      if (state.ascensionRun?.status === "failed") startAscensionChallenge();
+      else returnToMetaUpgradeFromAscension();
+    }
     else if (state.mode === "start" && state.assetLoadingDone && !state.settingsOpen) resetGame("endless");
+    return;
+  }
+  if (normalized === "r" && state.mode === "ascensionResult" && state.ascensionRun?.status === "failed") {
+    startAscensionChallenge();
     return;
   }
   if (normalized === "r" && (state.mode === "victory" || state.mode === "defeat")) {
@@ -11303,6 +11641,8 @@ window.addEventListener("keydown", (event) => {
       setGameMode("playing");
       state.pauseView = "menu";
       state.settingsOpen = false;
+    } else if (state.mode === "ascensionResult") {
+      returnToMetaUpgradeFromAscension();
     } else if (state.mode === "metaUpgrade" || state.mode === "guide" || state.mode === "victory" || state.mode === "defeat") {
       setGameMode("start");
       state.settingsOpen = false;
@@ -11353,6 +11693,7 @@ function isGameKey(key, code) {
     || ["1", "2", "3"].includes(key)
     || (state.mode === "paused" && state.pauseView === "menu" && normalized === "r")
     || ((state.mode === "victory" || state.mode === "defeat") && normalized === "r")
+    || (state.mode === "ascensionResult" && normalized === "r")
     || code === "Space";
 }
 
@@ -11425,6 +11766,10 @@ canvas.addEventListener(CANVAS_POINTER_DOWN_EVENT, (event) => {
   }
 
   if (!state.settingsOpen && state.mode !== "playing") {
+    if (state.mode === "ascensionResult") {
+      handleAscensionResultPointerDown(p.x, p.y);
+      return;
+    }
     if (state.mode === "metaUpgrade") {
       handleMetaUpgradePointerDown(p.x, p.y);
       return;

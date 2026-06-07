@@ -128,3 +128,15 @@ export function getMetaUpgradeRowRects() {
 export function getMetaUpgradeBackButtonRect() {
   return { x: 812, y: 574, w: 240, h: 44 };
 }
+
+export function getMetaAscensionEntryRect() {
+  return { x: 220, y: 550, w: 560, h: 72 };
+}
+
+export function getAscensionResultButtonRects() {
+  return {
+    primary: { x: 414, y: 458, w: 220, h: 48 },
+    secondary: { x: 646, y: 458, w: 220, h: 48 },
+    single: { x: 530, y: 458, w: 220, h: 48 },
+  };
+}

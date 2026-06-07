@@ -1,4 +1,8 @@
-export const META_PROGRESS_STORAGE_KEY = "tspin-traveler-meta-progress-v1";
+import { getAscensionMaxLevel } from "./ascensionChallenge.js";
+
+export const META_PROGRESS_SCHEMA_VERSION = 2;
+export const META_PROGRESS_STORAGE_KEY = "tspin-traveler-meta-progress-v2";
+export const LEGACY_META_PROGRESS_STORAGE_KEY = "tspin-traveler-meta-progress-v1";
 
 export const META_UPGRADE_DEFS = Object.freeze({
   hp: Object.freeze({
@@ -6,32 +10,44 @@ export const META_UPGRADE_DEFS = Object.freeze({
     levelKey: "hpLevel",
     nameKey: "metaUpgradeMaxHp",
     iconKey: "hp",
-    maxLevel: 10,
+    maxLevel: 20,
     valuePerLevel: 5,
-    costs: Object.freeze([50, 75, 100, 125, 150, 200, 250, 300, 375, 450]),
+    costs: Object.freeze([
+      50, 75, 100, 125, 150, 200, 250, 300, 375, 450,
+      550, 675, 825, 1000, 1200, 1450, 1750, 2100, 2500, 3000,
+    ]),
   }),
   attack: Object.freeze({
     id: "attack",
     levelKey: "attackLevel",
     nameKey: "metaUpgradeAttack",
     iconKey: "attack",
-    maxLevel: 10,
+    maxLevel: 20,
     valuePerLevel: 2,
     multiplierPerLevel: 0.02,
-    costs: Object.freeze([60, 90, 120, 160, 200, 260, 320, 400, 500, 650]),
+    costs: Object.freeze([
+      60, 90, 120, 160, 200, 260, 320, 400, 500, 650,
+      800, 975, 1175, 1400, 1675, 2000, 2400, 2850, 3400, 4050,
+    ]),
   }),
   guard: Object.freeze({
     id: "guard",
     levelKey: "guardLevel",
     nameKey: "metaUpgradeGuard",
     iconKey: "guard",
-    maxLevel: 10,
+    maxLevel: 20,
     valuePerLevel: 3,
-    costs: Object.freeze([50, 75, 100, 125, 150, 200, 250, 300, 375, 450]),
+    costs: Object.freeze([
+      50, 75, 100, 125, 150, 200, 250, 300, 375, 450,
+      550, 675, 825, 1000, 1200, 1450, 1750, 2100, 2500, 3000,
+    ]),
   }),
 });
 
 export const DEFAULT_META_PROGRESS = Object.freeze({
+  schemaVersion: META_PROGRESS_SCHEMA_VERSION,
+  ascensionTier: 0,
+  completedAscensions: Object.freeze([]),
   riftEnergy: 0,
   metaUpgrades: Object.freeze({
     hpLevel: 0,
@@ -47,17 +63,26 @@ function toNonNegativeInt(value) {
 
 export function normalizeMetaProgress(value = {}) {
   const upgrades = value?.metaUpgrades || {};
+  const ascensionTier = toNonNegativeInt(value?.ascensionTier);
   const normalized = {
+    schemaVersion: META_PROGRESS_SCHEMA_VERSION,
+    ascensionTier,
+    completedAscensions: Array.from(new Set(
+      Array.isArray(value?.completedAscensions)
+        ? value.completedAscensions.filter((id) => typeof id === "string" && id.length > 0)
+        : [],
+    )),
     riftEnergy: toNonNegativeInt(value?.riftEnergy),
     metaUpgrades: {
-      hpLevel: toNonNegativeInt(upgrades.hpLevel),
-      attackLevel: toNonNegativeInt(upgrades.attackLevel),
-      guardLevel: toNonNegativeInt(upgrades.guardLevel),
+      hpLevel: toNonNegativeInt(upgrades.hpLevel ?? value?.hpLevel),
+      attackLevel: toNonNegativeInt(upgrades.attackLevel ?? value?.attackLevel),
+      guardLevel: toNonNegativeInt(upgrades.guardLevel ?? value?.guardLevel),
     },
   };
+  const maxLevel = getAscensionMaxLevel(ascensionTier);
   for (const def of Object.values(META_UPGRADE_DEFS)) {
     normalized.metaUpgrades[def.levelKey] = Math.min(
-      def.maxLevel,
+      maxLevel,
       normalized.metaUpgrades[def.levelKey],
     );
   }
@@ -92,11 +117,12 @@ export function getMetaUpgradeLevel(progress, id) {
   return def ? normalized.metaUpgrades[def.levelKey] : 0;
 }
 
-export function getMetaUpgradeCost(id, level) {
+export function getMetaUpgradeCost(id, level, progress = null) {
   const def = getMetaUpgradeDef(id);
   if (!def) return null;
   const safeLevel = toNonNegativeInt(level);
-  if (safeLevel >= def.maxLevel) return null;
+  const levelCap = progress ? getAscensionMaxLevel(progress) : 10;
+  if (safeLevel >= levelCap) return null;
   return def.costs[safeLevel] ?? null;
 }
 
@@ -105,7 +131,7 @@ export function buyMetaUpgrade(progress, id) {
   if (!def) return { ok: false, reason: "unknown", progress: normalizeMetaProgress(progress) };
   const nextProgress = normalizeMetaProgress(progress);
   const level = nextProgress.metaUpgrades[def.levelKey];
-  const cost = getMetaUpgradeCost(id, level);
+  const cost = getMetaUpgradeCost(id, level, nextProgress);
   if (cost === null) return { ok: false, reason: "maxed", progress: nextProgress };
   if (nextProgress.riftEnergy < cost) {
     return { ok: false, reason: "notEnough", cost, progress: nextProgress };
@@ -137,7 +163,16 @@ export function getMetaBonuses(progress) {
 export function loadMetaProgress(storage = globalThis?.localStorage) {
   try {
     const raw = storage?.getItem?.(META_PROGRESS_STORAGE_KEY);
-    return normalizeMetaProgress(raw ? JSON.parse(raw) : DEFAULT_META_PROGRESS);
+    if (raw) return normalizeMetaProgress(JSON.parse(raw));
+  } catch {
+    // Fall through to the legacy backup when the v2 payload is invalid.
+  }
+  try {
+    const legacyRaw = storage?.getItem?.(LEGACY_META_PROGRESS_STORAGE_KEY);
+    if (!legacyRaw) return normalizeMetaProgress(DEFAULT_META_PROGRESS);
+    const migrated = normalizeMetaProgress(JSON.parse(legacyRaw));
+    storage?.setItem?.(META_PROGRESS_STORAGE_KEY, JSON.stringify(migrated));
+    return migrated;
   } catch {
     return normalizeMetaProgress(DEFAULT_META_PROGRESS);
   }

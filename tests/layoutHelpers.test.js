@@ -12,8 +12,10 @@ import {
 } from "../src/render/drawUtils.js";
 import {
   createHudLayout,
+  getAscensionResultButtonRects,
   getControlsResetButtonRect,
   getMainMenuButtonRects,
+  getMetaAscensionEntryRect,
   getMetaUpgradeBackButtonRect,
   getMetaUpgradeRowRects,
   getResultButtonRects,
@@ -123,6 +125,9 @@ describe("HUD and card layout helpers", () => {
     expect(getSettingsFeedbackButtonRect(388, 224, 640, 292)).toEqual({ x: 412, y: 454, w: 232, h: 40 });
     expect(getMetaUpgradeRowRects().guard.buyY).toBe(473);
     expect(getMetaUpgradeBackButtonRect()).toEqual({ x: 812, y: 574, w: 240, h: 44 });
+    expect(getMetaAscensionEntryRect()).toEqual({ x: 220, y: 550, w: 560, h: 72 });
+    expect(getAscensionResultButtonRects().primary).toEqual({ x: 414, y: 458, w: 220, h: 48 });
+    expect(getAscensionResultButtonRects().single).toEqual({ x: 530, y: 458, w: 220, h: 48 });
   });
 
   it("calculates upgrade card and current build rects", () => {
