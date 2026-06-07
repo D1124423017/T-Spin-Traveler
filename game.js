@@ -1586,12 +1586,14 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   unlockAudio();
   cleanupDomOverlay();
   setGameMode("playing");
-  showToast({
-    type: "run-start",
-    text: t(runMode === "ascension" ? "ascensionChallengeStarted" : "toastRunStart"),
-    tone: "rift",
-    durationMs: 1500,
-  });
+  if (runMode === "ascension") {
+    showToast({
+      type: "run-start",
+      text: t("ascensionChallengeStarted"),
+      tone: "rift",
+      durationMs: 1500,
+    });
+  }
   state.pauseView = "menu";
   state.settingsOpen = false;
   state.bindingAction = null;

@@ -10,12 +10,12 @@ describe("toast layer helpers", () => {
   it("normalizes event-only toast payloads", () => {
     expect(normalizeToastEvent({
       type: "run-start",
-      text: "Rift route opened",
+      text: "Ascension Challenge Started",
       tone: "rift",
       durationMs: 1200,
     })).toEqual({
       type: "run-start",
-      text: "Rift route opened",
+      text: "Ascension Challenge Started",
       tone: "rift",
       durationMs: 1200,
     });
@@ -27,8 +27,8 @@ describe("toast layer helpers", () => {
     expect(getToastDiagnostics()).toMatchObject({ activeToasts: 0, maxToasts: 4 });
   });
 
-  it("localizes run-start toast text", () => {
-    expect(translations.zh.toastRunStart).toBe("裂隙航道啟動");
-    expect(translations.en.toastRunStart).toBe("Rift route opened");
+  it("localizes ascension challenge toast text", () => {
+    expect(translations.zh.ascensionChallengeStarted).toBe("升階挑戰開始");
+    expect(translations.en.ascensionChallengeStarted).toBe("Ascension Challenge Started");
   });
 });
