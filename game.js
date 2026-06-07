@@ -1,7 +1,5 @@
 import {
   ASSET_REGISTRY,
-  BACKGROUND_STAGES,
-  BOSS_BACKGROUND_STAGE,
   enemyBattlePortraits,
   forestBg,
   getImageAssetRecord,
@@ -19,9 +17,6 @@ import {
   riftEnergyIcon,
   rosterArt,
   slimeArt,
-  specialUpgradeCardFrames,
-  upgradeCardFrames,
-  upgradeTypeIcons,
 } from "./src/data/assets.js";
 import {
   BGM_PLAYLISTS,
@@ -31,14 +26,9 @@ import {
 import { createFileSfxPlayer } from "./src/audio/audioManager.js";
 import { ENEMIES, MINI_BOSS_ENEMY_IDS } from "./src/data/enemies.js";
 import { translations } from "./src/data/i18n.js";
+import { UPGRADES } from "./src/data/upgrades.js";
 import {
-  RARITY,
-  UPGRADES,
-} from "./src/data/upgrades.js";
-import {
-  buildTagLabel as buildTagLabelForStats,
   getAcquiredRelicGroups as getAcquiredRelicGroupsForStats,
-  getBuildTagMeta,
   getCurrentBuildFamilyStats as getCurrentBuildFamilyStatsForGroups,
   getTraitBonus as getTraitBonusForGroups,
   getTraitChangeHintsForUpgrade as getTraitChangeHintsForUpgradeForGroups,
@@ -114,7 +104,6 @@ import {
   isTraitHighValueClear,
 } from "./src/combat/upgradeEffects.js";
 import {
-  SPECIAL_UPGRADE_FAMILIES,
   getSpecialBondCounts,
   getSpecialBondPreview,
   getSpecialBondTier,
@@ -139,7 +128,6 @@ import {
   canUnlockAscensionChallenge,
   createAscensionChallengeRun,
   failAscensionChallengeRun,
-  getAscensionStageName,
   getNextAscensionChallenge,
   recordAscensionChallengeLines,
   startAscensionChallengeRun,
@@ -160,10 +148,9 @@ import {
   pointInRect,
   smoothstep,
 } from "./src/render/drawUtils.js";
-import {
-  resetCanvasFrame,
-  resetCanvasTransform,
-} from "./src/render/renderStyles.js";
+import { drawBattleBackground } from "./src/render/backgroundRenderer.js";
+import { createBattleSceneRenderer } from "./src/render/battleSceneRenderer.js";
+import { drawGameplayFrame } from "./src/render/gameplayRenderer.js";
 import {
   getAnimationDuration,
   getAnimationFrameInfo,
@@ -194,7 +181,6 @@ import {
   getHandlingResetButtonRect as getHandlingResetButtonRectForLayout,
   getMainMenuButtonRects as getMainMenuButtonRectsForLayout,
   getResultButtonRects,
-  getRunRiftEnergyHudLayout,
   getSettingsBackButtonRect as getSettingsBackButtonRectForLayout,
   getSettingsContentOrigin as getSettingsContentOriginForLayout,
   getSettingsFeedbackCardRect as getSettingsFeedbackCardRectForLayout,
@@ -203,6 +189,12 @@ import {
   getUltimateTimerRatio,
   shouldShowUltimateCountdownWarning,
 } from "./src/ui/hudLayout.js";
+import {
+  drawAscensionChallengeHud as renderAscensionChallengeHud,
+  drawAscensionResultOverlay as renderAscensionResultOverlay,
+} from "./src/ui/ascensionChallengeOverlay.js";
+import { createBattleHudRenderer } from "./src/ui/battleHud.js";
+import { createEnemyPanelRenderer } from "./src/ui/enemyPanel.js";
 import { getPiecePreviewLayout } from "./src/ui/piecePreview.js";
 import { buildDamageEquation } from "./src/ui/combatReadout.js";
 import {
@@ -251,26 +243,13 @@ import {
 } from "./src/ui/metaUpgradeScreen.js";
 import { createCanvasFont, createTextLayout } from "./src/ui/textLayout.js";
 import {
-  getTraitDetailTitle as getTraitDetailTitleForPanel,
-  getTraitHudLabel as getTraitHudLabelForPanel,
-  getTraitProgressStatusText as getTraitProgressStatusTextForPanel,
-} from "./src/ui/traitPanel.js";
-import {
   getCurrentBuildButtonRect,
   getCurrentBuildCloseRect,
-  getCurrentBuildPanelRect,
   getUpgradeDetailToggleRect,
-  getUpgradeDraftLayout,
-  getUpgradeCardContentLayout,
   getUpgradeCardRect,
-  getUpgradeOverlayPanelRect,
   getNextUpgradeSelectionIndex,
 } from "./src/ui/upgradeCards.js";
-import {
-  getUpgradeCardMotion,
-  getUpgradeDetailMotion,
-  getUpgradeOverlayMotion,
-} from "./src/ui/upgradeMotion.js";
+import { createUpgradeScreenRenderer } from "./src/ui/upgradeScreen.js";
 import {
   DEBUG_HUD_BUILD,
   createDebugHudState,
@@ -279,6 +258,8 @@ import {
   updateDebugArtTuningDom,
   updateDebugDomHud,
 } from "./src/debug/debugHud.js";
+import { createSmokeDebugReaders } from "./src/debug/smokeHelpers.js";
+import { createGameState } from "./src/core/gameStateFactory.js";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -1015,214 +996,97 @@ const CHALLENGE_REWARDS = {
 
 const ENEMY_ATTACK_ANIMATIONS = ENEMY_ATTACK_BODY_ANIMATIONS;
 
-const state = {
-  mode: "start",
-  board: makeBoard(),
-  bag: [],
-  queue: [],
-  active: null,
-  hold: null,
-  canHold: true,
+const state = createGameState({
+  makeBoard,
+  makeStats,
+  loadSave,
+  loadMetaProgress,
+  makeRunStats,
+  createDebugHudState,
+  normalizeControlsMap,
+  defaultControls: DEFAULT_CONTROLS,
+  defaultTuning: DEFAULT_TUNING,
   playerMaxHp: PLAYER_MAX_HP,
-  playerHp: PLAYER_MAX_HP,
-  guard: 0,
-  maxGuard: BALANCE.guardMax,
-  runMode: "endless",
-  enemyHp: 120,
-  enemyMaxHp: 120,
-  enemyHpDisplay: 120,
-  enemyHpTrail: 120,
-  enemyAttackDamage: 8,
-  enemyCountdown: 7,
-  enemyType: ENEMIES[0],
-  wave: 1,
-  defeated: 0,
-  dropTimer: 0,
-  lockTimer: null,
-  lastTime: 0,
-  lineFlash: [],
-  floaters: [],
-  particles: [],
-  bursts: [],
-  attacks: [],
-  pendingHits: [],
-  perfectClearFx: null,
-  operationReadouts: [],
-  combatPopups: [],
-  lastDamageBreakdown: null,
-  shake: 0,
-  enemyHit: 0,
-  enemyHitIntensity: 0,
-  playerHit: 0,
-  heroAnimation: null,
-  heroLevelUpFx: null,
-  enemyAnimation: null,
-  enemyDeathVfx: null,
-  placed: 0,
-  combo: 0,
-  pendingGarbage: 0,
-  garbageGrace: 0,
-  queueHex: 0,
-  mistGarbage: 0,
-  lastGarbageHole: null,
-  garbageHoleRun: 0,
-  miniBoss: false,
-  lastClearedBoss: false,
-  b2bActive: false,
-  b2bChain: 0,
-  b2bBrokenFlash: 0,
-  lastPerfectClear: false,
-  perfectClears: 0,
-  ultimateCharge: 0,
-  ultimateActive: false,
-  ultimateTimer: 0,
-  ultimateTimerMax: ULTIMATE_DURATION_MS,
-  ultimateSavedBoard: null,
-  upgradeMeter: 0,
-  nextUpgradeAt: 8,
-  upgradeTier: 0,
-  upgradeReady: false,
-  stats: makeStats(),
-  save: loadSave(),
-  metaProgress: loadMetaProgress(),
-  runStats: makeRunStats(),
-  runFinalized: false,
-  defeatRenderTraceWarned: false,
-  playingStallWarned: false,
-  debug: createDebugHudState(),
-  challenge: null,
-  ascensionRun: null,
-  tutorial: null,
-  upgradeChoices: [],
-  upgradeSelectedIndex: 0,
-  upgradeDraftReason: null,
-  acquiredRelics: [],
-  currentBuildOpen: false,
-  upgradePickConfirm: null,
-  upgradeMotion: null,
-  upgradeDetailOpen: false,
-  spinSingularityStacks: 0,
-  spinStarterWave: 0,
-  spinStarterUses: 0,
-  comboConstellationWave: 0,
-  comboConstellationFirstUsed: false,
-  comboConstellationSecondUsed: false,
-  comboSafetyNetWave: 0,
-  emergencyRiftShieldWave: 0,
-  perfectEchoCharges: 0,
-  riftOverdriveCharge: 0,
-  lastStarProtocolWave: 0,
-  lastStarProtocolReady: false,
-  angelWard: 0,
-  angelBlessingCharges: 0,
-  angelMercyWave: 0,
-  devilSinMarks: 0,
-  upgrades: {
-    tspinBonus: 0,
-    garbageCancel: 0,
-    comboDelay: 0,
-    b2bBonus: 0,
-    waveHeal: 0,
-    spinBonus: 0,
-    allSpinBonus: 0,
-    comboDamage: 0,
-    defense: 0,
-    garbageGrace: 0,
-    bossDamage: 0,
-    maxHpBonus: 0,
-    lineDamage: 0,
-    clearHeal: 0,
-    spinHeal: 0,
-    damageMultiplier: 0,
-    guardGain: 0,
-    comboGuardGain: 0,
-    b2bShield: 0,
-    spinGuardStrike: 0,
-    comboEchoDamage: 0,
-    guardReflect: 0,
-    garbageCounterDamage: 0,
-    burstCharge: 0,
-    perfectBossDelay: 0,
-    singularitySpinCore: 0,
-    comboConstellation: 0,
-    aegisStarMirror: 0,
-    garbageAlchemyCore: 0,
-    perfectRiftCrown: 0,
-    spinStarter: 0,
-    b2bCompass: 0,
-    comboSafetyNet: 0,
-    emergencyRiftShield: 0,
-    garbageTransmuter: 0,
-    perfectEcho: 0,
-    riftOverdrive: 0,
-    lastStarProtocol: 0,
-    angelHaloSanctuary: 0,
-    angelCleansingPrism: 0,
-    angelPerfectBenediction: 0,
-    devilBloodMoonPact: 0,
-    devilAbyssChain: 0,
-    devilFallenCrown: 0,
-  },
-  message: "",
-  messageKey: "",
-  messageVars: {},
-  metaUpgradeMessage: { key: "", vars: {}, until: 0 },
-  settingsOpen: false,
-  settingsTab: "controls",
-  pauseView: "menu",
-  menuRevealStartedAt: 0,
-  bindingAction: null,
-  menuSpecialIdleStartedAt: performance.now(),
-  menuHeroInteraction: {
-    hovered: false,
-    hoverStartedAt: 0,
-    actionKind: "",
-    actionStartedAt: 0,
-    actionUntil: 0,
-    lineKey: "",
-    lineKind: "",
-    lineStartedAt: 0,
-    lineUntil: 0,
-    lineIndex: 0,
-    idleKind: "cube",
-    idleStartedAt: 0,
-    idleUntil: 0,
-    idleCooldownUntil: 0,
-    idleTriggerCount: 0,
-  },
-  language: "zh",
-  controls: normalizeControlsMap(DEFAULT_CONTROLS),
-  tuning: { ...DEFAULT_TUNING },
-  pointer: {
-    x: 0,
-    y: 0,
-    down: false,
-    dragging: null,
-    elasticSlider: { key: "", overflow: 0, releaseKey: "", releaseOverflow: 0, releaseStartedAt: 0 },
-  },
-  countdownMs: 0,
-  countdownCue: "",
-  firstWaveHintMs: 0,
-  controlHintsFullUntil: 0,
-  bossPhaseBanner: null,
-  bossWindup: null,
-  lastBossPhase: 1,
-  hitStopMs: 0,
-  assetLoadingStartedAt: performance.now(),
-  assetLoadingDone: false,
-  lastMoveWasRotate: false,
-  lastRotationKind: null,
-  lastKickIndex: null,
-  input: {
-    left: false,
-    right: false,
-    softDrop: false,
-    horizontalDir: 0,
-    das: 0,
-    arr: 0,
-    softDropTimer: 0,
-  },
-};
+  guardMax: BALANCE.guardMax,
+  firstEnemy: ENEMIES[0],
+  ultimateDurationMs: ULTIMATE_DURATION_MS,
+});
+
+const battleHudRenderer = createBattleHudRenderer({
+  ctx,
+  state,
+  uiLayout: UI_LAYOUT,
+  upgradeGrowthPerTier: BALANCE.upgradeGrowthPerTier,
+  riftEnergyIcon,
+  t,
+  fmt,
+  canvasFont,
+  label,
+  fitLabel,
+  roundedRect,
+  drawAscensionChallengeHud,
+  getTraitEntries,
+  getTraitFullCount,
+  drawCornerGlyph,
+  getEffectiveMaxGuard,
+  getCurrentRunRiftEnergyEarned,
+  drawImageContain,
+});
+
+const battleSceneRenderer = createBattleSceneRenderer({
+  ctx,
+  state,
+  uiLayout: UI_LAYOUT,
+  t,
+  canvasFont,
+  fitLabel,
+  roundedRect,
+  drawCornerGlyph,
+  drawTopQuestBar,
+  enemyName,
+});
+
+const enemyPanelRenderer = createEnemyPanelRenderer({
+  ctx,
+  state,
+  t,
+  fmt,
+  canvasFont,
+  label,
+  fitLabel,
+  roundedRect,
+  getEnemyAttackGarbagePreview,
+  getBossPhase,
+  enemyWeaknessToken,
+});
+
+const upgradeScreenRenderer = createUpgradeScreenRenderer({
+  ctx,
+  state,
+  t,
+  fmt,
+  canvasFont,
+  label,
+  fitLabel,
+  wrapText,
+  roundedRect,
+  drawDimOverlay,
+  drawCard,
+  drawMenuButton,
+  drawLimitedWrapText,
+  prefersReducedMotion,
+  upgradeName,
+  upgradeShortText,
+  rarityLabel,
+  getSpecialBondCountsForRun,
+  getTraitChangeHintsForUpgrade,
+  getAcquiredRelicGroups,
+  getCurrentBuildFamilyStats,
+  getTraitEntries,
+  getTraitEffectText,
+  getCurrentBuildDirectionText,
+  getTraitFullCount,
+});
 
 function makeBoard() {
   return makeEmptyBoard({ cols: COLS, rows: ROWS, hidden: HIDDEN });
@@ -5618,315 +5482,62 @@ function tickEffects(dt) {
 }
 
 function draw() {
-  state.debug.lastDrawAt = performance.now();
-  resetCanvasFrame(ctx, W, H);
-  ctx.save();
-  try {
-    const jitter = state.shake ? Math.sin(performance.now() * 0.06) * state.shake : 0;
-    ctx.translate(jitter, 0);
-    drawBackground();
-    drawPanels();
-    drawPlayer();
-    drawTraitList();
-    drawEnemy();
-    drawBoard();
-    drawSidePieces();
-    drawAttackEffects();
-    drawBursts();
-    drawParticles();
-    drawFloaters();
-    drawCombatPopups();
-    drawBossPhaseWarning();
-    drawBattleCountdown();
-    drawFirstWaveCombatHint();
-    drawTutorialPrompt();
-    drawPerfectClearFx();
-    drawOverlay();
-    if (!["start", "guide", "upgrade", "metaUpgrade", "victory", "defeat"].includes(state.mode)) drawSettings();
-  } finally {
-    ctx.restore();
-    resetCanvasTransform(ctx);
-  }
-}
-
-function activeHasCellAboveHiddenRows() {
-  if (!state.active) return false;
-  for (let r = 0; r < state.active.shape.length; r += 1) {
-    for (let c = 0; c < state.active.shape[r].length; c += 1) {
-      if (state.active.shape[r][c] && state.active.y + r < HIDDEN) return true;
-    }
-  }
-  return false;
-}
-
-function activeHasCellAboveTopBuffer() {
-  return isPieceAboveTopBuffer(state.active);
-}
-
-function canActiveMoveDownForDebug() {
-  if (!state.active) return false;
-  return !collides(state.active, state.active.x, state.active.y + 1, state.active.shape);
-}
-
-function getActiveDebugKey() {
-  if (!state.active) return "";
-  return `${state.active.type}:${state.active.x}:${state.active.y}:${state.active.shape.map((row) => row.join("")).join("/")}`;
-}
-
-function getActiveCellMinYForDebug() {
-  if (!state.active) return "";
-  let minY = Infinity;
-  for (let r = 0; r < state.active.shape.length; r += 1) {
-    for (let c = 0; c < state.active.shape[r].length; c += 1) {
-      if (state.active.shape[r][c]) minY = Math.min(minY, state.active.y + r);
-    }
-  }
-  return Number.isFinite(minY) ? minY : "";
+  drawGameplayFrame({
+    ctx,
+    width: W,
+    height: H,
+    state,
+    drawBackground,
+    drawPanels,
+    drawPlayer,
+    drawTraitList,
+    drawEnemy,
+    drawBoard,
+    drawSidePieces,
+    drawAttackEffects,
+    drawBursts,
+    drawParticles,
+    drawFloaters,
+    drawCombatPopups,
+    drawBossPhaseWarning,
+    drawBattleCountdown,
+    drawFirstWaveCombatHint,
+    drawTutorialPrompt,
+    drawPerfectClearFx,
+    drawOverlay,
+    drawSettings,
+  });
 }
 
 function getDebugHudReaders(now = performance.now()) {
-  const active = state.active;
-  return {
-    mode: () => state.mode,
-    runFinalized: () => state.runFinalized,
-    playerHp: () => state.playerHp,
-    active: () => Boolean(active),
-    activeType: () => active?.type || "",
-    activeX: () => active?.x ?? "",
-    activeY: () => active?.y ?? "",
-    activeMinCellY: getActiveCellMinYForDebug,
-    activeAboveHidden: activeHasCellAboveHiddenRows,
-    activeAboveTopBuffer: activeHasCellAboveTopBuffer,
-    activeCanMoveDown: canActiveMoveDownForDebug,
-    activeOverlapsBoard: isActivePieceOverlappingBoard,
-    lockTimer: () => state.lockTimer === null ? "null" : Math.round(now - state.lockTimer),
-    dropTimer: () => Math.round(state.dropTimer || 0),
-    countdownMs: () => Math.round(state.countdownMs || 0),
-    hitStopMs: () => Math.round(state.hitStopMs || 0),
-    pendingHitsLength: () => state.pendingHits.length,
-    upgradeChoiceOpen: () => state.mode === "upgrade" || state.upgradeChoices.length > 0,
-    pauseOpen: () => state.mode === "paused",
-    hiddenRow0: () => getHiddenRowsDebugInfo().rows[0] || false,
-    hiddenRow1: () => getHiddenRowsDebugInfo().rows[1] || false,
-    spawnFootprintBlocked: isSpawnBlockedForDefeat,
-    assetLoading: () => getAssetLoadingSummary().loading,
-    assetLoaded: () => getAssetLoadingSummary().loaded,
-    assetError: () => getAssetLoadingSummary().error,
-    assetTotal: () => getAssetLoadingSummary().total,
-    assetAge: () => `${Math.round(now - state.assetLoadingStartedAt)}ms`,
-    servedTopBuffer: () => HIDDEN === 5,
-    activeDebugKey: getActiveDebugKey,
-    activeBlockedDown: () => state.mode === "playing" && Boolean(state.active) && !canActiveMoveDownForDebug(),
-  };
+  return createSmokeDebugReaders({
+    state,
+    hiddenRows: HIDDEN,
+    isPieceAboveTopBuffer,
+    collides,
+    isActivePieceOverlappingBoard,
+    getHiddenRowsDebugInfo,
+    isSpawnBlockedForDefeat,
+    getAssetLoadingSummary,
+    now,
+  });
 }
 
 function drawBackground() {
-  const stage = getBackgroundForWave(state.wave || 1);
-  const image = getStageBackgroundImage(stage);
-  if (image) {
-    const usingFallback = image !== stage.image;
-    drawImageCoverRaw(image, 0, 0, W, H);
-    drawBackgroundTreatment(stage, usingFallback);
-    return;
-  }
-
-  drawProceduralBackground();
-}
-
-function getBackgroundForWave(wave) {
-  const enemyCycleLength = Math.max(1, getStandardEnemyPool().length * NORMAL_ENEMY_CYCLES_BEFORE_BOSS + 1);
-  if (wave > 0 && (wave - 1) % enemyCycleLength === enemyCycleLength - 1) return BOSS_BACKGROUND_STAGE;
-  if (!BACKGROUND_STAGES.length) return BOSS_BACKGROUND_STAGE;
-  return BACKGROUND_STAGES[Math.max(0, wave - 1) % BACKGROUND_STAGES.length];
-}
-
-function getStageBackgroundImage(stage) {
-  if (isImageReady(stage.image)) return stage.image;
-  if (isImageReady(stage.fallback)) return stage.fallback;
-  return null;
-}
-
-function drawBackgroundTreatment(stage, usingFallback) {
-  ctx.save();
-  if (stage.tint) {
-    ctx.fillStyle = stage.tint;
-    ctx.fillRect(0, 0, W, H);
-  }
-  ctx.fillStyle = `rgba(4, 7, 12, ${usingFallback ? 0.72 : stage.dim})`;
-  ctx.fillRect(0, 0, W, H);
-  if (stage.centerDim && !usingFallback) drawCenterBackgroundShade(stage.centerDim);
-  drawVignette(stage.vignette);
-  ctx.restore();
-}
-
-function drawCenterBackgroundShade(alpha) {
-  const g = ctx.createRadialGradient(W / 2, H / 2, 40, W / 2, H / 2, 460);
-  g.addColorStop(0, `rgba(0, 0, 0, ${alpha})`);
-  g.addColorStop(0.52, `rgba(0, 0, 0, ${alpha * 0.38})`);
-  g.addColorStop(1, "rgba(0, 0, 0, 0)");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
-}
-
-function drawProceduralBackground() {
-  const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, "#101326");
-  g.addColorStop(0.46, "#12172a");
-  g.addColorStop(1, "#07090f");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
-
-  drawStarMapBackdrop();
-  drawAncientObelisk(96, 112, 260, 0.42);
-  drawAncientObelisk(1098, 96, 310, 0.52);
-  drawAncientColumn(288, 170, 236, 0.34);
-  drawAncientColumn(915, 154, 258, 0.4);
-
-  ctx.fillStyle = "#0a0d15";
-  ctx.beginPath();
-  ctx.moveTo(0, 613);
-  ctx.bezierCurveTo(240, 570, 420, 642, 660, 590);
-  ctx.bezierCurveTo(900, 540, 1090, 602, 1280, 566);
-  ctx.lineTo(1280, 720);
-  ctx.lineTo(0, 720);
-  ctx.closePath();
-  ctx.fill();
-
-  drawAncientRiftRunes();
-  drawVignette();
-}
-
-function drawStarMapBackdrop() {
-  ctx.save();
-  ctx.strokeStyle = "rgba(120, 150, 255, 0.14)";
-  ctx.fillStyle = "rgba(185, 210, 255, 0.28)";
-  ctx.lineWidth = 1;
-  const points = [
-    [182, 126], [302, 86], [456, 154], [620, 106], [768, 164],
-    [928, 112], [1098, 152], [1190, 92],
-  ];
-  ctx.beginPath();
-  points.forEach(([x, y], index) => {
-    if (index === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+  drawBattleBackground({
+    ctx,
+    width: W,
+    height: H,
+    wave: state.wave,
+    normalEnemyCount: getStandardEnemyPool().length,
+    normalEnemyCyclesBeforeBoss: NORMAL_ENEMY_CYCLES_BEFORE_BOSS,
+    drawImageCover: drawImageCoverRaw,
+    roundedRect,
   });
-  ctx.stroke();
-  for (const [x, y] of points) {
-    ctx.beginPath();
-    ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-function drawAncientObelisk(x, y, h, alpha) {
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  const w = h * 0.22;
-  ctx.fillStyle = "#171323";
-  ctx.beginPath();
-  ctx.moveTo(x + w / 2, y);
-  ctx.lineTo(x + w, y + h * 0.16);
-  ctx.lineTo(x + w * 0.78, y + h);
-  ctx.lineTo(x + w * 0.22, y + h);
-  ctx.lineTo(x, y + h * 0.16);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "rgba(155, 132, 255, 0.26)";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(104, 218, 255, 0.24)";
-  ctx.beginPath();
-  ctx.moveTo(x + w * 0.5, y + h * 0.2);
-  ctx.lineTo(x + w * 0.5, y + h * 0.82);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawAncientColumn(x, y, h, alpha) {
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  const w = h * 0.18;
-  ctx.fillStyle = "#141826";
-  roundedRect(x, y, w, h, 10, true, false);
-  ctx.strokeStyle = "rgba(184, 160, 112, 0.22)";
-  ctx.lineWidth = 2;
-  roundedRect(x, y, w, h, 10, false, true);
-  ctx.fillStyle = "rgba(115, 96, 210, 0.16)";
-  ctx.fillRect(x + w * 0.22, y + h * 0.18, w * 0.56, h * 0.64);
-  ctx.restore();
-}
-
-function drawAncientRiftRunes() {
-  ctx.save();
-  ctx.translate(176, 520);
-  ctx.fillStyle = "#28302f";
-  roundedRect(-38, -86, 76, 110, 14, true, false);
-  ctx.strokeStyle = "rgba(145, 160, 190, 0.28)";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(-20, -64, 40, 58);
-  ctx.fillStyle = "rgba(131, 146, 255, 0.52)";
-  ctx.fillRect(-14, -42, 28, 4);
-  ctx.fillRect(-3, -56, 6, 38);
-  ctx.restore();
-}
-
-function drawVignette(strength = 0.78) {
-  const g = ctx.createRadialGradient(W / 2, H / 2, 180, W / 2, H / 2, 720);
-  g.addColorStop(0, "rgba(0, 0, 0, 0)");
-  g.addColorStop(0.58, `rgba(0, 0, 0, ${strength * 0.2})`);
-  g.addColorStop(1, `rgba(0, 0, 0, ${strength})`);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
 }
 
 function drawPanels() {
-  drawTitle();
-  const player = UI_LAYOUT.playerPanel;
-  const enemy = UI_LAYOUT.enemyPanel;
-  const board = UI_LAYOUT.boardFrame;
-  drawBoardFocusAura(board);
-  drawHudPanel(player.x, player.y, player.w, player.h, t("ally").toUpperCase(), "NOA");
-  drawHudPanel(enemy.x, enemy.y, enemy.w, enemy.h, t("enemy").toUpperCase(), enemyName(state.enemyType));
-  drawBoardFrame(board.x, board.y, board.w, board.h);
-  drawTopQuestBar();
-}
-
-function drawTitle() {
-  ctx.save();
-  ctx.font = canvasFont("900", 28, t("startTitle"), true);
-  ctx.shadowColor = "rgba(175, 112, 255, 0.38)";
-  ctx.shadowBlur = 14;
-  const g = ctx.createLinearGradient(48, 20, 318, 48);
-  g.addColorStop(0, "#f9f5e6");
-  g.addColorStop(0.45, "#ffe0a3");
-  g.addColorStop(1, "#c7a7ff");
-  ctx.fillStyle = g;
-  ctx.fillText(t("startTitle"), 48, 40);
-  ctx.font = canvasFont("700", 13, t("navigationCore"));
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = "rgba(230, 244, 255, 0.5)";
-  ctx.fillText(t("navigationCore"), 50, 58);
-  ctx.restore();
-}
-
-function drawBoardFocusAura(board) {
-  ctx.save();
-  const cx = board.x + board.w / 2;
-  const cy = board.y + board.h / 2;
-  const halo = ctx.createRadialGradient(cx, cy, 160, cx, cy, 390);
-  halo.addColorStop(0, "rgba(105, 96, 255, 0.16)");
-  halo.addColorStop(0.48, "rgba(99, 217, 255, 0.055)");
-  halo.addColorStop(1, "rgba(0, 0, 0, 0)");
-  ctx.fillStyle = halo;
-  ctx.fillRect(board.x - 180, board.y - 60, board.w + 360, board.h + 120);
-  const sideGlow = ctx.createLinearGradient(board.x - 20, board.y, board.x + board.w + 20, board.y);
-  sideGlow.addColorStop(0, "rgba(126, 231, 255, 0)");
-  sideGlow.addColorStop(0.48, "rgba(159, 128, 255, 0.16)");
-  sideGlow.addColorStop(1, "rgba(126, 231, 255, 0)");
-  ctx.fillStyle = sideGlow;
-  roundedRect(board.x - 16, board.y - 18, board.w + 32, board.h + 36, 16, true, false);
-  ctx.restore();
+  battleSceneRenderer.drawPanels();
 }
 
 function drawCard(x, y, w, h) {
@@ -5973,190 +5584,12 @@ function drawCard(x, y, w, h) {
   ctx.restore();
 }
 
-function drawHudPanel(x, y, w, h, tag, name) {
-  const isAlly = name === "NOA";
-  const accent = isAlly ? "#7ee7ff" : "#ffb95f";
-  ctx.save();
-  const bg = ctx.createLinearGradient(x, y, x, y + h);
-  bg.addColorStop(0, "rgba(4, 8, 15, 0.72)");
-  bg.addColorStop(0.58, "rgba(5, 8, 13, 0.46)");
-  bg.addColorStop(1, "rgba(11, 7, 18, 0.58)");
-  ctx.fillStyle = bg;
-  ctx.shadowColor = hexToRgba(accent, 0.1);
-  ctx.shadowBlur = 18;
-  roundedRect(x, y, w, h, 18, true, false);
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = hexToRgba(accent, 0.32);
-  ctx.lineWidth = 1.4;
-  roundedRect(x, y, w, h, 18, false, true);
-  ctx.strokeStyle = "rgba(255,255,255,0.07)";
-  roundedRect(x + 7, y + 7, w - 14, h - 14, 13, false, true);
-
-  ctx.fillStyle = "rgba(3, 6, 12, 0.62)";
-  roundedRect(x + 18, y + 18, w - 36, 54, 12, true, false);
-  ctx.strokeStyle = hexToRgba(accent, 0.26);
-  roundedRect(x + 18, y + 18, w - 36, 54, 12, false, true);
-  ctx.font = canvasFont("800", 12, tag, true);
-  ctx.fillStyle = hexToRgba(accent, 0.76);
-  ctx.fillText(tag, x + 34, y + 39);
-  ctx.shadowColor = hexToRgba(accent, 0.26);
-  ctx.shadowBlur = 10;
-  fitLabel(name, x + 34, y + 63, w - 90, 24, "#f3f2ea", 16, "900");
-  ctx.shadowBlur = 0;
-  drawCornerGlyph(x + w - 42, y + 35, accent);
-  ctx.restore();
-}
-
-function drawBoardFrame(x, y, w, h) {
-  ctx.save();
-  const g = ctx.createLinearGradient(x, y, x + w, y + h);
-  g.addColorStop(0, "rgba(12, 18, 31, 0.96)");
-  g.addColorStop(0.52, "rgba(3, 6, 12, 0.98)");
-  g.addColorStop(1, "rgba(20, 12, 34, 0.94)");
-  ctx.fillStyle = g;
-  ctx.shadowColor = "rgba(126, 101, 255, 0.52)";
-  ctx.shadowBlur = 32;
-  roundedRect(x, y, w, h, 14, true, false);
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = "rgba(239, 229, 202, 0.78)";
-  ctx.lineWidth = 2.8;
-  roundedRect(x, y, w, h, 14, false, true);
-  ctx.strokeStyle = "rgba(138, 108, 255, 0.48)";
-  ctx.lineWidth = 7;
-  roundedRect(x + 5, y + 5, w - 10, h - 10, 10, false, true);
-  ctx.strokeStyle = "rgba(126, 231, 255, 0.24)";
-  ctx.lineWidth = 1;
-  roundedRect(x + 12, y + 12, w - 24, h - 24, 3, false, true);
-  const gemX = x + w / 2;
-  const gemY = y - 2;
-  ctx.fillStyle = "rgba(12, 18, 31, 0.88)";
-  roundedRect(gemX - 34, gemY - 10, 68, 18, 9, true, false);
-  drawCornerGlyph(gemX, gemY - 1, "#b99cff");
-  ctx.restore();
-}
-
 function drawTopQuestBar() {
-  if (state.runMode === "ascension" && state.ascensionRun) {
-    drawAscensionChallengeHud();
-    return;
-  }
-  ctx.save();
-  ctx.fillStyle = "rgba(4, 7, 14, 0.8)";
-  roundedRect(404, 10, 472, 38, 10, true, false);
-  ctx.strokeStyle = "rgba(255, 210, 128, 0.28)";
-  ctx.lineWidth = 1.5;
-  roundedRect(404, 10, 472, 38, 10, false, true);
-  ctx.font = canvasFont("800", 15, t("topQuest").toUpperCase(), true);
-  ctx.fillStyle = "#d7c2ff";
-  ctx.fillText(t("topQuest").toUpperCase(), 450, 30);
-  ctx.textAlign = "right";
-  ctx.fillStyle = "rgba(238,244,252,0.58)";
-  ctx.font = canvasFont("800", 15, `${t("waveLabel")} ${state.wave}`);
-  ctx.fillText(`${t("waveLabel")} ${state.wave}`, 850, 30);
-  ctx.fillStyle = "#ffb95f";
-  ctx.beginPath();
-  ctx.arc(427, 29, 7, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  battleHudRenderer.drawTopQuestBar();
 }
 
 function drawTraitList() {
-  if (state.mode !== "playing" && state.mode !== "paused") return;
-  const traits = getTraitEntries().filter((trait) => trait.count > 0).slice(0, 6);
-  if (!traits.length) return;
-  const x = 20;
-  const y = 292;
-  const w = 132;
-  const rowH = 24;
-  const h = 27 + traits.length * rowH + 8;
-  ctx.save();
-  ctx.fillStyle = "rgba(4, 7, 14, 0.38)";
-  roundedRect(x, y, w, h, 9, true, false);
-  ctx.strokeStyle = "rgba(126, 231, 255, 0.16)";
-  ctx.lineWidth = 1;
-  roundedRect(x, y, w, h, 9, false, true);
-  label(t("traitListTitle").toUpperCase(), x + 10, y + 19, 10, "rgba(143, 232, 220, 0.74)");
-  for (let i = 0; i < traits.length; i += 1) {
-    const trait = traits[i];
-    const yy = y + 27 + i * rowH;
-    drawTraitListRow(trait, x + 8, yy, w - 16, rowH - 4);
-  }
-  ctx.restore();
-}
-
-function drawTraitListRow(trait, x, y, w, h) {
-  const active = trait.stage > 0;
-  const color = trait.isFull ? "#fff0a6" : trait.stage >= 2 ? "#d7c2ff" : trait.color;
-  ctx.save();
-  ctx.fillStyle = active ? hexToRgba(color, 0.14) : "rgba(8, 13, 20, 0.34)";
-  roundedRect(x, y, w, h, 6, true, false);
-  ctx.strokeStyle = active ? hexToRgba(color, 0.5 + trait.stage * 0.09) : "rgba(238,244,252,0.09)";
-  ctx.lineWidth = active ? 1.2 : 1;
-  roundedRect(x, y, w, h, 6, false, true);
-  ctx.fillStyle = hexToRgba(color, active ? 0.24 : 0.08);
-  roundedRect(x + 4, y + 3, 16, h - 6, 5, true, false);
-  ctx.textAlign = "center";
-  ctx.font = canvasFont("900", 10, trait.def.icon, true);
-  ctx.fillStyle = active ? color : "rgba(238,244,252,0.44)";
-  ctx.fillText(trait.def.icon, x + 12, y + 14);
-  ctx.textAlign = "left";
-  fitLabel(getTraitHudLabelForPanel(trait, { translate: t }), x + 26, y + 14, 48, 10, active ? "#f5f1e6" : "rgba(238,244,252,0.48)", 8, "800", true);
-  ctx.textAlign = "right";
-  fitLabel(getTraitProgressStatusTextForPanel(trait, { format: fmt, getFullCount: getTraitFullCount }), x + w - 56, y + 14, 52, 10, active ? color : "rgba(238,244,252,0.44)", 7, "900", true);
-  if (active) {
-    ctx.fillStyle = color;
-    ctx.globalAlpha = trait.isFull ? 0.9 : 0.64;
-    ctx.fillRect(x + w - 26, y + h - 4, Math.min(20, 6 + trait.stage * 5), 2);
-  }
-  ctx.restore();
-}
-
-function getRelicProgressInfo() {
-  const tierStep = state.upgradeTier > 0
-    ? BALANCE.upgradeGrowthPerTier * state.upgradeTier
-    : state.nextUpgradeAt;
-  const previousTarget = Math.max(0, state.nextUpgradeAt - tierStep);
-  const target = Math.max(1, state.nextUpgradeAt - previousTarget);
-  const current = clamp(state.upgradeMeter - previousTarget, 0, target);
-  const ready = state.upgradeReady || state.upgradeMeter >= state.nextUpgradeAt;
-  return {
-    current,
-    target,
-    ready,
-    ratio: ready ? 1 : clamp(current / target, 0, 1),
-  };
-}
-
-function getRelicProgressText(progress) {
-  return progress.ready
-    ? t("relicDraftReady")
-    : `${t("relicProgress")} ${Math.floor(progress.current)} / ${progress.target}`;
-}
-
-function drawRelicProgressBar(x, y, w, h, progress, showText = true) {
-  const glow = progress.ready || progress.ratio >= 0.75;
-  const text = getRelicProgressText(progress);
-  ctx.save();
-  ctx.fillStyle = "rgba(4, 9, 18, 0.72)";
-  roundedRect(x, y, w, h, h / 2, true, false);
-  const fill = ctx.createLinearGradient(x, y, x + w, y);
-  fill.addColorStop(0, "#7ef7ff");
-  fill.addColorStop(0.55, "#b690ff");
-  fill.addColorStop(1, glow ? "#fff0a6" : "#d7c2ff");
-  ctx.fillStyle = fill;
-  if (glow) {
-    ctx.shadowColor = progress.ready ? "#fff0a6" : "#b690ff";
-    ctx.shadowBlur = progress.ready ? 16 : 9;
-  }
-  roundedRect(x, y, Math.max(h, w * progress.ratio), h, h / 2, true, false);
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = glow ? "rgba(255, 240, 166, 0.54)" : "rgba(126, 231, 255, 0.28)";
-  roundedRect(x, y, w, h, h / 2, false, true);
-  if (showText) {
-    ctx.textAlign = "left";
-    fitLabel(text, x, y + 14, w, 11, glow ? "#fff0a6" : "rgba(238,244,252,0.7)", 9, "800");
-  }
-  ctx.restore();
+  battleHudRenderer.drawTraitList();
 }
 
 function drawCornerGlyph(x, y, color) {
@@ -6241,31 +5674,7 @@ function drawPlayer() {
 }
 
 function drawPlayerRelicProgress() {
-  const progress = getRelicProgressInfo();
-  const x = 56;
-  const y = 622;
-  const w = 292;
-  const h = 46;
-  const glow = progress.ready || progress.ratio >= 0.75;
-  ctx.save();
-  const bg = ctx.createLinearGradient(x, y, x + w, y + h);
-  bg.addColorStop(0, "rgba(4, 9, 18, 0.62)");
-  bg.addColorStop(0.55, "rgba(18, 16, 38, 0.58)");
-  bg.addColorStop(1, "rgba(6, 13, 23, 0.62)");
-  ctx.fillStyle = bg;
-  ctx.shadowColor = glow ? "rgba(255, 240, 166, 0.22)" : "rgba(109, 232, 255, 0.12)";
-  ctx.shadowBlur = glow ? 18 : 10;
-  roundedRect(x, y, w, h, 10, true, false);
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = glow ? "rgba(255, 240, 166, 0.44)" : "rgba(126, 231, 255, 0.22)";
-  ctx.lineWidth = 1.3;
-  roundedRect(x, y, w, h, 10, false, true);
-  ctx.fillStyle = glow ? "rgba(255, 240, 166, 0.2)" : "rgba(126, 231, 255, 0.12)";
-  roundedRect(x + 12, y + 10, 24, 24, 7, true, false);
-  drawCornerGlyph(x + 24, y + 22, glow ? "#fff0a6" : "#8fe8dc");
-  fitLabel(getRelicProgressText(progress), x + 46, y + 25, w - 60, 12, glow ? "#fff0a6" : "rgba(238,244,252,0.74)", 10, "900", true);
-  drawRelicProgressBar(x + 14, y + 33, w - 28, 7, progress, false);
-  ctx.restore();
+  battleHudRenderer.drawPlayerRelicProgress();
 }
 
 function drawBuildChip(x, y, w) {
@@ -6317,17 +5726,7 @@ function drawPresentationSigil(x, y, r, color) {
 }
 
 function drawGuardMeter(x, y, w = 190) {
-  const maxGuard = getEffectiveMaxGuard();
-  const ratio = maxGuard ? state.guard / maxGuard : 0;
-  ctx.save();
-  ctx.fillStyle = "rgba(7, 10, 16, 0.5)";
-  roundedRect(x, y, w, 20, 6, true, false);
-  ctx.fillStyle = "rgba(157, 247, 218, 0.22)";
-  roundedRect(x, y, w * ratio, 20, 6, true, false);
-  ctx.strokeStyle = "rgba(157, 247, 218, 0.3)";
-  roundedRect(x, y, w, 20, 6, false, true);
-  label(`${t("guardLabel")} ${state.guard}/${maxGuard}`, x + 10, y + 14, 11, state.guard > 0 ? "#9df7da" : "rgba(238,244,252,0.46)");
-  ctx.restore();
+  battleHudRenderer.drawGuardMeter(x, y, w);
 }
 
 function drawHeroSprite(hit) {
@@ -7025,25 +6424,7 @@ function drawEnemy() {
 }
 
 function drawEnemyBehaviorChips(x, y, enemy, w = 294) {
-  const chips = [
-    { label: t("boardEffectShort"), value: t(`special.${enemy.id}`), color: enemy.color },
-    { label: t("weakShort"), value: enemyWeaknessToken(enemy), color: "#fff0a6" },
-  ];
-  ctx.save();
-  const gap = 8;
-  const chipW = (w - gap) / 2;
-  for (let i = 0; i < chips.length; i += 1) {
-    const chip = chips[i];
-    const cy = y;
-    const cx = x + i * (chipW + gap);
-    ctx.fillStyle = "rgba(7, 10, 16, 0.5)";
-    roundedRect(cx, cy, chipW, 27, 7, true, false);
-    ctx.strokeStyle = hexToRgba(chip.color.startsWith("#") ? chip.color : "#8fe8dc", 0.22);
-    roundedRect(cx, cy, chipW, 27, 7, false, true);
-    label(String(chip.label).toUpperCase(), cx + 9, cy + 11, 8, "rgba(238,244,252,0.48)");
-    fitLabel(String(chip.value), cx + 9, cy + 22, chipW - 18, 11, chip.color, 9, "800");
-  }
-  ctx.restore();
+  enemyPanelRenderer.drawEnemyBehaviorChips(x, y, enemy, w);
 }
 
 function drawEnemyHitFlash(enemy, intensity = 1) {
@@ -7066,25 +6447,7 @@ function drawEnemyHitFlash(enemy, intensity = 1) {
 }
 
 function drawBossPhaseBar(x, y) {
-  const phase = getBossPhase();
-  const ratio = state.enemyMaxHp ? clamp(1 - state.enemyHp / state.enemyMaxHp, 0, 1) : 0;
-  ctx.save();
-  label(`${t("bossPhaseBar").toUpperCase()} P${phase}`, x, y - 2, 10, "#fff0a6");
-  ctx.fillStyle = "rgba(8, 13, 20, 0.68)";
-  roundedRect(x + 104, y - 11, 126, 7, 4, true, false);
-  const g = ctx.createLinearGradient(x + 104, y - 11, x + 230, y - 11);
-  g.addColorStop(0, "#9df7da");
-  g.addColorStop(0.5, "#fff0a6");
-  g.addColorStop(1, "#ff7782");
-  ctx.fillStyle = g;
-  roundedRect(x + 104, y - 11, 126 * ratio, 7, 4, true, false);
-  ctx.strokeStyle = "rgba(255, 240, 166, 0.24)";
-  roundedRect(x + 104, y - 11, 126, 7, 4, false, true);
-  for (const marker of [0.3, 0.6, 0.8]) {
-    ctx.fillStyle = "rgba(255,255,255,0.42)";
-    ctx.fillRect(x + 104 + 126 * marker, y - 13, 1, 11);
-  }
-  ctx.restore();
+  enemyPanelRenderer.drawBossPhaseBar(x, y);
 }
 
 function drawEnemyConceptArt(enemy, hit) {
@@ -7320,86 +6683,11 @@ function drawSlimeKingBody(enemy) {
 }
 
 function getEnemyIntent(enemy) {
-  const garbage = getEnemyAttackGarbagePreview(enemy);
-  const cancelText = garbage > 0 ? t("enemyCancelable") : "-";
-  const icon = {
-    slime: "!",
-    vine: "G",
-    mushroom: "N",
-    beetle: "A",
-    mist: "?",
-    thorn: "X",
-    wisp: "*",
-    sentinel: "S",
-    king: "B",
-  }[enemy.id] || "!";
-  if (enemy.id === "mushroom") {
-    return { icon, title: t("intentSporeHex"), detail: `${fmt("intentSporeHexDetail", { damage: state.enemyAttackDamage })} / ${cancelText}`, color: "#77e8ff" };
-  }
-  if (enemy.id === "beetle") {
-    return { icon, title: t("intentArmorCrush"), detail: `${fmt("intentArmorCrushDetail", { damage: state.enemyAttackDamage, garbage })} / ${cancelText}`, color: "#c6b38a" };
-  }
-  if (enemy.id === "thorn") {
-    return { icon, title: t("intentDashSlash"), detail: `${fmt("intentDashSlashDetail", { damage: state.enemyAttackDamage, garbage })} / ${cancelText}`, color: "#b174ff" };
-  }
-  if (enemy.id === "wisp") {
-    return { icon, title: t("intentHomingBolt"), detail: fmt("intentHomingBoltDetail", { damage: state.enemyAttackDamage }), color: "#c7a7ff" };
-  }
-  if (enemy.id === "sentinel") {
-    return { icon, title: t("intentGroundSlam"), detail: `${fmt("intentGroundSlamDetail", { damage: state.enemyAttackDamage, garbage })} / ${cancelText}`, color: "#d7c28f" };
-  }
-  if (enemy.id === "king") {
-    return { icon, title: fmt("intentBossPhase", { phase: getBossPhase() }), detail: `${fmt("intentBossPhaseDetail", { damage: state.enemyAttackDamage })} / +${garbage}`, color: "#f1d36b" };
-  }
-  if (garbage > 0) {
-    return { icon, title: t("intentGarbageSurge"), detail: `${fmt("intentGarbageSurgeDetail", { damage: state.enemyAttackDamage, garbage })} / ${cancelText}`, color: "#c9d4da" };
-  }
-  return { icon, title: t("intentStrike"), detail: fmt("intentStrikeDetail", { damage: state.enemyAttackDamage }), color: "#98f07e" };
+  return enemyPanelRenderer.getEnemyIntent(enemy);
 }
 
 function drawEnemyIntent(x, y, intent, w = 294) {
-  const enemy = state.enemyType;
-  const garbage = getEnemyAttackGarbagePreview(enemy);
-  const h = 92;
-  const danger = state.enemyCountdown <= 1;
-  ctx.save();
-  ctx.fillStyle = "rgba(7, 10, 16, 0.44)";
-  roundedRect(x, y, w, h, 8, true, false);
-  ctx.strokeStyle = hexToRgba(intent.color, 0.36);
-  ctx.lineWidth = 1.5;
-  roundedRect(x, y, w, h, 8, false, true);
-  ctx.fillStyle = hexToRgba(intent.color, 0.22);
-  roundedRect(x + 12, y + 14, 34, 38, 7, true, false);
-  ctx.strokeStyle = hexToRgba(intent.color, 0.48);
-  roundedRect(x + 12, y + 14, 34, 38, 7, false, true);
-  ctx.font = canvasFont("900", 18, intent.icon || "!");
-  ctx.fillStyle = intent.color;
-  ctx.textAlign = "center";
-  ctx.fillText(intent.icon || "!", x + 29, y + 39);
-  ctx.textAlign = "left";
-  label(t("enemyIntent").toUpperCase(), x + 58, y + 25, 10, "rgba(238,244,252,0.48)");
-  fitLabel(intent.title, x + 58, y + 45, w - 74, 15, intent.color, 11, "900");
-
-  const gap = 6;
-  const pillW = (w - 24 - gap * 2) / 3;
-  const pillY = y + 60;
-  drawIntentPill(x + 12, pillY, pillW, `${t("intentAttackLabel")} ${state.enemyAttackDamage}`, "#ffb7bd", true);
-  drawIntentPill(x + 12 + pillW + gap, pillY, pillW, fmt("turnsLater", { count: state.enemyCountdown }), danger ? "#ff7782" : "#98f07e", danger);
-  drawIntentPill(x + 12 + (pillW + gap) * 2, pillY, pillW, `${t("intentGarbageLabel")} +${garbage}`, garbage > 0 ? "#c9d4da" : "rgba(238,244,252,0.56)");
-  ctx.restore();
-}
-
-function drawIntentPill(x, y, w, text, color, emphasis = false) {
-  const accent = color.startsWith("#") ? color : "#dce8ee";
-  ctx.save();
-  ctx.fillStyle = hexToRgba(accent, emphasis ? 0.16 : 0.09);
-  roundedRect(x, y, w, 22, 6, true, false);
-  ctx.strokeStyle = hexToRgba(accent, emphasis ? 0.32 : 0.16);
-  roundedRect(x, y, w, 22, 6, false, true);
-  ctx.textBaseline = "middle";
-  fitLabel(String(text), x + 8, y + 12, w - 16, 12, color, 9, "800");
-  ctx.textBaseline = "alphabetic";
-  ctx.restore();
+  enemyPanelRenderer.drawEnemyIntent(x, y, intent, w);
 }
 
 function drawIntentMetricRow(x, y, w, labelText, value, color) {
@@ -9942,121 +9230,32 @@ function getRatingColor(rating) {
 }
 
 function drawAscensionResultOverlay() {
-  const run = state.ascensionRun;
-  const succeeded = run?.status === "success";
-  const buttons = getAscensionResultButtonRects();
-  const accent = succeeded ? "#fff0a6" : "#ff8f98";
-  ctx.save();
-  drawDimOverlay(OVERLAY_READABILITY.scrim.result);
-  drawCard(342, 126, 596, 424);
-  drawCornerGlyph(640, 150, accent);
-  label(
-    t(succeeded ? "ascensionChallengeSuccessTitle" : "ascensionChallengeFailedTitle"),
-    400,
-    214,
-    38,
-    "#f5f1e6",
-  );
-  wrapText(getMessage(), 402, 258, 476, 25, "rgba(238,244,252,0.72)", 17);
-  ctx.fillStyle = "rgba(15, 10, 29, 0.68)";
-  roundedRect(402, 320, 476, 86, 10, true, false);
-  ctx.strokeStyle = succeeded
-    ? "rgba(255, 240, 166, 0.34)"
-    : "rgba(255, 143, 152, 0.34)";
-  roundedRect(402, 320, 476, 86, 10, false, true);
-  label(
-    fmt("ascensionChallengeLinesHud", {
-      current: run?.linesCleared || 0,
-      target: run?.targetLines || 0,
-    }),
-    430,
-    354,
-    18,
-    "#9df7da",
-  );
-  label(
-    succeeded
-      ? fmt("metaUpgradeStage", { stage: getAscensionStageName(state.metaProgress) })
-      : fmt("ascensionChallengeTimeHud", {
-        seconds: Math.ceil(Math.max(0, run?.remainingMs || 0) / 1000),
-      }),
-    430,
-    386,
-    18,
-    accent,
-  );
-  drawMenuButton(
-    succeeded ? buttons.single.x : buttons.primary.x,
-    succeeded ? buttons.single.y : buttons.primary.y,
-    succeeded ? buttons.single.w : buttons.primary.w,
-    succeeded ? buttons.single.h : buttons.primary.h,
-    t("ascensionReturnToUpgrades"),
-    succeeded ? "Enter" : "Esc",
-    "primary",
-  );
-  if (!succeeded) {
-    drawMenuButton(
-      buttons.secondary.x,
-      buttons.secondary.y,
-      buttons.secondary.w,
-      buttons.secondary.h,
-      t("ascensionRetry"),
-      "Enter",
-    );
-  }
-  ctx.restore();
+  renderAscensionResultOverlay({
+    ctx,
+    run: state.ascensionRun,
+    metaProgress: state.metaProgress,
+    message: getMessage(),
+    t,
+    fmt,
+    drawDimOverlay,
+    resultScrim: OVERLAY_READABILITY.scrim.result,
+    drawCard,
+    drawCornerGlyph,
+    label,
+    wrapText,
+    roundedRect,
+    drawMenuButton,
+  });
 }
 
 function drawAscensionChallengeHud() {
-  const run = state.ascensionRun;
-  const remainingSeconds = Math.ceil(Math.max(0, run.remainingMs || 0) / 1000);
-  const urgent = run.status === "active" && remainingSeconds <= 15;
-  ctx.save();
-  ctx.fillStyle = "rgba(14, 8, 28, 0.88)";
-  roundedRect(404, 8, 472, 42, 10, true, false);
-  ctx.strokeStyle = urgent ? "rgba(255, 111, 124, 0.72)" : "rgba(184, 141, 255, 0.58)";
-  ctx.lineWidth = 1.7;
-  roundedRect(404, 8, 472, 42, 10, false, true);
-  fitLabel(
-    fmt("ascensionChallengeGoal", {
-      seconds: Math.round(run.durationMs / 1000),
-      lines: run.targetLines,
-    }),
-    424,
-    25,
-    238,
-    13,
-    "#d7c2ff",
-    10,
-    "900",
-    true,
-  );
-  fitLabel(
-    fmt("ascensionChallengeTimeHud", { seconds: remainingSeconds }),
-    672,
-    25,
-    92,
-    14,
-    urgent ? "#ff8f98" : "#fff0a6",
-    11,
-    "900",
-    true,
-  );
-  fitLabel(
-    fmt("ascensionChallengeLinesHud", {
-      current: run.linesCleared,
-      target: run.targetLines,
-    }),
-    770,
-    25,
-    86,
-    14,
-    "#9df7da",
-    11,
-    "900",
-    true,
-  );
-  ctx.restore();
+  renderAscensionChallengeHud({
+    ctx,
+    run: state.ascensionRun,
+    fmt,
+    fitLabel,
+    roundedRect,
+  });
 }
 
 function startAscensionChallenge() {
@@ -10229,821 +9428,9 @@ function isHeroMeleeAttackStyle(style) {
   ].includes(String(style || ""));
 }
 
-function drawSpecialBondProgressSummary(x, y) {
-  const counts = getSpecialBondCountsForRun();
-  drawSpecialBondChip(SPECIAL_UPGRADE_FAMILIES.angel, counts.angel, x, y);
-  drawSpecialBondChip(SPECIAL_UPGRADE_FAMILIES.devil, counts.devil, x + 128, y);
-}
-
-function drawSpecialBondChip(family, count, x, y) {
-  const w = 116;
-  const h = 28;
-  const active = count > 0;
-  ctx.save();
-  ctx.fillStyle = active ? hexToRgba(family.color, 0.18) : "rgba(238,244,252,0.06)";
-  roundedRect(x, y, w, h, 9, true, false);
-  ctx.strokeStyle = active ? hexToRgba(family.color, 0.46) : "rgba(238,244,252,0.13)";
-  ctx.lineWidth = active ? 1.2 : 1;
-  roundedRect(x, y, w, h, 9, false, true);
-  fitLabel(`${t(family.labelKey)} ${count}/3`, x + 10, y + 18, 58, 11, active ? family.color : "rgba(238,244,252,0.54)", 8, "900", true);
-  for (let i = 0; i < 3; i += 1) {
-    ctx.fillStyle = i < count ? family.color : "rgba(238,244,252,0.18)";
-    roundedRect(x + 73 + i * 11, y + 10, 7, 7, 3, true, false);
-  }
-  ctx.restore();
-}
-
 function drawUpgradeOverlay() {
-  ctx.save();
-  const now = performance.now();
-  const reducedMotion = prefersReducedMotion();
-  const motionState = state.upgradeMotion || {
-    openedAt: now,
-    selectedAt: now,
-    selectedIndex: state.upgradeSelectedIndex,
-  };
-  const overlayMotion = getUpgradeOverlayMotion({
-    now,
-    openedAt: motionState.openedAt,
-    reducedMotion,
-  });
-  drawDimOverlay(OVERLAY_READABILITY.scrim.upgrade);
-  ctx.save();
-  ctx.globalAlpha *= overlayMotion.alpha;
-  ctx.translate(0, overlayMotion.y);
-  const draftLayout = getUpgradeDraftLayout();
-  const panel = draftLayout.panel;
-  drawCard(panel.x, panel.y, panel.w, panel.h);
-  drawUpgradeMotionTitle(t("relicDraft").toUpperCase(), draftLayout.title, now, overlayMotion.glow);
-  drawSpecialBondProgressSummary(draftLayout.bondSummary.x, draftLayout.bondSummary.y);
-  const buildButton = draftLayout.buildButton;
-  drawMenuButton(buildButton.x, buildButton.y, buildButton.w, buildButton.h, t("currentBuild"), "");
-  for (let i = 0; i < 3; i += 1) {
-    const upgrade = state.upgradeChoices[i];
-    if (!upgrade) continue;
-    const rarity = getRarityVisual(upgrade.rarity);
-    const card = getUpgradeCardRect(i);
-    const hovered = !state.upgradePickConfirm && pointInRect(state.pointer.x, state.pointer.y, card.x, card.y, card.w, card.h);
-    const selected = !state.upgradePickConfirm && state.upgradeSelectedIndex === i;
-    const dimmed = state.upgradePickConfirm && state.upgradePickConfirm.index !== i;
-    const specialFrame = getSpecialUpgradeCardFrame(upgrade);
-    const cardMotion = getUpgradeCardMotion({
-      now,
-      openedAt: motionState.openedAt,
-      selectedAt: motionState.selectedIndex === i ? motionState.selectedAt : motionState.openedAt,
-      index: i,
-      selected,
-      hovered,
-      dimmed,
-      confirming: state.upgradePickConfirm?.index === i,
-      confirmElapsed: state.upgradePickConfirm?.elapsed || 0,
-      confirmDuration: state.upgradePickConfirm?.duration || 1,
-      reducedMotion,
-    });
-    drawUpgradeChoiceCard({
-      upgrade,
-      card,
-      rarity,
-      hovered,
-      selected,
-      active: hovered || selected || state.upgradePickConfirm?.index === i,
-      specialFrame,
-      layoutVariant: specialFrame ? "special" : "default",
-      motion: cardMotion,
-      pickNumber: i + 1,
-    });
-  }
-  const selectedUpgrade = state.upgradeChoices[state.upgradeSelectedIndex];
-  if (selectedUpgrade) {
-    drawUpgradeSelectedDetail(
-      selectedUpgrade,
-      draftLayout.selectedDetail,
-      getUpgradeCardAccentVisual(selectedUpgrade, getRarityVisual(selectedUpgrade.rarity)),
-      getUpgradeDetailMotion({
-        now,
-        selectedAt: motionState.selectedAt,
-        reducedMotion,
-      }),
-      {
-        expanded: state.upgradeDetailOpen,
-        toggleRect: draftLayout.detailToggle,
-      },
-    );
-  }
-  drawUpgradeMotionHint(t("upgradeHelp"), draftLayout.help, now, overlayMotion.glow);
-  ctx.restore();
-  if (state.currentBuildOpen) drawCurrentBuildPanel();
-  ctx.restore();
+  upgradeScreenRenderer.drawUpgradeOverlay();
 }
-
-function drawUpgradeChoiceCard({
-  upgrade,
-  card,
-  rarity,
-  hovered = false,
-  selected = false,
-  active = false,
-  specialFrame = null,
-  layoutVariant = "default",
-  motion = {},
-  pickNumber = 1,
-} = {}) {
-  ctx.save();
-  ctx.globalAlpha *= motion.alpha ?? 1;
-  ctx.translate(card.x + card.w / 2, card.y + card.h / 2 + (motion.y || 0));
-  const scale = motion.scale || 1;
-  ctx.scale(scale, scale);
-  const localCard = { x: -card.w / 2, y: -card.h / 2, w: card.w, h: card.h };
-  const layout = getUpgradeCardContentLayout(localCard, layoutVariant);
-  const accent = getUpgradeCardAccentVisual(upgrade, rarity);
-  const textTheme = getUpgradeCardTextTheme(upgrade, layoutVariant, accent);
-  drawUpgradeCardMotionAura(localCard, accent, motion);
-  drawUpgradeCardFrame(localCard.x, localCard.y, localCard.w, localCard.h, accent, active, specialFrame);
-  drawUpgradeCardReadabilityPanels(layout, accent, hovered || selected, textTheme);
-  drawUpgradeTagPills(getUpgradeTags(upgrade), layout.tags.x, layout.tags.y, layout.tags.w, layout.tags.maxTags || 2, 0.92, textTheme);
-  drawUpgradeDivider(layout.divider.x, layout.divider.y, layout.divider.w, textTheme.dividerColor, hovered ? 0.6 : selected ? 0.52 : 0.32);
-  drawReadableUpgradeText(() => {
-    drawLimitedWrapText(upgradeShortText(upgrade), layout.desc.x, layout.desc.y, layout.desc.w, layout.desc.lineH, textTheme.descColor, layout.desc.size, layout.desc.maxLines || 2, "900");
-  }, textTheme.shadowBlur, textTheme.shadowColor, textTheme.shadowOffsetY);
-  drawUpgradePickHint(localCard.x + 16, localCard.y + localCard.h - 28, pickNumber, accent);
-  if (selected) drawUpgradeSelectionHighlight(localCard, accent);
-  drawUpgradeConfirmBurst(localCard, accent, motion.confirmPulse || 0);
-  ctx.restore();
-}
-
-function drawUpgradeMotionTitle(text, titleLayout, now, revealGlow = 0) {
-  const pulse = 0.5 + Math.sin(now * 0.006) * 0.5;
-  ctx.save();
-  ctx.shadowColor = "#7ef7ff";
-  ctx.shadowBlur = 8 + revealGlow * 12 + pulse * 5;
-  fitLabel(text, titleLayout.x, titleLayout.y, titleLayout.w, titleLayout.size, "#f5f1e6", 24, "900", true);
-  ctx.shadowBlur = 0;
-  ctx.globalAlpha = 0.18 + pulse * 0.16;
-  fitLabel(text, titleLayout.x + 2, titleLayout.y, titleLayout.w, titleLayout.size, "#fff0a6", 24, "900", true);
-  ctx.globalAlpha = 0.14 + revealGlow * 0.12;
-  ctx.fillStyle = "#7ef7ff";
-  roundedRect(titleLayout.x, titleLayout.y + 11, Math.min(titleLayout.w, 228), 2, 1, true, false);
-  ctx.restore();
-}
-
-function drawUpgradeMotionHint(text, helpLayout, now, revealGlow = 0) {
-  const pulse = 0.5 + Math.sin(now * 0.005 + 1.3) * 0.5;
-  ctx.save();
-  ctx.shadowColor = "#8f70ff";
-  ctx.shadowBlur = 6 + pulse * 5 + revealGlow * 8;
-  ctx.globalAlpha = 0.68 + pulse * 0.16;
-  fitLabel(text, helpLayout.x, helpLayout.y, helpLayout.w, helpLayout.size, "rgba(184, 202, 255, 0.9)", 10, "800");
-  ctx.globalAlpha = 0.16 + pulse * 0.12;
-  fitLabel(text, helpLayout.x + 1, helpLayout.y, helpLayout.w, helpLayout.size, "#fff0a6", 10, "800");
-  ctx.restore();
-}
-
-function drawUpgradeCardFrame(x, y, w, h, rarity, hovered = false, frameOverride = null) {
-  ctx.save();
-  const fallbackFrame = upgradeCardFrames[rarity.tier] || upgradeCardFrames.common;
-  const frame = isImageReady(frameOverride) ? frameOverride : fallbackFrame;
-  if (isImageReady(frame)) {
-    ctx.shadowColor = rarity.glow;
-    ctx.shadowBlur = hovered ? 18 : 10;
-    ctx.drawImage(frame, x, y, w, h);
-    ctx.shadowBlur = 0;
-    if (hovered) {
-      ctx.shadowColor = rarity.glow;
-      ctx.shadowBlur = 18;
-      ctx.strokeStyle = hexToRgba(rarity.border, 0.72);
-      ctx.lineWidth = 2.2;
-      roundedRect(x - 5, y - 5, w + 10, h + 10, 13, false, true);
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = hexToRgba(rarity.border, 0.42);
-      ctx.lineWidth = 1.2;
-      roundedRect(x + 9, y + 9, w - 18, h - 18, 10, false, true);
-    }
-    ctx.restore();
-    return;
-  }
-  const glow = hovered ? 0.72 : 0.42;
-  ctx.shadowColor = rarity.glow;
-  ctx.shadowBlur = hovered ? 28 : 16;
-  const cardG = ctx.createLinearGradient(x, y, x, y + h);
-  cardG.addColorStop(0, rarity.fillTop);
-  cardG.addColorStop(0.46, "rgba(12, 14, 24, 0.82)");
-  cardG.addColorStop(1, rarity.fillBottom);
-  ctx.fillStyle = cardG;
-  roundedRect(x, y, w, h, 12, true, false);
-  ctx.shadowBlur = 0;
-
-  const inner = ctx.createLinearGradient(x, y, x + w, y + h);
-  inner.addColorStop(0, hexToRgba(rarity.color, hovered ? 0.18 : 0.1));
-  inner.addColorStop(0.5, "rgba(255, 255, 255, 0)");
-  inner.addColorStop(1, hexToRgba(rarity.color, hovered ? 0.12 : 0.06));
-  ctx.fillStyle = inner;
-  roundedRect(x + 5, y + 5, w - 10, h - 10, 10, true, false);
-
-  const aura = ctx.createRadialGradient(x + w / 2, y + 78, 8, x + w / 2, y + 78, 84);
-  aura.addColorStop(0, hexToRgba(rarity.color, hovered ? 0.28 : 0.18));
-  aura.addColorStop(0.46, hexToRgba(rarity.color, hovered ? 0.12 : 0.07));
-  aura.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = aura;
-  roundedRect(x + 8, y + 42, w - 16, 86, 10, true, false);
-
-  ctx.strokeStyle = hexToRgba(rarity.color, hovered ? 0.24 : 0.14);
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.arc(x + w / 2, y + 78, 48, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(x + w / 2, y + 78, 34, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.strokeStyle = hovered ? rarity.border : hexToRgba(rarity.border, glow);
-  ctx.lineWidth = hovered ? rarity.lineWidth + 0.6 : rarity.lineWidth;
-  roundedRect(x, y, w, h, 12, false, true);
-
-  ctx.fillStyle = hexToRgba(rarity.color, hovered ? 0.24 : 0.14);
-  roundedRect(x + 10, y + h - 8, w - 20, 3, 2, true, false);
-  drawUpgradeCornerMarks(x, y, w, h, rarity.color, hovered ? 0.58 : 0.34);
-  ctx.restore();
-}
-
-function drawUpgradeSelectionHighlight(card, rarity) {
-  const pulse = 0.5 + Math.sin(performance.now() / 220) * 0.5;
-  ctx.save();
-  ctx.shadowColor = rarity.glow;
-  ctx.shadowBlur = 18 + pulse * 8;
-  ctx.strokeStyle = hexToRgba(rarity.border, 0.7 + pulse * 0.18);
-  ctx.lineWidth = 2.6;
-  roundedRect(card.x - 7, card.y - 7, card.w + 14, card.h + 14, 15, false, true);
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = hexToRgba("#fff0a6", 0.28 + pulse * 0.18);
-  ctx.lineWidth = 1.1;
-  roundedRect(card.x + 7, card.y + 7, card.w - 14, card.h - 14, 10, false, true);
-  ctx.restore();
-}
-
-function drawUpgradeCardMotionAura(card, rarity, motion = {}) {
-  const glow = clamp(motion.glow || 0, 0, 1);
-  if (glow <= 0.02) return;
-  const pulse = 0.65 + Math.sin(performance.now() * 0.007) * 0.35;
-  ctx.save();
-  const baseAlpha = ctx.globalAlpha;
-  ctx.globalAlpha = baseAlpha * (0.16 + glow * 0.22);
-  ctx.shadowColor = rarity.glow;
-  ctx.shadowBlur = 22 + glow * 18;
-  ctx.strokeStyle = hexToRgba(rarity.border, 0.22 + glow * 0.24);
-  ctx.lineWidth = 1.2 + glow * 1.2;
-  roundedRect(card.x - 10 - pulse * 2, card.y - 10 - pulse * 2, card.w + 20 + pulse * 4, card.h + 20 + pulse * 4, 17, false, true);
-  ctx.shadowBlur = 0;
-  ctx.globalAlpha = baseAlpha * (0.08 + glow * 0.12);
-  const sweep = ctx.createLinearGradient(card.x, card.y, card.x + card.w, card.y + card.h);
-  sweep.addColorStop(0, "rgba(255,255,255,0)");
-  sweep.addColorStop(0.48, rarity.color);
-  sweep.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = sweep;
-  roundedRect(card.x + 8, card.y + 8, card.w - 16, card.h - 16, 12, true, false);
-  ctx.restore();
-}
-
-function drawUpgradeCardReadabilityPanels(layout, rarity, hovered = false, theme = null) {
-  if (!layout?.panels) return;
-  const panels = [
-    { rect: layout.panels.title, fill: hovered ? 0.7 : 0.64, stroke: hovered ? 0.24 : 0.16, radius: 8 },
-    { rect: layout.panels.tags, fill: hovered ? 0.62 : 0.56, stroke: hovered ? 0.2 : 0.12, radius: 7 },
-    { rect: layout.panels.desc, fill: hovered ? 0.76 : 0.7, stroke: hovered ? 0.22 : 0.13, radius: 9 },
-    { rect: layout.panels.trait, fill: hovered ? 0.68 : 0.62, stroke: hovered ? 0.24 : 0.16, radius: 9 },
-  ];
-  ctx.save();
-  for (const panel of panels) {
-    if (!panel.rect) continue;
-    const { x, y, w, h } = panel.rect;
-    if (theme?.lightCard) {
-      const fill = ctx.createLinearGradient(x, y, x, y + h);
-      fill.addColorStop(0, `rgba(255, 251, 226, ${Math.min(0.78, panel.fill + 0.04)})`);
-      fill.addColorStop(1, `rgba(216, 200, 144, ${Math.min(0.72, panel.fill)})`);
-      ctx.fillStyle = fill;
-    } else {
-      const fill = ctx.createLinearGradient(x, y, x, y + h);
-      fill.addColorStop(0, `rgba(2, 5, 12, ${panel.fill})`);
-      fill.addColorStop(1, `rgba(8, 12, 22, ${Math.min(0.82, panel.fill + 0.06)})`);
-      ctx.fillStyle = fill;
-    }
-    roundedRect(x, y, w, h, panel.radius, true, false);
-    ctx.strokeStyle = theme?.lightCard ? "rgba(108, 91, 39, 0.34)" : hexToRgba(rarity.border, panel.stroke);
-    ctx.lineWidth = 1;
-    roundedRect(x, y, w, h, panel.radius, false, true);
-  }
-  ctx.restore();
-}
-
-function getUpgradeCardAccentVisual(upgrade, rarity) {
-  const tags = getUpgradeTags(upgrade);
-  if (tags.includes("Devil")) {
-    return {
-      ...rarity,
-      color: "#ff5b86",
-      border: "#ff4f7a",
-      glow: "rgba(255, 54, 96, 0.62)",
-      badgeFill: "rgba(255, 54, 96, 0.22)",
-      badgeText: "#ffd6df",
-      lineWidth: Math.max(2.8, rarity.lineWidth || 2),
-    };
-  }
-  if (tags.includes("Angel")) {
-    return {
-      ...rarity,
-      color: "#dff7ff",
-      border: "#f4e6b4",
-      glow: "rgba(210, 247, 255, 0.56)",
-      badgeFill: "rgba(244, 230, 180, 0.26)",
-      badgeText: "#3b3218",
-      lineWidth: Math.max(2.6, rarity.lineWidth || 2),
-    };
-  }
-  return rarity;
-}
-
-function drawReadableUpgradeText(draw, blur = 6, shadowColor = "rgba(0, 0, 0, 0.92)", shadowOffsetY = 1) {
-  ctx.save();
-  ctx.shadowColor = shadowColor;
-  ctx.shadowBlur = blur;
-  ctx.shadowOffsetY = shadowOffsetY;
-  draw();
-  ctx.restore();
-}
-
-function drawUpgradeCornerMarks(x, y, w, h, color, alpha) {
-  ctx.save();
-  ctx.strokeStyle = hexToRgba(color, alpha);
-  ctx.lineWidth = 1.4;
-  const size = 16;
-  const pad = 8;
-  [
-    [x + pad, y + pad, 1, 1],
-    [x + w - pad, y + pad, -1, 1],
-    [x + pad, y + h - pad, 1, -1],
-    [x + w - pad, y + h - pad, -1, -1],
-  ].forEach(([cx, cy, sx, sy]) => {
-    ctx.beginPath();
-    ctx.moveTo(cx, cy + sy * size);
-    ctx.lineTo(cx, cy);
-    ctx.lineTo(cx + sx * size, cy);
-    ctx.stroke();
-  });
-  ctx.restore();
-}
-
-function drawRarityBadge(x, y, w, h, text, rarity) {
-  ctx.save();
-  ctx.fillStyle = rarity.badgeFill;
-  roundedRect(x, y, w, h, 8, true, false);
-  ctx.strokeStyle = hexToRgba(rarity.border, 0.52);
-  ctx.lineWidth = 1.4;
-  roundedRect(x, y, w, h, 8, false, true);
-  fitLabel(text, x + 9, y + h / 2 + 4, w - 18, 10, rarity.badgeText, 8, "900", true);
-  ctx.restore();
-}
-
-function drawUpgradePickHint(x, y, number, rarity) {
-  ctx.save();
-  ctx.fillStyle = "rgba(4, 7, 12, 0.34)";
-  roundedRect(x, y, 22, 20, 6, true, false);
-  ctx.strokeStyle = hexToRgba(rarity.border, 0.28);
-  ctx.lineWidth = 1;
-  roundedRect(x, y, 22, 20, 6, false, true);
-  fitLabel(String(number), x + 7, y + 14, 10, 11, hexToRgba(rarity.badgeText, 0.72), 9, "800", true);
-  ctx.restore();
-}
-
-function drawUpgradeDivider(x, y, w, color, alpha = 0.5) {
-  ctx.save();
-  ctx.strokeStyle = hexToRgba(color, alpha);
-  ctx.lineWidth = 1.1;
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(x + w * 0.4, y);
-  ctx.moveTo(x + w * 0.6, y);
-  ctx.lineTo(x + w, y);
-  ctx.stroke();
-  ctx.fillStyle = hexToRgba(color, alpha + 0.08);
-  ctx.save();
-  ctx.translate(x + w / 2, y);
-  ctx.rotate(Math.PI / 4);
-  ctx.fillRect(-3, -3, 6, 6);
-  ctx.restore();
-  ctx.restore();
-}
-
-function getSpecialUpgradeCardFrame(upgrade) {
-  return upgrade?.id ? specialUpgradeCardFrames[upgrade.id] : null;
-}
-
-function getUpgradeTraitPreview(upgrade) {
-  const specialHint = getSpecialBondPreview(upgrade, state.acquiredRelics);
-  if (specialHint) {
-    const activated = specialHint.after > specialHint.before;
-    return {
-      accent: specialHint.family.color,
-      glyph: activated ? "✦" : "•",
-      text: activated
-        ? fmt("bondHintUpgrade", { bond: t(specialHint.family.labelKey), before: specialHint.before, after: specialHint.after })
-        : fmt("bondHintOwned", { bond: t(specialHint.family.labelKey), count: specialHint.after }),
-      emphasis: activated,
-    };
-  }
-  const hint = getTraitChangeHintsForUpgrade(upgrade)[0];
-  if (!hint) return null;
-  const isUpgrade = hint.type === "upgrade";
-  const isActivate = hint.type === "activate";
-  const isOvercap = hint.type === "overcap";
-  const accent = isOvercap ? "#fff0a6" : isUpgrade ? "#fff0a6" : isActivate ? "#9df7da" : hint.color;
-  return {
-    accent,
-    glyph: isOvercap ? "+" : isUpgrade ? "↑" : isActivate ? "✦" : "+",
-    text: isOvercap
-      ? `${t("traitOvercap")}: ${hint.label} ${fmt("traitOvercapCount", { count: hint.overcap })}`
-      : hint.type === "progress"
-      ? fmt(hint.stage > 0 ? "traitProgressUpgrade" : "traitProgressActivate", { tag: hint.label, remain: hint.remaining })
-      : `${t(isActivate ? "traitActivated" : "traitUpgrade")}: ${hint.label} ${hint.count}/${hint.next}`,
-    emphasis: isActivate || isUpgrade || isOvercap,
-  };
-}
-
-function getUpgradeCardTextTheme(upgrade, layoutVariant = "default", rarity = getRarityVisual(upgrade?.rarity)) {
-  const specialHint = layoutVariant === "special" ? getSpecialBondPreview(upgrade, state.acquiredRelics) : null;
-  if (specialHint?.family?.key === "angel") {
-    return {
-      lightCard: true,
-      titleColor: "#2b2412",
-      dividerColor: "#8b7430",
-      shadowBlur: 2,
-      shadowColor: "rgba(255, 252, 229, 0.92)",
-      shadowOffsetY: 0,
-      tagFillAlpha: 0.72,
-      tagStrokeAlpha: 0.58,
-      tagTextColor: "#302914",
-      tagFontSize: 11,
-      tagTextSize: 10,
-      tagPillHeight: 22,
-      tagMaxPillWidth: 82,
-      tagPillGap: 6,
-      chipFillAlpha: 0.72,
-      chipStrokeAlpha: 0.66,
-      chipTextColor: "#302914",
-      chipGlyphColor: "#4f4521",
-      chipGlyphFillAlpha: 0.16,
-      descColor: "#251a08",
-    };
-  }
-  return {
-    lightCard: false,
-    titleColor: rarity.titleColor,
-    descColor: "#fff4cf",
-    dividerColor: rarity.color,
-    shadowBlur: 7,
-    shadowColor: "rgba(0, 0, 0, 0.92)",
-    shadowOffsetY: 1,
-    tagFontSize: 11,
-    tagTextSize: 10,
-    tagPillHeight: 22,
-    tagMaxPillWidth: 82,
-    tagPillGap: 6,
-  };
-}
-
-function drawUpgradeTraitPreviewChip(preview, x, y, w, h, { compact = true, emphasis = preview?.emphasis, theme = null } = {}) {
-  if (!preview) return;
-  const accent = preview.accent;
-  const glyphSize = compact ? 15 : 18;
-  const glyphX = x + (compact ? 9 : 12);
-  const glyphY = y + Math.max(8, h / 2 - glyphSize / 2 + 1);
-  ctx.save();
-  if (emphasis) {
-    ctx.shadowColor = hexToRgba(accent, 0.36);
-    ctx.shadowBlur = theme?.lightCard ? 4 : compact ? 10 : 13;
-  }
-  if (theme?.lightCard) {
-    const fill = ctx.createLinearGradient(x, y, x + w, y + h);
-    fill.addColorStop(0, "rgba(255, 250, 221, 0.78)");
-    fill.addColorStop(1, "rgba(202, 185, 121, 0.6)");
-    ctx.fillStyle = fill;
-  } else {
-    ctx.fillStyle = hexToRgba(accent, emphasis ? 0.24 : 0.15);
-  }
-  roundedRect(x, y, w, h, compact ? 8 : 10, true, false);
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = theme?.lightCard ? "rgba(80, 68, 30, 0.62)" : hexToRgba(accent, emphasis ? 0.58 : 0.34);
-  ctx.lineWidth = emphasis ? 1.3 : 1;
-  roundedRect(x, y, w, h, compact ? 8 : 10, false, true);
-  ctx.fillStyle = theme?.lightCard ? "rgba(66, 58, 27, 0.12)" : hexToRgba(accent, emphasis ? 0.34 : 0.22);
-  roundedRect(glyphX, glyphY, glyphSize, glyphSize, compact ? 5 : 6, true, false);
-  fitLabel(preview.glyph, glyphX + 3, glyphY + glyphSize - 4, glyphSize - 6, compact ? 11 : 13, theme?.lightCard ? theme.chipGlyphColor : accent, 8, "900", true);
-  fitLabel(
-    preview.text,
-    glyphX + glyphSize + 8,
-    y + h / 2 + 5,
-    w - glyphSize - 26,
-    compact ? 11 : 12,
-    theme?.lightCard ? theme.chipTextColor : emphasis ? "#f5f1e6" : hexToRgba(accent, 0.84),
-    compact ? 8 : 9,
-    "900",
-    true,
-  );
-  ctx.restore();
-}
-
-function drawUpgradeTraitHint(upgrade, card, layoutVariant = "default", theme = null) {
-  const preview = getUpgradeTraitPreview(upgrade);
-  if (!preview) return;
-  const layout = getUpgradeCardContentLayout(card, layoutVariant).trait;
-  const { x, y, w, h } = layout;
-  drawUpgradeTraitPreviewChip(preview, x, y, w, h, { compact: true, theme });
-}
-
-const UPGRADE_DETAIL_ICON_TAG_PRIORITY = Object.freeze([
-  "Perfect",
-  "Combo",
-  "Spin",
-  "Defense",
-  "Survival",
-  "Garbage",
-  "B2B",
-  "Boss Killer",
-  "Burst",
-  "Utility",
-  "Devil",
-  "Angel",
-]);
-
-const UPGRADE_DETAIL_ICON_BY_TAG = Object.freeze({
-  Perfect: "rift",
-  Combo: "combo",
-  Spin: "spin",
-  Defense: "defense",
-  Survival: "survival",
-  Garbage: "garbage",
-  B2B: "attack",
-  "Boss Killer": "attack",
-  Burst: "attack",
-  Utility: "rift",
-  Devil: "attack",
-  Angel: "rift",
-});
-
-function getUpgradeDetailIconAsset(upgrade) {
-  const tags = getUpgradeTags(upgrade);
-  const tag = UPGRADE_DETAIL_ICON_TAG_PRIORITY.find((entry) => tags.includes(entry));
-  return upgradeTypeIcons[UPGRADE_DETAIL_ICON_BY_TAG[tag]] || upgradeTypeIcons.rift;
-}
-
-function drawUpgradeDetailTypeIcon(upgrade, x, y, size, rarity) {
-  const icon = getUpgradeDetailIconAsset(upgrade);
-  if (!isImageReady(icon)) return 0;
-  ctx.save();
-  ctx.shadowColor = rarity.glow;
-  ctx.shadowBlur = 9;
-  ctx.fillStyle = hexToRgba(rarity.color, 0.18);
-  roundedRect(x - 3, y - 3, size + 6, size + 6, 9, true, false);
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = hexToRgba(rarity.border, 0.28);
-  ctx.lineWidth = 1;
-  roundedRect(x - 3, y - 3, size + 6, size + 6, 9, false, true);
-  ctx.globalAlpha = 0.96;
-  ctx.drawImage(icon, x, y, size, size);
-  ctx.restore();
-  return size + 10;
-}
-
-function drawUpgradeSelectedDetail(upgrade, rect, rarity, motion = {}, {
-  expanded = false,
-  toggleRect = getUpgradeDetailToggleRect(),
-} = {}) {
-  const preview = getUpgradeTraitPreview(upgrade);
-  const { x, y, w, h } = rect;
-  const toggleHovered = pointInRect(state.pointer.x, state.pointer.y, toggleRect.x, toggleRect.y, toggleRect.w, toggleRect.h);
-  ctx.save();
-  ctx.globalAlpha *= motion.alpha ?? 1;
-  ctx.translate(0, motion.y || 0);
-  ctx.shadowColor = rarity.glow;
-  ctx.shadowBlur = 12 + Math.max(0, motion.glow || 0) * 18;
-  const fill = ctx.createLinearGradient(x, y, x + w, y + h);
-  fill.addColorStop(0, "rgba(3, 8, 18, 0.82)");
-  fill.addColorStop(0.52, hexToRgba(rarity.color, 0.2));
-  fill.addColorStop(1, "rgba(7, 5, 18, 0.82)");
-  ctx.fillStyle = fill;
-  roundedRect(x, y, w, h, 12, true, false);
-  ctx.shadowBlur = 0;
-  drawUpgradeDetailShimmer(rect, rarity, motion.shimmer || 0);
-  ctx.strokeStyle = hexToRgba(rarity.border, 0.42);
-  ctx.lineWidth = 1.3;
-  roundedRect(x, y, w, h, 12, false, true);
-  ctx.fillStyle = hexToRgba(rarity.color, 0.28);
-  roundedRect(x + 13, y + 12, 3, h - 24, 2, true, false);
-  const iconSize = 54;
-  const iconX = x + 24;
-  const iconY = y + 17;
-  const textX = x + 94;
-  fitLabel(t("selectedUpgrade"), textX, y + 21, 194, 11, "rgba(143,232,220,0.78)", 8, "900", true);
-  drawUpgradeDetailTypeIcon(upgrade, iconX, iconY, iconSize, rarity);
-  drawReadableUpgradeText(() => {
-    fitLabel(upgradeName(upgrade), textX, y + 47, 194, 19, rarity.titleColor, 12, "900", true);
-  }, 5);
-  if (preview) drawUpgradeTraitPreviewChip(preview, textX, y + 57, 188, 22, { compact: true, emphasis: false });
-  const descX = x + 308;
-  const descW = Math.max(160, toggleRect.x - descX - 18);
-  const detailText = expanded ? upgradeText(upgrade) : upgradeShortText(upgrade);
-  drawReadableUpgradeText(() => {
-    drawLimitedWrapText(detailText, descX, y + 27, descW, 16, "#fff4cf", expanded ? 13 : 14, expanded ? 3 : 2, "900");
-  }, 4);
-  drawUpgradeDetailToggleButton(toggleRect, rarity, expanded, toggleHovered);
-  ctx.restore();
-}
-
-function drawUpgradeDetailToggleButton(rect, rarity, expanded, hovered = false) {
-  const pulse = 0.5 + Math.sin(performance.now() * 0.006 + 0.4) * 0.5;
-  ctx.save();
-  ctx.shadowColor = rarity.glow;
-  ctx.shadowBlur = hovered ? 16 : 7 + pulse * 4;
-  ctx.fillStyle = hovered ? hexToRgba(rarity.color, 0.28) : "rgba(8, 13, 24, 0.76)";
-  roundedRect(rect.x, rect.y, rect.w, rect.h, 10, true, false);
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = hovered ? hexToRgba("#fff0a6", 0.72) : hexToRgba(rarity.border, 0.46 + pulse * 0.14);
-  ctx.lineWidth = hovered ? 1.8 : 1.2;
-  roundedRect(rect.x, rect.y, rect.w, rect.h, 10, false, true);
-  fitLabel(t(expanded ? "upgradeDetailClose" : "upgradeDetailOpen"), rect.x + 17, rect.y + 22, rect.w - 34, 14, hovered ? "#fff0a6" : "rgba(246,250,255,0.86)", 10, "900", true);
-  ctx.restore();
-}
-
-function drawUpgradeDetailShimmer(rect, rarity, shimmer) {
-  const progress = clamp(shimmer, 0, 1);
-  if (progress <= 0 || progress >= 1) return;
-  const { x, y, w, h } = rect;
-  const stripeX = x + w * (progress * 1.25 - 0.18);
-  const alpha = 0.12 * (1 - Math.abs(progress - 0.52) * 1.6);
-  if (alpha <= 0) return;
-  ctx.save();
-  ctx.globalAlpha *= alpha;
-  const beam = ctx.createLinearGradient(stripeX - 42, y, stripeX + 42, y + h);
-  beam.addColorStop(0, "rgba(255,255,255,0)");
-  beam.addColorStop(0.5, rarity.color);
-  beam.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = beam;
-  roundedRect(x + 6, y + 6, w - 12, h - 12, 10, true, false);
-  ctx.restore();
-}
-
-function drawUpgradeConfirmBurst(card, rarity, pulse = 0) {
-  if (pulse <= 0.01) return;
-  ctx.save();
-  ctx.shadowColor = rarity.glow;
-  ctx.shadowBlur = 16 + pulse * 12;
-  ctx.strokeStyle = hexToRgba(rarity.border, 0.58 + pulse * 0.26);
-  ctx.lineWidth = 2.4 + pulse * 1.4;
-  roundedRect(card.x - 8, card.y - 8, card.w + 16, card.h + 16, 15, false, true);
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = hexToRgba(rarity.color, 0.32 + pulse * 0.2);
-  ctx.lineWidth = 1.2;
-  roundedRect(card.x + 8, card.y + 8, card.w - 16, card.h - 16, 10, false, true);
-  ctx.restore();
-}
-
-function getRarityVisual(rarity) {
-  const key = rarity === "boss" || rarity === "special" ? "legendary" : rarity;
-  return RARITY[key] || RARITY.common;
-}
-
-function drawCurrentBuildPanel() {
-  const panel = getCurrentBuildPanelRect();
-  const closeRect = getCurrentBuildCloseRect();
-  const groups = getAcquiredRelicGroups();
-  const stats = getCurrentBuildFamilyStats(groups);
-  ctx.save();
-  drawDimOverlay(OVERLAY_READABILITY.scrim.nested);
-  drawCard(panel.x, panel.y, panel.w, panel.h);
-  label(t("currentBuildTitle"), panel.x + 42, panel.y + 58, 32, "#f5f1e6");
-  drawMenuButton(closeRect.x, closeRect.y, closeRect.w, closeRect.h, t("currentBuildClose"), "Esc");
-  drawCurrentBuildSummary(stats, panel.x + 44, panel.y + 82, 460, 44);
-  wrapText(getCurrentBuildDirectionText(stats), panel.x + 526, panel.y + 104, 314, 18, "rgba(238,244,252,0.62)", 12);
-  label(t("currentBuildStats").toUpperCase(), panel.x + 44, panel.y + 140, 13, "#fff0a6");
-  drawCurrentBuildStats(stats, panel.x + 44, panel.y + 156, panel.w - 88);
-  label(t("currentBuildTraits").toUpperCase(), panel.x + 44, panel.y + 198, 13, "#fff0a6");
-  drawCurrentBuildTraitDetails(getTraitEntries(groups), panel.x + 44, panel.y + 214, panel.w - 88, 58);
-  label(t("currentBuildList").toUpperCase(), panel.x + 44, panel.y + 298, 13, "#8fe8dc");
-  if (!groups.length) {
-    drawCurrentBuildEmpty(panel.x + 44, panel.y + 322, panel.w - 88, 104);
-  } else {
-    drawAcquiredRelicCards(groups, panel.x + 44, panel.y + 322, panel.w - 88, panel.y + panel.h - 44);
-  }
-  ctx.restore();
-}
-
-function drawCurrentBuildEmpty(x, y, w, h) {
-  ctx.save();
-  ctx.fillStyle = OVERLAY_READABILITY.surface.fill;
-  roundedRect(x, y, w, h, 10, true, false);
-  ctx.strokeStyle = "rgba(126, 231, 255, 0.2)";
-  roundedRect(x, y, w, h, 10, false, true);
-  wrapText(t("currentBuildEmpty"), x + 22, y + 48, w - 44, 22, "rgba(238,244,252,0.74)", 16);
-  ctx.restore();
-}
-
-function drawCurrentBuildSummary(stats, x, y, w, h) {
-  const strongest = stats[0];
-  ctx.save();
-  ctx.fillStyle = OVERLAY_READABILITY.surface.fill;
-  roundedRect(x, y, w, h, 9, true, false);
-  ctx.strokeStyle = strongest ? hexToRgba(strongest.color, 0.34) : "rgba(126, 231, 255, 0.18)";
-  roundedRect(x, y, w, h, 9, false, true);
-  label(t("currentBuildStrongest").toUpperCase(), x + 16, y + 19, 11, "rgba(238,244,252,0.5)");
-  const text = strongest ? `${strongest.label} x${strongest.count}` : t("currentBuildNoDirection");
-  fitLabel(text, x + 16, y + 36, w - 32, 16, strongest ? strongest.color : "#8fe8dc", 11, "900", true);
-  ctx.restore();
-}
-
-function drawCurrentBuildStats(stats, x, y, w) {
-  if (!stats.length) {
-    drawUpgradePill(x, y, 170, 24, t("currentBuildNoDirection"), "#8fe8dc", 0.1);
-    return;
-  }
-  let xx = x;
-  for (const stat of stats.slice(0, 5)) {
-    const text = `${stat.label} x${stat.count}`;
-    const pillW = Math.min(150, Math.max(88, ctx.measureText(text).width + 28));
-    if (xx + pillW > x + w) break;
-    drawUpgradePill(xx, y, pillW, 24, text.toUpperCase(), stat.color, 0.14);
-    xx += pillW + 10;
-  }
-}
-
-function drawCurrentBuildTraitDetails(traits, x, y, w, h) {
-  const shown = traits.filter((trait) => trait.count > 0).slice(0, 4);
-  if (!shown.length) {
-    drawUpgradePill(x, y, 180, 24, t("traitEffectNone"), "#8fe8dc", 0.1);
-    return;
-  }
-  const gap = 10;
-  const cardW = (w - gap * 3) / 4;
-  shown.forEach((trait, index) => {
-    const xx = x + index * (cardW + gap);
-    const active = trait.stage > 0;
-    ctx.save();
-    ctx.fillStyle = active ? hexToRgba(trait.color, 0.22) : OVERLAY_READABILITY.surface.fillSoft;
-    roundedRect(xx, y, cardW, h, 8, true, false);
-    ctx.strokeStyle = active ? hexToRgba(trait.color, 0.42) : "rgba(238,244,252,0.12)";
-    roundedRect(xx, y, cardW, h, 8, false, true);
-    fitLabel(getTraitDetailTitleForPanel(trait, { format: fmt, getFullCount: getTraitFullCount }), xx + 12, y + 18, cardW - 24, 12, active ? trait.color : "rgba(238,244,252,0.62)", 8, "900", true);
-    fitLabel(getTraitEffectText(trait), xx + 12, y + 39, cardW - 24, 12, "rgba(238,244,252,0.62)", 8, "700");
-    ctx.restore();
-  });
-}
-
-function drawAcquiredRelicCards(groups, x, y, w, bottomY) {
-  const columns = 3;
-  const gap = 12;
-  const cardW = (w - gap * (columns - 1)) / columns;
-  const cardH = 66;
-  const rowGap = 10;
-  const maxRows = Math.max(1, Math.floor((bottomY - y - 24) / (cardH + rowGap)));
-  const maxVisible = maxRows * columns;
-  const visible = groups.slice(0, maxVisible);
-  visible.forEach((group, index) => {
-    const col = index % columns;
-    const row = Math.floor(index / columns);
-    const cardX = x + col * (cardW + gap);
-    const cardY = y + row * (cardH + rowGap);
-    drawAcquiredRelicCard(group, cardX, cardY, cardW, cardH);
-  });
-  if (groups.length > visible.length) {
-    label(`+${groups.length - visible.length}`, x, bottomY - 2, 14, "rgba(238,244,252,0.58)");
-  }
-}
-
-function drawAcquiredRelicCard(group, x, y, w, h) {
-  drawAcquiredRelicListRow(group, x, y, w, h);
-}
-
-function drawAcquiredRelicListRow(group, x, y, w, h) {
-  const rarity = getRarityVisual(group.rarity);
-  ctx.save();
-  const cardG = ctx.createLinearGradient(x, y, x + w, y + h);
-  cardG.addColorStop(0, hexToRgba(rarity.color, 0.16));
-  cardG.addColorStop(1, OVERLAY_READABILITY.surface.fill);
-  ctx.fillStyle = cardG;
-  roundedRect(x, y, w, h, 7, true, false);
-  ctx.strokeStyle = hexToRgba(rarity.border, 0.32);
-  ctx.lineWidth = 1.1;
-  roundedRect(x, y, w, h, 7, false, true);
-  ctx.fillStyle = hexToRgba(rarity.color, 0.42);
-  roundedRect(x + 5, y + 6, 4, h - 12, 3, true, false);
-  const countText = group.count > 1 ? ` x${group.count}` : "";
-  fitLabel(`${rarityLabel(group.rarity).toUpperCase()}${countText}`, x + 16, y + 17, Math.max(50, w - 28), 9, hexToRgba(rarity.color, 0.9), 7, "900", true);
-  fitLabel(upgradeName(group.upgrade), x + 16, y + 34, w - 30, h >= 60 ? 13 : 12, rarity.titleColor, 8, "800", true);
-  if (h >= 58) {
-    drawUpgradeTagPills(group.tags, x + 16, y + 42, w - 32, 2, 0.56);
-  } else if (group.tags?.length) {
-    fitLabel(buildTagLabel(group.tags[0]).toUpperCase(), x + 16, y + h - 7, w - 32, 8, "rgba(238,244,252,0.56)", 6, "800", true);
-  }
-  ctx.restore();
-}
-
 function getAcquiredRelicGroups() {
   if (!Array.isArray(state.acquiredRelics)) state.acquiredRelics = [];
   return getAcquiredRelicGroupsForStats(state.acquiredRelics);
@@ -11093,66 +9480,6 @@ function getCurrentBuildDirectionText(stats) {
   if (!stats.length) return t("currentBuildNoDirection");
   const families = stats.slice(0, 2).map((stat) => stat.label).join(" / ");
   return fmt("currentBuildDirection", { families });
-}
-
-function drawUpgradeTagPills(tags, x, y, maxWidth, maxTags = 2, alpha = 1, theme = null) {
-  const visibleTags = getUpgradeTags({ tags }).slice(0, maxTags);
-  let xx = x;
-  const fontSize = theme?.tagFontSize || 9;
-  const pillH = theme?.tagPillHeight || 18;
-  const maxPillW = theme?.tagMaxPillWidth || 66;
-  const pillGap = theme?.tagPillGap || 5;
-  ctx.save();
-  ctx.font = canvasFont("900", fontSize, "TAG", true);
-  for (const tag of visibleTags) {
-    const meta = getBuildTagMeta(tag);
-    const text = buildTagLabel(tag).toUpperCase();
-    const pillW = Math.min(maxPillW, Math.max(38, ctx.measureText(text).width + 18));
-    if (xx + pillW > x + maxWidth) break;
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    drawUpgradePill(xx, y, pillW, pillH, text, meta.color, theme?.lightCard ? theme.tagFillAlpha : 0.16, theme);
-    ctx.restore();
-    xx += pillW + pillGap;
-  }
-  ctx.restore();
-}
-
-function drawUpgradePill(x, y, w, h, text, color, fillAlpha = 0.14, theme = null) {
-  ctx.save();
-  if (theme?.lightCard) {
-    const fill = ctx.createLinearGradient(x, y, x, y + h);
-    fill.addColorStop(0, "rgba(255, 252, 229, 0.82)");
-    fill.addColorStop(1, hexToRgba(color, 0.34));
-    ctx.fillStyle = fill;
-  } else {
-    ctx.fillStyle = hexToRgba(color, fillAlpha);
-  }
-  roundedRect(x, y, w, h, 7, true, false);
-  ctx.strokeStyle = theme?.lightCard ? "rgba(76, 66, 32, 0.58)" : hexToRgba(color, 0.34);
-  ctx.lineWidth = 1.2;
-  roundedRect(x, y, w, h, 7, false, true);
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  fitLabel(text, x + 8, y + h / 2 + 0.5, w - 16, theme?.tagTextSize || Math.min(10, h - 8), theme?.lightCard ? theme.tagTextColor : color, 8, "900", true);
-  ctx.textBaseline = "alphabetic";
-  ctx.restore();
-}
-
-function upgradeFamilyShortLabel(family) {
-  const shortKey = family.labelKey.replace("family.", "familyShort.");
-  const shortLabel = t(shortKey);
-  return shortLabel === shortKey ? t(family.labelKey) : shortLabel;
-}
-
-function buildTagLabel(tag) {
-  return buildTagLabelForStats(tag, t);
-}
-
-function stackRuleLabel(rule = "stackable") {
-  const key = `stack.${rule}`;
-  const label = t(key);
-  return label === key ? rule : label;
 }
 
 function drawMoveGuideOverlay() {
@@ -11307,35 +9634,7 @@ function drawSettings() {
 }
 
 function drawRunRiftEnergyHud() {
-  if (state.runMode === "ascension") return;
-  const amount = getCurrentRunRiftEnergyEarned();
-  const hud = getRunRiftEnergyHudLayout(UI_LAYOUT.pauseButton);
-  const pulse = amount > 0 ? 0.5 + Math.sin(performance.now() * 0.007) * 0.5 : 0;
-  ctx.save();
-  ctx.shadowColor = `rgba(184, 141, 255, ${0.24 + pulse * 0.12})`;
-  ctx.shadowBlur = 14 + pulse * 4;
-  drawImageContain(
-    riftEnergyIcon,
-    hud.icon.x,
-    hud.icon.y,
-    hud.icon.w,
-    hud.icon.h,
-  );
-  ctx.shadowBlur = 0;
-  ctx.shadowColor = "rgba(89, 58, 180, 0.52)";
-  ctx.shadowBlur = amount > 0 ? 8 : 4;
-  fitLabel(
-    String(amount),
-    hud.number.x,
-    hud.number.y,
-    hud.number.w,
-    hud.number.size,
-    amount > 0 ? "#fff0a6" : "rgba(238,244,252,0.72)",
-    hud.number.minSize,
-    "900",
-    true,
-  );
-  ctx.restore();
+  battleHudRenderer.drawRunRiftEnergyHud();
 }
 
 function controlDisplayValue(action) {
@@ -11343,24 +9642,7 @@ function controlDisplayValue(action) {
 }
 
 function drawPauseButton() {
-  const b = UI_LAYOUT.pauseButton;
-  const hovered = pointInRect(state.pointer.x, state.pointer.y, b.x, b.y, b.w, b.h);
-  ctx.save();
-  ctx.fillStyle = hovered ? "rgba(112, 226, 218, 0.24)" : "rgba(8, 13, 20, 0.58)";
-  roundedRect(b.x, b.y, b.w, b.h, 10, true, false);
-  ctx.strokeStyle = "rgba(145, 232, 222, 0.32)";
-  ctx.lineWidth = 2;
-  roundedRect(b.x, b.y, b.w, b.h, 10, false, true);
-  ctx.strokeStyle = "#d8f8f4";
-  ctx.lineWidth = 4;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(b.x + 18, b.y + 10);
-  ctx.lineTo(b.x + 18, b.y + 28);
-  ctx.moveTo(b.x + 32, b.y + 10);
-  ctx.lineTo(b.x + 32, b.y + 28);
-  ctx.stroke();
-  ctx.restore();
+  battleHudRenderer.drawPauseButton();
 }
 
 function drawImageContain(img, x, y, w, h) {
