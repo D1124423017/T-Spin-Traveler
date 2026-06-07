@@ -46,6 +46,27 @@ export function createHudLayout({ boardX, boardY, cols, rows, tile }) {
   };
 }
 
+export function getRunRiftEnergyHudLayout(pauseButton) {
+  const iconSize = 52;
+  const numberGap = 2;
+  const numberWidth = 60;
+  const pauseGap = 10;
+  const width = iconSize + numberGap + numberWidth;
+  const x = pauseButton.x - pauseGap - width;
+  const y = pauseButton.y - 7;
+  return {
+    icon: { x, y, w: iconSize, h: iconSize },
+    number: {
+      x: x + iconSize + numberGap,
+      y: pauseButton.y + 27,
+      w: numberWidth,
+      size: 22,
+      minSize: 15,
+    },
+    bounds: { x, y, w: width, h: iconSize },
+  };
+}
+
 export function getUltimateTimerRatio(active, timer, maxTimer) {
   if (!active) return 0;
   const total = Math.max(1, Number.isFinite(maxTimer) ? maxTimer : 0);
@@ -110,27 +131,6 @@ export function getHandlingResetButtonRect(origin) {
 
 export function getSettingsFeedbackButtonRect(cardX, cardY, cardW, cardH = 292) {
   return { x: cardX + 24, y: cardY + cardH - 62, w: 232, h: 40 };
-}
-
-export function getMetaUpgradeRowRects() {
-  const x = 220;
-  const y = 228;
-  const w = 838;
-  const h = 92;
-  const gap = 18;
-  return {
-    hp: { x, y, w, h, buyX: x + w - 142, buyY: y + 25, buyW: 112, buyH: 42 },
-    attack: { x, y: y + h + gap, w, h, buyX: x + w - 142, buyY: y + h + gap + 25, buyW: 112, buyH: 42 },
-    guard: { x, y: y + (h + gap) * 2, w, h, buyX: x + w - 142, buyY: y + (h + gap) * 2 + 25, buyW: 112, buyH: 42 },
-  };
-}
-
-export function getMetaUpgradeBackButtonRect() {
-  return { x: 812, y: 574, w: 240, h: 44 };
-}
-
-export function getMetaAscensionEntryRect() {
-  return { x: 220, y: 550, w: 560, h: 72 };
 }
 
 export function getAscensionResultButtonRects() {

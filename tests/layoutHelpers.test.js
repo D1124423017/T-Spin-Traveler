@@ -15,10 +15,8 @@ import {
   getAscensionResultButtonRects,
   getControlsResetButtonRect,
   getMainMenuButtonRects,
-  getMetaAscensionEntryRect,
-  getMetaUpgradeBackButtonRect,
-  getMetaUpgradeRowRects,
   getResultButtonRects,
+  getRunRiftEnergyHudLayout,
   getSettingsBackButtonRect,
   getSettingsContentOrigin,
   getSettingsFeedbackButtonRect,
@@ -28,6 +26,11 @@ import {
   getHandlingResetButtonRect,
   shouldShowUltimateCountdownWarning,
 } from "../src/ui/hudLayout.js";
+import {
+  getMetaAscensionEntryRect,
+  getMetaUpgradeBackButtonRect,
+  getMetaUpgradeRowRects,
+} from "../src/ui/metaUpgradeScreen.js";
 import { getPiecePreviewLayout } from "../src/ui/piecePreview.js";
 import { createCanvasFont, shouldUseDisplayFont, tokenizeForWrap } from "../src/ui/textLayout.js";
 import {
@@ -111,6 +114,16 @@ describe("HUD and card layout helpers", () => {
     expect(shouldShowUltimateCountdownWarning(true, 3000)).toBe(true);
     expect(shouldShowUltimateCountdownWarning(true, 1)).toBe(true);
     expect(shouldShowUltimateCountdownWarning(false, 2000)).toBe(false);
+  });
+
+  it("keeps the frameless Rift Energy HUD clear of pause and enemy UI", () => {
+    const layout = createHudLayout({ boardX: 476, boardY: 72, cols: 10, rows: 20, tile: 29 });
+    const rift = getRunRiftEnergyHudLayout(layout.pauseButton);
+
+    expect(rift.icon).toEqual({ x: 1068, y: 17, w: 52, h: 52 });
+    expect(rift.number).toEqual({ x: 1122, y: 51, w: 60, size: 22, minSize: 15 });
+    expect(rift.bounds.x + rift.bounds.w).toBe(layout.pauseButton.x - 10);
+    expect(rift.bounds.y + rift.bounds.h).toBeLessThan(layout.enemyPanel.y);
   });
 
   it("calculates overlay, result, settings, and meta rects", () => {
