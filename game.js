@@ -137,16 +137,18 @@ import {
   isAssetLoadingComplete,
 } from "./src/core/assetReadiness.js";
 import {
-  animateNumber,
   clamp,
   drawRoundedRect,
   hexToRgba,
-  lerp,
   OVERLAY_READABILITY,
   pointInRect,
   smoothstep,
 } from "./src/render/drawUtils.js";
 import { drawBattleBackground } from "./src/render/backgroundRenderer.js";
+import {
+  createAttackEffectRenderer,
+  isHeroMeleeAttackStyle,
+} from "./src/render/attackEffectRenderer.js";
 import { createBattleBoardRenderer } from "./src/render/battleBoardRenderer.js";
 import { createBattleParticleRenderer } from "./src/render/battleParticleRenderer.js";
 import { createBattleSceneRenderer } from "./src/render/battleSceneRenderer.js";
@@ -155,8 +157,11 @@ import {
   createCharacterStageHelpers,
   getBaselineAnchorY,
 } from "./src/render/characterStageHelpers.js";
+import { createCombatCinematicRenderer } from "./src/render/combatCinematicRenderer.js";
+import { createEffectStateUpdater } from "./src/render/effectStateUpdater.js";
 import { createFallbackCharacterRenderer } from "./src/render/fallbackCharacterRenderer.js";
 import { drawGameplayFrame } from "./src/render/gameplayRenderer.js";
+import { createHeroCombatFallbackRenderer } from "./src/render/heroCombatFallbackRenderer.js";
 import { createImageRenderer } from "./src/render/imageRenderer.js";
 import { createKeyedSpriteRenderer } from "./src/render/keyedSpriteRenderer.js";
 import {
@@ -1086,6 +1091,59 @@ const {
   ctx,
   documentTarget: document,
   drawImageCropContain,
+});
+
+const {
+  drawAttackEffects,
+} = createAttackEffectRenderer({
+  ctx,
+  state,
+  isImageReady,
+  roundedRect,
+  drawSpriteAnimationFrame,
+  resolvePlayerAttackVfx,
+  resolveEnemyAttackVfx,
+  enemyAttackAnimations: ENEMY_ATTACK_ANIMATIONS,
+});
+
+const {
+  drawBossPhaseWarning,
+  drawPerfectClearFx,
+} = createCombatCinematicRenderer({
+  ctx,
+  state,
+  width: W,
+  height: H,
+  boardX: BOARD_X,
+  boardY: BOARD_Y,
+  cols: COLS,
+  rows: ROWS,
+  tileSize: TILE,
+  heroUltimateAnimation: HERO_ANIMATIONS.ultimate,
+  roundedRect,
+  label,
+  t,
+  fmt,
+  canvasFont,
+  isImageReady,
+  drawSpriteAnimationFrame,
+});
+
+const {
+  drawFallbackHeroAttackAnimation,
+  drawHeroIdleEnergy,
+  drawNoaAttackPose,
+} = createHeroCombatFallbackRenderer({
+  ctx,
+  roundedRect,
+  drawHeroIdleBase,
+});
+
+const {
+  tickEffects,
+} = createEffectStateUpdater({
+  state,
+  processPendingHits,
 });
 
 const {
@@ -5757,62 +5815,6 @@ function previewSfx() {
   tone(660, 0.05, "triangle", 0.24, audio.sfxGain, t);
 }
 
-function tickEffects(dt) {
-  processPendingHits();
-  state.shake = Math.max(0, state.shake - dt * 0.04);
-  state.enemyHit = Math.max(0, state.enemyHit - dt);
-  state.enemyHitIntensity = Math.max(0, state.enemyHitIntensity - dt * 0.0032);
-  state.enemyHpDisplay = animateNumber(state.enemyHpDisplay, state.enemyHp, dt, 125);
-  state.enemyHpTrail = animateNumber(state.enemyHpTrail, state.enemyHp, dt, 520);
-  state.playerHit = Math.max(0, state.playerHit - dt);
-  state.b2bBrokenFlash = Math.max(0, state.b2bBrokenFlash - dt);
-  state.lineFlash = state.lineFlash
-    .map((flash) => ({ ...flash, life: flash.life - dt }))
-    .filter((flash) => flash.life > 0);
-  state.floaters = state.floaters
-    .map((f) => ({ ...f, y: f.y - dt * 0.035, life: f.life - dt }))
-    .filter((f) => f.life > 0);
-  state.operationReadouts = state.operationReadouts
-    .map((readout) => ({ ...readout, life: readout.life - dt }))
-    .filter((readout) => readout.life > 0);
-  state.combatPopups = state.combatPopups
-    .map((popup) => ({ ...popup, life: popup.life - dt }))
-    .filter((popup) => popup.life > 0);
-  if (state.bossPhaseBanner) {
-    state.bossPhaseBanner.life -= dt;
-    if (state.bossPhaseBanner.life <= 0) state.bossPhaseBanner = null;
-  }
-  if (state.bossWindup) {
-    state.bossWindup.life -= dt;
-    if (state.bossWindup.life <= 0) state.bossWindup = null;
-  }
-  if (
-    state.enemyDeathVfx
-    && performance.now() - state.enemyDeathVfx.startedAt >= state.enemyDeathVfx.duration
-  ) {
-    state.enemyDeathVfx = null;
-  }
-  state.attacks = state.attacks
-    .map((a) => ({ ...a, life: a.life - dt }))
-    .filter((a) => a.life > 0);
-  if (state.perfectClearFx && performance.now() - state.perfectClearFx.startedAt >= state.perfectClearFx.duration) {
-    state.perfectClearFx = null;
-  }
-  state.bursts = state.bursts
-    .map((b) => ({ ...b, radius: b.radius + dt * 0.42 * b.intensity, life: b.life - dt }))
-    .filter((b) => b.life > 0);
-  state.particles = state.particles
-    .map((p) => ({
-      ...p,
-      x: p.x + p.vx,
-      y: p.y + p.vy,
-      vy: p.vy + (p.gravity ?? 0.08),
-      rotation: (p.rotation || 0) + (p.spin || 0),
-      life: p.life - dt,
-    }))
-    .filter((p) => p.life > 0);
-}
-
 function draw() {
   drawGameplayFrame({
     ctx,
@@ -6020,164 +6022,6 @@ function drawHeroLevelUpEffect() {
   drawSpriteAnimationFrame(HERO_LEVEL_UP_EFFECT, elapsed, draw.x, draw.y, draw.w, draw.h);
   ctx.restore();
   return true;
-}
-
-function drawFallbackHeroAttackAnimation(kind, progress, frameIndex) {
-  const meleeLike = isHeroMeleeAttackStyle(kind);
-  const strike = Math.sin(progress * Math.PI);
-  ctx.save();
-  ctx.translate(meleeLike ? strike * 8 : -strike * 3, 0);
-  ctx.rotate(meleeLike ? -0.035 + strike * 0.075 : -0.018);
-  drawHeroIdleBase();
-  ctx.restore();
-
-  if (meleeLike) drawFallbackMeleePose(progress, frameIndex);
-  else drawFallbackRangedPose(progress, frameIndex);
-}
-
-function drawHeroIdleEnergy() {
-  const now = performance.now() * 0.001;
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  ctx.shadowColor = "#a66cff";
-  ctx.shadowBlur = 14;
-  ctx.globalAlpha = 0.56 + Math.sin(now * 3.2) * 0.12;
-  ctx.strokeStyle = "rgba(180, 124, 255, 0.42)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(0, 34, 42 + Math.sin(now * 2.2) * 4, 0.15, Math.PI * 1.18);
-  ctx.stroke();
-  for (let i = 0; i < 6; i += 1) {
-    const a = now * 1.7 + i * 1.05;
-    const x = -58 + Math.cos(a) * (10 + i * 4);
-    const y = 92 + Math.sin(a * 1.3) * 22;
-    ctx.fillStyle = i % 2 ? "#c9a7ff" : "#8c55ff";
-    ctx.globalAlpha = 0.28 + ((Math.sin(now * 2 + i) + 1) / 2) * 0.38;
-    ctx.fillRect(x, y, 4, 4);
-  }
-  ctx.restore();
-}
-
-function drawFallbackMeleePose(progress, frameIndex) {
-  const strike = Math.sin(progress * Math.PI);
-  const charge = frameIndex <= 1 ? 0.35 + frameIndex * 0.3 : strike;
-  const bladeStart = {
-    x: -46 + strike * 20,
-    y: 70 - charge * 18,
-  };
-  const bladeEnd = {
-    x: 58 + strike * 78,
-    y: 10 - strike * 74,
-  };
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  ctx.shadowColor = "#b98cff";
-  ctx.shadowBlur = 24 + strike * 22;
-  ctx.lineCap = "round";
-  ctx.strokeStyle = "rgba(246, 239, 255, 0.94)";
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.moveTo(bladeStart.x, bladeStart.y);
-  ctx.lineTo(bladeEnd.x, bladeEnd.y);
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(169, 104, 255, 0.88)";
-  ctx.lineWidth = 10;
-  ctx.beginPath();
-  ctx.moveTo(bladeStart.x, bladeStart.y);
-  ctx.lineTo(bladeEnd.x, bladeEnd.y);
-  ctx.stroke();
-  if (frameIndex >= 3) {
-    ctx.strokeStyle = "rgba(189, 135, 255, 0.62)";
-    ctx.lineWidth = 8;
-    ctx.beginPath();
-    ctx.arc(18, 42, 76 + strike * 42, -0.86, 0.72 + progress * 1.2);
-    ctx.stroke();
-  }
-  for (let i = 0; i < 12; i += 1) {
-    const a = progress * 5 + i * 0.62;
-    ctx.fillStyle = i % 2 ? "#d6b7ff" : "#8f57ff";
-    ctx.globalAlpha = Math.max(0.18, 0.82 - i * 0.045);
-    ctx.fillRect(bladeEnd.x - 10 + Math.cos(a) * (16 + i * 4), bladeEnd.y + Math.sin(a) * (10 + i * 2), 5, 5);
-  }
-  ctx.restore();
-}
-
-function drawFallbackRangedPose(progress, frameIndex) {
-  const charge = Math.min(1, progress * 2.3);
-  const recoil = frameIndex >= 4 ? Math.sin((progress - 0.5) * Math.PI * 2) * 8 : 0;
-  const gunX = 36 - recoil;
-  const gunY = 44;
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  ctx.shadowColor = "#a66cff";
-  ctx.shadowBlur = 20 + charge * 20;
-  ctx.fillStyle = "rgba(21, 24, 34, 0.92)";
-  roundedRect(gunX - 18, gunY - 10, 72, 24, 7, true, false);
-  ctx.strokeStyle = "rgba(235, 222, 255, 0.82)";
-  ctx.lineWidth = 2;
-  roundedRect(gunX - 18, gunY - 10, 72, 24, 7, false, true);
-  ctx.fillStyle = "#9d68ff";
-  roundedRect(gunX + 10, gunY - 6, 18, 12, 4, true, false);
-  if (frameIndex >= 2) {
-    ctx.fillStyle = "rgba(181, 124, 255, 0.78)";
-    ctx.beginPath();
-    ctx.arc(gunX + 62, gunY + 1, 8 + charge * 8, 0, Math.PI * 2);
-    ctx.fill();
-    for (let i = 0; i < 8; i += 1) {
-      const a = i * 0.78 + progress * 6;
-      ctx.fillRect(gunX + 62 + Math.cos(a) * 20, gunY + 1 + Math.sin(a) * 14, 4, 4);
-    }
-  }
-  if (frameIndex >= 4) {
-    ctx.strokeStyle = "rgba(198, 160, 255, 0.82)";
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(gunX + 64, gunY + 1);
-    ctx.lineTo(gunX + 154 + progress * 80, gunY - 8);
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-function drawNoaAttackPose(attack) {
-  const t = 1 - attack.life / attack.duration;
-  const k = Math.sin(Math.min(1, t) * Math.PI);
-  const special = attack.special || "clear";
-  const color =
-    special === "perfect" ? "#8ff7ff" :
-    special === "combo" ? "#ffbe5f" :
-    special === "spin" ? "#caa2ff" :
-    special === "b2b" || special === "tetris" ? "#ffbe5f" :
-    "#9fb4ff";
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  ctx.globalAlpha = 0.2 + k * 0.8;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 28 + k * 18;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = special === "clear" ? 4 : 7;
-  ctx.beginPath();
-  ctx.arc(-6, 16, 54 + k * 22, -0.6, 1.1 + k * 0.7);
-  ctx.stroke();
-  ctx.strokeStyle = "#f6f0ff";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(28, 42);
-  ctx.lineTo(88 + k * 24, 22 - k * 22);
-  ctx.stroke();
-  ctx.fillStyle = color;
-  for (let i = 0; i < 7; i += 1) {
-    const a = -0.2 + i * 0.2 + t * 2;
-    ctx.fillRect(52 + Math.cos(a) * (28 + i * 4), 26 + Math.sin(a) * 34, 4, 4);
-  }
-  if (special !== "clear") {
-    ctx.strokeStyle = hexToRgba(color, 0.72);
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.ellipse(56, 36, 60 + k * 26, 18 + k * 8, -0.28, 0, Math.PI * 1.7);
-    ctx.stroke();
-  }
-  ctx.restore();
 }
 
 function drawBuildPanel(x = 54, y = 510, w = 198) {
@@ -6614,559 +6458,6 @@ function getB2BStatus() {
   }
   if (state.b2bBrokenFlash > 0) return { text: t("b2bBroken"), color: "#ff7782" };
   return { text: `B2B ${t("off")}`, color: "#7b8791" };
-}
-
-function drawAttackEffects() {
-  for (const attack of state.attacks) {
-    const t = 1 - attack.life / attack.duration;
-    const eased = 1 - Math.pow(1 - t, 3);
-    const x = lerp(attack.x0, attack.x1, eased);
-    const y = lerp(attack.y0, attack.y1, eased) + Math.sin(t * Math.PI) * -42;
-    if (attack.type === "player") {
-      drawPlayerAttack(attack, x, y, t);
-    } else if (attack.type === "enemy") {
-      drawEnemyAttack(attack, x, y, t);
-    } else {
-      drawWaveSpawn(attack, t);
-    }
-  }
-}
-
-function drawWaveSpawn(attack, t) {
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  ctx.globalAlpha = 1 - t;
-  ctx.strokeStyle = "#98f07e";
-  ctx.lineWidth = 5;
-  for (let i = 0; i < 3; i += 1) {
-    ctx.beginPath();
-    ctx.arc(attack.x0, attack.y0, 35 + i * 28 + t * 96, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-  ctx.fillStyle = "rgba(152, 240, 126, 0.18)";
-  ctx.beginPath();
-  ctx.arc(attack.x0, attack.y0, 90 + t * 110, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawPlayerAttack(attack, x, y, t) {
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  const special = attack.special || (attack.spin ? "spin" : "clear");
-  const melee = isHeroMeleeAttackStyle(attack.heroStyle);
-  const glow =
-    special === "perfect" ? "#8ff7ff" :
-    special === "combo" ? "#ffbe5f" :
-    special === "spin" ? "#caa2ff" :
-    special === "b2b" || special === "tetris" ? "#ffbe5f" :
-    "#9fb4ff";
-  const core = special === "perfect" ? "#ffffff" : special === "combo" ? "#fff0a6" : special === "spin" ? "#f1d36b" : "#d9f0ff";
-  const elapsed = attack.duration - attack.life;
-  const vfx = resolvePlayerAttackVfx(attack.heroStyle, attack.comboStyle);
-  const drewProjectile = drawPlayerAttackProjectile(attack, vfx, elapsed, glow, core, special);
-  if (!drewProjectile) {
-    if (melee) drawMeleeAttackPath(attack, x, y, t, glow, core, special);
-    else drawRangedAttackPath(attack, x, y, t, glow, core, special);
-    ctx.shadowColor = glow;
-    ctx.shadowBlur = special === "clear" ? 18 : 32;
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(x, y, special === "clear" ? 11 : 17, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = core;
-    ctx.beginPath();
-    ctx.arc(x, y, special === "clear" ? 4 : 6, 0, Math.PI * 2);
-    ctx.fill();
-    if (special === "spin" || special === "b2b" || special === "perfect" || special === "combo") {
-      ctx.strokeStyle = hexToRgba(core, 0.9);
-      ctx.lineWidth = special === "perfect" ? 4 : 3;
-      ctx.beginPath();
-      ctx.arc(x, y, 28 + Math.sin(t * Math.PI) * 12, t * 8, t * 8 + Math.PI * 1.35);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.ellipse(attack.x1, attack.y1, 46 + t * 10, 16 + t * 4, -0.4, 0, Math.PI * 1.6);
-      ctx.stroke();
-    }
-    if (special === "perfect") {
-      for (let i = 0; i < 6; i += 1) {
-        const a = t * 5 + (Math.PI * 2 * i) / 6;
-        ctx.fillStyle = i % 2 ? "#c7a7ff" : "#8ff7ff";
-        ctx.fillRect(attack.x1 + Math.cos(a) * 42, attack.y1 + Math.sin(a) * 28, 6, 6);
-      }
-    }
-  }
-  if (!drawPlayerAttackImpact(attack, vfx, elapsed, glow) && t > 0.78) {
-    drawImpactBurst(attack.x1, attack.y1, glow, t, special, 0.78);
-  }
-  ctx.restore();
-}
-
-function drawPlayerAttackProjectile(attack, vfx, elapsed, glow, core, special) {
-  const projectile = vfx.projectile;
-  if (!isImageReady(projectile.image)) return false;
-  const localElapsed = elapsed - projectile.startMs;
-  if (localElapsed < 0 || localElapsed > projectile.durationMs) return true;
-  const localT = clamp(localElapsed / projectile.durationMs, 0, 1);
-  const eased = 1 - Math.pow(1 - localT, 3);
-  const arc = Math.sin(localT * Math.PI);
-  const x = lerp(attack.x0 + 24, attack.x1 - 18, eased);
-  const y = lerp(attack.y0 - 10, attack.y1, eased) - arc * 44;
-  const fade = localT > 0.88 ? clamp((1 - localT) / 0.12, 0, 1) : 1;
-  const scale = projectile.scale * (1 + arc * 0.08);
-  const w = 190 * scale * (special === "perfect" ? 1.2 : 1);
-  const h = 116 * scale * (special === "perfect" ? 1.12 : 1);
-  ctx.save();
-  ctx.globalAlpha *= projectile.alpha * fade;
-  ctx.shadowColor = glow;
-  ctx.shadowBlur = 22 + vfx.intensity * 10;
-  ctx.translate(x, y);
-  if (projectile.spin) ctx.rotate(-0.18 + localT * 0.36);
-  drawSpriteAnimationFrame(projectile, localElapsed, -w * 0.5, -h * 0.5, w, h);
-  ctx.globalAlpha *= 0.32 * fade;
-  ctx.strokeStyle = hexToRgba(core, 0.62);
-  ctx.lineWidth = 2 + vfx.intensity;
-  ctx.beginPath();
-  ctx.moveTo(-w * 0.48, h * 0.18);
-  ctx.quadraticCurveTo(-w * 0.18, -h * 0.4, w * 0.42, -h * 0.08);
-  ctx.stroke();
-  ctx.restore();
-  return true;
-}
-
-function drawPlayerAttackImpact(attack, vfx, elapsed, glow) {
-  const impact = vfx.impact;
-  if (!isImageReady(impact.image)) return false;
-  const localElapsed = elapsed - impact.startMs;
-  if (localElapsed < 0 || localElapsed > impact.durationMs) return true;
-  const localT = clamp(localElapsed / impact.durationMs, 0, 1);
-  const fade = localT > 0.86 ? clamp((1 - localT) / 0.14, 0, 1) : 1;
-  const bloom = Math.sin(localT * Math.PI);
-  const size = 126 * impact.scale * (1 + bloom * 0.18);
-  ctx.save();
-  ctx.globalAlpha *= fade;
-  ctx.shadowColor = glow;
-  ctx.shadowBlur = 24 + vfx.intensity * 12;
-  drawSpriteAnimationFrame(impact, localElapsed, attack.x1 - size / 2, attack.y1 - size / 2, size, size);
-  ctx.restore();
-  return true;
-}
-
-function drawRangedAttackPath(attack, x, y, t, glow, core, special) {
-  ctx.strokeStyle = hexToRgba(glow, special === "clear" ? 0.28 : 0.42);
-  ctx.lineWidth = special === "clear" ? 4 : 6;
-  ctx.beginPath();
-  ctx.moveTo(attack.x0, attack.y0);
-  ctx.quadraticCurveTo((attack.x0 + attack.x1) / 2, attack.y0 - 54, x, y);
-  ctx.stroke();
-  ctx.strokeStyle = hexToRgba(core, 0.58);
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(attack.x0, attack.y0 + 6);
-  ctx.quadraticCurveTo((attack.x0 + attack.x1) / 2, attack.y0 - 28, x, y + 6);
-  ctx.stroke();
-  for (let i = 0; i < 8; i += 1) {
-    const k = Math.max(0, t - i * 0.03);
-    ctx.globalAlpha = Math.max(0, 0.52 - i * 0.055);
-    ctx.fillStyle = i % 2 ? core : glow;
-    ctx.fillRect(lerp(attack.x0, attack.x1, k) - 4, lerp(attack.y0, attack.y1, k) - 4, 7, 7);
-  }
-  ctx.globalAlpha = 1;
-}
-
-function drawMeleeAttackPath(attack, x, y, t, glow, core, special) {
-  const arc = Math.sin(t * Math.PI);
-  ctx.strokeStyle = hexToRgba(glow, 0.52 + arc * 0.24);
-  ctx.lineWidth = special === "perfect" ? 8 : 6;
-  ctx.beginPath();
-  ctx.moveTo(attack.x0 + 20, attack.y0 + 8);
-  ctx.bezierCurveTo(448, 206 - arc * 42, 760, 502 + arc * 26, x, y);
-  ctx.stroke();
-  ctx.strokeStyle = hexToRgba(core, 0.78);
-  ctx.lineWidth = special === "perfect" ? 4 : 3;
-  ctx.beginPath();
-  ctx.ellipse(attack.x1 - 8, attack.y1 + 2, 64 + arc * 48, 22 + arc * 18, -0.35, 0, Math.PI * 1.85);
-  ctx.stroke();
-  for (let i = 0; i < 14; i += 1) {
-    const k = Math.max(0, t - i * 0.018);
-    ctx.globalAlpha = Math.max(0, 0.7 - i * 0.045);
-    ctx.fillStyle = i % 2 ? core : glow;
-    ctx.fillRect(lerp(attack.x0 + 34, attack.x1, k) - 4, lerp(attack.y0 - 18, attack.y1, k) + Math.sin(i) * 12 - 4, 8, 8);
-  }
-  ctx.globalAlpha = 1;
-}
-
-function drawEnemyAttack(attack, x, y, t) {
-  const vfx = resolveEnemyAttackVfx(attack.attackKind, attack.bossPhase || 1);
-  const ready = vfx
-    && isImageReady(vfx.impact.image)
-    && (!vfx.projectile || isImageReady(vfx.projectile.image));
-  if (!ready) {
-    drawEnemyAttackFallback(attack, x, y, t);
-    return;
-  }
-
-  const elapsed = attack.duration - attack.life;
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  if (vfx.projectile) drawEnemyProjectileSprite(attack, vfx.projectile, elapsed);
-  drawEnemyImpactSprite(attack, vfx.impact, elapsed);
-  ctx.restore();
-}
-
-function drawEnemyProjectileSprite(attack, projectile, elapsed) {
-  const localElapsed = elapsed - projectile.startMs;
-  if (localElapsed < 0 || localElapsed > projectile.durationMs) return;
-  const progress = clamp(localElapsed / projectile.durationMs, 0, 1);
-  const eased = 1 - Math.pow(1 - progress, 3);
-  const x = lerp(attack.x0, attack.x1, eased);
-  const y = lerp(attack.y0 - 8, attack.y1 - 4, eased) - Math.sin(progress * Math.PI) * 34;
-  const size = 148 * (projectile.scale || 1);
-  ctx.save();
-  ctx.shadowColor = "#b98cff";
-  ctx.shadowBlur = 24 * (projectile.intensity || 1);
-  drawSpriteAnimationFrame(
-    projectile,
-    localElapsed,
-    x - size / 2,
-    y - size / 2,
-    size,
-    size,
-  );
-  ctx.restore();
-}
-
-function drawEnemyImpactSprite(attack, impact, elapsed) {
-  const localElapsed = elapsed - impact.startMs;
-  if (localElapsed < 0 || localElapsed > impact.durationMs) return;
-  const size = 182 * (impact.scale || 1);
-  ctx.save();
-  ctx.shadowColor = "#c7a7ff";
-  ctx.shadowBlur = 28 * (impact.intensity || 1);
-  drawSpriteAnimationFrame(
-    impact,
-    localElapsed,
-    attack.x1 - size / 2,
-    attack.y1 - size / 2,
-    size,
-    size,
-  );
-  ctx.restore();
-}
-
-function drawEnemyAttackFallback(attack, x, y, t) {
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  const kind = attack.attackKind || "slime";
-  const config = ENEMY_ATTACK_ANIMATIONS[kind] || {};
-  const impactStart = typeof config.hitRatio === "number" ? Math.max(0.68, config.hitRatio - 0.02) : 0.78;
-  const palette = {
-    vine: "#9de06c",
-    mushroom: "#b690ff",
-    beetle: "#c6b38a",
-    mist: "#d2ceff",
-    thorn: "#b174ff",
-    wisp: "#c7a7ff",
-    sentinel: "#d7c28f",
-    king: "#ffb95f",
-    slime: "#82f28f",
-  };
-  const color = palette[kind] || palette.slime;
-  const garbageAttack = ["vine", "mushroom", "beetle", "mist", "thorn", "sentinel", "king"].includes(kind);
-  ctx.strokeStyle = hexToRgba(color, garbageAttack ? 0.42 : 0.32);
-  ctx.lineWidth = kind === "king" ? 9 : garbageAttack ? 7 : 5;
-  ctx.beginPath();
-  ctx.moveTo(attack.x0, attack.y0);
-  ctx.quadraticCurveTo((attack.x0 + attack.x1) / 2, attack.y0 - 58, x, y);
-  ctx.stroke();
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 18;
-  if (kind === "vine") {
-    ctx.strokeStyle = hexToRgba(color, 0.75);
-    ctx.lineWidth = 4;
-    for (let i = 0; i < 3; i += 1) {
-      ctx.beginPath();
-      ctx.moveTo(x - 26 + i * 18, y + 18);
-      ctx.bezierCurveTo(x - 42 + i * 22, y - 14, x + 16 - i * 8, y - 20, x + 5, y + 22);
-      ctx.stroke();
-    }
-  } else if (kind === "thorn") {
-    ctx.strokeStyle = hexToRgba(color, 0.82);
-    ctx.lineWidth = 5;
-    for (let i = 0; i < 4; i += 1) {
-      const sweep = 22 + i * 10;
-      ctx.beginPath();
-      ctx.moveTo(x - 52 + i * 10, y + 30 - i * 6);
-      ctx.quadraticCurveTo(x + 2, y - sweep, x + 58 - i * 7, y + 12 + i * 3);
-      ctx.stroke();
-    }
-    ctx.fillStyle = hexToRgba("#f2d6ff", 0.78);
-    for (let i = 0; i < 9; i += 1) {
-      const a = -0.8 + i * 0.2 + t * 2.4;
-      ctx.beginPath();
-      ctx.moveTo(x + Math.cos(a) * 42, y + Math.sin(a) * 24);
-      ctx.lineTo(x + Math.cos(a + 0.12) * 56, y + Math.sin(a + 0.12) * 30);
-      ctx.lineTo(x + Math.cos(a - 0.12) * 52, y + Math.sin(a - 0.12) * 20);
-      ctx.closePath();
-      ctx.fill();
-    }
-  } else if (kind === "mushroom") {
-    ctx.fillStyle = hexToRgba(color, 0.72);
-    for (let i = 0; i < 10; i += 1) {
-      const a = t * 8 + i * 1.9;
-      ctx.beginPath();
-      ctx.arc(x + Math.cos(a) * (14 + i * 2), y + Math.sin(a) * 16, 3 + (i % 3), 0, Math.PI * 2);
-      ctx.fill();
-    }
-  } else if (kind === "wisp") {
-    for (let i = 0; i < 3; i += 1) {
-      const drift = Math.sin(t * Math.PI * 2 + i * 1.7) * 14;
-      ctx.strokeStyle = hexToRgba(i % 2 ? "#e2d8ff" : color, 0.58);
-      ctx.lineWidth = 4 - i * 0.5;
-      ctx.beginPath();
-      ctx.moveTo(x - 58 - i * 8, y + drift);
-      ctx.bezierCurveTo(x - 30, y - 26 + drift, x + 18, y + 22 - drift, x + 46 + i * 8, y - drift * 0.25);
-      ctx.stroke();
-      ctx.fillStyle = hexToRgba(i % 2 ? "#e2d8ff" : "#78dcff", 0.88);
-      ctx.beginPath();
-      ctx.arc(x + 46 + i * 8, y - drift * 0.25, 7 - i, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.strokeStyle = hexToRgba(color, 0.34);
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(x, y, 28 + t * 12, 0, Math.PI * 1.7);
-    ctx.stroke();
-  } else if (kind === "mist") {
-    ctx.strokeStyle = hexToRgba(color, 0.64);
-    ctx.lineWidth = 5;
-    for (let i = 0; i < 2; i += 1) {
-      ctx.beginPath();
-      ctx.ellipse(x, y + i * 8, 30 + t * 10, 12, t * 5 + i, 0, Math.PI * 1.8);
-      ctx.stroke();
-    }
-  } else if (kind === "sentinel") {
-    ctx.fillStyle = "#8f8469";
-    ctx.strokeStyle = hexToRgba(color, 0.72);
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.ellipse(x, y + 12, 56 + t * 12, 16 + t * 6, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(x, y, 34 + t * 8, Math.PI * 0.08, Math.PI * 0.92);
-    ctx.stroke();
-    for (let i = 0; i < 8; i += 1) {
-      const a = (Math.PI * 2 * i) / 8 + t;
-      const rx = x + Math.cos(a) * (26 + i);
-      const ry = y + 16 + Math.sin(a) * 12;
-      ctx.save();
-      ctx.translate(rx, ry);
-      ctx.rotate(a);
-      roundedRect(-5, -5, 10 + (i % 3) * 4, 10, 2, true, false);
-      ctx.restore();
-    }
-  } else if (kind === "beetle" || kind === "king") {
-    ctx.fillStyle = kind === "king" ? "#d8bf65" : "#9aa6ae";
-    ctx.shadowBlur = 18;
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(t * 10);
-    const size = kind === "king" ? 42 : 34;
-    roundedRect(-size / 2, -size / 2, size, size, 4, true, false);
-    ctx.strokeStyle = "rgba(20, 24, 30, 0.7)";
-    ctx.lineWidth = 4;
-    roundedRect(-size / 2, -size / 2, size, size, 4, false, true);
-    ctx.restore();
-  } else {
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.ellipse(x, y, 18, 12, t * 8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#d7ffd7";
-    ctx.beginPath();
-    ctx.arc(x - 4, y - 2, 5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  if (t > impactStart) drawImpactBurst(attack.x1, attack.y1, garbageAttack ? color : "#ff7782", t, kind, impactStart);
-  ctx.restore();
-}
-
-function drawImpactBurst(x, y, color, t, kind = "clear", impactStart = 0.78) {
-  const k = Math.min(1, (t - impactStart) / Math.max(0.05, 1 - impactStart));
-  const strong = ["perfect", "spin", "b2b", "combo", "thorn", "wisp", "sentinel", "king"].includes(kind);
-  ctx.save();
-  ctx.globalAlpha = 1 - k;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = strong ? 5 : 3;
-  ctx.beginPath();
-  ctx.arc(x, y, 14 + k * (strong ? 58 : 34), 0, Math.PI * 2);
-  ctx.stroke();
-  const count = strong ? 12 : 7;
-  for (let i = 0; i < count; i += 1) {
-    const a = (Math.PI * 2 * i) / count;
-    ctx.beginPath();
-    ctx.moveTo(x + Math.cos(a) * 16, y + Math.sin(a) * 16);
-    ctx.lineTo(x + Math.cos(a) * (strong ? 72 : 48), y + Math.sin(a) * (strong ? 58 : 38));
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-function drawBossPhaseWarning() {
-  const banner = state.bossPhaseBanner;
-  const windup = state.bossWindup;
-  if (!banner && !windup) return;
-  ctx.save();
-  if (windup) {
-    const p = 1 - clamp(windup.life / windup.duration, 0, 1);
-    const pulse = Math.sin(p * Math.PI);
-    ctx.globalCompositeOperation = "lighter";
-    ctx.strokeStyle = `rgba(255, 185, 95, ${0.24 + pulse * 0.46})`;
-    ctx.lineWidth = 3 + windup.phase;
-    ctx.beginPath();
-    ctx.ellipse(994, 346, 92 + pulse * 54, 42 + pulse * 22, -0.18, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.strokeStyle = `rgba(177, 116, 255, ${0.16 + pulse * 0.32})`;
-    ctx.lineWidth = 2;
-    for (let i = 0; i < 4; i += 1) {
-      const a = p * Math.PI * 2 + i * Math.PI * 0.5;
-      ctx.beginPath();
-      ctx.arc(994 + Math.cos(a) * 56, 346 + Math.sin(a) * 24, 18 + pulse * 12, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-  }
-  if (banner) {
-    const alpha = clamp(banner.life / banner.duration, 0, 1);
-    const reveal = Math.min(1, (banner.duration - banner.life) / 180);
-    const x = W / 2 - 178;
-    const y = 86;
-    ctx.globalCompositeOperation = "source-over";
-    ctx.fillStyle = `rgba(3, 5, 12, ${0.52 * Math.min(reveal, alpha * 2)})`;
-    roundedRect(x, y, 356, 64, 14, true, false);
-    ctx.strokeStyle = `rgba(255, 185, 95, ${0.38 + reveal * 0.34})`;
-    ctx.lineWidth = 2;
-    roundedRect(x, y, 356, 64, 14, false, true);
-    ctx.textAlign = "center";
-    label(fmt("bossPhaseShift", { phase: banner.phase }).toUpperCase(), W / 2, y + 27, 20, "#fff0a6");
-    label(t("bossRiftWindup"), W / 2, y + 48, 12, "#ffb95f");
-    ctx.textAlign = "left";
-  }
-  ctx.restore();
-}
-
-function drawPerfectClearFx() {
-  const fx = state.perfectClearFx;
-  if (!fx) return;
-  const elapsed = performance.now() - fx.startedAt;
-  const progress = clamp(elapsed / fx.duration, 0, 1);
-  const fadeIn = clamp(progress / 0.12, 0, 1);
-  const fadeOut = clamp((1 - progress) / 0.22, 0, 1);
-  const alpha = Math.min(fadeIn, fadeOut);
-  const burst = Math.sin(Math.min(1, progress * 1.28) * Math.PI);
-  const cx = BOARD_X + (COLS * TILE) / 2;
-  const cy = BOARD_Y + ROWS * TILE * 0.42;
-  const now = performance.now();
-
-  ctx.save();
-  ctx.fillStyle = `rgba(2, 3, 10, ${0.66 * alpha})`;
-  ctx.fillRect(0, 0, W, H);
-  ctx.globalCompositeOperation = "lighter";
-
-  const radial = ctx.createRadialGradient(cx, cy, 40, cx, cy, 540);
-  radial.addColorStop(0, `rgba(255, 255, 246, ${0.78 * alpha})`);
-  radial.addColorStop(0.22, `rgba(255, 225, 132, ${0.4 * alpha})`);
-  radial.addColorStop(0.5, `rgba(154, 116, 255, ${0.22 * alpha})`);
-  radial.addColorStop(1, "rgba(0, 0, 0, 0)");
-  ctx.fillStyle = radial;
-  ctx.fillRect(0, 0, W, H);
-
-  const flash = Math.max(0, 1 - Math.abs(progress - 0.38) / 0.08);
-  if (flash > 0) {
-    ctx.fillStyle = `rgba(255, 255, 255, ${0.42 * flash * alpha})`;
-    ctx.fillRect(0, 0, W, H);
-  }
-
-  for (let i = 0; i < 18; i += 1) {
-    const a = (Math.PI * 2 * i) / 18 + progress * 2.8;
-    const inner = 36 + burst * 18;
-    const outer = 480 + burst * 220;
-    ctx.strokeStyle = i % 3 === 0 ? `rgba(255, 239, 165, ${0.34 * alpha})` : `rgba(150, 236, 255, ${0.24 * alpha})`;
-    ctx.lineWidth = i % 3 === 0 ? 5 : 3;
-    ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
-    ctx.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer);
-    ctx.stroke();
-  }
-
-  for (let i = 0; i < 4; i += 1) {
-    ctx.strokeStyle = i % 2 ? `rgba(199, 167, 255, ${0.42 * alpha})` : `rgba(255, 244, 168, ${0.36 * alpha})`;
-    ctx.lineWidth = 3 + i;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, 92 + i * 58 + burst * 120, 34 + i * 24 + burst * 46, -0.32 + progress * 2.1, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  for (let i = 0; i < 42; i += 1) {
-    const seed = fx.seed + i * 19.17;
-    const a = seed + progress * (2.2 + (i % 5) * 0.18);
-    const r = 95 + ((i * 37) % 360) + burst * 92;
-    const x = cx + Math.cos(a) * r;
-    const y = cy + Math.sin(a) * r * 0.56;
-    const size = 5 + (i % 4) * 2;
-    ctx.fillStyle = i % 3 === 0 ? `rgba(255, 229, 132, ${0.74 * alpha})` : `rgba(178, 118, 255, ${0.72 * alpha})`;
-    ctx.fillRect(x - size / 2, y - size / 2, size, size);
-  }
-
-  if (progress > 0.28 && progress < 0.72) {
-    const k = Math.sin(((progress - 0.28) / 0.44) * Math.PI);
-    ctx.strokeStyle = `rgba(255, 255, 255, ${0.86 * k * alpha})`;
-    ctx.lineWidth = 12;
-    ctx.beginPath();
-    ctx.moveTo(-80, cy + 150);
-    ctx.lineTo(W + 80, cy - 190);
-    ctx.stroke();
-    ctx.strokeStyle = `rgba(199, 167, 255, ${0.62 * k * alpha})`;
-    ctx.lineWidth = 18;
-    ctx.beginPath();
-    ctx.moveTo(-80, cy - 74);
-    ctx.lineTo(W + 80, cy + 94);
-    ctx.stroke();
-  }
-
-  if (isImageReady(HERO_ANIMATIONS.ultimate.image)) {
-    ctx.save();
-    ctx.globalCompositeOperation = "source-over";
-    ctx.globalAlpha = 0.96 * alpha;
-    ctx.shadowColor = "rgba(199, 167, 255, 0.9)";
-    ctx.shadowBlur = 36 + burst * 28;
-    const heroW = 704 + burst * 44;
-    const heroH = 402 + burst * 26;
-    drawSpriteAnimationFrame(HERO_ANIMATIONS.ultimate, elapsed, 42, 202 - burst * 12, heroW, heroH);
-    ctx.restore();
-  }
-
-  ctx.globalCompositeOperation = "source-over";
-  ctx.textAlign = "center";
-  ctx.shadowColor = "rgba(255, 240, 166, 0.9)";
-  ctx.shadowBlur = 26 + burst * 24;
-  ctx.font = canvasFont("900", 72, t("perfectClearTitle"), true);
-  const titleY = 132 + Math.sin(progress * Math.PI) * -8;
-  const titleGradient = ctx.createLinearGradient(380, titleY - 54, 900, titleY + 18);
-  titleGradient.addColorStop(0, "#ffffff");
-  titleGradient.addColorStop(0.5, "#fff0a6");
-  titleGradient.addColorStop(1, "#8ff7ff");
-  ctx.fillStyle = titleGradient;
-  ctx.globalAlpha = alpha;
-  ctx.fillText(t("perfectClearTitle"), W / 2, titleY);
-  ctx.font = canvasFont("900", 22, t("perfectClearSubtitle").toUpperCase());
-  ctx.fillStyle = "#d7c2ff";
-  ctx.fillText(t("perfectClearSubtitle").toUpperCase(), W / 2, titleY + 34);
-  ctx.font = canvasFont("900", 34, fmt("perfectClearDamage", { damage: fx.damage }).toUpperCase());
-  ctx.fillStyle = "#fff0a6";
-  ctx.fillText(fmt("perfectClearDamage", { damage: fx.damage }).toUpperCase(), W / 2, titleY + 70);
-  ctx.globalAlpha = 1;
-  ctx.textAlign = "left";
-  ctx.restore();
 }
 
 function isMenuHeroInteractive() {
@@ -7888,23 +7179,6 @@ function purchaseMetaUpgrade(id) {
   };
   playSfx("metaUpgradeFail");
   return false;
-}
-
-function isHeroMeleeAttackStyle(style) {
-  return [
-    "melee",
-    "ultimate",
-    "slash",
-    "doubleSlash",
-    "tripleSlash",
-    "tetris",
-    "tspin",
-    "combo",
-    "combo1",
-    "combo2",
-    "combo3",
-    "b2b",
-  ].includes(String(style || ""));
 }
 
 function drawUpgradeOverlay() {
