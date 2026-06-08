@@ -1,11 +1,16 @@
-# T-Spin Traveler
+<h1 align="center">T-Spin Traveler</h1>
 
 <p align="center">
-  <a href="./README.md">English</a> |
-  <a href="./README.zh-TW.md">繁體中文</a>
+  <a href="https://d1124423017.github.io/T-Spin-Traveler/">
+    <img height="60" src="https://img.shields.io/badge/▶%20PLAY%20ONLINE-T--Spin%20Traveler-8A2BE2?style=for-the-badge&logo=githubpages&logoColor=white" alt="線上遊玩">
+  </a>
 </p>
 
-[▶ 線上遊玩](https://d1124423017.github.io/T-Spin-Traveler/)
+<p align="center">
+     <img width="1672" height="941" alt="image" src="https://github.com/user-attachments/assets/06ebde53-28e9-4760-9700-4ecac657e26c" />
+</p>
+
+<h1 align="center">T-Spin Traveler</h1>
 
 專案文件：[測試清單](TESTING.md)｜[更新紀錄](CHANGELOG.md)
 
