@@ -32,7 +32,9 @@ function createContext() {
   });
 }
 
-function createRenderer({ currentBuildOpen = false } = {}) {
+function createRenderer({ currentBuildOpen = false, detailOpen = false } = {}) {
+  const detailTexts = [];
+  const fittedLabels = [];
   const state = {
     acquiredRelics: [],
     currentBuildOpen,
@@ -42,7 +44,7 @@ function createRenderer({ currentBuildOpen = false } = {}) {
       { id: "b", name: "B", rarity: "rare", tags: ["Combo"], text: "B", shortText: "B" },
       { id: "c", name: "C", rarity: "relic", tags: ["Defense"], text: "C", shortText: "C" },
     ],
-    upgradeDetailOpen: false,
+    upgradeDetailOpen: detailOpen,
     upgradeMotion: {
       openedAt: 0,
       selectedAt: 0,
@@ -58,15 +60,20 @@ function createRenderer({ currentBuildOpen = false } = {}) {
     fmt: (key) => key,
     canvasFont: () => "12px sans-serif",
     label() {},
-    fitLabel() {},
+    fitLabel(text) {
+      fittedLabels.push(text);
+    },
     wrapText() {},
     roundedRect() {},
     drawDimOverlay() {},
     drawCard() {},
     drawMenuButton() {},
-    drawLimitedWrapText() {},
+    drawLimitedWrapText(text) {
+      detailTexts.push(text);
+    },
     prefersReducedMotion: () => true,
     upgradeName: (upgrade) => upgrade.name,
+    upgradeText: (upgrade) => `${upgrade.name} full effect`,
     upgradeShortText: (upgrade) => upgrade.shortText,
     rarityLabel: (rarity) => rarity,
     getSpecialBondCountsForRun: () => ({ angel: 0, devil: 0 }),
@@ -78,7 +85,7 @@ function createRenderer({ currentBuildOpen = false } = {}) {
     getCurrentBuildDirectionText: () => "",
     getTraitFullCount: () => 4,
   });
-  return { renderer, state };
+  return { renderer, state, detailTexts, fittedLabels };
 }
 
 describe("upgrade screen renderer wiring", () => {
@@ -94,5 +101,28 @@ describe("upgrade screen renderer wiring", () => {
     const { renderer } = createRenderer({ currentBuildOpen: true });
 
     expect(() => renderer.drawUpgradeOverlay()).not.toThrow();
+  });
+
+  it("keeps selected upgrade text visible across detail toggles and card changes", () => {
+    const {
+      renderer,
+      state,
+      detailTexts,
+      fittedLabels,
+    } = createRenderer({ detailOpen: true });
+
+    expect(() => renderer.drawUpgradeOverlay()).not.toThrow();
+    expect(detailTexts).toContain("A full effect");
+    expect(fittedLabels).toContain("SPIN");
+
+    state.upgradeSelectedIndex = 1;
+    renderer.drawUpgradeOverlay();
+    expect(detailTexts).toContain("B full effect");
+    expect(fittedLabels).toContain("COMBO");
+
+    state.upgradeDetailOpen = false;
+    renderer.drawUpgradeOverlay();
+    expect(detailTexts).toContain("B");
+    expect(fittedLabels.filter((label) => label === "COMBO").length).toBeGreaterThanOrEqual(2);
   });
 });

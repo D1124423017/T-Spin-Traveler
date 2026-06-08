@@ -179,14 +179,36 @@ describe("HUD and card layout helpers", () => {
 
   it("centers piece previews without canvas dependencies", () => {
     const shape = [
+      [0, 0, 0, 0],
       [1, 1, 1, 1],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
     ];
 
     expect(getPiecePreviewLayout(shape, 100, 50, 12, 80, 40)).toMatchObject({
-      offX: 108,
-      offY: 56,
+      offX: 116,
+      offY: 64,
+      minRow: 1,
+      minColumn: 0,
       columns: 4,
       rows: 1,
+    });
+  });
+
+  it("centers occupied cells instead of padded piece matrices", () => {
+    const shape = [
+      [0, 1, 0],
+      [1, 1, 1],
+      [0, 0, 0],
+    ];
+
+    expect(getPiecePreviewLayout(shape, 20, 30, 15, 80, 58)).toMatchObject({
+      offX: 38,
+      offY: 44,
+      minRow: 0,
+      minColumn: 0,
+      columns: 3,
+      rows: 2,
     });
   });
 });

@@ -25,6 +25,7 @@ export function createUpgradeCardRenderer({
   fitLabel,
   roundedRect,
   drawLimitedWrapText,
+  upgradeText,
   upgradeShortText,
   upgradeName,
   getTraitChangeHintsForUpgrade,
@@ -497,13 +498,7 @@ function drawUpgradeDetailTypeIcon(upgrade, x, y, size, rarity) {
   if (!isImageReady(icon)) return 0;
   ctx.save();
   ctx.shadowColor = rarity.glow;
-  ctx.shadowBlur = 9;
-  ctx.fillStyle = hexToRgba(rarity.color, 0.18);
-  roundedRect(x - 3, y - 3, size + 6, size + 6, 9, true, false);
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = hexToRgba(rarity.border, 0.28);
-  ctx.lineWidth = 1;
-  roundedRect(x - 3, y - 3, size + 6, size + 6, 9, false, true);
+  ctx.shadowBlur = 11;
   ctx.globalAlpha = 0.96;
   ctx.drawImage(icon, x, y, size, size);
   ctx.restore();
@@ -548,8 +543,9 @@ function drawUpgradeSelectedDetail(upgrade, rect, rarity, motion = {}, {
   const descX = x + 308;
   const descW = Math.max(160, toggleRect.x - descX - 18);
   const detailText = expanded ? upgradeText(upgrade) : upgradeShortText(upgrade);
+  drawUpgradeTagPills(getUpgradeTags(upgrade), descX, y + 13, descW, 3, 0.86);
   drawReadableUpgradeText(() => {
-    drawLimitedWrapText(detailText, descX, y + 27, descW, 16, "#fff4cf", expanded ? 13 : 14, expanded ? 3 : 2, "900");
+    drawLimitedWrapText(detailText, descX, y + 47, descW, 15, "#fff4cf", expanded ? 12 : 13, 2, "900");
   }, 4);
   drawUpgradeDetailToggleButton(toggleRect, rarity, expanded, toggleHovered);
   ctx.restore();

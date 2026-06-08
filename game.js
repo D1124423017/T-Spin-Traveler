@@ -449,22 +449,22 @@ const TILE = 29;
 const BOARD_X = 476;
 const BOARD_Y = 72;
 const HOLD_PANEL_X = BOARD_X - 116;
-const HOLD_PANEL_Y = BOARD_Y + 42;
+const HOLD_PANEL_Y = BOARD_Y + 4;
 const HOLD_PANEL_W = 106;
 const HOLD_PANEL_H = 112;
 const HOLD_PREVIEW_BOX_W = 86;
-const HOLD_PREVIEW_BOX_H = 66;
-const HOLD_PREVIEW_CELL_SIZE = 16;
-const NEXT_PANEL_X = BOARD_X + COLS * TILE + 22;
-const NEXT_PANEL_Y = BOARD_Y + 42;
+const HOLD_PREVIEW_BOX_H = 74;
+const HOLD_PREVIEW_CELL_SIZE = 18;
+const NEXT_PANEL_X = BOARD_X + COLS * TILE + 12;
+const NEXT_PANEL_Y = BOARD_Y + 4;
 const NEXT_PREVIEW_COUNT = 5;
-const NEXT_PANEL_W = 98;
-const NEXT_SLOT_H = 56;
-const NEXT_SLOT_GAP = 8;
+const NEXT_PANEL_W = 96;
+const NEXT_SLOT_H = 58;
+const NEXT_SLOT_GAP = 4;
 const NEXT_SLOT_STEP = NEXT_SLOT_H + NEXT_SLOT_GAP;
 const NEXT_PREVIEW_BOX_W = 80;
-const NEXT_PREVIEW_BOX_H = 50;
-const NEXT_PREVIEW_CELL_SIZE = 12.8;
+const NEXT_PREVIEW_BOX_H = NEXT_SLOT_H;
+const NEXT_PREVIEW_CELL_SIZE = 15;
 const DROP_MS = 760;
 const SOFT_DROP_MS = 12;
 const LOCK_DELAY_MS = 500;
@@ -1076,6 +1076,7 @@ const upgradeScreenRenderer = createUpgradeScreenRenderer({
   drawLimitedWrapText,
   prefersReducedMotion,
   upgradeName,
+  upgradeText,
   upgradeShortText,
   rarityLabel,
   getSpecialBondCountsForRun,
@@ -7150,7 +7151,6 @@ function getGhost() {
 function drawPiece(piece, ghost) {
   const constrainToUltimateWell = Boolean(state.ultimateActive);
   const well = getUltimateWellRange();
-  if (!ghost) drawHiddenPieceCells(piece, constrainToUltimateWell ? well : null);
   const cells = getVisiblePieceCells(piece, {
     cols: COLS,
     rows: ROWS,
@@ -7161,24 +7161,6 @@ function drawPiece(piece, ghost) {
   for (const cell of cells) {
     drawBlock(cell.x * TILE, cell.y * TILE, ghost ? "rgba(228,235,245,0.16)" : COLORS[piece.type], ghost);
   }
-}
-
-function drawHiddenPieceCells(piece, well = null) {
-  if (!piece || !Array.isArray(piece.shape)) return;
-  const layout = getTopBufferLayout();
-  ctx.save();
-  ctx.globalAlpha = 0.78;
-  for (let r = 0; r < piece.shape.length; r += 1) {
-    for (let c = 0; c < piece.shape[r].length; c += 1) {
-      if (!piece.shape[r][c]) continue;
-      const x = piece.x + c;
-      const boardY = piece.y + r;
-      if (x < 0 || x >= COLS || boardY < 0 || boardY >= HIDDEN) continue;
-      if (well && (x < well.start || x >= well.end)) continue;
-      drawBlock(x * TILE, layout.y + boardY * TILE, COLORS[piece.type]);
-    }
-  }
-  ctx.restore();
 }
 
 function drawBlock(x, y, color, ghost = false, size = TILE) {
@@ -7231,25 +7213,24 @@ function drawHoldPanel() {
   ctx.lineWidth = 1.3;
   roundedRect(HOLD_PANEL_X, HOLD_PANEL_Y, w, h, 14, false, true);
   label(t("hold").toUpperCase(), HOLD_PANEL_X + 11, HOLD_PANEL_Y + 22, 13, state.canHold ? "#ffe0a3" : "rgba(245,241,230,0.42)");
-  ctx.fillStyle = "rgba(126, 231, 255, 0.035)";
-  roundedRect(HOLD_PANEL_X + 10, HOLD_PANEL_Y + 36, w - 20, 64, 10, true, false);
   drawMiniPiece(
     state.hold,
-    HOLD_PANEL_X + 18,
-    HOLD_PANEL_Y + 44,
+    HOLD_PANEL_X + 10,
+    HOLD_PANEL_Y + 30,
     HOLD_PREVIEW_CELL_SIZE,
     HOLD_PREVIEW_BOX_W,
     HOLD_PREVIEW_BOX_H,
     { disabled: locked },
   );
-  if (locked) drawHoldLockedOverlay(HOLD_PANEL_X + 10, HOLD_PANEL_Y + 36, w - 20, 64);
+  if (locked) drawHoldLockedIndicator(HOLD_PANEL_X + w - 18, HOLD_PANEL_Y + 17);
   ctx.restore();
 }
 
 function drawNextQueuePanel() {
   ctx.save();
+  const queuePreview = state.queue.slice(0, NEXT_PREVIEW_COUNT);
   const w = NEXT_PANEL_W;
-  const h = 34 + NEXT_PREVIEW_COUNT * NEXT_SLOT_H + (NEXT_PREVIEW_COUNT - 1) * NEXT_SLOT_GAP + 42;
+  const h = 30 + NEXT_PREVIEW_COUNT * NEXT_SLOT_H + (NEXT_PREVIEW_COUNT - 1) * NEXT_SLOT_GAP + 42;
   ctx.fillStyle = "rgba(3, 5, 10, 0.62)";
   roundedRect(NEXT_PANEL_X, NEXT_PANEL_Y, w, h, 14, true, false);
   ctx.strokeStyle = "rgba(255, 224, 162, 0.38)";
@@ -7257,10 +7238,8 @@ function drawNextQueuePanel() {
   roundedRect(NEXT_PANEL_X, NEXT_PANEL_Y, w, h, 14, false, true);
   label(t("next").toUpperCase(), NEXT_PANEL_X + 11, NEXT_PANEL_Y + 22, 13, "#ffe0a3");
   for (let i = 0; i < NEXT_PREVIEW_COUNT; i += 1) {
-    const slotY = NEXT_PANEL_Y + 34 + i * NEXT_SLOT_STEP;
-    ctx.fillStyle = "rgba(126, 231, 255, 0.03)";
-    roundedRect(NEXT_PANEL_X + 9, slotY, w - 18, NEXT_SLOT_H, 9, true, false);
-    drawMiniPiece(state.queue[i], NEXT_PANEL_X + 17, slotY + 11, NEXT_PREVIEW_CELL_SIZE, NEXT_PREVIEW_BOX_W, NEXT_PREVIEW_BOX_H);
+    const slotY = NEXT_PANEL_Y + 30 + i * NEXT_SLOT_STEP;
+    drawMiniPiece(queuePreview[i], NEXT_PANEL_X + 8, slotY, NEXT_PREVIEW_CELL_SIZE, NEXT_PREVIEW_BOX_W, NEXT_PREVIEW_BOX_H);
   }
   if (state.queueHex > 0) {
     ctx.fillStyle = "rgba(119, 232, 255, 0.11)";
@@ -7270,54 +7249,16 @@ function drawNextQueuePanel() {
   ctx.restore();
 }
 
-function drawHoldLockedOverlay(x, y, w, h) {
+function drawHoldLockedIndicator(cx, cy) {
   ctx.save();
-  ctx.fillStyle = "rgba(2, 5, 10, 0.46)";
-  roundedRect(x, y, w, h, 10, true, false);
-  ctx.strokeStyle = "rgba(176, 199, 224, 0.22)";
-  ctx.lineWidth = 1.1;
-  roundedRect(x + 1, y + 1, w - 2, h - 2, 9, false, true);
-  ctx.save();
-  holdOverlayClipPath(x + 2, y + 2, w - 4, h - 4, 8);
-  ctx.clip();
-  ctx.globalAlpha = 0.36;
-  ctx.strokeStyle = "rgba(223, 243, 255, 0.34)";
-  ctx.lineWidth = 1;
-  const inset = 6;
-  const lineTop = y + inset;
-  const lineBottom = y + h - inset;
-  for (let sx = x - h + inset; sx < x + w - inset; sx += 12) {
-    ctx.beginPath();
-    ctx.moveTo(sx, lineBottom);
-    ctx.lineTo(sx + h - inset * 2, lineTop);
-    ctx.stroke();
-  }
-  ctx.restore();
   ctx.globalAlpha = 0.82;
   ctx.strokeStyle = "rgba(215, 194, 255, 0.72)";
-  ctx.lineWidth = 2;
-  const cx = x + w - 18;
-  const cy = y + 18;
-  roundedRect(cx - 9, cy - 1, 18, 14, 4, false, true);
+  ctx.lineWidth = 1.6;
+  roundedRect(cx - 7, cy - 1, 14, 10, 3, false, true);
   ctx.beginPath();
-  ctx.arc(cx, cy - 2, 7, Math.PI, 0);
+  ctx.arc(cx, cy - 2, 5, Math.PI, 0);
   ctx.stroke();
   ctx.restore();
-}
-
-function holdOverlayClipPath(x, y, w, h, radius) {
-  const r = Math.max(0, Math.min(radius, w / 2, h / 2));
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
 }
 
 function drawOperationReadouts() {
@@ -8047,26 +7988,25 @@ function drawParticles() {
 }
 
 function drawMiniPiece(type, x, y, size = 14, boxW = 92, boxH = 58, options = {}) {
+  const shape = PIECES[type];
+  if (!shape) return;
+  const preview = getPiecePreviewLayout(shape, x, y, size, boxW, boxH);
   ctx.save();
-  ctx.fillStyle = "rgba(5,8,12,0.66)";
-  roundedRect(x - 8, y - 8, boxW, boxH, 6, true, false);
-  ctx.strokeStyle = "rgba(152, 228, 235, 0.16)";
-  ctx.lineWidth = 1.5;
-  roundedRect(x - 8, y - 8, boxW, boxH, 6, false, true);
-  if (type) {
-    const shape = PIECES[type];
-    const preview = getPiecePreviewLayout(shape, x, y, size, boxW, boxH);
-    ctx.save();
-    if (options.disabled) {
-      ctx.globalAlpha *= 0.48;
-      ctx.filter = "grayscale(1) saturate(0.35) brightness(0.82)";
+  if (options.disabled) {
+    ctx.globalAlpha *= 0.48;
+    ctx.filter = "grayscale(1) saturate(0.35) brightness(0.82)";
+  }
+  for (let r = 0; r < shape.length; r += 1) {
+    for (let c = 0; c < shape[r].length; c += 1) {
+      if (!shape[r][c]) continue;
+      drawBlock(
+        preview.offX + (c - preview.minColumn) * size,
+        preview.offY + (r - preview.minRow) * size,
+        COLORS[type],
+        false,
+        size,
+      );
     }
-    for (let r = 0; r < shape.length; r += 1) {
-      for (let c = 0; c < shape[r].length; c += 1) {
-        if (shape[r][c]) drawBlock(preview.offX + c * size, preview.offY + r * size, COLORS[type], false, size);
-      }
-    }
-    ctx.restore();
   }
   ctx.restore();
 }
