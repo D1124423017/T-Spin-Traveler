@@ -28,15 +28,6 @@ import { ENEMIES, MINI_BOSS_ENEMY_IDS } from "./src/data/enemies.js";
 import { translations } from "./src/data/i18n.js";
 import { UPGRADES } from "./src/data/upgrades.js";
 import {
-  getAcquiredRelicGroups as getAcquiredRelicGroupsForStats,
-  getCurrentBuildFamilyStats as getCurrentBuildFamilyStatsForGroups,
-  getTraitBonus as getTraitBonusForGroups,
-  getTraitChangeHintsForUpgrade as getTraitChangeHintsForUpgradeForGroups,
-  getTraitCount as getTraitCountForGroups,
-  getTraitEffectText as getTraitEffectTextForEntry,
-  getTraitEntries as getTraitEntriesForGroups,
-  getTraitNextThreshold as getTraitNextThresholdForGroups,
-  getTraitProgress as getTraitProgressForGroups,
   getUpgradeById,
   getUpgradeTags,
 } from "./src/combat/buildStats.js";
@@ -98,8 +89,6 @@ import {
   getPerfectClearTraitBonus,
   getSpinTraitBonus,
   getSurvivalTraitBonus,
-  getTraitFullCount as getTraitFullCountFromDefs,
-  getTraitStage as getTraitStageFromDefs,
   getUtilityTraitBonus,
   isTraitHighValueClear,
 } from "./src/combat/upgradeEffects.js";
@@ -136,9 +125,12 @@ import {
   getAssetLoadingSummary,
   isAssetLoadingComplete,
 } from "./src/core/assetReadiness.js";
-import { getAssetLoadingTransition } from "./src/core/assetLoadingController.js";
+import { createAssetLoadingController } from "./src/core/assetLoadingController.js";
+import { createBattleCountdownCueReader } from "./src/core/battleCountdownModel.js";
+import { createBuildStatsController } from "./src/core/buildStatsController.js";
 import { createGameModeSetter } from "./src/core/gameModeHelpers.js";
 import { createModeOverlayRouter } from "./src/core/modeRouter.js";
+import { createRunStatsFactory } from "./src/core/runStatsFactory.js";
 import {
   clamp,
   drawRoundedRect,
@@ -154,6 +146,7 @@ import {
 } from "./src/render/attackEffectRenderer.js";
 import { createBattleBoardRenderer } from "./src/render/battleBoardRenderer.js";
 import { createBattleParticleRenderer } from "./src/render/battleParticleRenderer.js";
+import { createBattleParticleSpawner } from "./src/render/battleParticleSpawner.js";
 import { createBattleSceneRenderer } from "./src/render/battleSceneRenderer.js";
 import {
   alignDrawBoxToBaseline,
@@ -164,6 +157,7 @@ import { createCombatCinematicRenderer } from "./src/render/combatCinematicRende
 import { createEnemyStageRenderer } from "./src/render/enemyStageRenderer.js";
 import { createEffectStateUpdater } from "./src/render/effectStateUpdater.js";
 import { createFallbackCharacterRenderer } from "./src/render/fallbackCharacterRenderer.js";
+import { createGameplayFrameController } from "./src/render/gameplayFrameController.js";
 import { drawGameplayFrame } from "./src/render/gameplayRenderer.js";
 import { createHeroCombatFallbackRenderer } from "./src/render/heroCombatFallbackRenderer.js";
 import { createImageRenderer } from "./src/render/imageRenderer.js";
@@ -229,6 +223,7 @@ import { createLoadingScreenRenderer } from "./src/ui/loadingScreenRenderer.js";
 import {
   cleanupDomOverlay,
   initDomOverlayRoot,
+  prefersReducedMotion,
   setDomOverlayMode,
 } from "./src/dom/domOverlayRoot.js";
 import {
@@ -242,7 +237,6 @@ import {
 } from "./src/dom/gameplayFeedbackLayer.js";
 import { showToast } from "./src/dom/toastLayer.js";
 import { showBondCallout } from "./src/dom/bondCalloutLayer.js";
-import { drawMenuButtonPanel } from "./src/ui/panelDrawing.js";
 import {
   createSettingsScreenRenderer,
   getControlDisplayValue,
@@ -270,6 +264,7 @@ import { createResultOverlayRenderer } from "./src/ui/resultOverlayRenderer.js";
 import { createResultOverlayModel } from "./src/ui/resultOverlayModel.js";
 import { createScreenPrimitives } from "./src/ui/screenPrimitives.js";
 import { createScreenNoteController } from "./src/ui/screenNoteController.js";
+import { createMenuButtonRenderer } from "./src/ui/menuButtonRenderer.js";
 import { createUiTextHelpers } from "./src/ui/uiTextHelpers.js";
 import { createCombatReadoutModel } from "./src/ui/combatReadoutModel.js";
 import { createBondCalloutController } from "./src/ui/bondCalloutController.js";
@@ -939,6 +934,11 @@ const {
   defaultControls: DEFAULT_CONTROLS,
 });
 
+const controlDisplayValue = (action) => getControlDisplayValue(action, {
+  getControlKeys,
+  formatControlKey,
+});
+
 const TEXT = translations;
 
 const ROSTER_CELLS = {
@@ -988,6 +988,13 @@ const CHALLENGE_REWARDS = {
 
 const ENEMY_ATTACK_ANIMATIONS = ENEMY_ATTACK_BODY_ANIMATIONS;
 
+const {
+  makeRunStats,
+  makeStats,
+} = createRunStatsFactory({
+  damageSourceKeys: DAMAGE_SOURCE_KEYS,
+});
+
 const state = createGameState({
   makeBoard,
   makeStats,
@@ -1020,6 +1027,40 @@ const {
 } = createUiTextHelpers({
   state,
   translations,
+});
+
+const {
+  getAcquiredRelicGroups,
+  getCurrentBuildDirectionText,
+  getCurrentBuildFamilyStats,
+  getTraitBonus,
+  getTraitChangeHintsForUpgrade,
+  getTraitCount,
+  getTraitEffectText,
+  getTraitEntries,
+  getTraitFullCount,
+  getTraitNextThreshold,
+  getTraitProgress,
+  getTraitStage,
+} = createBuildStatsController({
+  state,
+  translate: t,
+  format: fmt,
+});
+
+const getCountdownCue = createBattleCountdownCueReader({
+  state,
+  durationMs: BATTLE_COUNTDOWN_MS,
+  startWindowMs: BATTLE_COUNTDOWN_START_WINDOW_MS,
+});
+
+const updateAssetLoading = createAssetLoadingController({
+  state,
+  getSummary: () => getAssetLoadingSummary(window.TST_ASSETS),
+  minMs: ASSET_LOADING_MIN_MS,
+  maxMs: ASSET_LOADING_MAX_MS,
+  isComplete: isAssetLoadingComplete,
+  onCompleted: () => playSfx("loadingComplete"),
 });
 
 const setGameMode = createGameModeSetter({
@@ -1067,6 +1108,14 @@ const {
   ctx,
   roundedRect,
   overlayReadability: OVERLAY_READABILITY,
+});
+
+const drawMenuButton = createMenuButtonRenderer({
+  ctx,
+  state,
+  canvasFont,
+  fitLabel,
+  roundedRect,
 });
 
 const {
@@ -1261,6 +1310,26 @@ const {
 });
 
 const {
+  spawnClearBurst,
+  spawnEnemyDeathParticles,
+  spawnGarbageParticles,
+  spawnLineParticles,
+} = createBattleParticleSpawner({
+  state,
+  boardX: BOARD_X,
+  boardY: BOARD_Y,
+  cols: COLS,
+  rows: ROWS,
+  hiddenRows: HIDDEN,
+  tileSize: TILE,
+  uiLayout: UI_LAYOUT,
+  enemyBaseline: CHARACTER_BASELINES.enemy,
+  enemyDeathParticleCount: ENEMY_DEATH_TRANSITION.particleCount,
+  getUltimateWellRange,
+  isUltimateWellColumn,
+});
+
+const {
   drawFallbackModeOverlay,
 } = createGameModeOverlayRenderer({
   ctx,
@@ -1450,7 +1519,7 @@ const battleSceneRenderer = createBattleSceneRenderer({
   fitLabel,
   roundedRect,
   drawCornerGlyph,
-  drawTopQuestBar,
+  drawTopQuestBar: battleHudRenderer.drawTopQuestBar,
   enemyName,
 });
 
@@ -1569,6 +1638,38 @@ const drawModeOverlay = createModeOverlayRouter({
   drawAssetLoadingScreen,
   drawStartOverlay,
   drawFallbackModeOverlay,
+});
+
+const {
+  draw,
+} = createGameplayFrameController({
+  ctx,
+  width: W,
+  height: H,
+  state,
+  drawBattleBackground,
+  drawGameplayFrame,
+  normalEnemyCyclesBeforeBoss: NORMAL_ENEMY_CYCLES_BEFORE_BOSS,
+  getNormalEnemyCount: () => getStandardEnemyPool().length,
+  drawImageCover: drawImageCoverRaw,
+  roundedRect,
+  battleSceneRenderer,
+  battleHudRenderer,
+  drawPlayer,
+  drawEnemy,
+  drawBoard,
+  drawSidePieces,
+  drawAttackEffects,
+  drawBursts,
+  drawParticles,
+  drawFloaters,
+  drawCombatPopups,
+  drawBossPhaseWarning,
+  drawBattleCountdown,
+  drawFirstWaveCombatHint,
+  drawTutorialPrompt,
+  drawPerfectClearFx,
+  drawOverlay,
 });
 
 function makeBoard() {
@@ -1723,12 +1824,6 @@ function checkDefeatState(source = "checkDefeatState", { spawnPiece = null, spaw
   return state.mode === "defeat" || state.mode === "ascensionResult";
 }
 
-function prefersReducedMotion() {
-  return typeof window !== "undefined"
-    && typeof window.matchMedia === "function"
-    && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
 function warnDefeatSource(source, messageKey) {
   console.warn("[T-Spin Traveler] Game Over", {
     source,
@@ -1738,34 +1833,6 @@ function warnDefeatSource(source, messageKey) {
     active: readActivePieceDebugInfo(state.active),
     hiddenRows: readHiddenRowsDebugInfo(state.board, HIDDEN, rowHasPlayableCells),
   });
-}
-
-function makeStats() {
-  return {
-    peakWave: 1,
-    maxCombo: 0,
-    b2bCount: 0,
-    perfectClears: 0,
-    spins: 0,
-    allSpins: 0,
-    damage: 0,
-    bestHit: 0,
-    damageSources: Object.fromEntries(DAMAGE_SOURCE_KEYS.map((key) => [key, 0])),
-    rating: "GOOD",
-  };
-}
-
-function makeRunStats() {
-  return {
-    waveReached: 1,
-    normalEnemyKills: 0,
-    bossKills: 0,
-    perfectClearCount: 0,
-    spinCount: 0,
-    maxCombo: 0,
-    riftEnergyEarned: 0,
-    riftEnergySettled: false,
-  };
 }
 
 function loadSave() {
@@ -2396,58 +2463,6 @@ function recordRunClearStats(lines, spinType) {
 
 function isBoardEmpty() {
   return isBoardEmptyCore(state.board, { ignoredCell: ULTIMATE_WALL });
-}
-
-function spawnLineParticles(lines) {
-  for (const line of lines) {
-    const py = BOARD_Y + (line - HIDDEN) * TILE + TILE / 2;
-    if (py < BOARD_Y) continue;
-    const well = getUltimateWellRange();
-    const colStart = state.ultimateActive ? well.start : 0;
-    const colEnd = state.ultimateActive ? well.end : COLS;
-    for (let x = colStart; x < colEnd; x += 1) {
-      state.particles.push({
-        x: BOARD_X + x * TILE + TILE / 2,
-        y: py,
-        vx: (Math.random() - 0.5) * 2.8,
-        vy: -1.1 - Math.random() * 2.2,
-        size: 1.6 + Math.random() * 2.4,
-        color: Math.random() > 0.45 ? "#c8d2ff" : "#78e0cc",
-        life: 320 + Math.random() * 180,
-      });
-    }
-  }
-}
-
-function spawnClearBurst(lines, combo) {
-  const intensity = Math.min(1.35, 0.42 + lines * 0.16 + combo * 0.035);
-  const well = getUltimateWellRange();
-  const centerX = state.ultimateActive
-    ? BOARD_X + (well.start + well.width / 2) * TILE
-    : BOARD_X + (COLS * TILE) / 2;
-  state.bursts.push({
-    x: centerX,
-    y: BOARD_Y + ROWS * TILE - 122,
-    radius: 22,
-    color: lines >= 4 ? "#fff0a6" : combo >= 3 ? "#7ef7ff" : "#b9c2ff",
-    life: 220 + lines * 42,
-    duration: 220 + lines * 42,
-    intensity,
-  });
-  const extra = Math.floor(4 * intensity);
-  for (let i = 0; i < extra; i += 1) {
-    const a = Math.random() * Math.PI * 2;
-    const speed = 1.6 + Math.random() * 3.2 * intensity;
-    state.particles.push({
-      x: centerX + (Math.random() - 0.5) * (state.ultimateActive ? 84 : 150),
-      y: BOARD_Y + ROWS * TILE - 112 + (Math.random() - 0.5) * 48,
-      vx: Math.cos(a) * speed,
-      vy: Math.sin(a) * speed - 1.4,
-      size: 1.8 + Math.random() * 3,
-      color: lines >= 4 ? "#fff0a6" : Math.random() > 0.5 ? "#7ef7ff" : "#c7a7ff",
-      life: 340 + Math.random() * 190,
-    });
-  }
 }
 
 function damageEnemyFromUpgrade(amount, floaterKey, color, x = 920, y = 430) {
@@ -4263,32 +4278,6 @@ function checkBossPhaseTransition(beforeHp, afterHp) {
   if (afterPhase > beforePhase && afterPhase > state.lastBossPhase) triggerBossPhaseSignal(afterPhase);
 }
 
-function spawnEnemyDeathParticles(enemy) {
-  const pose = CHARACTER_BASELINES.enemy;
-  const centerX = UI_LAYOUT.enemyStage.x + UI_LAYOUT.enemyStage.w / 2 + pose.centerOffsetX;
-  const centerY = pose.groundY - 150 * pose.scale;
-  const colors = ["#a972ff", "#68dcff", "#5f7cff", "#fff0a6", enemy.color || "#c7a7ff"];
-
-  for (let index = 0; index < ENEMY_DEATH_TRANSITION.particleCount; index += 1) {
-    const angle = (Math.PI * 2 * index) / ENEMY_DEATH_TRANSITION.particleCount
-      + (Math.random() - 0.5) * 0.34;
-    const speed = 1.8 + Math.random() * 3.8;
-    state.particles.push({
-      kind: "enemy-death",
-      x: centerX + (Math.random() - 0.5) * 70,
-      y: centerY + (Math.random() - 0.5) * 90,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - 1.2,
-      gravity: 0.018,
-      size: 2.4 + Math.random() * 4.8,
-      rotation: Math.random() * Math.PI,
-      spin: (Math.random() - 0.5) * 0.18,
-      color: colors[index % colors.length],
-      life: 760 + Math.random() * 300,
-    });
-  }
-}
-
 function startEnemyDeathTransition(enemy, revealNext) {
   if (!enemy) return;
   state.enemyDeathVfx = {
@@ -4751,23 +4740,6 @@ function randomGarbageHole(holeMin, holeMax, avoid = null) {
   return hole;
 }
 
-function spawnGarbageParticles(hole) {
-  const y = BOARD_Y + ROWS * TILE - TILE / 2;
-  for (let x = 0; x < COLS; x += 1) {
-    if (state.ultimateActive && !isUltimateWellColumn(x)) continue;
-    if (x === hole) continue;
-    state.particles.push({
-      x: BOARD_X + x * TILE + TILE / 2,
-      y,
-      vx: (Math.random() - 0.5) * 2.2,
-      vy: -2.4 - Math.random() * 2,
-      size: 2 + Math.random() * 3,
-      color: "#aeb7bc",
-      life: 480 + Math.random() * 180,
-    });
-  }
-}
-
 function update(time) {
   const elapsedMs = Math.max(0, time - (state.lastTime || time));
   const dt = Math.min(34, elapsedMs);
@@ -4839,25 +4811,6 @@ function update(time) {
   requestAnimationFrame(update);
 }
 
-function updateAssetLoading(now = performance.now()) {
-  if (state.assetLoadingDone) return;
-  const summary = getAssetLoadingSummary(window.TST_ASSETS);
-  const transition = getAssetLoadingTransition({
-    loadingDone: state.assetLoadingDone,
-    startedAt: state.assetLoadingStartedAt,
-    now,
-    summary,
-    minMs: ASSET_LOADING_MIN_MS,
-    maxMs: ASSET_LOADING_MAX_MS,
-    isComplete: isAssetLoadingComplete,
-  });
-  if (transition.completed) {
-    state.assetLoadingDone = true;
-    state.menuRevealStartedAt = now;
-    playSfx("loadingComplete");
-  }
-}
-
 function isBattleCountdownActive() {
   return state.mode === "playing" && state.countdownMs > 0;
 }
@@ -4879,12 +4832,6 @@ function updateBattleCountdown(dt) {
       state.ascensionRun = startAscensionChallengeRun(state.ascensionRun);
     }
   }
-}
-
-function getCountdownCue() {
-  if (state.countdownMs <= 0) return "";
-  if (state.countdownMs <= BATTLE_COUNTDOWN_START_WINDOW_MS) return "START";
-  return String(Math.max(1, Math.ceil((state.countdownMs - BATTLE_COUNTDOWN_START_WINDOW_MS) / ((BATTLE_COUNTDOWN_MS - BATTLE_COUNTDOWN_START_WINDOW_MS) / 3))));
 }
 
 function purgeLegacyVineBlocks() {
@@ -5645,59 +5592,6 @@ function previewSfx() {
   tone(660, 0.05, "triangle", 0.24, audio.sfxGain, t);
 }
 
-function draw() {
-  drawGameplayFrame({
-    ctx,
-    width: W,
-    height: H,
-    state,
-    drawBackground,
-    drawPanels,
-    drawPlayer,
-    drawTraitList,
-    drawEnemy,
-    drawBoard,
-    drawSidePieces,
-    drawAttackEffects,
-    drawBursts,
-    drawParticles,
-    drawFloaters,
-    drawCombatPopups,
-    drawBossPhaseWarning,
-    drawBattleCountdown,
-    drawFirstWaveCombatHint,
-    drawTutorialPrompt,
-    drawPerfectClearFx,
-    drawOverlay,
-    drawSettings,
-  });
-}
-
-function drawBackground() {
-  drawBattleBackground({
-    ctx,
-    width: W,
-    height: H,
-    wave: state.wave,
-    normalEnemyCount: getStandardEnemyPool().length,
-    normalEnemyCyclesBeforeBoss: NORMAL_ENEMY_CYCLES_BEFORE_BOSS,
-    drawImageCover: drawImageCoverRaw,
-    roundedRect,
-  });
-}
-
-function drawPanels() {
-  battleSceneRenderer.drawPanels();
-}
-
-function drawTopQuestBar() {
-  battleHudRenderer.drawTopQuestBar();
-}
-
-function drawTraitList() {
-  battleHudRenderer.drawTraitList();
-}
-
 function drawHeroIdleBase(context = "battle") {
   if (context === "menu") {
     if (drawMenuHeroIdleSprite(performance.now())) return;
@@ -6373,94 +6267,11 @@ function purchaseMetaUpgrade(id) {
 function drawUpgradeOverlay() {
   upgradeScreenRenderer.drawUpgradeOverlay();
 }
-function getAcquiredRelicGroups() {
-  if (!Array.isArray(state.acquiredRelics)) state.acquiredRelics = [];
-  return getAcquiredRelicGroupsForStats(state.acquiredRelics);
-}
-
-function getCurrentBuildFamilyStats(groups = getAcquiredRelicGroups()) {
-  return getCurrentBuildFamilyStatsForGroups(groups, { translate: t });
-}
-
-function getTraitEntries(groups = getAcquiredRelicGroups()) {
-  return getTraitEntriesForGroups(groups, { translate: t });
-}
-
-function getTraitCount(tag, groups = getAcquiredRelicGroups()) {
-  return getTraitCountForGroups(tag, groups);
-}
-
-function getTraitStage(tag, count = getTraitCount(tag)) {
-  return getTraitStageFromDefs(tag, count);
-}
-
-function getTraitNextThreshold(tag, count = getTraitCount(tag)) {
-  return getTraitNextThresholdForGroups(tag, count);
-}
-
-function getTraitFullCount(tag) {
-  return getTraitFullCountFromDefs(tag);
-}
-
-function getTraitProgress(tag, count = getTraitCount(tag)) {
-  return getTraitProgressForGroups(tag, count);
-}
-
-function getTraitBonus(tag, values) {
-  return getTraitBonusForGroups(tag, values, getAcquiredRelicGroups());
-}
-
-function getTraitEffectText(entry) {
-  return getTraitEffectTextForEntry(entry, t);
-}
-
-function getTraitChangeHintsForUpgrade(upgrade) {
-  return getTraitChangeHintsForUpgradeForGroups(upgrade, getAcquiredRelicGroups(), { translate: t });
-}
-
-function getCurrentBuildDirectionText(stats) {
-  if (!stats.length) return t("currentBuildNoDirection");
-  const families = stats.slice(0, 2).map((stat) => stat.label).join(" / ");
-  return fmt("currentBuildDirection", { families });
-}
-
-function drawMenuButton(x, y, w, h, text, hint, variant = "secondary", options = {}) {
-  drawMenuButtonPanel(ctx, {
-    x, y, w, h, text, hint, variant,
-    pointer: state.pointer,
-    now: performance.now(),
-    motion: options.motion,
-  }, {
-    canvasFont,
-    fitLabel,
-    roundedRect,
-  });
-}
-
 function setLanguage(language) {
   state.language = language === "en" ? "en" : "zh";
   syncControlHints();
   saveGame();
 }
-function drawSettings() {
-  if (state.mode === "playing") {
-    drawRunRiftEnergyHud();
-    drawPauseButton();
-  }
-}
-
-function drawRunRiftEnergyHud() {
-  battleHudRenderer.drawRunRiftEnergyHud();
-}
-
-function controlDisplayValue(action) {
-  return getControlDisplayValue(action, { getControlKeys, formatControlKey });
-}
-
-function drawPauseButton() {
-  battleHudRenderer.drawPauseButton();
-}
-
 const {
   handleAscensionResultPointerDown,
   handleMetaUpgradePointerDown,

@@ -14,3 +14,32 @@ export function getAssetLoadingTransition({
     summary,
   };
 }
+
+export function createAssetLoadingController({
+  state,
+  getSummary,
+  minMs,
+  maxMs,
+  isComplete,
+  onCompleted,
+  now = () => performance.now(),
+} = {}) {
+  return function updateAssetLoading(currentTime = now()) {
+    if (state.assetLoadingDone) return false;
+    const summary = getSummary();
+    const transition = getAssetLoadingTransition({
+      loadingDone: state.assetLoadingDone,
+      startedAt: state.assetLoadingStartedAt,
+      now: currentTime,
+      summary,
+      minMs,
+      maxMs,
+      isComplete,
+    });
+    if (!transition.completed) return false;
+    state.assetLoadingDone = true;
+    state.menuRevealStartedAt = currentTime;
+    onCompleted?.(transition);
+    return true;
+  };
+}
