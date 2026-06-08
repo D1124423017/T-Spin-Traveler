@@ -25,12 +25,12 @@ export function createResultOverlayRenderer({
   drawCard,
   drawMenuButton,
   drawImageContain,
-  formatDamageSources,
 }) {
   function drawResultOverlay({
     victory,
     message,
     buttons,
+    damageSources,
   }) {
     const accent = victory ? "#fff0a6" : "#ff8f98";
     ctx.save();
@@ -41,7 +41,7 @@ export function createResultOverlayRenderer({
     ctx.fillStyle = accent;
     roundedRect(384, 156, 210, 4, 8, true, false);
     wrapText(message, 384, 186, 504, 28, "rgba(238,244,252,0.76)", 19);
-    drawRunSummary();
+    drawRunSummary(damageSources);
     drawMenuButton(
       buttons.retry.x,
       buttons.retry.y,
@@ -70,7 +70,7 @@ export function createResultOverlayRenderer({
     ctx.restore();
   }
 
-  function drawRunSummary() {
+  function drawRunSummary(damageSources) {
     const rows = [
       [t("waveLabel"), state.stats.peakWave, `${t("bestLabel")} ${state.save.bestWave || 0}`],
       [t("runMaxCombo"), state.stats.maxCombo, `${t("bestLabel")} ${state.save.bestCombo || 0}`],
@@ -95,7 +95,7 @@ export function createResultOverlayRenderer({
     }
     drawResultRiftEnergyPanel(384, 390, 510, 60);
     label(t("summaryDamageSources"), 384, 472, 14, "#8fe8dc");
-    wrapText(formatDamageSources(), 520, 472, 360, 18, "rgba(238,244,252,0.66)", 12);
+    wrapText(damageSources || "-", 520, 472, 360, 18, "rgba(238,244,252,0.66)", 12);
     label(getNextRunGoalText(), 384, 498, 13, "#fff0a6");
     ctx.restore();
   }

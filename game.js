@@ -136,6 +136,8 @@ import {
   getAssetLoadingSummary,
   isAssetLoadingComplete,
 } from "./src/core/assetReadiness.js";
+import { getAssetLoadingTransition } from "./src/core/assetLoadingController.js";
+import { createGameModeSetter } from "./src/core/gameModeHelpers.js";
 import {
   clamp,
   drawRoundedRect,
@@ -158,16 +160,15 @@ import {
   getBaselineAnchorY,
 } from "./src/render/characterStageHelpers.js";
 import { createCombatCinematicRenderer } from "./src/render/combatCinematicRenderer.js";
+import { createEnemyStageRenderer } from "./src/render/enemyStageRenderer.js";
 import { createEffectStateUpdater } from "./src/render/effectStateUpdater.js";
 import { createFallbackCharacterRenderer } from "./src/render/fallbackCharacterRenderer.js";
 import { drawGameplayFrame } from "./src/render/gameplayRenderer.js";
 import { createHeroCombatFallbackRenderer } from "./src/render/heroCombatFallbackRenderer.js";
 import { createImageRenderer } from "./src/render/imageRenderer.js";
 import { createKeyedSpriteRenderer } from "./src/render/keyedSpriteRenderer.js";
-import {
-  getAnimationDuration,
-  getAnimationFrameInfo,
-} from "./src/render/animationTiming.js";
+import { getAnimationDuration } from "./src/render/animationTiming.js";
+import { createPlayerStageRenderer } from "./src/render/playerStageRenderer.js";
 import {
   PLAYER_ATTACK_HERO_ANIMATIONS,
   resolvePlayerAttackVfx,
@@ -218,7 +219,6 @@ import {
 import { buildDamageEquation } from "./src/ui/combatReadout.js";
 import {
   formatControlKey,
-  formatDamageSources as formatDamageSourcesForUi,
 } from "./src/ui/formatters.js";
 import {
   createLoadingOverlayModel,
@@ -266,8 +266,10 @@ import { createGameModeOverlayRenderer } from "./src/ui/gameModeOverlays.js";
 import { createMoveGuideOverlayRenderer } from "./src/ui/moveGuideOverlay.js";
 import { createPauseOverlayRenderer } from "./src/ui/pauseOverlay.js";
 import { createResultOverlayRenderer } from "./src/ui/resultOverlayRenderer.js";
+import { createResultOverlayModel } from "./src/ui/resultOverlayModel.js";
 import { createScreenPrimitives } from "./src/ui/screenPrimitives.js";
 import { createUiTextHelpers } from "./src/ui/uiTextHelpers.js";
+import { createCombatReadoutModel } from "./src/ui/combatReadoutModel.js";
 import {
   DEBUG_HUD_BUILD,
   createDebugHudState,
@@ -276,6 +278,10 @@ import {
   updateDebugArtTuningDom,
   updateDebugDomHud,
 } from "./src/debug/debugHud.js";
+import {
+  readActivePieceDebugInfo,
+  readHiddenRowsDebugInfo,
+} from "./src/debug/debugStateReaders.js";
 import { createRuntimeSmokeReaderFactory } from "./src/debug/runtimeSmoke.js";
 import { createGameState } from "./src/core/gameStateFactory.js";
 import {
@@ -1044,6 +1050,24 @@ const {
   translations,
 });
 
+const setGameMode = createGameModeSetter({
+  state,
+  setDomOverlayMode,
+  setFeedbackMode,
+});
+
+const {
+  buildCombatPopup,
+  buildOperationReadout,
+  getOperationTitle,
+} = createCombatReadoutModel({
+  translate: t,
+  format: fmt,
+  buildDamageEquation,
+  boardX: BOARD_X,
+  boardY: BOARD_Y,
+});
+
 const {
   drawCard,
   drawCornerGlyph,
@@ -1357,7 +1381,6 @@ const resultOverlayRenderer = createResultOverlayRenderer({
   drawCard,
   drawMenuButton,
   drawImageContain,
-  formatDamageSources,
 });
 
 const settingsScreenRenderer = createSettingsScreenRenderer(() => ({
@@ -1396,7 +1419,11 @@ const getDebugHudReaders = createRuntimeSmokeReaderFactory({
   isPieceAboveTopBuffer,
   collides,
   isActivePieceOverlappingBoard,
-  getHiddenRowsDebugInfo,
+  getHiddenRowsDebugInfo: () => readHiddenRowsDebugInfo(
+    state.board,
+    HIDDEN,
+    rowHasPlayableCells,
+  ),
   isSpawnBlockedForDefeat,
   getAssetLoadingSummary,
 });
@@ -1447,6 +1474,69 @@ const enemyPanelRenderer = createEnemyPanelRenderer({
   getEnemyAttackGarbagePreview,
   getBossPhase,
   enemyWeaknessToken,
+});
+
+const {
+  drawPlayer,
+} = createPlayerStageRenderer({
+  ctx,
+  state,
+  uiLayout: UI_LAYOUT,
+  characterBaselines: CHARACTER_BASELINES,
+  heroAnimations: HERO_ANIMATIONS,
+  heroLevelUpEffect: HERO_LEVEL_UP_EFFECT,
+  playerHitAnimation: PLAYER_HIT_ANIMATION,
+  heroHitDurationMs: HERO_HIT_DURATION_MS,
+  debugHudEnabled: DEBUG_HUD_ENABLED,
+  getDebugArtTuning,
+  getBaselineAnchorY,
+  alignDrawBoxToBaseline,
+  drawHpBar,
+  drawGuardMeter: battleHudRenderer.drawGuardMeter,
+  drawStageGlow,
+  drawPresentationSigil,
+  drawCharacterShadow,
+  drawNoaAttackPose,
+  drawHeroIdleBase,
+  drawHeroIdleEnergy,
+  drawFallbackHeroAttackAnimation,
+  drawPlayerRelicProgress: battleHudRenderer.drawPlayerRelicProgress,
+  drawSpriteAnimationFrame,
+  isImageReady,
+  t,
+});
+
+const {
+  drawEnemy,
+} = createEnemyStageRenderer({
+  ctx,
+  state,
+  uiLayout: UI_LAYOUT,
+  characterBaselines: CHARACTER_BASELINES,
+  enemyBattlePortraits,
+  rosterArt,
+  slimeArt,
+  enemyDeathAnimation: ENEMY_DEATH_ANIMATION,
+  enemyAttackAnimations: ENEMY_ATTACK_ANIMATIONS,
+  getEnemyDeathTransitionState,
+  debugHudEnabled: DEBUG_HUD_ENABLED,
+  getDebugArtTuning,
+  getBaselineAnchorY,
+  alignDrawBoxToBaseline,
+  drawHpBar,
+  drawStageGlow,
+  drawPresentationSigil,
+  drawCharacterShadow,
+  scaleAroundBaseline,
+  drawEnemyOverlay,
+  drawEnemySilhouette,
+  drawSlimeFallback,
+  drawRosterSprite,
+  drawImageContain,
+  drawSpriteAnimationFrame,
+  isImageReady,
+  enemyPanelRenderer,
+  t,
 });
 
 const upgradeScreenRenderer = createUpgradeScreenRenderer({
@@ -1564,12 +1654,12 @@ function warnPlayingStallOnce(reason, source, extra = {}) {
     mode: state.mode,
     runFinalized: state.runFinalized,
     playerHp: state.playerHp,
-    active: getActivePieceDebugInfo(),
+    active: readActivePieceDebugInfo(state.active),
     lockTimer: state.lockTimer,
     countdownMs: state.countdownMs,
     hitStopMs: state.hitStopMs,
     pendingHits: state.pendingHits.length,
-    hiddenRows: getHiddenRowsDebugInfo(),
+    hiddenRows: readHiddenRowsDebugInfo(state.board, HIDDEN, rowHasPlayableCells),
     ...extra,
   });
 }
@@ -1630,29 +1720,6 @@ function checkDefeatState(source = "checkDefeatState", { spawnPiece = null, spaw
   return state.mode === "defeat" || state.mode === "ascensionResult";
 }
 
-function getActivePieceDebugInfo() {
-  if (!state.active) return null;
-  return {
-    type: state.active.type,
-    x: state.active.x,
-    y: state.active.y,
-  };
-}
-
-function getHiddenRowsDebugInfo() {
-  const hiddenRows = state.board.slice(0, HIDDEN);
-  return {
-    occupied: hiddenRows.some(rowHasPlayableCells),
-    rows: hiddenRows.map(rowHasPlayableCells),
-  };
-}
-
-function setGameMode(mode) {
-  state.mode = mode;
-  setDomOverlayMode(mode);
-  setFeedbackMode(mode);
-}
-
 function prefersReducedMotion() {
   return typeof window !== "undefined"
     && typeof window.matchMedia === "function"
@@ -1665,8 +1732,8 @@ function warnDefeatSource(source, messageKey) {
     messageKey,
     mode: state.mode,
     playerHp: state.playerHp,
-    active: getActivePieceDebugInfo(),
-    hiddenRows: getHiddenRowsDebugInfo(),
+    active: readActivePieceDebugInfo(state.active),
+    hiddenRows: readHiddenRowsDebugInfo(state.board, HIDDEN, rowHasPlayableCells),
   });
 }
 
@@ -3943,197 +4010,16 @@ function getWeaknessBonus(lines, spinType) {
 }
 
 function pushOperationReadout(lines, pieceType, spinType, meta = {}) {
-  if (lines <= 0) return;
-  const title = getOperationTitle(lines, pieceType, spinType, meta.perfect);
-  const color =
-    meta.perfect ? "#fff0a6" :
-    spinType ? "#d7c2ff" :
-    lines >= 4 ? "#9df7da" :
-    lines >= 2 ? "#f5f1e6" :
-    "#b9c2ff";
-  state.operationReadouts.unshift({
-    title,
-    combo: meta.combo || 0,
-    b2b: Boolean(meta.b2b),
-    effectiveLines: meta.effectiveLines || lines,
-    damage: meta.damage || 0,
-    equation: meta.breakdown ? buildDamageEquation(meta.breakdown, { translate: t, compact: true }) : "",
-    color,
-    life: 1650,
-    duration: 1650,
-  });
+  const readout = buildOperationReadout(lines, pieceType, spinType, meta);
+  if (!readout) return;
+  state.operationReadouts.unshift(readout);
   state.operationReadouts = state.operationReadouts.slice(0, 4);
-  pushCombatPopup(lines, pieceType, spinType, {
-    ...meta,
-    title,
-    color,
-  });
-}
-
-function pushCombatPopup(lines, pieceType, spinType, meta = {}) {
-  const combo = meta.combo || 0;
-  const hasCombo = combo >= 2;
-  const b2b = Boolean(meta.b2b);
-  const perfect = Boolean(meta.perfect);
-  const type =
-    perfect ? "perfect" :
-    spinType === "full" ? "tspin" :
-    spinType ? "spin" :
-    b2b ? "b2b" :
-    hasCombo ? "combo" :
-    lines >= 4 ? "tetris" :
-    "lineClear";
-  const popupBase = {
-    ...getCombatPopupAnchor(type),
-    life: 980,
-    maxLife: 980,
-    seed: Math.random() * 1000,
-  };
-  const damageText = meta.damage ? `${meta.damage} ${t("dmgShort")}` : "";
-  const title = getHitBreakdownTitle(lines, pieceType, spinType, { combo, b2b, perfect });
-
-  if (perfect) {
-    addCombatPopup({
-      ...popupBase,
-      text: title,
-      subText: damageText,
-      ...getCombatPopupAnchor("perfect"),
-      color: "#fff0a6",
-      accent: "#8ff7ff",
-      scale: 1.18,
-      type: "perfect",
-      life: 1240,
-      maxLife: 1240,
-    });
-    return;
-  }
-
-  addCombatPopup({
-    ...popupBase,
-    text: title,
-    subText: damageText,
-    color: getHitPopupColor(type, lines, combo),
-    accent: getHitPopupAccent(type),
-    scale: getHitPopupScale(type, combo),
-    type,
-    life: getHitPopupLife(type),
-    maxLife: getHitPopupLife(type),
-  });
+  addCombatPopup(buildCombatPopup(lines, pieceType, spinType, meta));
 }
 
 function addCombatPopup(popup) {
   state.combatPopups.unshift(popup);
   state.combatPopups = state.combatPopups.slice(0, 5);
-}
-
-function getHitBreakdownTitle(lines, pieceType, spinType, meta = {}) {
-  if (meta.perfect) return t("hitPerfect");
-  const parts = [];
-  if (spinType) {
-    if (spinType === "full") parts.push(t("hitTSpin"));
-    else if (spinType === "mini") parts.push(t("hitTSpinMini"));
-    else parts.push(`${pieceType}-SPIN`);
-  } else {
-    parts.push(getLineHitLabel(lines));
-  }
-  if (meta.combo >= 2) parts.push(t("hitCombo"));
-  if (meta.b2b) parts.push(t("hitB2B"));
-  return parts.filter(Boolean).slice(0, 3).join(" + ");
-}
-
-function getLineHitLabel(lines) {
-  return {
-    1: t("hitSingle"),
-    2: t("hitDouble"),
-    3: t("hitTriple"),
-    4: t("hitTetris"),
-  }[lines] || `${lines} ${t("linesShort")}`;
-}
-
-function getHitPopupColor(type, lines, combo) {
-  return {
-    perfect: "#fff0a6",
-    tspin: "#ffb7ff",
-    spin: "#d7c2ff",
-    b2b: "#fff0a6",
-    combo: combo >= 4 ? "#7ef7ff" : "#d7c2ff",
-    tetris: "#9df7da",
-    lineClear: lines >= 2 ? "#f5f1e6" : "#b9c2ff",
-  }[type] || "#f5f1e6";
-}
-
-function getHitPopupAccent(type) {
-  return {
-    perfect: "#8ff7ff",
-    tspin: "#8ff7ff",
-    spin: "#8ff7ff",
-    b2b: "#d7c2ff",
-    combo: "#ffb7ff",
-    tetris: "#fff0a6",
-    lineClear: "#8ff7ff",
-  }[type] || "#8ff7ff";
-}
-
-function getCombatPopupAnchor(type) {
-  const x = BOARD_X - 104;
-  const baseY = BOARD_Y + 404;
-  return {
-    x,
-    y: baseY + ({
-      perfect: -120,
-      tspin: -56,
-      spin: -48,
-      b2b: -34,
-      combo: -18,
-      tetris: -8,
-      lineClear: 0,
-    }[type] || 0),
-  };
-}
-
-function getHitPopupScale(type, combo = 0) {
-  if (type === "perfect") return 1.18;
-  if (type === "tspin") return 1.06;
-  if (type === "spin") return 1;
-  if (type === "b2b") return 1;
-  if (type === "combo") return 0.98 + Math.min(0.2, combo * 0.026);
-  if (type === "tetris") return 1.02;
-  return 0.92;
-}
-
-function getHitPopupLife(type) {
-  return {
-    perfect: 1240,
-    tspin: 1120,
-    spin: 1020,
-    b2b: 1040,
-    combo: 980,
-    tetris: 920,
-    lineClear: 820,
-  }[type] || 900;
-}
-
-function getLineClearPopupText(lines) {
-  return {
-    1: t("hitSingle"),
-    2: t("hitDouble"),
-    3: t("hitTriple"),
-    4: t("hitTetris"),
-  }[lines] || fmt("line.generic", { lines });
-}
-
-function getOperationTitle(lines, pieceType, spinType, perfect) {
-  if (perfect) return t("perfectClearTitle");
-  const lineName = {
-    1: t("line.single"),
-    2: t("line.double"),
-    3: t("line.triple"),
-    4: t("line.tetris"),
-  }[lines] || fmt("line.generic", { lines });
-  if (spinType === "full") return `T-SPIN ${lineName}`;
-  if (spinType === "mini") return `T-SPIN MINI ${lineName}`;
-  if (spinType === "all-mini") return `${pieceType}-SPIN ${lineName}`;
-  return lineName;
 }
 
 function cancelIncomingGarbage(lines) {
@@ -4977,11 +4863,16 @@ function update(time) {
 function updateAssetLoading(now = performance.now()) {
   if (state.assetLoadingDone) return;
   const summary = getAssetLoadingSummary(window.TST_ASSETS);
-  const elapsed = now - state.assetLoadingStartedAt;
-  if (isAssetLoadingComplete(summary, elapsed, {
+  const transition = getAssetLoadingTransition({
+    loadingDone: state.assetLoadingDone,
+    startedAt: state.assetLoadingStartedAt,
+    now,
+    summary,
     minMs: ASSET_LOADING_MIN_MS,
     maxMs: ASSET_LOADING_MAX_MS,
-  })) {
+    isComplete: isAssetLoadingComplete,
+  });
+  if (transition.completed) {
     state.assetLoadingDone = true;
     state.menuRevealStartedAt = now;
     playSfx("loadingComplete");
@@ -5868,42 +5759,6 @@ function drawTraitList() {
   battleHudRenderer.drawTraitList();
 }
 
-function drawPlayer() {
-  const hit = state.playerHit > 0;
-  const playerAttack = state.attacks.find((attack) => attack.type === "player");
-  const panel = UI_LAYOUT.playerPanel;
-  const stage = UI_LAYOUT.playerStage;
-  const pad = UI_LAYOUT.panelPadding;
-  const left = panel.x + pad;
-  const innerW = panel.w - pad * 2;
-  drawHpBar(left, panel.y + 84, innerW, 20, state.playerHp, state.playerMaxHp, hit ? "#ff7782" : "#76d4ff", t("hp"));
-  drawGuardMeter(left, panel.y + 122, innerW);
-  ctx.save();
-  const pose = CHARACTER_BASELINES.player;
-  const artTuning = getDebugArtTuning({ enabled: DEBUG_HUD_ENABLED });
-  const playerScale = pose.scale * artTuning.playerScale;
-  const centerX = stage.x + stage.w / 2 + pose.centerOffsetX;
-  const anchorY = getBaselineAnchorY(pose.groundY, pose.localY, playerScale);
-  drawStageGlow(centerX, pose.groundY, pose.glowRadius, "#6de8ff");
-  drawPresentationSigil(centerX, pose.groundY + pose.sigilYOffset, pose.sigilRadius, "#6de8ff");
-  ctx.translate(centerX, anchorY);
-  ctx.scale(playerScale, playerScale);
-  drawCharacterShadow(0, pose.localY, pose.shadowW, "#6de8ff");
-
-  ctx.save();
-  const bob = hit ? 0 : Math.sin(performance.now() * 0.0025) * 1.2;
-  ctx.translate(0, bob);
-  drawHeroSprite(hit);
-  if (playerAttack) drawNoaAttackPose(playerAttack);
-  ctx.restore();
-  ctx.restore();
-  drawPlayerRelicProgress();
-}
-
-function drawPlayerRelicProgress() {
-  battleHudRenderer.drawPlayerRelicProgress();
-}
-
 function drawBuildChip(x, y, w) {
   const items = getBuildSummary();
   ctx.save();
@@ -5914,52 +5769,6 @@ function drawBuildChip(x, y, w) {
   label(t("buildCompact"), x + 12, y + 17, 11, "#c7a7ff");
   fitLabel(items[0], x + 76, y + 17, w - 90, 12, "rgba(238,244,252,0.68)", 9, "800");
   ctx.restore();
-}
-
-function drawGuardMeter(x, y, w = 190) {
-  battleHudRenderer.drawGuardMeter(x, y, w);
-}
-
-function drawHeroSprite(hit) {
-  ctx.save();
-  ctx.shadowColor = "rgba(98, 221, 255, 0.45)";
-  ctx.shadowBlur = 24;
-
-  if (drawPlayerHitAnimationFrame()) {
-    ctx.restore();
-    return;
-  }
-
-  if (hit) {
-    ctx.globalCompositeOperation = "lighter";
-    ctx.globalAlpha = 0.82;
-  }
-
-  if (drawHeroAnimationFrame()) {
-    ctx.restore();
-    return;
-  }
-
-  drawHeroIdleBase();
-  drawHeroIdleEnergy();
-  drawHeroLevelUpEffect();
-  ctx.restore();
-}
-
-function drawPlayerHitAnimationFrame() {
-  if (state.playerHit <= 0 || !isImageReady(PLAYER_HIT_ANIMATION.image)) return false;
-  const elapsed = clamp(HERO_HIT_DURATION_MS - state.playerHit, 0, HERO_HIT_DURATION_MS);
-  const artTuning = getDebugArtTuning({ enabled: DEBUG_HUD_ENABLED });
-  const draw = alignDrawBoxToBaseline(
-    PLAYER_HIT_ANIMATION.draw,
-    CHARACTER_BASELINES.player.localY,
-    {
-      scale: CHARACTER_BASELINES.player.animationScale * artTuning.heroAttackScale,
-      bottomOffset: PLAYER_HIT_ANIMATION.bottomOffset,
-    },
-  );
-  drawSpriteAnimationFrame(PLAYER_HIT_ANIMATION, elapsed, draw.x, draw.y, draw.w, draw.h);
-  return true;
 }
 
 function drawHeroIdleBase(context = "battle") {
@@ -5982,46 +5791,6 @@ function drawHeroIdleBase(context = "battle") {
   } else {
     drawNoaFallback(false);
   }
-}
-
-function drawHeroAnimationFrame() {
-  if (!state.heroAnimation) return false;
-  const config = HERO_ANIMATIONS[state.heroAnimation.kind];
-  if (!config) return false;
-
-  const elapsed = performance.now() - state.heroAnimation.startedAt;
-  if (elapsed >= state.heroAnimation.duration) {
-    state.heroAnimation = null;
-    return false;
-  }
-  const frameIndex = getAnimationFrameInfo(config, elapsed).frameIndex;
-  if (isImageReady(config.image)) {
-    const artTuning = getDebugArtTuning({ enabled: DEBUG_HUD_ENABLED });
-    const draw = alignDrawBoxToBaseline(config.draw || { x: -132, y: -222, w: 264, h: 410 }, CHARACTER_BASELINES.player.localY, {
-      scale: CHARACTER_BASELINES.player.animationScale * artTuning.heroAttackScale,
-      bottomOffset: config.bottomOffset ?? CHARACTER_BASELINES.player.animationBottomOffset,
-    });
-    drawSpriteAnimationFrame(config, elapsed, draw.x, draw.y, draw.w, draw.h);
-  } else {
-    drawFallbackHeroAttackAnimation(state.heroAnimation.kind, elapsed / state.heroAnimation.duration, frameIndex);
-  }
-  return true;
-}
-
-function drawHeroLevelUpEffect() {
-  if (!state.heroLevelUpFx) return false;
-  const elapsed = performance.now() - state.heroLevelUpFx.startedAt;
-  if (elapsed >= state.heroLevelUpFx.duration) {
-    state.heroLevelUpFx = null;
-    return false;
-  }
-  if (!isImageReady(HERO_LEVEL_UP_EFFECT.image)) return true;
-  const draw = HERO_LEVEL_UP_EFFECT.draw;
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  drawSpriteAnimationFrame(HERO_LEVEL_UP_EFFECT, elapsed, draw.x, draw.y, draw.w, draw.h);
-  ctx.restore();
-  return true;
 }
 
 function drawBuildPanel(x = 54, y = 510, w = 198) {
@@ -6070,223 +5839,6 @@ function getBuildSummary() {
   if (state.upgrades.comboGuardGain > 0) items.push(`Combo ${t("guardLabel")} +${state.upgrades.comboGuardGain}`);
   if (state.upgrades.b2bShield > 0) items.push(`B2B ${t("guardLabel")} ${state.upgrades.b2bShield}`);
   return items.length ? items.slice(0, 3) : [t("noUpgrades")];
-}
-
-function drawEnemy() {
-  const hit = state.enemyHit > 0;
-  const hitIntensity = state.enemyHitIntensity || (hit ? 0.8 : 0);
-  const enemy = state.enemyType;
-  const panel = UI_LAYOUT.enemyPanel;
-  const stage = UI_LAYOUT.enemyStage;
-  const pad = UI_LAYOUT.panelPadding;
-  const left = panel.x + pad;
-  const innerW = panel.w - pad * 2;
-  drawHpBar(left, panel.y + 84, innerW, 20, Math.round(state.enemyHpDisplay), state.enemyMaxHp, hit ? "#fff2ad" : "#75e298", t("hp"), {
-    textValue: state.enemyHp,
-    trailValue: state.enemyHpTrail,
-    trailColor: "rgba(255, 119, 130, 0.38)",
-  });
-  if (enemy.id === "king") drawBossPhaseBar(left, panel.y + 112);
-  const intentY = panel.y + (enemy.id === "king" ? 130 : 118);
-  drawEnemyIntent(left, intentY, getEnemyIntent(enemy), innerW);
-  drawEnemyBehaviorChips(left, intentY + 96, enemy, innerW);
-  ctx.save();
-  const pose = CHARACTER_BASELINES.enemy;
-  const artTuning = getDebugArtTuning({ enabled: DEBUG_HUD_ENABLED });
-  const enemyScale = pose.scale * artTuning.enemyScale;
-  const centerX = stage.x + stage.w / 2 + pose.centerOffsetX;
-  const anchorY = getBaselineAnchorY(pose.groundY, pose.localY, enemyScale);
-  drawStageGlow(centerX, pose.groundY, pose.glowRadius, enemy.color);
-  drawPresentationSigil(centerX, pose.groundY + pose.sigilYOffset, pose.sigilRadius, enemy.color);
-  ctx.translate(centerX, anchorY);
-  ctx.scale(enemyScale, enemyScale);
-  drawCharacterShadow(0, pose.localY, pose.shadowW, enemy.color);
-
-  ctx.save();
-  if (hit) {
-    const tremor = Math.sin(performance.now() * 0.085) * 4.2 * hitIntensity;
-    const recoil = Math.cos(performance.now() * 0.052) * 2.4 * hitIntensity;
-    ctx.translate(tremor, recoil);
-  }
-  const pulse = 1 + Math.sin(performance.now() * 0.006) * 0.018;
-  scaleAroundBaseline(pulse, pulse, pose.localY);
-  if (hit) scaleAroundBaseline(1.08, 0.92, pose.localY);
-  if (drawEnemyDeathTransitionFrame(enemy)) {
-    // Keep the defeated enemy visible while the next enemy fades in.
-  } else if (drawEnemyAttackAnimationFrame(enemy, hit)) {
-    // Enemy attack animations use the standardized 16-frame sheets.
-  } else if (drawEnemyConceptArt(enemy, hit)) {
-    // Project-local concept sheets are the primary idle enemy source.
-  } else if (isImageReady(rosterArt)) {
-    ctx.save();
-    ctx.shadowColor = hexToRgba(enemy.color, 0.55);
-    ctx.shadowBlur = hit ? 34 : 22;
-    if (hit) {
-      ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = 0.88;
-    }
-    const tall = ["vine", "king", "mist", "wisp", "sentinel"].includes(enemy.id);
-    const draw = alignDrawBoxToBaseline(
-      { x: tall ? -132 : -126, y: tall ? -158 : -132, w: tall ? 264 : 252, h: tall ? 260 : 222 },
-      CHARACTER_BASELINES.enemy.localY,
-    );
-    drawRosterSprite(enemy.id, draw.x, draw.y, draw.w, draw.h);
-    ctx.restore();
-  } else if (enemy.id !== "slime") {
-    drawEnemySilhouette(enemy, hit);
-  } else if (isImageReady(slimeArt)) {
-    ctx.save();
-    ctx.shadowColor = hexToRgba(enemy.color, 0.55);
-    ctx.shadowBlur = hit ? 34 : 22;
-    ctx.filter = enemy.filter;
-    if (hit) {
-      ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = 0.88;
-    }
-    const draw = alignDrawBoxToBaseline({ x: -122, y: -126, w: 244, h: 206 }, CHARACTER_BASELINES.enemy.localY);
-    drawImageContain(slimeArt, draw.x, draw.y, draw.w, draw.h);
-    ctx.restore();
-    drawEnemyOverlay(enemy);
-  } else {
-    drawSlimeFallback(hit);
-  }
-  if (hit) drawEnemyHitFlash(enemy, hitIntensity);
-  ctx.restore();
-  ctx.restore();
-}
-
-function drawEnemyBehaviorChips(x, y, enemy, w = 294) {
-  enemyPanelRenderer.drawEnemyBehaviorChips(x, y, enemy, w);
-}
-
-function drawEnemyHitFlash(enemy, intensity = 1) {
-  const alpha = clamp(state.enemyHit / 300, 0, 1);
-  const strength = Math.min(1, alpha * (0.32 + intensity * 0.18));
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  ctx.shadowColor = "#ffffff";
-  ctx.shadowBlur = 22 + intensity * 16;
-  ctx.fillStyle = `rgba(255, 255, 255, ${0.18 * strength})`;
-  ctx.beginPath();
-  ctx.ellipse(0, -8, 118 + intensity * 16, 138 + intensity * 18, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = hexToRgba(enemy.color || "#d7c2ff", 0.42 * strength);
-  ctx.lineWidth = 3 + intensity;
-  ctx.beginPath();
-  ctx.ellipse(0, 14, 136 + intensity * 24, 54 + intensity * 12, -0.18, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawBossPhaseBar(x, y) {
-  enemyPanelRenderer.drawBossPhaseBar(x, y);
-}
-
-function drawEnemyConceptArt(enemy, hit) {
-  const battlePortrait = enemyBattlePortraits[enemy.battleArt || enemy.id];
-  if (!isImageReady(battlePortrait)) return false;
-  const draw = alignDrawBoxToBaseline(enemy.artDraw || { x: -130, y: -150, w: 260, h: 240 }, CHARACTER_BASELINES.enemy.localY);
-  ctx.save();
-  ctx.shadowColor = hexToRgba(enemy.color, hit ? 0.82 : 0.56);
-  ctx.shadowBlur = hit ? 36 : 22;
-  ctx.filter = enemy.filter;
-  if (hit) {
-    ctx.globalCompositeOperation = "lighter";
-    ctx.globalAlpha = 0.88;
-  }
-  drawImageContain(battlePortrait, draw.x, draw.y, draw.w, draw.h);
-  ctx.restore();
-  return true;
-}
-
-function drawEnemyDeathTransitionFrame(enemy) {
-  const transition = state.enemyDeathVfx;
-  if (!transition) return false;
-  const elapsed = performance.now() - transition.startedAt;
-  if (elapsed >= transition.duration) {
-    state.enemyDeathVfx = null;
-    return false;
-  }
-
-  const phase = getEnemyDeathTransitionState(elapsed, transition.revealNext);
-  if (phase.oldAlpha > 0) {
-    ctx.save();
-    ctx.globalAlpha *= phase.oldAlpha;
-    ctx.translate(0, -phase.oldLift);
-    scaleAroundBaseline(phase.oldScale, phase.oldScale, CHARACTER_BASELINES.enemy.localY);
-    drawEnemyConceptArt(transition.enemy, false);
-    ctx.restore();
-  }
-
-  if (isImageReady(ENEMY_DEATH_ANIMATION.image) && phase.effectAlpha > 0) {
-    const draw = ENEMY_DEATH_ANIMATION.draw;
-    ctx.save();
-    ctx.globalAlpha *= phase.effectAlpha * 0.76;
-    ctx.globalCompositeOperation = "screen";
-    ctx.shadowColor = "#8f7cff";
-    ctx.shadowBlur = 22;
-    drawSpriteAnimationFrame(
-      ENEMY_DEATH_ANIMATION,
-      phase.elapsed,
-      draw.x,
-      draw.y,
-      draw.w,
-      draw.h,
-    );
-    ctx.restore();
-  }
-
-  if (phase.nextAlpha > 0) {
-    ctx.save();
-    ctx.globalAlpha *= phase.nextAlpha;
-    ctx.translate(0, phase.nextLift);
-    drawEnemyConceptArt(enemy, false);
-    ctx.restore();
-  }
-  return true;
-}
-
-function drawEnemyAttackAnimationFrame(enemy, hit) {
-  if (!state.enemyAnimation || state.enemyAnimation.kind !== enemy.id) return false;
-  const config = state.enemyAnimation.config || ENEMY_ATTACK_ANIMATIONS[enemy.id];
-  if (!config) return false;
-  const elapsed = performance.now() - state.enemyAnimation.startedAt;
-  if (elapsed >= state.enemyAnimation.duration) {
-    state.enemyAnimation = null;
-    return false;
-  }
-  const artTuning = getDebugArtTuning({ enabled: DEBUG_HUD_ENABLED });
-  const draw = alignDrawBoxToBaseline(config.draw || enemy.artDraw || { x: -140, y: -150, w: 280, h: 240 }, CHARACTER_BASELINES.enemy.localY, {
-    scale: artTuning.enemyAttackScale * (config.renderScale || 1),
-    bottomOffset: config.bottomOffset || 0,
-  });
-  ctx.save();
-  ctx.shadowColor = hexToRgba(enemy.color, hit ? 0.86 : 0.62);
-  ctx.shadowBlur = (hit ? 38 : 26) * (config.intensity || 1);
-  ctx.filter = config.noKeying ? "none" : enemy.filter;
-  if (hit) {
-    ctx.globalCompositeOperation = "lighter";
-    ctx.globalAlpha = 0.9;
-  }
-  if (config.image) {
-    if (!isImageReady(config.image)) {
-      ctx.restore();
-      return false;
-    }
-    drawSpriteAnimationFrame(config, elapsed, draw.x, draw.y, draw.w, draw.h);
-    ctx.restore();
-    return true;
-  }
-  ctx.restore();
-  return false;
-}
-
-function getEnemyIntent(enemy) {
-  return enemyPanelRenderer.getEnemyIntent(enemy);
-}
-
-function drawEnemyIntent(x, y, intent, w = 294) {
-  enemyPanelRenderer.drawEnemyIntent(x, y, intent, w);
 }
 
 function drawIntentMetricRow(x, y, w, labelText, value, color) {
@@ -6920,7 +6472,7 @@ function drawOverlay() {
         runFinalized: state.runFinalized,
         overlayPath,
         hasResultOverlay: typeof drawResultOverlay === "function",
-        active: getActivePieceDebugInfo(),
+        active: readActivePieceDebugInfo(state.active),
         pendingHits: state.pendingHits.length,
         countdownMs: state.countdownMs,
         hitStopMs: state.hitStopMs,
@@ -6984,19 +6536,16 @@ function drawOverlay() {
 
 function drawResultOverlay() {
   state.debug.resultOverlayDrawn = true;
-  resultOverlayRenderer.drawResultOverlay({
-    victory: state.mode === "victory",
+  resultOverlayRenderer.drawResultOverlay(createResultOverlayModel({
+    state,
     message: getMessage(),
     buttons: getResultButtonRects(),
-  });
+    translate: t,
+  }));
 }
 
 function drawSettingsOverlay(source = "pause") {
   settingsScreenRenderer.draw(source);
-}
-
-function formatDamageSources() {
-  return formatDamageSourcesForUi(state.stats.damageSources || {}, { translate: t });
 }
 
 function drawAscensionResultOverlay() {
