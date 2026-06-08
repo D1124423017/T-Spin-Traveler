@@ -35,6 +35,17 @@ export function getControlDisplayValue(action, {
   return keys.length ? keys.map(formatControlKey).join(" / ") : "-";
 }
 
+export function createSettingsScreenRenderer(depsOrFactory) {
+  return {
+    draw(source = "pause") {
+      const deps = typeof depsOrFactory === "function"
+        ? depsOrFactory()
+        : depsOrFactory;
+      drawSettingsScreenOverlay(deps, source);
+    },
+  };
+}
+
 export function drawSettingsScreenOverlay(deps, source = "pause") {
   const {
     ctx,

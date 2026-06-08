@@ -140,17 +140,25 @@ import {
   animateNumber,
   clamp,
   drawRoundedRect,
-  getSpriteFrameRect,
   hexToRgba,
-  insetSpriteFrameRect,
   lerp,
   OVERLAY_READABILITY,
   pointInRect,
   smoothstep,
 } from "./src/render/drawUtils.js";
 import { drawBattleBackground } from "./src/render/backgroundRenderer.js";
+import { createBattleBoardRenderer } from "./src/render/battleBoardRenderer.js";
+import { createBattleParticleRenderer } from "./src/render/battleParticleRenderer.js";
 import { createBattleSceneRenderer } from "./src/render/battleSceneRenderer.js";
+import {
+  alignDrawBoxToBaseline,
+  createCharacterStageHelpers,
+  getBaselineAnchorY,
+} from "./src/render/characterStageHelpers.js";
+import { createFallbackCharacterRenderer } from "./src/render/fallbackCharacterRenderer.js";
 import { drawGameplayFrame } from "./src/render/gameplayRenderer.js";
+import { createImageRenderer } from "./src/render/imageRenderer.js";
+import { createKeyedSpriteRenderer } from "./src/render/keyedSpriteRenderer.js";
 import {
   getAnimationDuration,
   getAnimationFrameInfo,
@@ -194,8 +202,14 @@ import {
   drawAscensionResultOverlay as renderAscensionResultOverlay,
 } from "./src/ui/ascensionChallengeOverlay.js";
 import { createBattleHudRenderer } from "./src/ui/battleHud.js";
+import { createBattleUiPrimitives } from "./src/ui/battleUiPrimitives.js";
+import { createCombatFeedbackRenderer } from "./src/ui/combatFeedbackRenderer.js";
 import { createEnemyPanelRenderer } from "./src/ui/enemyPanel.js";
-import { getPiecePreviewLayout } from "./src/ui/piecePreview.js";
+import { createGameplayPromptRenderer } from "./src/ui/gameplayPromptRenderer.js";
+import {
+  createSidePieceLayout,
+  createSidePieceRenderer,
+} from "./src/ui/sidePieceRenderer.js";
 import { buildDamageEquation } from "./src/ui/combatReadout.js";
 import {
   formatControlKey,
@@ -205,12 +219,7 @@ import {
   createLoadingOverlayModel,
   drawLoadingOverlay,
 } from "./src/ui/loadingOverlay.js";
-import {
-  createMenuMotionModel,
-  drawMenuAmbientMotion,
-  drawMenuTitleWake,
-  getMenuButtonMotion,
-} from "./src/ui/menuMotion.js";
+import { createLoadingScreenRenderer } from "./src/ui/loadingScreenRenderer.js";
 import {
   cleanupDomOverlay,
   initDomOverlayRoot,
@@ -229,12 +238,9 @@ import { showToast } from "./src/dom/toastLayer.js";
 import { showBondCallout } from "./src/dom/bondCalloutLayer.js";
 import { drawMenuButtonPanel } from "./src/ui/panelDrawing.js";
 import {
-  drawSettingsScreenOverlay,
+  createSettingsScreenRenderer,
   getControlDisplayValue,
 } from "./src/ui/settingsScreen.js";
-import {
-  getElasticRiftSliderValueFromPointer,
-} from "./src/ui/elasticRiftSlider.js";
 import {
   drawMetaUpgradeScreen,
   getMetaAscensionEntryRect,
@@ -250,6 +256,13 @@ import {
   getNextUpgradeSelectionIndex,
 } from "./src/ui/upgradeCards.js";
 import { createUpgradeScreenRenderer } from "./src/ui/upgradeScreen.js";
+import { createMenuScreenRenderer } from "./src/ui/menuScreen.js";
+import { createGameModeOverlayRenderer } from "./src/ui/gameModeOverlays.js";
+import { createMoveGuideOverlayRenderer } from "./src/ui/moveGuideOverlay.js";
+import { createPauseOverlayRenderer } from "./src/ui/pauseOverlay.js";
+import { createResultOverlayRenderer } from "./src/ui/resultOverlayRenderer.js";
+import { createScreenPrimitives } from "./src/ui/screenPrimitives.js";
+import { createUiTextHelpers } from "./src/ui/uiTextHelpers.js";
 import {
   DEBUG_HUD_BUILD,
   createDebugHudState,
@@ -258,8 +271,17 @@ import {
   updateDebugArtTuningDom,
   updateDebugDomHud,
 } from "./src/debug/debugHud.js";
-import { createSmokeDebugReaders } from "./src/debug/smokeHelpers.js";
+import { createRuntimeSmokeReaderFactory } from "./src/debug/runtimeSmoke.js";
 import { createGameState } from "./src/core/gameStateFactory.js";
+import {
+  bindControl as bindControlForState,
+  getAllControlKeys,
+  getControlKeys as getControlKeysForState,
+  normalizeControlKeys,
+  normalizeControlsMap as normalizeControlsForActions,
+  serializeControls as serializeControlsForActions,
+} from "./src/input/controlBindings.js";
+import { installInputController } from "./src/input/inputController.js";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -291,8 +313,6 @@ const HERO_LEVEL_UP_EFFECT = {
   draw: { x: -188, y: -314, w: 376, h: 502 },
   noKeying: true,
 };
-
-const spriteFrameCache = new Map();
 
 const audio = {
   ctx: null,
@@ -448,23 +468,16 @@ const HIDDEN = 5;
 const TILE = 29;
 const BOARD_X = 476;
 const BOARD_Y = 72;
-const HOLD_PANEL_X = BOARD_X - 116;
-const HOLD_PANEL_Y = BOARD_Y + 4;
-const HOLD_PANEL_W = 106;
-const HOLD_PANEL_H = 112;
-const HOLD_PREVIEW_BOX_W = 86;
-const HOLD_PREVIEW_BOX_H = 74;
-const HOLD_PREVIEW_CELL_SIZE = 18;
-const NEXT_PANEL_X = BOARD_X + COLS * TILE + 12;
-const NEXT_PANEL_Y = BOARD_Y + 4;
-const NEXT_PREVIEW_COUNT = 5;
-const NEXT_PANEL_W = 96;
-const NEXT_SLOT_H = 58;
-const NEXT_SLOT_GAP = 4;
-const NEXT_SLOT_STEP = NEXT_SLOT_H + NEXT_SLOT_GAP;
-const NEXT_PREVIEW_BOX_W = 80;
-const NEXT_PREVIEW_BOX_H = NEXT_SLOT_H;
-const NEXT_PREVIEW_CELL_SIZE = 15;
+const SIDE_PIECE_LAYOUT = createSidePieceLayout({
+  boardX: BOARD_X,
+  boardY: BOARD_Y,
+  cols: COLS,
+  tile: TILE,
+});
+const HOLD_PANEL_X = SIDE_PIECE_LAYOUT.hold.x;
+const HOLD_PANEL_Y = SIDE_PIECE_LAYOUT.hold.y;
+const NEXT_PANEL_X = SIDE_PIECE_LAYOUT.next.x;
+const NEXT_PANEL_Y = SIDE_PIECE_LAYOUT.next.y;
 const DROP_MS = 760;
 const SOFT_DROP_MS = 12;
 const LOCK_DELAY_MS = 500;
@@ -843,8 +856,6 @@ const CHARACTER_BASELINES = {
   },
 };
 
-const SPRITE_FRAME_CROP_INSET = 3;
-
 const SETTINGS_TABS = ["controls", "handling", "audio", "language", "feedback"];
 
 const MENU_IDLE_SEQUENCE = [
@@ -907,42 +918,40 @@ const getControlsResetButtonRect = () => getControlsResetButtonRectForLayout(
 );
 const getHandlingResetButtonRect = () => getHandlingResetButtonRectForLayout(getSettingsContentOrigin());
 
-function normalizeControlKeys(value) {
-  const source = Array.isArray(value) ? value : (typeof value === "string" ? [value] : []);
-  const keys = [];
-  for (const key of source) {
-    if (typeof key !== "string") continue;
-    const normalized = normalizeControlKey(key);
-    if (!normalized || keys.includes(normalized)) continue;
-    keys.push(normalized);
-  }
-  return keys;
-}
-
 function normalizeControlsMap(source = {}) {
-  const controls = {};
-  for (const { id } of CONTROL_ACTIONS) {
-    const hasSavedValue = Object.prototype.hasOwnProperty.call(source, id);
-    const fallback = DEFAULT_CONTROLS[id] || [];
-    const keys = normalizeControlKeys(hasSavedValue ? source[id] : fallback);
-    controls[id] = keys.length || hasSavedValue ? keys : normalizeControlKeys(fallback);
-  }
-  return controls;
+  return normalizeControlsForActions(source, {
+    controlActions: CONTROL_ACTIONS,
+    defaultControls: DEFAULT_CONTROLS,
+  });
 }
 
 function serializeControls(controls) {
-  const normalized = normalizeControlsMap(controls || {});
-  return Object.fromEntries(Object.entries(normalized).map(([id, keys]) => [id, keys.slice()]));
+  return serializeControlsForActions(controls, {
+    controlActions: CONTROL_ACTIONS,
+    defaultControls: DEFAULT_CONTROLS,
+  });
 }
 
 function getControlKeys(action) {
-  const controls = state && state.controls ? state.controls : DEFAULT_CONTROLS;
-  const hasValue = Object.prototype.hasOwnProperty.call(controls, action);
-  return normalizeControlKeys(hasValue ? controls[action] : DEFAULT_CONTROLS[action]);
+  return getControlKeysForState(action, {
+    controls: state && state.controls ? state.controls : DEFAULT_CONTROLS,
+    defaultControls: DEFAULT_CONTROLS,
+  });
 }
 
 function allControlKeys() {
-  return CONTROL_ACTIONS.flatMap(({ id }) => getControlKeys(id));
+  return getAllControlKeys({
+    controlActions: CONTROL_ACTIONS,
+    controls: state && state.controls ? state.controls : DEFAULT_CONTROLS,
+    defaultControls: DEFAULT_CONTROLS,
+  });
+}
+
+function bindControl(action, key) {
+  bindControlForState(state.controls, action, key, {
+    controlActions: CONTROL_ACTIONS,
+    defaultControls: DEFAULT_CONTROLS,
+  });
 }
 
 
@@ -1010,6 +1019,328 @@ const state = createGameState({
   guardMax: BALANCE.guardMax,
   firstEnemy: ENEMIES[0],
   ultimateDurationMs: ULTIMATE_DURATION_MS,
+});
+
+const {
+  enemyName,
+  enemyTrait,
+  enemyWeaknessLabel,
+  enemyWeaknessToken,
+  fmt,
+  getMessage,
+  rarityLabel,
+  setMessage,
+  t,
+  upgradeName,
+  upgradeShortText,
+  upgradeText,
+} = createUiTextHelpers({
+  state,
+  translations,
+});
+
+const {
+  drawCard,
+  drawCornerGlyph,
+} = createScreenPrimitives({
+  ctx,
+  roundedRect,
+  overlayReadability: OVERLAY_READABILITY,
+});
+
+const {
+  drawCharacterShadow,
+  drawCountdownBadge,
+  drawHpBar,
+  drawStatChip,
+} = createBattleUiPrimitives({
+  ctx,
+  t,
+  clamp,
+  hexToRgba,
+  roundedRect,
+  canvasFont,
+});
+
+const {
+  drawImageContain,
+  drawImageCoverRaw,
+  drawImageCropContain,
+  drawImageFallbackBox,
+  drawRosterSprite,
+} = createImageRenderer({
+  ctx,
+  isImageReady,
+  getImageAssetRecord,
+  roundedRect,
+  canvasFont,
+  rosterArt,
+  rosterCells: ROSTER_CELLS,
+});
+
+const {
+  drawKeyedImageCropContain,
+  drawSpriteAnimationFrame,
+  drawSpriteSheetFrame,
+} = createKeyedSpriteRenderer({
+  ctx,
+  documentTarget: document,
+  drawImageCropContain,
+});
+
+const {
+  drawPresentationSigil,
+  drawStageGlow,
+  scaleAroundBaseline,
+} = createCharacterStageHelpers({
+  ctx,
+  hexToRgba,
+});
+
+const {
+  drawEnemyOverlay,
+  drawEnemySilhouette,
+  drawNoaFallback,
+  drawSlimeFallback,
+} = createFallbackCharacterRenderer({
+  ctx,
+  hexToRgba,
+  roundedRect,
+});
+
+const {
+  drawBlock,
+  drawBoard,
+} = createBattleBoardRenderer({
+  ctx,
+  state,
+  boardX: BOARD_X,
+  boardY: BOARD_Y,
+  cols: COLS,
+  rows: ROWS,
+  hiddenRows: HIDDEN,
+  tileSize: TILE,
+  colors: COLORS,
+  ultimateWall: ULTIMATE_WALL,
+  ultimateDurationMs: ULTIMATE_DURATION_MS,
+  uiLayout: UI_LAYOUT,
+  roundedRect,
+  canvasFont,
+  label,
+  t,
+  collides,
+  getUltimateWellRange,
+  getVisiblePieceCells,
+  getUltimateTimerRatio,
+  getUltimateCountdownSeconds,
+  shouldShowUltimateCountdownWarning,
+});
+
+const {
+  drawBattleCountdown,
+  drawDimOverlay,
+  drawFirstWaveCombatHint,
+  drawTutorialPrompt,
+} = createGameplayPromptRenderer({
+  ctx,
+  state,
+  width: W,
+  height: H,
+  uiLayout: UI_LAYOUT,
+  tutorialSteps: TUTORIAL_STEPS,
+  battleCountdownMs: BATTLE_COUNTDOWN_MS,
+  firstWaveHintMs: FIRST_WAVE_HINT_MS,
+  firstWaveHintFadeMs: FIRST_WAVE_HINT_FADE_MS,
+  overlayScrim: OVERLAY_READABILITY.scrim.standard,
+  t,
+  clamp,
+  canvasFont,
+  label,
+  fitLabel,
+  roundedRect,
+  isBattleCountdownActive,
+  getCountdownCue,
+});
+
+const {
+  drawAssetLoadingScreen,
+} = createLoadingScreenRenderer({
+  ctx,
+  state,
+  debugHudEnabled: DEBUG_HUD_ENABLED,
+  debugHudBuild: DEBUG_HUD_BUILD,
+  getAssetLoadingSummary,
+  createLoadingOverlayModel,
+  drawLoadingOverlay,
+  canvasFont,
+  drawCornerGlyph,
+  drawDimOverlay,
+  roundedRect,
+});
+
+const {
+  drawBursts,
+  drawParticles,
+} = createBattleParticleRenderer({
+  ctx,
+  state,
+});
+
+const {
+  drawFallbackModeOverlay,
+} = createGameModeOverlayRenderer({
+  ctx,
+  state,
+  overlayReadability: OVERLAY_READABILITY,
+  t,
+  getMessage,
+  label,
+  wrapText,
+  drawDimOverlay,
+  drawCard,
+  drawMenuButton,
+});
+
+const {
+  drawSidePieces,
+} = createSidePieceRenderer({
+  ctx,
+  state,
+  pieces: PIECES,
+  colors: COLORS,
+  layout: SIDE_PIECE_LAYOUT,
+  t,
+  label,
+  roundedRect,
+  drawBlock,
+});
+
+const {
+  drawCombatPopups,
+  drawFloaters,
+} = createCombatFeedbackRenderer({
+  ctx,
+  state,
+  clamp,
+  hexToRgba,
+  canvasFont,
+  label,
+});
+
+const {
+  drawMainMenuScene,
+  drawStartMenuOverlay,
+} = createMenuScreenRenderer({
+  ctx,
+  state,
+  width: W,
+  height: H,
+  uiLayout: UI_LAYOUT,
+  forestBg,
+  isImageReady,
+  t,
+  canvasFont,
+  label,
+  wrapText,
+  drawCard,
+  drawCornerGlyph,
+  drawMenuButton,
+  getMainMenuButtonRects,
+  drawMenuHeroShowcase,
+  drawMenuHeroDialogueBubble,
+});
+
+const {
+  drawPauseOverlay,
+} = createPauseOverlayRenderer({
+  ctx,
+  state,
+  uiLayout: UI_LAYOUT,
+  overlayReadability: OVERLAY_READABILITY,
+  t,
+  label,
+  wrapText,
+  roundedRect,
+  drawDimOverlay,
+  drawCard,
+  drawMenuButton,
+  drawSettingsOverlay,
+  controlDisplayValue,
+});
+
+const {
+  drawMoveGuideOverlay,
+} = createMoveGuideOverlayRenderer({
+  ctx,
+  overlayReadability: OVERLAY_READABILITY,
+  t,
+  label,
+  fitLabel,
+  wrapText,
+  roundedRect,
+  hexToRgba,
+  drawDimOverlay,
+  drawCard,
+  drawMenuButton,
+});
+
+const resultOverlayRenderer = createResultOverlayRenderer({
+  ctx,
+  state,
+  overlayReadability: OVERLAY_READABILITY,
+  riftEnergyIcon,
+  t,
+  fmt,
+  label,
+  fitLabel,
+  wrapText,
+  roundedRect,
+  drawDimOverlay,
+  drawCard,
+  drawMenuButton,
+  drawImageContain,
+  formatDamageSources,
+});
+
+const settingsScreenRenderer = createSettingsScreenRenderer(() => ({
+  audio,
+  canvasFont,
+  controlActions: CONTROL_ACTIONS,
+  ctx,
+  drawCard,
+  drawDimOverlay,
+  drawImageContain,
+  drawMenuButton,
+  fitLabel,
+  formatControlKey,
+  getControlKeys,
+  getControlsResetButtonRect,
+  getHandlingResetButtonRect,
+  getSettingsBackButtonRect,
+  getSettingsFeedbackButtonRect,
+  getSettingsFeedbackCardRect,
+  getSettingsSliderTrackWidth: inputController.getSettingsSliderTrackWidth,
+  getSettingsSliderTrackX: inputController.getSettingsSliderTrackX,
+  label,
+  layout: UI_LAYOUT,
+  noaFeedbackBowArt,
+  roundedRect,
+  settingsTabs: SETTINGS_TABS,
+  state,
+  t,
+  tuningSliders: TUNING_SLIDERS,
+  wrapText,
+}));
+
+const getDebugHudReaders = createRuntimeSmokeReaderFactory({
+  state,
+  hiddenRows: HIDDEN,
+  isPieceAboveTopBuffer,
+  collides,
+  isActivePieceOverlappingBoard,
+  getHiddenRowsDebugInfo,
+  isSpawnBlockedForDefeat,
+  getAssetLoadingSummary,
 });
 
 const battleHudRenderer = createBattleHudRenderer({
@@ -5510,20 +5841,6 @@ function draw() {
   });
 }
 
-function getDebugHudReaders(now = performance.now()) {
-  return createSmokeDebugReaders({
-    state,
-    hiddenRows: HIDDEN,
-    isPieceAboveTopBuffer,
-    collides,
-    isActivePieceOverlappingBoard,
-    getHiddenRowsDebugInfo,
-    isSpawnBlockedForDefeat,
-    getAssetLoadingSummary,
-    now,
-  });
-}
-
 function drawBackground() {
   drawBattleBackground({
     ctx,
@@ -5541,105 +5858,12 @@ function drawPanels() {
   battleSceneRenderer.drawPanels();
 }
 
-function drawCard(x, y, w, h) {
-  ctx.save();
-  const g = ctx.createLinearGradient(x, y, x + w, y + h);
-  g.addColorStop(0, OVERLAY_READABILITY.panel.top);
-  g.addColorStop(0.52, OVERLAY_READABILITY.panel.middle);
-  g.addColorStop(1, OVERLAY_READABILITY.panel.bottom);
-  ctx.fillStyle = g;
-  ctx.shadowColor = "rgba(126, 231, 255, 0.06)";
-  ctx.shadowBlur = 10;
-  ctx.strokeStyle = "rgba(214, 159, 86, 0.22)";
-  ctx.lineWidth = 1.5;
-  roundedRect(x, y, w, h, 8, true, true);
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = "rgba(139, 102, 255, 0.1)";
-  ctx.lineWidth = 1.5;
-  roundedRect(x + 5, y + 5, w - 10, h - 10, 5, false, true);
-  ctx.strokeStyle = "rgba(255, 210, 128, 0.2)";
-  ctx.lineWidth = 1.5;
-  for (const [sx, sy, dx, dy] of [
-    [x + 18, y + 18, 24, 0],
-    [x + 18, y + 18, 0, 24],
-    [x + w - 18, y + 18, -24, 0],
-    [x + w - 18, y + 18, 0, 24],
-    [x + 18, y + h - 18, 24, 0],
-    [x + 18, y + h - 18, 0, -24],
-    [x + w - 18, y + h - 18, -24, 0],
-    [x + w - 18, y + h - 18, 0, -24],
-  ]) {
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(sx + dx, sy + dy);
-    ctx.stroke();
-  }
-  const scan = ctx.createLinearGradient(x, y, x + w, y);
-  scan.addColorStop(0, "rgba(255,255,255,0)");
-  scan.addColorStop(0.5, "rgba(255,255,255,0.035)");
-  scan.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = scan;
-  ctx.fillRect(x + 10, y + 10, w - 20, 1);
-  ctx.fillStyle = OVERLAY_READABILITY.panel.scanline;
-  for (let yy = y + 22; yy < y + h - 16; yy += 26) ctx.fillRect(x + 12, yy, w - 24, 1);
-  ctx.restore();
-}
-
 function drawTopQuestBar() {
   battleHudRenderer.drawTopQuestBar();
 }
 
 function drawTraitList() {
   battleHudRenderer.drawTraitList();
-}
-
-function drawCornerGlyph(x, y, color) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.strokeStyle = color;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 12;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, -12);
-  ctx.lineTo(11, 0);
-  ctx.lineTo(0, 12);
-  ctx.lineTo(-11, 0);
-  ctx.closePath();
-  ctx.stroke();
-  ctx.restore();
-}
-
-function getBaselineAnchorY(groundY, localBaselineY, scale = 1) {
-  return groundY - localBaselineY * scale;
-}
-
-function scaleAroundBaseline(scaleX, scaleY, localBaselineY) {
-  ctx.translate(0, localBaselineY);
-  ctx.scale(scaleX, scaleY);
-  ctx.translate(0, -localBaselineY);
-}
-
-function scaleDrawBoxFromBottom(draw, scale = 1) {
-  if (scale === 1) return { ...draw };
-  const centerX = draw.x + draw.w / 2;
-  const bottomY = draw.y + draw.h;
-  const w = draw.w * scale;
-  const h = draw.h * scale;
-  return {
-    x: centerX - w / 2,
-    y: bottomY - h,
-    w,
-    h,
-  };
-}
-
-function alignDrawBoxToBaseline(draw, localBaselineY, options = {}) {
-  const scaled = scaleDrawBoxFromBottom(draw, options.scale || 1);
-  return {
-    ...scaled,
-    y: localBaselineY + (options.bottomOffset || 0) - scaled.h,
-  };
 }
 
 function drawPlayer() {
@@ -5687,42 +5911,6 @@ function drawBuildChip(x, y, w) {
   roundedRect(x, y, w, 26, 8, false, true);
   label(t("buildCompact"), x + 12, y + 17, 11, "#c7a7ff");
   fitLabel(items[0], x + 76, y + 17, w - 90, 12, "rgba(238,244,252,0.68)", 9, "800");
-  ctx.restore();
-}
-
-function drawStageGlow(x, y, r, color) {
-  ctx.save();
-  const g = ctx.createRadialGradient(x, y, 18, x, y, r);
-  g.addColorStop(0, hexToRgba(color, 0.22));
-  g.addColorStop(0.55, hexToRgba(color, 0.08));
-  g.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.ellipse(x, y, r * 1.05, r * 0.28, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawPresentationSigil(x, y, r, color) {
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  ctx.translate(x, y);
-  ctx.strokeStyle = hexToRgba(color, 0.18);
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 10;
-  ctx.lineWidth = 1.4;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, r, r * 0.24, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.strokeStyle = hexToRgba("#fff0a6", 0.16);
-  ctx.beginPath();
-  ctx.ellipse(0, 0, r * 0.72, r * 0.14, 0, Math.PI * 0.08, Math.PI * 1.92);
-  ctx.stroke();
-  for (let i = 0; i < 6; i += 1) {
-    const a = (Math.PI * 2 * i) / 6 + performance.now() * 0.0004;
-    ctx.fillStyle = i % 2 ? hexToRgba(color, 0.34) : "rgba(255, 240, 166, 0.26)";
-    ctx.fillRect(Math.cos(a) * r * 0.82 - 2, Math.sin(a) * r * 0.18 - 2, 4, 4);
-  }
   ctx.restore();
 }
 
@@ -5951,265 +6139,6 @@ function drawFallbackRangedPose(progress, frameIndex) {
   ctx.restore();
 }
 
-function drawSpriteAnimationFrame(config, elapsed, x, y, w, h) {
-  const { frameIndex, local } = getAnimationFrameInfo(config, elapsed);
-  const currentFrame = config.frames[frameIndex];
-  const previousFrame = config.frames[Math.max(0, frameIndex - 1)];
-  const nextFrame = config.frames[Math.min(config.frames.length - 1, frameIndex + 1)];
-  const motion = String(config.id || "").startsWith("enemy") ? 7 : 10;
-  const blendFrames = config.blendFrames === true;
-  if (blendFrames && previousFrame !== currentFrame && local < 0.42) {
-    const ghostAlpha = (1 - local / 0.42) * 0.18;
-    drawSpriteSheetFrame(config, previousFrame, x - motion * ghostAlpha, y, w, h, ghostAlpha);
-  }
-  drawSpriteSheetFrame(config, currentFrame, x, y, w, h);
-  const blend = smoothstep(0.5, 1, local);
-  if (blendFrames && blend > 0 && nextFrame !== currentFrame) {
-    drawSpriteSheetFrame(config, nextFrame, x + motion * 0.04 * blend, y, w, h, blend * 0.48);
-  }
-}
-
-function drawSpriteSheetFrame(config, frame, x, y, w, h, alpha = 1) {
-  const img = config.image;
-  const cropInset = config.cropInset ?? SPRITE_FRAME_CROP_INSET;
-  const rect = insetSpriteFrameRect(getSpriteFrameRect(config, frame), img, cropInset);
-  const keyed = getKeyedSpriteFrame(config, frame, rect);
-  ctx.save();
-  ctx.globalAlpha *= alpha;
-  if (keyed) {
-    drawCanvasContain(keyed, x, y, w, h);
-  } else {
-    drawImageCropContain(img, rect.x, rect.y, rect.w, rect.h, x, y, w, h);
-  }
-  ctx.restore();
-}
-
-function getKeyedSpriteFrame(config, frame, rect) {
-  if (config.noKeying) return null;
-  const img = config.image;
-  const key = `${config.id}:${frame}:${img.naturalWidth}x${img.naturalHeight}`;
-  if (spriteFrameCache.has(key)) return spriteFrameCache.get(key);
-  const canvasFrame = makeKeyedCropCanvas(img, rect.x, rect.y, rect.w, rect.h);
-  spriteFrameCache.set(key, canvasFrame);
-  return canvasFrame;
-}
-
-function drawKeyedImageCropContain(img, sx, sy, sw, sh, x, y, w, h, id, alpha = 1) {
-  const key = `${id}:${img.naturalWidth}x${img.naturalHeight}`;
-  if (!spriteFrameCache.has(key)) {
-    spriteFrameCache.set(key, makeKeyedCropCanvas(img, sx, sy, sw, sh));
-  }
-  const keyed = spriteFrameCache.get(key);
-  ctx.save();
-  ctx.globalAlpha *= alpha;
-  if (keyed) drawCanvasContain(keyed, x, y, w, h);
-  else drawImageCropContain(img, sx, sy, sw, sh, x, y, w, h);
-  ctx.restore();
-}
-
-function makeKeyedCropCanvas(img, sx, sy, sw, sh) {
-  try {
-    const output = document.createElement("canvas");
-    output.width = Math.max(1, Math.round(sw));
-    output.height = Math.max(1, Math.round(sh));
-    const outputCtx = output.getContext("2d", { willReadFrequently: true });
-    outputCtx.drawImage(img, sx, sy, sw, sh, 0, 0, output.width, output.height);
-    const imageData = outputCtx.getImageData(0, 0, output.width, output.height);
-    removeConnectedPaperBackground(imageData, output.width, output.height);
-    keepPrimaryForeground(imageData, output.width, output.height);
-    outputCtx.putImageData(imageData, 0, 0);
-    return output;
-  } catch (_error) {
-    return null;
-  }
-}
-
-function removeConnectedPaperBackground(imageData, width, height) {
-  const data = imageData.data;
-  const key = sampleCornerColor(data, width, height);
-  const visited = new Uint8Array(width * height);
-  const stack = [];
-  const tryVisit = (x, y) => {
-    if (x < 0 || x >= width || y < 0 || y >= height) return;
-    const pos = y * width + x;
-    if (visited[pos]) return;
-    visited[pos] = 1;
-    if (isPaperPixel(data, pos * 4, key)) stack.push(pos);
-  };
-  for (let x = 0; x < width; x += 1) {
-    tryVisit(x, 0);
-    tryVisit(x, height - 1);
-  }
-  for (let y = 0; y < height; y += 1) {
-    tryVisit(0, y);
-    tryVisit(width - 1, y);
-  }
-  while (stack.length) {
-    const pos = stack.pop();
-    const offset = pos * 4;
-    data[offset + 3] = 0;
-    const x = pos % width;
-    const y = Math.floor(pos / width);
-    tryVisit(x + 1, y);
-    tryVisit(x - 1, y);
-    tryVisit(x, y + 1);
-    tryVisit(x, y - 1);
-  }
-  softenPaperHalo(imageData, width, height);
-}
-
-function sampleCornerColor(data, width, height) {
-  const points = [
-    0,
-    width - 1,
-    (height - 1) * width,
-    (height - 1) * width + width - 1,
-  ];
-  const color = { r: 0, g: 0, b: 0 };
-  for (const point of points) {
-    const offset = point * 4;
-    color.r += data[offset];
-    color.g += data[offset + 1];
-    color.b += data[offset + 2];
-  }
-  color.r /= points.length;
-  color.g /= points.length;
-  color.b /= points.length;
-  return color;
-}
-
-function isPaperPixel(data, offset, key) {
-  const r = data[offset];
-  const g = data[offset + 1];
-  const b = data[offset + 2];
-  const distance = Math.abs(r - key.r) + Math.abs(g - key.g) + Math.abs(b - key.b);
-  const chromaKey =
-    (key.r > 210 && key.b > 210 && key.g < 80) ||
-    (key.g > 210 && key.r < 80 && key.b < 80);
-  if (chromaKey) return distance < 130;
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const luma = r * 0.299 + g * 0.587 + b * 0.114;
-  const lowSaturation = max - min < 74;
-  const warmPaper = r > 150 && g > 132 && b > 108 && r >= b - 6;
-  const paleBackground = luma > 176 && lowSaturation;
-  const cornerMatch = distance < 124 && warmPaper;
-  return paleBackground || cornerMatch;
-}
-
-function softenPaperHalo(imageData, width, height) {
-  const data = imageData.data;
-  const alpha = new Uint8Array(width * height);
-  for (let i = 0; i < width * height; i += 1) alpha[i] = data[i * 4 + 3];
-  for (let y = 1; y < height - 1; y += 1) {
-    for (let x = 1; x < width - 1; x += 1) {
-      const pos = y * width + x;
-      const offset = pos * 4;
-      if (alpha[pos] === 0) continue;
-      const nearTransparent =
-        alpha[pos - 1] === 0 ||
-        alpha[pos + 1] === 0 ||
-        alpha[pos - width] === 0 ||
-        alpha[pos + width] === 0;
-      if (!nearTransparent) continue;
-      const r = data[offset];
-      const g = data[offset + 1];
-      const b = data[offset + 2];
-      const max = Math.max(r, g, b);
-      const min = Math.min(r, g, b);
-      const luma = r * 0.299 + g * 0.587 + b * 0.114;
-      if (luma > 168 && max - min < 82) data[offset + 3] = Math.min(data[offset + 3], 82);
-    }
-  }
-}
-
-function keepPrimaryForeground(imageData, width, height) {
-  const data = imageData.data;
-  const total = width * height;
-  const labels = new Int32Array(total);
-  const components = [{ area: 0 }];
-  const stack = [];
-  let currentLabel = 0;
-
-  for (let start = 0; start < total; start += 1) {
-    if (labels[start] || data[start * 4 + 3] <= 18) continue;
-    currentLabel += 1;
-    const component = {
-      area: 0,
-      minX: width,
-      minY: height,
-      maxX: 0,
-      maxY: 0,
-      saturation: 0,
-      luma: 0,
-    };
-    stack.push(start);
-    labels[start] = currentLabel;
-    while (stack.length) {
-      const pos = stack.pop();
-      const offset = pos * 4;
-      const x = pos % width;
-      const y = Math.floor(pos / width);
-      const r = data[offset];
-      const g = data[offset + 1];
-      const b = data[offset + 2];
-      component.area += 1;
-      component.minX = Math.min(component.minX, x);
-      component.minY = Math.min(component.minY, y);
-      component.maxX = Math.max(component.maxX, x);
-      component.maxY = Math.max(component.maxY, y);
-      component.saturation += Math.max(r, g, b) - Math.min(r, g, b);
-      component.luma += r * 0.299 + g * 0.587 + b * 0.114;
-      const neighbors = [pos - 1, pos + 1, pos - width, pos + width];
-      for (const next of neighbors) {
-        if (next < 0 || next >= total || labels[next]) continue;
-        if ((pos % width === 0 && next === pos - 1) || (pos % width === width - 1 && next === pos + 1)) continue;
-        if (data[next * 4 + 3] <= 18) continue;
-        labels[next] = currentLabel;
-        stack.push(next);
-      }
-    }
-    component.saturation /= component.area;
-    component.luma /= component.area;
-    components[currentLabel] = component;
-  }
-
-  if (currentLabel <= 1) return;
-  let mainIndex = 1;
-  for (let i = 2; i < components.length; i += 1) {
-    if (components[i].area > components[mainIndex].area) mainIndex = i;
-  }
-  const main = components[mainIndex];
-  const keep = new Uint8Array(components.length);
-  keep[mainIndex] = 1;
-  for (let i = 1; i < components.length; i += 1) {
-    if (i === mainIndex) continue;
-    const c = components[i];
-    const nearMain =
-      c.maxX >= main.minX - 34 &&
-      c.minX <= main.maxX + 34 &&
-      c.maxY >= main.minY - 34 &&
-      c.minY <= main.maxY + 34;
-    const overlapsMainVertically = c.minY < main.maxY - 8;
-    const meaningfulLargePart = c.area >= Math.max(260, main.area * 0.025) && (overlapsMainVertically || c.saturation > 24);
-    const energeticParticle = c.area >= 8 && c.saturation > 44 && c.luma > 68;
-    const bodyFragment = nearMain && c.area >= 20 && overlapsMainVertically;
-    if (meaningfulLargePart || energeticParticle || bodyFragment) keep[i] = 1;
-  }
-
-  for (let pos = 0; pos < total; pos += 1) {
-    const labelIndex = labels[pos];
-    if (labelIndex && !keep[labelIndex]) data[pos * 4 + 3] = 0;
-  }
-}
-
-function drawCanvasContain(source, x, y, w, h) {
-  const scale = Math.min(w / source.width, h / source.height);
-  const dw = source.width * scale;
-  const dh = source.height * scale;
-  ctx.drawImage(source, x + (w - dw) / 2, y + h - dh, dw, dh);
-}
-
 function drawNoaAttackPose(attack) {
   const t = 1 - attack.life / attack.duration;
   const k = Math.sin(Math.min(1, t) * Math.PI);
@@ -6297,48 +6226,6 @@ function getBuildSummary() {
   if (state.upgrades.comboGuardGain > 0) items.push(`Combo ${t("guardLabel")} +${state.upgrades.comboGuardGain}`);
   if (state.upgrades.b2bShield > 0) items.push(`B2B ${t("guardLabel")} ${state.upgrades.b2bShield}`);
   return items.length ? items.slice(0, 3) : [t("noUpgrades")];
-}
-
-function drawNoaFallback(hit) {
-  ctx.fillStyle = "#151821";
-  ctx.beginPath();
-  ctx.ellipse(0, 162, 86, 18, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#2d3340";
-  ctx.beginPath();
-  ctx.moveTo(-64, 32);
-  ctx.quadraticCurveTo(-22, 98, -42, 154);
-  ctx.quadraticCurveTo(6, 174, 52, 152);
-  ctx.quadraticCurveTo(36, 92, 72, 34);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "rgba(209, 220, 235, 0.25)";
-  ctx.lineWidth = 3;
-  ctx.stroke();
-  ctx.fillStyle = "#d8d8d2";
-  ctx.beginPath();
-  ctx.ellipse(0, -34, 62, 72, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#f1f0e7";
-  ctx.lineWidth = 3;
-  ctx.stroke();
-  ctx.fillStyle = "#111218";
-  ctx.beginPath();
-  ctx.ellipse(-22, -42, 15, 25, -0.14, 0, Math.PI * 2);
-  ctx.ellipse(24, -42, 15, 25, 0.14, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#191d26";
-  ctx.fillRect(-24, 100, 16, 68);
-  ctx.fillRect(14, 100, 16, 68);
-  ctx.fillStyle = "#1d2028";
-  ctx.fillRect(-36, 158, 34, 14);
-  ctx.fillRect(10, 158, 38, 14);
-  ctx.fillStyle = "#78dcff";
-  ctx.shadowColor = "#78dcff";
-  ctx.shadowBlur = 18;
-  ctx.beginPath();
-  ctx.arc(0, 62, 12, 0, Math.PI * 2);
-  ctx.fill();
 }
 
 function drawEnemy() {
@@ -6550,139 +6437,6 @@ function drawEnemyAttackAnimationFrame(enemy, hit) {
   return false;
 }
 
-function drawEnemySilhouette(enemy, hit) {
-  ctx.save();
-  ctx.shadowColor = hexToRgba(enemy.color, hit ? 0.8 : 0.55);
-  ctx.shadowBlur = hit ? 34 : 22;
-  if (hit) ctx.globalCompositeOperation = "lighter";
-  if (enemy.id === "vine") drawVineGuardBody(enemy);
-  else if (enemy.id === "mushroom") drawMushroomMageBody(enemy);
-  else if (enemy.id === "beetle") drawStoneBeetleBody(enemy);
-  else if (enemy.id === "mist") drawMistDeerBody(enemy);
-  else if (enemy.id === "thorn") drawStoneBeetleBody(enemy);
-  else if (enemy.id === "wisp") drawMistDeerBody(enemy);
-  else if (enemy.id === "sentinel") drawSlimeKingBody(enemy);
-  else if (enemy.id === "king") drawSlimeKingBody(enemy);
-  ctx.restore();
-}
-
-function drawVineGuardBody(enemy) {
-  ctx.strokeStyle = "#1d3a25";
-  ctx.lineWidth = 16;
-  for (let i = 0; i < 5; i += 1) {
-    ctx.beginPath();
-    ctx.moveTo(-96 + i * 48, 88);
-    ctx.bezierCurveTo(-126 + i * 58, 10, -58 + i * 34, -40, -62 + i * 38, -110);
-    ctx.stroke();
-  }
-  ctx.fillStyle = enemy.color;
-  ctx.beginPath();
-  ctx.ellipse(0, 18, 72, 88, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#0e2018";
-  ctx.beginPath();
-  ctx.ellipse(-24, -12, 10, 18, -0.3, 0, Math.PI * 2);
-  ctx.ellipse(24, -12, 10, 18, 0.3, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function drawMushroomMageBody(enemy) {
-  ctx.fillStyle = "#d8f7ff";
-  roundedRect(-30, -8, 60, 112, 26, true, false);
-  ctx.fillStyle = enemy.color;
-  ctx.beginPath();
-  ctx.ellipse(0, -60, 118, 54, 0, Math.PI, 0);
-  ctx.lineTo(96, -22);
-  ctx.lineTo(-96, -22);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = "#143844";
-  for (const [x, y, r] of [[-44, -48, 10], [0, -66, 13], [46, -45, 9]]) {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-
-function drawStoneBeetleBody(enemy) {
-  ctx.fillStyle = "#7f7664";
-  ctx.beginPath();
-  ctx.ellipse(0, 8, 112, 72, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = enemy.color;
-  ctx.lineWidth = 8;
-  for (let i = 0; i < 4; i += 1) {
-    ctx.beginPath();
-    ctx.arc(0, 12, 94 - i * 16, Math.PI * 0.12, Math.PI * 0.88);
-    ctx.stroke();
-  }
-  ctx.fillStyle = "#1f1c18";
-  ctx.beginPath();
-  ctx.moveTo(-98, -8);
-  ctx.lineTo(-144, -46);
-  ctx.lineTo(-116, 8);
-  ctx.moveTo(98, -8);
-  ctx.lineTo(144, -46);
-  ctx.lineTo(116, 8);
-  ctx.fill();
-}
-
-function drawMistDeerBody(enemy) {
-  ctx.fillStyle = "rgba(210, 206, 255, 0.48)";
-  ctx.beginPath();
-  ctx.ellipse(0, 24, 82, 54, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(-8, -52, 36, 46, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = enemy.color;
-  ctx.lineWidth = 6;
-  for (const side of [-1, 1]) {
-    ctx.beginPath();
-    ctx.moveTo(side * 18, -86);
-    ctx.lineTo(side * 58, -140);
-    ctx.moveTo(side * 38, -114);
-    ctx.lineTo(side * 78, -126);
-    ctx.stroke();
-  }
-  drawMistWisps(enemy);
-}
-
-function drawMistWisps(enemy) {
-  ctx.save();
-  ctx.strokeStyle = hexToRgba(enemy.color, 0.56);
-  ctx.lineWidth = 4;
-  for (let i = 0; i < 6; i += 1) {
-    const y = -84 + i * 32 + Math.sin(performance.now() * 0.002 + i) * 8;
-    ctx.beginPath();
-    ctx.moveTo(-132, y);
-    ctx.bezierCurveTo(-58, y - 24, 48, y + 24, 132, y - 8);
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-function drawSlimeKingBody(enemy) {
-  ctx.fillStyle = "#6cc76f";
-  ctx.beginPath();
-  ctx.ellipse(0, 24, 124, 86, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = enemy.color;
-  ctx.beginPath();
-  ctx.moveTo(-54, -82);
-  ctx.lineTo(-28, -130);
-  ctx.lineTo(-4, -86);
-  ctx.lineTo(26, -132);
-  ctx.lineTo(58, -82);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = "#173018";
-  ctx.beginPath();
-  ctx.ellipse(-34, 0, 16, 22, -0.25, 0, Math.PI * 2);
-  ctx.ellipse(38, 0, 16, 22, 0.25, 0, Math.PI * 2);
-  ctx.fill();
-}
-
 function getEnemyIntent(enemy) {
   return enemyPanelRenderer.getEnemyIntent(enemy);
 }
@@ -6739,525 +6493,6 @@ function drawCountdownBadgeCompact(x, y, count) {
   roundedRect(x, y, 88, 34, 8, false, true);
   label(t("enemyStrike").toUpperCase(), x + 8, y + 12, 8, danger ? "#ffb7bd" : "rgba(216, 238, 229, 0.62)");
   label(String(count), x + 56, y + 28, 22, danger ? "#ff7782" : "#98f07e");
-  ctx.restore();
-}
-
-function drawEnemyOverlay(enemy) {
-  ctx.save();
-  ctx.globalCompositeOperation = "source-over";
-  if (enemy.id === "vine") {
-    ctx.strokeStyle = "#9de06c";
-    ctx.lineWidth = 5;
-    for (let i = 0; i < 4; i += 1) {
-      ctx.beginPath();
-      ctx.moveTo(-112 + i * 68, 62);
-      ctx.bezierCurveTo(-90 + i * 54, 16, -42 + i * 28, 4, -24 + i * 24, -70);
-      ctx.stroke();
-    }
-  } else if (enemy.id === "mushroom") {
-    ctx.fillStyle = "#77e8ff";
-    ctx.shadowColor = "#77e8ff";
-    ctx.shadowBlur = 16;
-    for (const [x, y, s] of [
-      [-70, -100, 0.9],
-      [0, -118, 1.15],
-      [72, -98, 0.78],
-    ]) {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.scale(s, s);
-      ctx.beginPath();
-      ctx.arc(0, 0, 18, Math.PI, 0);
-      ctx.lineTo(18, 8);
-      ctx.lineTo(-18, 8);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillRect(-4, 4, 8, 18);
-      ctx.restore();
-    }
-  } else if (enemy.id === "beetle") {
-    ctx.strokeStyle = "#d5c49b";
-    ctx.lineWidth = 7;
-    for (let i = 0; i < 4; i += 1) {
-      ctx.beginPath();
-      ctx.arc(0, -20 + i * 28, 96 - i * 10, Math.PI * 0.1, Math.PI * 0.9);
-      ctx.stroke();
-    }
-  } else if (enemy.id === "mist") {
-    ctx.strokeStyle = "rgba(210, 206, 255, 0.56)";
-    ctx.lineWidth = 4;
-    for (let i = 0; i < 6; i += 1) {
-      const y = -84 + i * 36 + Math.sin(performance.now() * 0.002 + i) * 8;
-      ctx.beginPath();
-      ctx.moveTo(-132, y);
-      ctx.bezierCurveTo(-58, y - 24, 48, y + 24, 132, y - 8);
-      ctx.stroke();
-    }
-  } else if (enemy.id === "king") {
-    ctx.fillStyle = "#f1d36b";
-    ctx.shadowColor = "#f1d36b";
-    ctx.shadowBlur = 18;
-    ctx.beginPath();
-    ctx.moveTo(-54, -138);
-    ctx.lineTo(-28, -174);
-    ctx.lineTo(-6, -136);
-    ctx.lineTo(22, -176);
-    ctx.lineTo(52, -138);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = "#3b2d18";
-    ctx.lineWidth = 4;
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-function drawSlimeFallback(hit) {
-  ctx.fillStyle = "rgba(102, 224, 135, 0.16)";
-  ctx.beginPath();
-  ctx.ellipse(0, 74, 118, 34, 0, 0, Math.PI * 2);
-  ctx.fill();
-  const body = ctx.createRadialGradient(-32, -22, 20, 0, 0, 112);
-  body.addColorStop(0, hit ? "#e3ffd5" : "#9cf2a9");
-  body.addColorStop(0.55, "#4fc47f");
-  body.addColorStop(1, "rgba(27, 102, 68, 0.84)");
-  ctx.fillStyle = body;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 92, 78, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "rgba(203, 255, 210, 0.38)";
-  ctx.lineWidth = 4;
-  ctx.stroke();
-  ctx.fillStyle = "#0f251e";
-  ctx.beginPath();
-  ctx.ellipse(-28, -16, 11, 15, 0, 0, Math.PI * 2);
-  ctx.ellipse(29, -16, 11, 15, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#16412d";
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.arc(0, 12, 26, 0.18, Math.PI - 0.18);
-  ctx.stroke();
-}
-
-function drawCharacterShadow(x, y, w, color) {
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  ctx.fillStyle = hexToRgba(color, 0.13);
-  ctx.beginPath();
-  ctx.ellipse(x, y, w, 22, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawHpBar(x, y, w, h, value, max, color, caption, options = {}) {
-  const ratio = max ? clamp(value / max, 0, 1) : 0;
-  const textValue = options.textValue ?? value;
-  const valueText = `${Math.max(0, Math.round(textValue))}/${max}`;
-  ctx.save();
-  ctx.fillStyle = "rgba(255,255,255,0.08)";
-  roundedRect(x, y, w, h, 7, true, false);
-  if (typeof options.trailValue === "number" && options.trailValue > value) {
-    const trailRatio = max ? clamp(options.trailValue / max, 0, 1) : 0;
-    ctx.fillStyle = options.trailColor || "rgba(255, 119, 130, 0.3)";
-    roundedRect(x, y, Math.max(0, w * trailRatio), h, 7, true, false);
-  }
-  const g = ctx.createLinearGradient(x, y, x + w, y);
-  g.addColorStop(0, color);
-  g.addColorStop(1, ratio < 0.35 ? "#ff7782" : "#8ff1d2");
-  ctx.fillStyle = g;
-  roundedRect(x, y, Math.max(0, w * ratio), h, 7, true, false);
-  ctx.strokeStyle = "rgba(241,244,250,0.34)";
-  ctx.lineWidth = 2;
-  roundedRect(x, y, w, h, 7, false, true);
-  ctx.textBaseline = "middle";
-  ctx.font = canvasFont("800", 11, caption, true);
-  ctx.fillStyle = "rgba(8, 11, 18, 0.78)";
-  ctx.fillText(caption, x + 10, y + h / 2 + 1);
-  ctx.font = canvasFont("800", 12, valueText, true);
-  const textW = Math.max(56, Math.min(w - 58, Math.ceil(ctx.measureText(valueText).width + 18)));
-  ctx.fillStyle = "rgba(2, 5, 10, 0.58)";
-  roundedRect(x + w - textW - 4, y + 3, textW, h - 6, 5, true, false);
-  ctx.textAlign = "right";
-  ctx.fillStyle = "#f3f2ea";
-  ctx.fillText(valueText, x + w - 12, y + h / 2 + 1);
-  ctx.textAlign = "left";
-  ctx.textBaseline = "alphabetic";
-  ctx.restore();
-}
-
-function drawStatChip(x, y, text, color) {
-  ctx.save();
-  const width = Math.max(112, text.length * 8 + 26);
-  ctx.fillStyle = "rgba(8, 13, 20, 0.54)";
-  roundedRect(x, y, width, 24, 6, true, false);
-  ctx.strokeStyle = "rgba(211, 231, 255, 0.18)";
-  ctx.lineWidth = 1;
-  roundedRect(x, y, width, 24, 6, false, true);
-  ctx.fillStyle = color;
-  ctx.font = canvasFont("800", 12, text);
-  ctx.fillText(text, x + 12, y + 16);
-  ctx.restore();
-}
-
-function drawCountdownBadge(x, y, count) {
-  ctx.save();
-  const danger = count <= 1;
-  ctx.fillStyle = danger ? "rgba(76, 14, 24, 0.72)" : "rgba(8, 13, 20, 0.58)";
-  roundedRect(x, y, 160, 34, 8, true, false);
-  ctx.strokeStyle = danger ? "rgba(255, 119, 130, 0.72)" : "rgba(139, 238, 184, 0.28)";
-  ctx.lineWidth = 2;
-  roundedRect(x, y, 160, 34, 8, false, true);
-  ctx.font = canvasFont("800", 12, t("enemyStrike").toUpperCase(), true);
-  ctx.fillStyle = danger ? "#ffb7bd" : "rgba(216, 238, 229, 0.72)";
-  ctx.fillText(t("enemyStrike").toUpperCase(), x + 12, y + 14);
-  ctx.font = canvasFont("900", 22, String(count), true);
-  ctx.fillStyle = danger ? "#ff7782" : "#98f07e";
-  ctx.fillText(String(count), x + 128, y + 25);
-  ctx.restore();
-}
-
-function drawBoard() {
-  ctx.save();
-  ctx.translate(BOARD_X, BOARD_Y);
-  const frame = ctx.createLinearGradient(-18, -18, COLS * TILE + 18, ROWS * TILE + 18);
-  frame.addColorStop(0, "rgba(123, 238, 225, 0.22)");
-  frame.addColorStop(0.5, "rgba(24, 28, 42, 0.96)");
-  frame.addColorStop(1, "rgba(169, 126, 255, 0.18)");
-  ctx.fillStyle = frame;
-  roundedRect(-18, -18, COLS * TILE + 36, ROWS * TILE + 36, 9, true, false);
-  ctx.fillStyle = "rgba(4, 7, 12, 0.9)";
-  roundedRect(-9, -9, COLS * TILE + 18, ROWS * TILE + 18, 5, true, false);
-  ctx.strokeStyle = "rgba(223, 243, 255, 0.3)";
-  ctx.lineWidth = 1.5;
-  roundedRect(-9, -9, COLS * TILE + 18, ROWS * TILE + 18, 5, false, true);
-
-  ctx.fillStyle = "rgba(229,235,244,0.045)";
-  for (let x = 0; x <= COLS; x += 1) ctx.fillRect(x * TILE, 0, 1, ROWS * TILE);
-  for (let y = 0; y <= ROWS; y += 1) ctx.fillRect(0, y * TILE, COLS * TILE, 1);
-  drawUltimateWellMask();
-
-  drawHiddenBoardCells();
-  for (let y = HIDDEN; y < ROWS + HIDDEN; y += 1) {
-    for (let x = 0; x < COLS; x += 1) {
-      const type = state.board[y][x];
-      if (type === ULTIMATE_WALL) continue;
-      if (type) drawBlock(x * TILE, (y - HIDDEN) * TILE, COLORS[type]);
-    }
-  }
-
-  const ghost = getGhost();
-  if (ghost) drawPiece(ghost, true);
-  if (state.active) drawPiece(state.active, false);
-
-  for (const flash of state.lineFlash) {
-    const y = (flash.y - HIDDEN) * TILE;
-    if (y < 0) continue;
-    ctx.fillStyle = `rgba(245, 236, 190, ${Math.min(0.32, flash.life / 620)})`;
-    const well = getUltimateWellRange();
-    const flashX = state.ultimateActive ? well.start * TILE : 0;
-    const flashW = state.ultimateActive ? well.width * TILE : COLS * TILE;
-    ctx.fillRect(flashX, y, flashW, TILE);
-  }
-  ctx.restore();
-  drawUltimateTimerUi();
-  drawIncomingGarbageMeter();
-}
-
-function getTopBufferLayout() {
-  const h = HIDDEN * TILE;
-  return { x: 0, y: -h, w: COLS * TILE, h, rowH: TILE };
-}
-
-function drawHiddenBoardCells() {
-  const layout = getTopBufferLayout();
-  ctx.save();
-  ctx.globalAlpha = 0.62;
-  for (let y = 0; y < HIDDEN; y += 1) {
-    for (let x = 0; x < COLS; x += 1) {
-      const type = state.board[y]?.[x];
-      if (!type || type === ULTIMATE_WALL) continue;
-      drawBlock(x * TILE, layout.y + y * TILE, COLORS[type]);
-    }
-  }
-  ctx.restore();
-}
-
-function drawUltimateWellMask() {
-  if (!state.ultimateActive) return;
-  const well = getUltimateWellRange();
-  const wellX = well.start * TILE;
-  const wellW = well.width * TILE;
-  const leftW = wellX;
-  const rightX = wellX + wellW;
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(0, 0, COLS * TILE, ROWS * TILE);
-  ctx.clip();
-  ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
-  ctx.fillRect(0, 0, leftW, ROWS * TILE);
-  ctx.fillRect(rightX, 0, COLS * TILE - rightX, ROWS * TILE);
-  const pulse = 0.55 + Math.sin(performance.now() * 0.008) * 0.18;
-  ctx.strokeStyle = `rgba(255, 190, 95, ${pulse})`;
-  ctx.lineWidth = 3;
-  roundedRect(wellX - 4, -5, wellW + 8, ROWS * TILE + 10, 4, false, true);
-  ctx.strokeStyle = "rgba(223, 243, 255, 0.64)";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(wellX, 0);
-  ctx.lineTo(wellX, ROWS * TILE);
-  ctx.moveTo(wellX + wellW, 0);
-  ctx.lineTo(wellX + wellW, ROWS * TILE);
-  ctx.stroke();
-  ctx.fillStyle = "rgba(255, 190, 95, 0.12)";
-  ctx.fillRect(wellX, 0, wellW, ROWS * TILE);
-  ctx.restore();
-}
-
-function drawUltimateTimerUi() {
-  if (!state.ultimateActive) return;
-  ctx.save();
-  ctx.translate(BOARD_X, BOARD_Y);
-  drawUltimateCountdownBar();
-  ctx.restore();
-  drawUltimateCountdownWarning();
-}
-
-function drawUltimateCountdownBar() {
-  if (!state.ultimateActive) return;
-  const meter = UI_LAYOUT.ultimateMeter;
-  const remaining = Math.max(0, state.ultimateTimer);
-  const ratio = getUltimateTimerRatio(state.ultimateActive, remaining, state.ultimateTimerMax || ULTIMATE_DURATION_MS);
-  const secondsText = `${getUltimateCountdownSeconds(remaining)}s`;
-  const danger = remaining <= 5000;
-  const barX = meter.x + 90;
-  const barY = meter.y + 8;
-  const barW = meter.w - 140;
-  const barH = 9;
-  const pulse = danger ? 0.7 + Math.sin(performance.now() * 0.018) * 0.3 : 1;
-
-  ctx.save();
-  ctx.fillStyle = "rgba(4, 7, 12, 0.72)";
-  roundedRect(meter.x, meter.y, meter.w, meter.h, 8, true, false);
-  ctx.strokeStyle = danger ? `rgba(255, 119, 130, ${0.45 * pulse})` : "rgba(255, 190, 95, 0.34)";
-  ctx.lineWidth = 1.5;
-  roundedRect(meter.x, meter.y, meter.w, meter.h, 8, false, true);
-
-  ctx.font = canvasFont("900", 12, "4-WIDE", true);
-  ctx.textAlign = "left";
-  ctx.fillStyle = danger ? "#ff9aa2" : "#ffbe5f";
-  ctx.shadowColor = danger ? "#ff7782" : "#ffbe5f";
-  ctx.shadowBlur = danger ? 12 : 8;
-  ctx.fillText("4-WIDE", meter.x + 12, meter.y + 17);
-  ctx.shadowBlur = 0;
-
-  ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
-  roundedRect(barX, barY, barW, barH, 8, true, false);
-  const fillW = Math.max(0, barW * ratio);
-  if (fillW > 0) {
-    const g = ctx.createLinearGradient(barX, 0, barX + barW, 0);
-    g.addColorStop(0, danger ? "#ff7782" : "#d7c2ff");
-    g.addColorStop(0.58, danger ? "#ffbe5f" : "#ffbe5f");
-    g.addColorStop(1, "#8fe8dc");
-    ctx.fillStyle = g;
-    roundedRect(barX, barY, Math.max(4, fillW), barH, 8, true, false);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
-    ctx.fillRect(barX + 2, barY + 2, Math.max(0, fillW - 4), 1);
-  }
-
-  ctx.font = canvasFont("900", 13, secondsText, true);
-  ctx.textAlign = "right";
-  ctx.fillStyle = danger ? "#ffb7bd" : "#f5f1e6";
-  ctx.fillText(secondsText, meter.x + meter.w - 12, meter.y + 18);
-  ctx.restore();
-}
-
-function drawUltimateCountdownWarning() {
-  if (!shouldShowUltimateCountdownWarning(state.ultimateActive, state.ultimateTimer)) return;
-  const seconds = getUltimateCountdownSeconds(state.ultimateTimer);
-  const t = performance.now();
-  const urgent = seconds <= 1;
-  const pulse = 0.5 + Math.sin(t * (urgent ? 0.026 : 0.018)) * 0.5;
-  const cx = BOARD_X + (COLS * TILE) / 2;
-  const cy = BOARD_Y + TILE * 3.25;
-  const badgeW = urgent ? 112 : 96;
-  const badgeH = urgent ? 82 : 70;
-  const alpha = 0.78 + pulse * 0.18;
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.translate(cx, cy);
-  ctx.shadowColor = urgent ? "rgba(255, 119, 130, 0.75)" : "rgba(255, 190, 95, 0.62)";
-  ctx.shadowBlur = urgent ? 26 : 20;
-  const g = ctx.createLinearGradient(0, -badgeH / 2, 0, badgeH / 2);
-  g.addColorStop(0, urgent ? "rgba(70, 10, 26, 0.78)" : "rgba(30, 20, 52, 0.72)");
-  g.addColorStop(0.55, "rgba(8, 12, 24, 0.82)");
-  g.addColorStop(1, "rgba(4, 8, 14, 0.72)");
-  ctx.fillStyle = g;
-  roundedRect(-badgeW / 2, -badgeH / 2, badgeW, badgeH, 16, true, false);
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = urgent ? `rgba(255, 119, 130, ${0.52 + pulse * 0.28})` : `rgba(255, 190, 95, ${0.48 + pulse * 0.22})`;
-  ctx.lineWidth = urgent ? 2.6 : 2;
-  roundedRect(-badgeW / 2, -badgeH / 2, badgeW, badgeH, 16, false, true);
-  ctx.strokeStyle = `rgba(126, 247, 255, ${0.16 + pulse * 0.18})`;
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.moveTo(-badgeW / 2 + 18, -badgeH / 2 + 12);
-  ctx.lineTo(badgeW / 2 - 18, -badgeH / 2 + 12);
-  ctx.moveTo(-badgeW / 2 + 18, badgeH / 2 - 12);
-  ctx.lineTo(badgeW / 2 - 18, badgeH / 2 - 12);
-  ctx.stroke();
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.font = canvasFont("900", urgent ? 50 : 44, String(seconds), true);
-  ctx.fillStyle = urgent ? "#ffdde0" : "#fff0a6";
-  ctx.shadowColor = urgent ? "#ff7782" : "#ffbe5f";
-  ctx.shadowBlur = urgent ? 18 : 14;
-  ctx.fillText(String(seconds), 0, 3);
-  ctx.restore();
-}
-
-function drawIncomingGarbageMeter() {
-  const x = BOARD_X - 30;
-  const y = BOARD_Y;
-  const maxRows = 10;
-  ctx.save();
-  label(`${t("incomingShort").toUpperCase()} ${state.pendingGarbage}`, x - 10, y - 12, 12, state.pendingGarbage > 0 ? "#ffb7bd" : "rgba(238,244,252,0.38)");
-  ctx.fillStyle = "rgba(5, 8, 12, 0.55)";
-  roundedRect(x, y, 16, ROWS * TILE, 6, true, false);
-  ctx.strokeStyle = "rgba(238,244,252,0.16)";
-  roundedRect(x, y, 16, ROWS * TILE, 6, false, true);
-  const visible = Math.min(maxRows, state.pendingGarbage);
-  for (let i = 0; i < visible; i += 1) {
-    const by = y + ROWS * TILE - 8 - i * 18;
-    ctx.fillStyle = i < 3 ? "#c9d4da" : "#ff7782";
-    roundedRect(x + 3, by, 10, 13, 3, true, false);
-  }
-  if (state.pendingGarbage > maxRows) {
-    label(`+${state.pendingGarbage - maxRows}`, x - 3, y + ROWS * TILE - 194, 12, "#ff7782");
-  }
-  ctx.restore();
-}
-
-function getGhost() {
-  if (!state.active || state.mode !== "playing") return null;
-  const ghost = {
-    ...state.active,
-    shape: state.active.shape,
-  };
-  while (!collides(ghost, ghost.x, ghost.y + 1, ghost.shape)) ghost.y += 1;
-  return ghost;
-}
-
-function drawPiece(piece, ghost) {
-  const constrainToUltimateWell = Boolean(state.ultimateActive);
-  const well = getUltimateWellRange();
-  const cells = getVisiblePieceCells(piece, {
-    cols: COLS,
-    rows: ROWS,
-    hidden: HIDDEN,
-    minCol: constrainToUltimateWell ? well.start : 0,
-    maxCol: constrainToUltimateWell ? well.end : COLS,
-  });
-  for (const cell of cells) {
-    drawBlock(cell.x * TILE, cell.y * TILE, ghost ? "rgba(228,235,245,0.16)" : COLORS[piece.type], ghost);
-  }
-}
-
-function drawBlock(x, y, color, ghost = false, size = TILE) {
-  ctx.save();
-  ctx.fillStyle = color;
-  roundedRect(x + 2, y + 2, size - 4, size - 4, 4, true, false);
-  ctx.strokeStyle = ghost ? "rgba(232,240,255,0.32)" : "rgba(7,10,16,0.62)";
-  ctx.lineWidth = 2;
-  roundedRect(x + 2, y + 2, size - 4, size - 4, 4, false, true);
-  if (!ghost) {
-    ctx.fillStyle = "rgba(255,255,255,0.2)";
-    ctx.fillRect(x + 6, y + 5, size - 12, 2);
-    ctx.fillStyle = "rgba(0,0,0,0.18)";
-    ctx.fillRect(x + 5, y + size - 8, size - 10, 3);
-    ctx.strokeStyle = "rgba(255,255,255,0.08)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x + 8, y + size - 7);
-    ctx.lineTo(x + size - 7, y + 8);
-    ctx.stroke();
-    if (color === COLORS.G) {
-      ctx.strokeStyle = "rgba(229,235,240,0.22)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x + 9, y + 10);
-      ctx.lineTo(x + 14, y + 17);
-      ctx.lineTo(x + 11, y + 24);
-      ctx.moveTo(x + size - 10, y + 9);
-      ctx.lineTo(x + size - 17, y + 16);
-      ctx.lineTo(x + size - 12, y + 25);
-      ctx.stroke();
-    }
-  }
-  ctx.restore();
-}
-
-function drawSidePieces() {
-  drawHoldPanel();
-  drawNextQueuePanel();
-}
-
-function drawHoldPanel() {
-  ctx.save();
-  const w = HOLD_PANEL_W;
-  const h = HOLD_PANEL_H;
-  const locked = !state.canHold && Boolean(state.hold);
-  ctx.fillStyle = "rgba(3, 5, 10, 0.62)";
-  roundedRect(HOLD_PANEL_X, HOLD_PANEL_Y, w, h, 14, true, false);
-  ctx.strokeStyle = state.canHold ? "rgba(255, 224, 162, 0.38)" : "rgba(223, 243, 255, 0.12)";
-  ctx.lineWidth = 1.3;
-  roundedRect(HOLD_PANEL_X, HOLD_PANEL_Y, w, h, 14, false, true);
-  label(t("hold").toUpperCase(), HOLD_PANEL_X + 11, HOLD_PANEL_Y + 22, 13, state.canHold ? "#ffe0a3" : "rgba(245,241,230,0.42)");
-  drawMiniPiece(
-    state.hold,
-    HOLD_PANEL_X + 10,
-    HOLD_PANEL_Y + 30,
-    HOLD_PREVIEW_CELL_SIZE,
-    HOLD_PREVIEW_BOX_W,
-    HOLD_PREVIEW_BOX_H,
-    { disabled: locked },
-  );
-  if (locked) drawHoldLockedIndicator(HOLD_PANEL_X + w - 18, HOLD_PANEL_Y + 17);
-  ctx.restore();
-}
-
-function drawNextQueuePanel() {
-  ctx.save();
-  const queuePreview = state.queue.slice(0, NEXT_PREVIEW_COUNT);
-  const w = NEXT_PANEL_W;
-  const h = 30 + NEXT_PREVIEW_COUNT * NEXT_SLOT_H + (NEXT_PREVIEW_COUNT - 1) * NEXT_SLOT_GAP + 42;
-  ctx.fillStyle = "rgba(3, 5, 10, 0.62)";
-  roundedRect(NEXT_PANEL_X, NEXT_PANEL_Y, w, h, 14, true, false);
-  ctx.strokeStyle = "rgba(255, 224, 162, 0.38)";
-  ctx.lineWidth = 1.3;
-  roundedRect(NEXT_PANEL_X, NEXT_PANEL_Y, w, h, 14, false, true);
-  label(t("next").toUpperCase(), NEXT_PANEL_X + 11, NEXT_PANEL_Y + 22, 13, "#ffe0a3");
-  for (let i = 0; i < NEXT_PREVIEW_COUNT; i += 1) {
-    const slotY = NEXT_PANEL_Y + 30 + i * NEXT_SLOT_STEP;
-    drawMiniPiece(queuePreview[i], NEXT_PANEL_X + 8, slotY, NEXT_PREVIEW_CELL_SIZE, NEXT_PREVIEW_BOX_W, NEXT_PREVIEW_BOX_H);
-  }
-  if (state.queueHex > 0) {
-    ctx.fillStyle = "rgba(119, 232, 255, 0.11)";
-    roundedRect(NEXT_PANEL_X + 8, NEXT_PANEL_Y + h - 31, w - 16, 20, 8, true, false);
-    label(`${t("hex").toUpperCase()} ${state.queueHex}`, NEXT_PANEL_X + 13, NEXT_PANEL_Y + h - 17, 10, "#77e8ff");
-  }
-  ctx.restore();
-}
-
-function drawHoldLockedIndicator(cx, cy) {
-  ctx.save();
-  ctx.globalAlpha = 0.82;
-  ctx.strokeStyle = "rgba(215, 194, 255, 0.72)";
-  ctx.lineWidth = 1.6;
-  roundedRect(cx - 7, cy - 1, 14, 10, 3, false, true);
-  ctx.beginPath();
-  ctx.arc(cx, cy - 2, 5, Math.PI, 0);
-  ctx.stroke();
   ctx.restore();
 }
 
@@ -7934,477 +7169,6 @@ function drawPerfectClearFx() {
   ctx.restore();
 }
 
-function drawBursts() {
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  for (const burst of state.bursts) {
-    const t = 1 - burst.life / burst.duration;
-    const alpha = Math.max(0, 1 - t);
-    ctx.globalAlpha = alpha * 0.34;
-    ctx.strokeStyle = burst.color;
-    ctx.lineWidth = 2 + burst.intensity * 1.2;
-    ctx.beginPath();
-    ctx.arc(burst.x, burst.y, burst.radius, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.globalAlpha = alpha * 0.08;
-    ctx.fillStyle = burst.color;
-    ctx.beginPath();
-    ctx.arc(burst.x, burst.y, burst.radius * 0.62, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-function drawParticles() {
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  for (const p of state.particles) {
-    if (p.kind === "enemy-death") {
-      ctx.save();
-      ctx.globalAlpha = Math.min(0.9, p.life / 260);
-      ctx.fillStyle = p.color;
-      ctx.shadowColor = p.color;
-      ctx.shadowBlur = 10;
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.rotation || 0);
-      ctx.beginPath();
-      ctx.moveTo(0, -p.size * 1.6);
-      ctx.lineTo(p.size * 0.72, 0);
-      ctx.lineTo(0, p.size * 1.6);
-      ctx.lineTo(-p.size * 0.72, 0);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    } else {
-      ctx.globalAlpha = Math.min(0.72, p.life / 260);
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-  ctx.restore();
-  ctx.globalAlpha = 1;
-}
-
-function drawMiniPiece(type, x, y, size = 14, boxW = 92, boxH = 58, options = {}) {
-  const shape = PIECES[type];
-  if (!shape) return;
-  const preview = getPiecePreviewLayout(shape, x, y, size, boxW, boxH);
-  ctx.save();
-  if (options.disabled) {
-    ctx.globalAlpha *= 0.48;
-    ctx.filter = "grayscale(1) saturate(0.35) brightness(0.82)";
-  }
-  for (let r = 0; r < shape.length; r += 1) {
-    for (let c = 0; c < shape[r].length; c += 1) {
-      if (!shape[r][c]) continue;
-      drawBlock(
-        preview.offX + (c - preview.minColumn) * size,
-        preview.offY + (r - preview.minRow) * size,
-        COLORS[type],
-        false,
-        size,
-      );
-    }
-  }
-  ctx.restore();
-}
-
-function drawFloaters() {
-  for (const f of state.floaters) {
-    ctx.globalAlpha = Math.min(1, f.life / 260);
-    label(f.text, f.x, f.y, 28, f.color);
-    ctx.globalAlpha = 1;
-  }
-}
-
-function drawCombatPopups() {
-  if (!state.combatPopups.length) return;
-  ctx.save();
-  ctx.textAlign = "left";
-  for (const popup of state.combatPopups) {
-    drawCombatPopup(popup);
-  }
-  ctx.restore();
-}
-
-function drawCombatPopup(popup) {
-  const progress = clamp(1 - popup.life / popup.maxLife, 0, 1);
-  const appear = clamp(progress / 0.12, 0, 1);
-  const hold = progress < 0.62 ? 1 : clamp(1 - (progress - 0.62) / 0.38, 0, 1);
-  const alpha = Math.min(1, appear) * hold;
-  if (alpha <= 0) return;
-
-  const baseScale = popup.scale || 1;
-  const scale = baseScale * easeOutBack(appear);
-  const drift = progress > 0.45 ? (progress - 0.45) * 54 : 0;
-  const wobble = Math.sin((progress + popup.seed) * Math.PI * 5) * 3 * (1 - progress);
-  const x = popup.x + wobble;
-  const y = popup.y - drift;
-  const primary = popup.color || "#d7c2ff";
-  const accent = popup.accent || "#8ff7ff";
-  const perfect = popup.type === "perfect";
-  const big = popup.type === "tspin" || popup.type === "perfect";
-  const titleSize = perfect ? 36 : big ? 34 : popup.type === "b2b" ? 31 : 30;
-  const subSize = perfect ? 17 : 22;
-
-  ctx.save();
-  ctx.globalAlpha = alpha * (perfect ? 0.88 : 0.78);
-  ctx.translate(x, y);
-  ctx.rotate(perfect ? 0 : -0.08);
-  ctx.scale(scale, scale);
-  ctx.globalCompositeOperation = "source-over";
-
-  drawCombatPopupGlyphs(popup, progress, primary, accent);
-  drawCombatPopupTrail(popup, primary, accent, progress);
-
-  ctx.shadowColor = primary;
-  ctx.shadowBlur = perfect ? 18 : big ? 15 : 10;
-  ctx.lineWidth = perfect ? 4 : big ? 3 : 2.4;
-  ctx.strokeStyle = hexToRgba(accent, perfect ? 0.46 : 0.34);
-  ctx.font = canvasFont("900", titleSize, popup.text, true);
-  ctx.strokeText(popup.text, 0, 0);
-
-  const gradient = ctx.createLinearGradient(0, -titleSize, 220, 8);
-  gradient.addColorStop(0, perfect ? "rgba(255, 248, 214, 0.94)" : "rgba(239, 246, 255, 0.9)");
-  gradient.addColorStop(0.55, hexToRgba(primary, 0.9));
-  gradient.addColorStop(1, hexToRgba(accent, 0.72));
-  ctx.fillStyle = gradient;
-  ctx.fillText(popup.text, 0, 0);
-
-  if (popup.subText) {
-    ctx.shadowBlur = 8;
-    ctx.font = canvasFont("900", subSize, popup.subText, true);
-    ctx.strokeStyle = "rgba(10, 8, 24, 0.72)";
-    ctx.lineWidth = 2.2;
-    ctx.strokeText(popup.subText, 4, subSize + 14);
-    ctx.fillStyle = popup.type === "b2b" ? "rgba(255, 240, 166, 0.82)" : "rgba(235, 224, 255, 0.82)";
-    ctx.fillText(popup.subText, 4, subSize + 14);
-  }
-  ctx.restore();
-}
-
-function drawCombatPopupTrail(popup, primary, accent, progress) {
-  const lineCount = popup.type === "perfect" ? 5 : popup.type === "lineClear" ? 2 : 4;
-  for (let i = 0; i < lineCount; i += 1) {
-    const offset = i * 12;
-    ctx.strokeStyle = hexToRgba(i % 2 ? accent : primary, (popup.type === "perfect" ? 0.28 : 0.18) * (1 - progress));
-    ctx.lineWidth = popup.type === "perfect" ? 1.9 : 1.35;
-    ctx.beginPath();
-    ctx.moveTo(-72 - offset, 10 + i * 8);
-    ctx.quadraticCurveTo(-30 - offset * 0.4, -8 - i * 4, 142 + offset * 0.2, -28 + i * 10);
-    ctx.stroke();
-  }
-}
-
-function drawCombatPopupGlyphs(popup, progress, primary, accent) {
-  const sparkCount = popup.type === "perfect" ? 16 : popup.type === "lineClear" ? 6 : 10;
-  const orbit = popup.type === "perfect" ? 86 : 58;
-  if (popup.type === "tspin" || popup.type === "spin") drawSpinPopupSigil(progress, primary, accent);
-  for (let i = 0; i < sparkCount; i += 1) {
-    const angle = popup.seed + i * 2.399 + progress * 1.6;
-    const radius = orbit + Math.sin(progress * Math.PI + i) * 12;
-    const sx = Math.cos(angle) * radius + 64;
-    const sy = Math.sin(angle) * radius * 0.44 - 18;
-    const size = (popup.type === "perfect" ? 4.2 : 3.2) * (0.35 + (1 - progress) * 0.65);
-    ctx.save();
-    ctx.translate(sx, sy);
-    ctx.rotate(angle);
-    ctx.fillStyle = hexToRgba(i % 3 === 0 ? accent : primary, popup.type === "perfect" ? 0.72 : 0.48);
-    ctx.shadowColor = ctx.fillStyle;
-    ctx.shadowBlur = popup.type === "perfect" ? 8 : 5;
-    ctx.beginPath();
-    ctx.moveTo(0, -size);
-    ctx.lineTo(size, 0);
-    ctx.lineTo(0, size);
-    ctx.lineTo(-size, 0);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-}
-
-function drawSpinPopupSigil(progress, primary, accent) {
-  const rotation = progress * Math.PI * 2.4;
-  ctx.save();
-  ctx.translate(88, -30);
-  ctx.rotate(rotation);
-  ctx.strokeStyle = hexToRgba(accent, 0.24 * (1 - progress * 0.35));
-  ctx.lineWidth = 1.8;
-  ctx.beginPath();
-  ctx.arc(0, 0, 32, -0.85, Math.PI * 1.45);
-  ctx.stroke();
-  for (let i = 0; i < 4; i += 1) {
-    const a = i * Math.PI * 0.5;
-    ctx.fillStyle = hexToRgba(i % 2 ? accent : primary, 0.56);
-    ctx.shadowColor = ctx.fillStyle;
-    ctx.shadowBlur = 5;
-    ctx.fillRect(Math.cos(a) * 32 - 4, Math.sin(a) * 32 - 4, 8, 8);
-  }
-  ctx.restore();
-}
-
-function easeOutBack(t) {
-  const c1 = 1.70158;
-  const c3 = c1 + 1;
-  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
-}
-
-function drawTutorialPrompt() {
-  if (!state.tutorial || state.mode !== "playing") return;
-  const step = TUTORIAL_STEPS[state.tutorial.step];
-  if (!step && !state.tutorial.done) return;
-  const x = 54;
-  const y = 636;
-  ctx.save();
-  ctx.fillStyle = "rgba(3, 5, 10, 0.68)";
-  roundedRect(x, y, 360, 54, 10, true, false);
-  ctx.strokeStyle = state.tutorial.done ? "rgba(255, 240, 166, 0.54)" : "rgba(145, 232, 222, 0.34)";
-  ctx.lineWidth = 2;
-  roundedRect(x, y, 360, 54, 10, false, true);
-  label(t("tutorialActive").toUpperCase(), x + 16, y + 20, 12, "#8fe8dc");
-  label(state.tutorial.done ? t("tutorialDone") : t(step.promptKey), x + 16, y + 41, 15, "#f5f1e6");
-  if (!state.tutorial.done) {
-    const progress = `${state.tutorial.step + 1}/${TUTORIAL_STEPS.length}`;
-    label(progress, x + 314, y + 31, 18, "#fff0a6");
-  }
-  ctx.restore();
-}
-
-function drawDimOverlay(alpha = OVERLAY_READABILITY.scrim.standard) {
-  const baseAlpha = clamp(alpha, 0, 0.94);
-  ctx.save();
-  ctx.fillStyle = `rgba(2, 4, 8, ${baseAlpha})`;
-  ctx.fillRect(0, 0, W, H);
-  const g = ctx.createRadialGradient(W / 2, H / 2, 80, W / 2, H / 2, 620);
-  g.addColorStop(0, `rgba(48, 34, 70, ${Math.min(0.16, baseAlpha * 0.16)})`);
-  g.addColorStop(0.62, `rgba(0, 0, 0, ${Math.min(0.34, baseAlpha * 0.36)})`);
-  g.addColorStop(1, `rgba(0, 0, 0, ${Math.min(0.68, baseAlpha * 0.74)})`);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
-  ctx.restore();
-}
-
-function drawBattleCountdown() {
-  if (!isBattleCountdownActive()) return;
-  const cue = getCountdownCue();
-  const shown = cue === "START" ? t("countdownStart") : cue;
-  const progress = 1 - state.countdownMs / BATTLE_COUNTDOWN_MS;
-  const board = UI_LAYOUT.boardFrame;
-  const layout = UI_LAYOUT.countdown;
-  const cx = board.x + board.w / 2;
-  const cy = board.y + board.h / 2 + layout.yOffset;
-  const numeric = cue !== "START";
-  const pulse = Math.sin(progress * Math.PI * 8) * 0.035;
-  const scale = numeric ? 1 + pulse : 1 + Math.sin(progress * Math.PI) * 0.08;
-  const cardX = cx - layout.cardW / 2;
-  const cardY = cy - layout.cardH / 2;
-  ctx.save();
-  ctx.fillStyle = "rgba(1, 4, 10, 0.38)";
-  roundedRect(board.x + 8, board.y + 10, board.w - 16, board.h - 20, 14, true, false);
-  ctx.fillStyle = "rgba(1, 4, 10, 0.46)";
-  roundedRect(cardX, cardY, layout.cardW, layout.cardH, 16, true, false);
-  ctx.strokeStyle = cue === "START" ? "rgba(255, 240, 166, 0.62)" : "rgba(183, 146, 255, 0.48)";
-  ctx.lineWidth = 2;
-  roundedRect(cardX, cardY, layout.cardW, layout.cardH, 16, false, true);
-  if (cue === "START") {
-    const glow = ctx.createRadialGradient(cx, cy, 8, cx, cy, 138);
-    glow.addColorStop(0, "rgba(255, 240, 166, 0.18)");
-    glow.addColorStop(0.46, "rgba(255, 185, 95, 0.08)");
-    glow.addColorStop(1, "rgba(255, 185, 95, 0)");
-    ctx.fillStyle = glow;
-    ctx.fillRect(cardX - 38, cardY - 38, layout.cardW + 76, layout.cardH + 76);
-  }
-  ctx.translate(cx, cy - 2);
-  ctx.scale(scale, scale);
-  ctx.textAlign = "center";
-  ctx.shadowColor = cue === "START" ? "#fff0a6" : "#c7a7ff";
-  ctx.shadowBlur = cue === "START" ? 38 : 24;
-  ctx.font = canvasFont("900", numeric ? 76 : 42, shown, true);
-  const g = ctx.createLinearGradient(-120, -60, 120, 50);
-  g.addColorStop(0, "#ffffff");
-  g.addColorStop(0.5, cue === "START" ? "#fff0a6" : "#e2ccff");
-  g.addColorStop(1, cue === "START" ? "#ffb95f" : "#b88cff");
-  ctx.fillStyle = g;
-  ctx.fillText(shown, 0, numeric ? 22 : 14);
-  ctx.restore();
-
-  ctx.save();
-  const barW = layout.cardW - 24;
-  const barX = cx - barW / 2;
-  const barY = cardY + layout.cardH + layout.barGap;
-  ctx.fillStyle = "rgba(255,255,255,0.08)";
-  roundedRect(barX, barY, barW, 8, 5, true, false);
-  const fill = ctx.createLinearGradient(barX, barY, barX + barW, barY);
-  fill.addColorStop(0, "#7ef7ff");
-  fill.addColorStop(0.58, "#c7a7ff");
-  fill.addColorStop(1, "#fff0a6");
-  ctx.fillStyle = fill;
-  roundedRect(barX, barY, barW * progress, 8, 5, true, false);
-  ctx.strokeStyle = "rgba(255,255,255,0.2)";
-  roundedRect(barX, barY, barW, 8, 5, false, true);
-  ctx.restore();
-}
-
-function drawFirstWaveCombatHint() {
-  if (state.mode !== "playing" || isBattleCountdownActive() || state.firstWaveHintMs <= 0) return;
-  const progress = 1 - state.firstWaveHintMs / FIRST_WAVE_HINT_MS;
-  const fadeIn = clamp(progress / (FIRST_WAVE_HINT_FADE_MS / FIRST_WAVE_HINT_MS), 0, 1);
-  const fadeOut = clamp(state.firstWaveHintMs / FIRST_WAVE_HINT_FADE_MS, 0, 1);
-  const alpha = Math.min(fadeIn, fadeOut);
-  if (alpha <= 0) return;
-
-  const board = UI_LAYOUT.boardFrame;
-  const w = 462;
-  const h = 40;
-  const x = board.x + board.w / 2 - w / 2;
-  const y = 14;
-  const text = t("firstWaveCombatHint");
-
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.shadowColor = "rgba(126, 231, 255, 0.24)";
-  ctx.shadowBlur = 18;
-  ctx.fillStyle = "rgba(3, 5, 10, 0.68)";
-  roundedRect(x, y, w, h, 11, true, false);
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = "rgba(183, 146, 255, 0.34)";
-  ctx.lineWidth = 1.4;
-  roundedRect(x, y, w, h, 11, false, true);
-  ctx.fillStyle = "rgba(126, 231, 255, 0.12)";
-  roundedRect(x + 10, y + 10, 20, 20, 6, true, false);
-  ctx.strokeStyle = "rgba(126, 231, 255, 0.34)";
-  roundedRect(x + 10, y + 10, 20, 20, 6, false, true);
-  ctx.fillStyle = "#8fe8dc";
-  ctx.textAlign = "center";
-  ctx.font = canvasFont("900", 13, "!", true);
-  ctx.fillText("!", x + 20, y + 25);
-  ctx.textAlign = "left";
-  fitLabel(text, x + 42, y + 25, w - 58, 15, "#f5f1e6", 12, "800");
-  ctx.restore();
-}
-
-function menuActionText(key) {
-  if (state.language !== "en") return t(key);
-  if (key === "startGame") return "START";
-  if (key === "mainStageStart") return "MAIN STAGE";
-  if (key === "settings") return "SETTINGS";
-  if (key === "moveGuide") return "MOVE GUIDE";
-  return t(key).toUpperCase();
-}
-
-function drawAssetLoadingScreen() {
-  const now = performance.now();
-  const model = createLoadingOverlayModel({
-    summary: getAssetLoadingSummary(),
-    now,
-    startedAt: state.assetLoadingStartedAt,
-    debugEnabled: DEBUG_HUD_ENABLED,
-    debugBuild: DEBUG_HUD_BUILD,
-    drawError: state.debug.drawError,
-  });
-  drawLoadingOverlay(ctx, model, {
-    canvasFont,
-    drawCornerGlyph,
-    drawDimOverlay,
-    roundedRect,
-  });
-}
-
-function drawStartMenuOverlay() {
-  const now = performance.now();
-  const menuMotion = createMenuMotionModel({
-    now,
-    startedAt: state.menuRevealStartedAt || state.assetLoadingStartedAt,
-  });
-  const m = UI_LAYOUT.menu;
-  const pad = m.padding || 36;
-  const bx = m.x + pad;
-  const bw = m.w - pad * 2;
-  const buttons = getMainMenuButtonRects();
-  drawMainMenuScene(menuMotion);
-  drawMenuHeroShowcase();
-  ctx.save();
-  ctx.textAlign = "left";
-  ctx.shadowColor = "rgba(190, 140, 255, 0.86)";
-  ctx.shadowBlur = 34;
-  ctx.font = canvasFont("900", 70, t("startTitle"), true);
-  const titleGradient = ctx.createLinearGradient(72, 48, 540, 166);
-  titleGradient.addColorStop(0, "#fff8dc");
-  titleGradient.addColorStop(0.52, "#ffe0a3");
-  titleGradient.addColorStop(1, "#d7c2ff");
-  const titleParts = t("startTitle").split(" ");
-  const titleA = titleParts[0] || t("startTitle");
-  const titleB = titleParts.slice(1).join(" ") || "";
-  ctx.lineWidth = 5;
-  ctx.strokeStyle = "rgba(22, 14, 42, 0.72)";
-  ctx.strokeText(titleA, 72, 92);
-  ctx.strokeText(titleB, 72, 152);
-  ctx.lineWidth = 1.4;
-  ctx.strokeStyle = "rgba(227, 206, 255, 0.54)";
-  ctx.strokeText(titleA, 72, 92);
-  ctx.strokeText(titleB, 72, 152);
-  ctx.fillStyle = titleGradient;
-  ctx.fillText(titleA, 72, 92);
-  ctx.fillText(titleB, 72, 152);
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  ctx.globalAlpha = 0.34;
-  ctx.fillStyle = "rgba(255, 250, 220, 0.55)";
-  ctx.fillText(titleA, 74, 89);
-  ctx.fillText(titleB, 74, 149);
-  ctx.restore();
-  ctx.shadowBlur = 0;
-  const underline = ctx.createLinearGradient(92, 178, 422, 178);
-  underline.addColorStop(0, "rgba(255, 240, 166, 0)");
-  underline.addColorStop(0.35, "rgba(255, 240, 166, 0.48)");
-  underline.addColorStop(1, "rgba(126, 238, 255, 0)");
-  ctx.strokeStyle = underline;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(92, 178);
-  ctx.lineTo(422, 178);
-  ctx.stroke();
-  drawMenuTitleWake(ctx, menuMotion, { x: 92, y: 178, w: 330 });
-  ctx.shadowColor = "rgba(126, 238, 255, 0.34)";
-  ctx.shadowBlur = 10;
-  label(t("startTagline").toUpperCase(), 106, 210, 17, "#e0d2ff");
-  ctx.shadowBlur = 0;
-  wrapText(t("startWorldHint"), 106, 248, 372, 25, "rgba(245,248,255,0.78)", 15);
-  drawMenuHeroDialogueBubble();
-
-  drawCard(m.x, m.y, m.w, m.h);
-  drawCornerGlyph(m.x + m.w / 2, m.y - 2, "#9fb4ff");
-  label(t("menuActions").toUpperCase(), bx, m.y + 58, 15, "#fff0a6");
-  wrapText(t("startPanelHint"), bx, m.y + 88, bw, 19, "rgba(238,244,252,0.58)", 12);
-  drawMenuButton(buttons.start.x, buttons.start.y, buttons.start.w, buttons.start.h, menuActionText("startGame"), "Enter", "primary", { motion: getMenuButtonMotion(menuMotion, 0) });
-  drawMenuButton(buttons.mainStage.x, buttons.mainStage.y, buttons.mainStage.w, buttons.mainStage.h, menuActionText("mainStageStart"), t("mainStageEgyptShort"), "secondary", { motion: getMenuButtonMotion(menuMotion, 1) });
-  drawMenuButton(buttons.metaUpgrade.x, buttons.metaUpgrade.y, buttons.metaUpgrade.w, buttons.metaUpgrade.h, menuActionText("upgradeMenu"), "", "secondary", { motion: getMenuButtonMotion(menuMotion, 2) });
-  drawMenuButton(buttons.guide.x, buttons.guide.y, buttons.guide.w, buttons.guide.h, menuActionText("moveGuide"), "Spin", "secondary", { motion: getMenuButtonMotion(menuMotion, 3) });
-  drawMenuButton(buttons.settings.x, buttons.settings.y, buttons.settings.w, buttons.settings.h, menuActionText("settings"), "", "secondary", { motion: getMenuButtonMotion(menuMotion, 4) });
-  label(t("startHint"), bx, m.y + m.h - 42, 13, "#9fb4ff");
-  ctx.restore();
-}
-
-function drawMainMenuScene(menuMotion = null) {
-  ctx.save();
-  if (isImageReady(forestBg)) ctx.drawImage(forestBg, 0, 0, W, H);
-  const g = ctx.createLinearGradient(0, 0, W, H);
-  g.addColorStop(0, "rgba(3, 6, 14, 0.74)");
-  g.addColorStop(0.46, "rgba(4, 7, 14, 0.48)");
-  g.addColorStop(1, "rgba(1, 2, 6, 0.92)");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
-  drawMenuAmbientRift(menuMotion);
-  ctx.strokeStyle = "rgba(255, 240, 166, 0.18)";
-  ctx.beginPath();
-  ctx.moveTo(86, 642);
-  ctx.bezierCurveTo(262, 602, 462, 674, 700, 614);
-  ctx.stroke();
-  ctx.restore();
-}
-
 function isMenuHeroInteractive() {
   return state.mode === "start" && state.assetLoadingDone && !state.settingsOpen;
 }
@@ -8610,43 +7374,6 @@ function drawMenuHeroDialogueBubble() {
   label("NOA", x + 18, y + 24, 11, "#fff0a6");
   wrapText(t(interaction.lineKey), x + 18, y + 48, bubbleW - 34, 19, "#f5f1e6", 13);
   ctx.restore();
-}
-
-function drawMenuAmbientRift(menuMotion = null) {
-  const nowMs = performance.now();
-  const now = nowMs * 0.001;
-  const motion = menuMotion || createMenuMotionModel({ now: nowMs, startedAt: nowMs - 1800 });
-  const cx = 632;
-  const cy = 318;
-  const rift = ctx.createRadialGradient(cx, cy, 12, cx, cy, 270);
-  rift.addColorStop(0, "rgba(185, 140, 255, 0.065)");
-  rift.addColorStop(0.36, "rgba(105, 216, 255, 0.024)");
-  rift.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = rift;
-  ctx.fillRect(300, 70, 560, 510);
-
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  for (let i = 0; i < 24; i += 1) {
-    const drift = (now * 0.055 + i * 0.137) % 1;
-    const x = cx - 208 + (i * 47) % 406 + Math.sin(now * 0.9 + i) * 8;
-    const y = cy - 128 + drift * 260;
-    ctx.globalAlpha = 0.03 + (1 - Math.abs(drift - 0.5) * 2) * 0.06;
-    ctx.fillStyle = i % 3 ? "#8fe8dc" : "#d7c2ff";
-    ctx.fillRect(x, y, 2, 2);
-  }
-  ctx.globalAlpha = 0.08;
-  ctx.strokeStyle = "rgba(190, 146, 255, 0.18)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(cx - 18, cy - 88);
-  ctx.lineTo(cx, cy - 108);
-  ctx.lineTo(cx + 18, cy - 88);
-  ctx.lineTo(cx, cy - 68);
-  ctx.closePath();
-  ctx.stroke();
-  ctx.restore();
-  drawMenuAmbientMotion(ctx, motion, { cx, cy });
 }
 
 function drawMenuHeroShowcase() {
@@ -8961,212 +7688,24 @@ function drawOverlay() {
     if (state.settingsOpen) drawSettingsOverlay("start");
     return;
   }
-  ctx.save();
-  drawDimOverlay(OVERLAY_READABILITY.scrim.standard);
-  drawCard(318, 126, 644, 324);
-  const title =
-    state.mode === "start"
-      ? t("startTitle")
-      : state.mode === "paused"
-        ? t("paused")
-        : state.mode === "victory"
-          ? t("victory")
-          : t("defeat");
-  label(title, 382, 206, 48, "#f5f1e6");
-  const sub =
-    state.mode === "start"
-      ? t("startSubtitle")
-      : getMessage();
-  wrapText(sub, 384, 260, 504, 28, "rgba(238,244,252,0.76)", 19);
-  if (state.mode === "start") {
-    drawMenuButton(384, 318, 510, 54, t("endless"), "Enter");
-    drawMenuButton(384, 386, 510, 44, t("mainStageStart"), t("mainStageEgyptShort"));
-    drawMenuButton(384, 454, 244, 44, t("settings"), "Esc");
-    drawMenuButton(650, 454, 244, 44, t("practice"), "spins");
-    label(t("startHint"), 384, 534, 18, "#9fb4ff");
-    if (!state.save.tutorialCompleted) label(t("firstRunHint"), 384, 562, 14, "#fff0a6");
-  } else {
-    drawMenuButton(384, 318, 248, 44, t("retry"), "Enter");
-    drawMenuButton(646, 318, 248, 44, t("menu"), "Esc");
-  }
-  ctx.restore();
+  drawFallbackModeOverlay();
 }
 
 function drawResultOverlay() {
   state.debug.resultOverlayDrawn = true;
-  const victory = state.mode === "victory";
-  const accent = victory ? "#fff0a6" : "#ff8f98";
-  const buttons = getResultButtonRects();
-  ctx.save();
-  drawDimOverlay(OVERLAY_READABILITY.scrim.result);
-  drawCard(318, 62, 644, 536);
-  ctx.textAlign = "left";
-  label(victory ? t("victory") : t("defeat"), 382, 134, 48, "#f5f1e6");
-  ctx.fillStyle = accent;
-  roundedRect(384, 156, 210, 4, 8, true, false);
-  wrapText(getMessage(), 384, 186, 504, 28, "rgba(238,244,252,0.76)", 19);
-  drawRunSummary();
-  drawMenuButton(buttons.retry.x, buttons.retry.y, buttons.retry.w, buttons.retry.h, t("retry"), "R", "primary");
-  drawMenuButton(buttons.upgrade.x, buttons.upgrade.y, buttons.upgrade.w, buttons.upgrade.h, t("upgradeMenu"), "");
-  drawMenuButton(buttons.menu.x, buttons.menu.y, buttons.menu.w, buttons.menu.h, t("menu"), "Esc");
-  ctx.restore();
-}
-
-function drawPauseOverlay() {
-  if (state.pauseView === "settings") {
-    drawSettingsOverlay("pause");
-    return;
-  }
-  const m = UI_LAYOUT.pauseMenu;
-  ctx.save();
-  drawDimOverlay(OVERLAY_READABILITY.scrim.pause);
-  drawCard(m.x, m.y, m.w, m.h);
-  label(t("pauseMenu"), m.x + 48, m.y + 76, 42, "#f5f1e6");
-  wrapText(t("pauseMenuHint"), m.x + 50, m.y + 112, m.w - 100, 22, "rgba(238,244,252,0.62)", 15);
-  drawMenuButton(m.x + 56, m.y + 156, m.w - 112, 48, t("resume"), controlDisplayValue("pause"), "primary");
-  drawMenuButton(m.x + 56, m.y + 216, m.w - 112, 44, t("restart"), "R");
-  drawMenuButton(m.x + 56, m.y + 270, m.w - 112, 44, t("settings"), "");
-  drawMenuButton(m.x + 56, m.y + 324, m.w - 112, 44, t("menu"), "Esc");
-  drawPauseStat(m.x + 58, m.y + 400, t("waveLabel"), state.wave);
-  drawPauseStat(m.x + 252, m.y + 400, t("comboLabel"), state.combo);
-  ctx.restore();
+  resultOverlayRenderer.drawResultOverlay({
+    victory: state.mode === "victory",
+    message: getMessage(),
+    buttons: getResultButtonRects(),
+  });
 }
 
 function drawSettingsOverlay(source = "pause") {
-  drawSettingsScreenOverlay(getSettingsScreenRenderContext(), source);
-}
-
-function getSettingsScreenRenderContext() {
-  return {
-    audio,
-    canvasFont,
-    controlActions: CONTROL_ACTIONS,
-    ctx,
-    drawCard,
-    drawDimOverlay,
-    drawImageContain,
-    drawMenuButton,
-    fitLabel,
-    formatControlKey,
-    getControlKeys,
-    getControlsResetButtonRect,
-    getHandlingResetButtonRect,
-    getSettingsBackButtonRect,
-    getSettingsFeedbackButtonRect,
-    getSettingsFeedbackCardRect,
-    getSettingsSliderTrackWidth,
-    getSettingsSliderTrackX,
-    label,
-    layout: UI_LAYOUT,
-    noaFeedbackBowArt,
-    roundedRect,
-    settingsTabs: SETTINGS_TABS,
-    state,
-    t,
-    tuningSliders: TUNING_SLIDERS,
-    wrapText,
-  };
-}
-
-function drawPauseStat(x, y, name, value) {
-  ctx.save();
-  ctx.fillStyle = OVERLAY_READABILITY.surface.fill;
-  roundedRect(x, y - 22, 190, 28, 7, true, false);
-  ctx.strokeStyle = "rgba(145, 232, 222, 0.16)";
-  roundedRect(x, y - 22, 190, 28, 7, false, true);
-  label(name, x + 14, y - 3, 14, "rgba(238,244,252,0.58)");
-  label(String(value), x + 128, y - 3, 15, "#f5f1e6");
-  ctx.restore();
-}
-
-function drawPauseDamageDetail(x, y, w, h) {
-  const breakdown = state.lastDamageBreakdown;
-  ctx.save();
-  ctx.fillStyle = OVERLAY_READABILITY.surface.fill;
-  roundedRect(x, y, w, h, 8, true, false);
-  ctx.strokeStyle = "rgba(255, 240, 166, 0.18)";
-  roundedRect(x, y, w, h, 8, false, true);
-  label(t("damageFormula"), x + 14, y + 22, 15, "#fff0a6");
-  if (!breakdown) {
-    wrapText(t("damageEquationHint"), x + 14, y + 44, w - 28, 15, "rgba(238,244,252,0.52)", 11);
-    ctx.restore();
-    return;
-  }
-  label(`${breakdown.title} = ${breakdown.total} ${t("dmgShort")}`, x + 14, y + 43, 13, "#f5f1e6");
-  wrapText(buildDamageEquation(breakdown, { translate: t }), x + 14, y + 62, w - 28, 14, "rgba(238,244,252,0.64)", 10);
-  ctx.restore();
-}
-
-function drawRunSummary() {
-  const rows = [
-    [t("waveLabel"), state.stats.peakWave, `${t("bestLabel")} ${state.save.bestWave || 0}`],
-    [t("runMaxCombo"), state.stats.maxCombo, `${t("bestLabel")} ${state.save.bestCombo || 0}`],
-    [t("runB2BCount"), state.stats.b2bCount, `${t("bestLabel")} ${state.save.bestB2B || 0}`],
-    [t("runPerfectClear"), state.stats.perfectClears, `${t("bestLabel")} ${state.save.perfectClears || 0}`],
-    [t("runSpinCount"), `${state.stats.spins} / ${t("allSpinShort")} ${state.stats.allSpins}`, ""],
-    [t("summaryDamage"), state.stats.damage, `${t("bestLabel")} ${state.save.bestDamage || 0}`],
-    [t("summaryBestHit"), state.stats.bestHit, `${t("bestLabel")} ${state.save.bestHit || 0}`],
-  ];
-  ctx.save();
-  label(fmt("rating", { rating: state.stats.rating }), 384, 244, 23, getRatingColor(state.stats.rating));
-  for (let i = 0; i < rows.length; i += 1) {
-    const col = i % 2;
-    const row = Math.floor(i / 2);
-    const x = 384 + col * 258;
-    const y = 278 + row * 32;
-    ctx.fillStyle = OVERLAY_READABILITY.surface.fillSoft;
-    roundedRect(x, y - 20, 244, 24, 6, true, false);
-    label(rows[i][0], x + 12, y - 3, 13, "rgba(238,244,252,0.54)");
-    label(String(rows[i][1]), x + 118, y - 3, 15, "#f5f1e6");
-    if (rows[i][2]) label(rows[i][2], x + 168, y - 3, 11, "#9fb4ff");
-  }
-  drawResultRiftEnergyPanel(384, 390, 510, 60);
-  label(t("summaryDamageSources"), 384, 472, 14, "#8fe8dc");
-  wrapText(formatDamageSources(), 520, 472, 360, 18, "rgba(238,244,252,0.66)", 12);
-  label(getNextRunGoalText(), 384, 498, 13, "#fff0a6");
-  ctx.restore();
-}
-
-function drawResultRiftEnergyPanel(x, y, w, h) {
-  const earned = state.runStats?.riftEnergyEarned || 0;
-  const total = state.metaProgress?.riftEnergy || 0;
-  ctx.save();
-  const glow = earned > 0;
-  const bg = ctx.createLinearGradient(x, y, x + w, y + h);
-  bg.addColorStop(0, "rgba(26, 17, 48, 0.68)");
-  bg.addColorStop(0.55, "rgba(8, 13, 24, 0.72)");
-  bg.addColorStop(1, "rgba(20, 33, 48, 0.56)");
-  ctx.fillStyle = bg;
-  ctx.shadowColor = glow ? "rgba(184, 141, 255, 0.26)" : "rgba(126, 231, 255, 0.1)";
-  ctx.shadowBlur = glow ? 18 : 9;
-  roundedRect(x, y, w, h, 10, true, false);
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = glow ? "rgba(255, 240, 166, 0.38)" : "rgba(145, 232, 222, 0.2)";
-  ctx.lineWidth = 1.4;
-  roundedRect(x, y, w, h, 10, false, true);
-  drawImageContain(riftEnergyIcon, x + 12, y + 8, 44, 44);
-  label(t("riftEnergy").toUpperCase(), x + 68, y + 21, 12, "#d7c2ff");
-  fitLabel(fmt("riftEnergyEarned", { amount: earned }), x + 68, y + 43, 228, 16, "#fff0a6", 12, "900", true);
-  fitLabel(fmt("riftEnergyTotal", { amount: total }), x + 314, y + 43, 174, 14, "#9fb4ff", 11, "800", true);
-  ctx.restore();
-}
-
-function getNextRunGoalText() {
-  const currentPeak = Math.max(0, state.stats.peakWave || state.wave || 0);
-  const nextBossWave = Math.max(20, Math.ceil((currentPeak + 1) / 10) * 10);
-  return fmt("nextRunHookDynamic", { wave: nextBossWave });
+  settingsScreenRenderer.draw(source);
 }
 
 function formatDamageSources() {
   return formatDamageSourcesForUi(state.stats.damageSources || {}, { translate: t });
-}
-
-function getRatingColor(rating) {
-  if (rating === "PERFECT") return "#fff0a6";
-  if (rating === "ARCANE") return "#d7c2ff";
-  if (rating === "BRUTAL") return "#ff8f98";
-  if (rating === "CLEAN") return "#9df7da";
-  return "#f5f1e6";
 }
 
 function drawAscensionResultOverlay() {
@@ -9422,51 +7961,6 @@ function getCurrentBuildDirectionText(stats) {
   return fmt("currentBuildDirection", { families });
 }
 
-function drawMoveGuideOverlay() {
-  ctx.save();
-  drawDimOverlay(OVERLAY_READABILITY.scrim.standard);
-  drawCard(176, 70, 928, 580);
-  label(t("moveGuide"), 232, 136, 44, "#f5f1e6");
-  label(t("moveGuideSubtitle"), 236, 174, 16, "#9fb4ff");
-  const rows = [
-    ["T-Spin", t("guideTSpinText"), "#f2d36b"],
-    ["T-Spin Mini", t("guideTSpinMiniText"), "#d7c2ff"],
-    ["All-Spin Mini", t("guideAllSpinMiniText"), "#9df7da"],
-    ["Back-to-Back", t("guideB2BText"), "#fff0a6"],
-    ["Perfect Clear", t("guidePerfectClearText"), "#fff0a6"],
-    ["Incoming Cancel", t("guideIncomingCancelText"), "#ffb7bd"],
-  ];
-  rows.forEach((row, i) => drawGuideRow(232, 206 + i * 54, row[0], row[1], row[2], 816));
-  drawDamageRulesBox(232, 538, 816, 56);
-  drawMenuButton(232, 606, 180, 40, t("back"), "Esc");
-  ctx.restore();
-}
-
-function drawDamageRulesBox(x, y, w, h) {
-  ctx.save();
-  ctx.fillStyle = OVERLAY_READABILITY.surface.fill;
-  roundedRect(x, y, w, h, 8, true, false);
-  ctx.strokeStyle = "rgba(255, 240, 166, 0.22)";
-  roundedRect(x, y, w, h, 8, false, true);
-  label(t("damageFormula"), x + 14, y + 26, 16, "#fff0a6");
-  wrapText(t("damageRuleLine"), x + 134, y + 20, w - 154, 14, "rgba(238,244,252,0.66)", 10);
-  label(`${t("effectTierTitle")}: ${t("effectTierText")}`, x + 14, y + 48, 11, "rgba(238,244,252,0.56)");
-  ctx.restore();
-}
-
-function drawGuideRow(x, y, title, text, color, width = 620) {
-  ctx.save();
-  ctx.fillStyle = OVERLAY_READABILITY.surface.fill;
-  roundedRect(x, y, width, 48, 8, true, false);
-  ctx.fillStyle = hexToRgba(color, 0.28);
-  roundedRect(x, y, 5, 48, 5, true, false);
-  ctx.strokeStyle = hexToRgba(color, 0.25);
-  roundedRect(x, y, width, 48, 8, false, true);
-  fitLabel(title, x + 18, y + 30, 176, 17, color, 13, "800", true);
-  wrapText(text, x + 218, y + 20, width - 242, 16, "rgba(238,244,252,0.72)", 12);
-  ctx.restore();
-}
-
 function drawMenuButton(x, y, w, h, text, hint, variant = "secondary", options = {}) {
   drawMenuButtonPanel(ctx, {
     x, y, w, h, text, hint, variant,
@@ -9480,92 +7974,11 @@ function drawMenuButton(x, y, w, h, text, hint, variant = "secondary", options =
   });
 }
 
-function t(key) {
-  const table = translations[state.language] || translations.zh;
-  return table[key] || translations.en[key] || translations.zh[key] || key;
-}
-
-function fmt(key, vars = {}) {
-  return t(key).replace(/\{(\w+)\}/g, (_, name) => (vars[name] ?? `{${name}}`));
-}
-
-function setMessage(key, vars = {}) {
-  state.messageKey = key;
-  state.messageVars = vars;
-  state.message = fmt(key, vars);
-}
-
-function getMessage() {
-  return state.messageKey ? fmt(state.messageKey, state.messageVars) : state.message;
-}
-
 function setLanguage(language) {
   state.language = language === "en" ? "en" : "zh";
   syncControlHints();
   saveGame();
 }
-
-function upgradeText(upgrade) {
-  if (upgrade.textKey) return t(upgrade.textKey);
-  return state.language === "zh" ? upgrade.text : upgrade.textEn || upgrade.text;
-}
-
-function upgradeShortText(upgrade) {
-  if (upgrade.shortTextKey) return t(upgrade.shortTextKey);
-  return upgradeText(upgrade);
-}
-
-function upgradeName(upgrade) {
-  const key = `upgradeName.${upgrade.id}`;
-  const translated = t(key);
-  return translated === key ? upgrade.name : translated;
-}
-
-function rarityLabel(rarity) {
-  const labels = {
-    common: { zh: "Common", en: "Common" },
-    rare: { zh: "Rare", en: "Rare" },
-    relic: { zh: "Relic", en: "Relic" },
-    legendary: { zh: "Legendary", en: "Legendary" },
-    boss: { zh: "Boss", en: "Boss" },
-    special: { zh: "Special", en: "Special" },
-  };
-  return (labels[rarity] && labels[rarity][state.language]) || rarity;
-}
-
-function enemyWeaknessLabel(enemy) {
-  const keyByWeakness = {
-    none: "weaknessNone",
-    combo: "weaknessCombo",
-    perfect: "weaknessPerfect",
-    spin: "weaknessSpin",
-    allspin: "weaknessAllSpin",
-    "all-spin": "weaknessAllSpin",
-    b2b: "weaknessB2B",
-  };
-  return t(keyByWeakness[enemy.weakness] || "weaknessNone");
-}
-
-function enemyWeaknessToken(enemy) {
-  return {
-    none: "-",
-    combo: "Combo",
-    perfect: "PC",
-    spin: "Spin",
-    allspin: "All",
-    "all-spin": "All",
-    b2b: "B2B",
-  }[enemy.weakness] || "-";
-}
-
-function enemyName(enemy) {
-  return t(`enemy.${enemy.id}.name`);
-}
-
-function enemyTrait(enemy) {
-  return t(`enemy.${enemy.id}.trait`);
-}
-
 function drawSettings() {
   if (state.mode === "playing") {
     drawRunRiftEnergyHud();
@@ -9585,660 +7998,68 @@ function drawPauseButton() {
   battleHudRenderer.drawPauseButton();
 }
 
-function drawImageContain(img, x, y, w, h) {
-  if (!isImageReady(img)) {
-    drawImageFallbackBox(x, y, w, h, getMissingImageLabel(img, "IMAGE"));
-    return;
-  }
-  const scale = Math.min(w / img.naturalWidth, h / img.naturalHeight);
-  const dw = img.naturalWidth * scale;
-  const dh = img.naturalHeight * scale;
-  ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
-}
-
-function drawImageCoverRaw(img, x, y, w, h) {
-  const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
-  const dw = img.naturalWidth * scale;
-  const dh = img.naturalHeight * scale;
-  ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
-}
-
-function drawImageCropContain(img, sx, sy, sw, sh, x, y, w, h) {
-  if (!isImageReady(img) || sw <= 0 || sh <= 0) {
-    drawImageFallbackBox(x, y, w, h, getMissingImageLabel(img, "CROP"));
-    return;
-  }
-  const scale = Math.min(w / sw, h / sh);
-  const dw = sw * scale;
-  const dh = sh * scale;
-  ctx.drawImage(img, sx, sy, sw, sh, x + (w - dw) / 2, y + h - dh, dw, dh);
-}
-
-function drawRosterSprite(id, x, y, w, h) {
-  if (!isImageReady(rosterArt)) {
-    drawImageFallbackBox(x, y, w, h, "ROSTER");
-    return;
-  }
-  const cell = ROSTER_CELLS[id] || ROSTER_CELLS.slime;
-  const cw = rosterArt.naturalWidth / 4;
-  const ch = rosterArt.naturalHeight / 2;
-  const sx = cell[0] * cw;
-  const sy = cell[1] * ch;
-  const scale = Math.min(w / cw, h / ch);
-  const dw = cw * scale;
-  const dh = ch * scale;
-  ctx.drawImage(rosterArt, sx, sy, cw, ch, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
-}
-
-function getMissingImageLabel(img, fallback) {
-  const record = getImageAssetRecord(img);
-  return record ? record.id.replace(/-/g, " ").toUpperCase() : fallback;
-}
-
-function drawImageFallbackBox(x, y, w, h, text = "MISSING IMAGE") {
-  ctx.save();
-  ctx.fillStyle = "rgba(7, 10, 16, 0.46)";
-  roundedRect(x, y, w, h, 10, true, false);
-  ctx.strokeStyle = "rgba(126, 231, 255, 0.2)";
-  ctx.setLineDash([7, 5]);
-  roundedRect(x, y, w, h, 10, false, true);
-  ctx.setLineDash([]);
-  ctx.fillStyle = "rgba(238, 244, 252, 0.58)";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.font = canvasFont("800", Math.max(10, Math.min(14, w / 14)), text, true);
-  ctx.fillText(text, x + w / 2, y + h / 2);
-  ctx.textBaseline = "alphabetic";
-  ctx.restore();
-}
-
-const HAS_POINTER_EVENTS = typeof window.PointerEvent !== "undefined";
-const CANVAS_POINTER_MOVE_EVENT = HAS_POINTER_EVENTS ? "pointermove" : "mousemove";
-const CANVAS_POINTER_DOWN_EVENT = HAS_POINTER_EVENTS ? "pointerdown" : "mousedown";
-const CANVAS_POINTER_UP_EVENT = HAS_POINTER_EVENTS ? "pointerup" : "mouseup";
-
-window.addEventListener("keydown", (event) => {
-  const key = event.key;
-  const code = event.code;
-  const normalized = normalizeControlKey(key);
-  if (state.bindingAction) {
-    event.preventDefault();
-    if (normalized !== "escape") {
-      bindControl(state.bindingAction, normalized);
-      syncControlHints();
-      saveGame();
-      playSfx("hold");
-    }
-    state.bindingAction = null;
-    return;
-  }
-  if (isGameKey(key, code)) {
-    event.preventDefault();
-  }
-
-  if (state.mode === "upgrade" && state.currentBuildOpen) {
-    if (key === "Escape") {
-      state.currentBuildOpen = false;
-      playSfx("uiCancel");
-    }
-    return;
-  }
-
-  if (state.mode === "upgrade" && state.upgradePickConfirm) return;
-
-  if (state.mode === "upgrade") {
-    if (key === "ArrowLeft" || key === "ArrowRight") {
-      moveUpgradeSelection(key === "ArrowLeft" ? -1 : 1);
-      return;
-    }
-    if (!event.repeat && isActionKey("hold", key)) {
-      toggleUpgradeDetail();
-      return;
-    }
-    if (code === "Space" || key === " ") {
-      chooseUpgrade(state.upgradeSelectedIndex);
-      return;
-    }
-    if (["1", "2", "3"].includes(key)) {
-      chooseUpgrade(Number(key) - 1);
-      return;
-    }
-  }
-  if (key === "Enter" && state.mode !== "playing") {
-    if (state.mode === "upgrade") chooseUpgrade(state.upgradeSelectedIndex);
-    else if (state.mode === "ascensionResult") {
-      if (state.ascensionRun?.status === "failed") startAscensionChallenge();
-      else returnToMetaUpgradeFromAscension();
-    }
-    else if (state.mode === "start" && state.assetLoadingDone && !state.settingsOpen) resetGame("endless");
-    return;
-  }
-  if (normalized === "r" && state.mode === "ascensionResult" && state.ascensionRun?.status === "failed") {
-    startAscensionChallenge();
-    return;
-  }
-  if (normalized === "r" && (state.mode === "victory" || state.mode === "defeat")) {
-    resetGame(state.runMode);
-    return;
-  }
-  if (normalized === "r" && state.mode === "paused" && state.pauseView === "menu") {
-    resetGame(state.runMode);
-    return;
-  }
-  if (normalized !== "escape" && isActionKey("pause", key)) {
-    if (state.mode === "playing") {
-      setGameMode("paused");
-      state.pauseView = "menu";
-      state.settingsOpen = false;
-    }
-    else if (state.mode === "paused") {
-      setGameMode("playing");
-      state.pauseView = "menu";
-    }
-    return;
-  }
-  if (key === "Escape") {
-    unlockAudio();
-    state.bindingAction = null;
-    if (state.mode === "playing") {
-      setGameMode("paused");
-      state.pauseView = "menu";
-      state.settingsOpen = false;
-    }
-    else if (state.mode === "start" && state.assetLoadingDone) {
-      state.settingsOpen = !state.settingsOpen;
-      if (state.settingsOpen) state.settingsTab = "controls";
-    }
-    else if (state.mode === "paused") {
-      setGameMode("playing");
-      state.pauseView = "menu";
-      state.settingsOpen = false;
-    } else if (state.mode === "ascensionResult") {
-      returnToMetaUpgradeFromAscension();
-    } else if (state.mode === "metaUpgrade" || state.mode === "guide" || state.mode === "victory" || state.mode === "defeat") {
-      setGameMode("start");
-      state.settingsOpen = false;
-    } else {
-      state.settingsOpen = !state.settingsOpen;
-    }
-    playSfx("uiCancel");
-    return;
-  }
-  if (isActionKey("mute", key)) {
-    toggleMute();
-    return;
-  }
-  if (state.mode !== "playing") return;
-  if (isBattleCountdownActive()) return;
-
-  if (isActionKey("left", key) && !event.repeat) pressHorizontal(-1);
-  else if (isActionKey("right", key) && !event.repeat) pressHorizontal(1);
-  else if (isActionKey("softDrop", key)) {
-    state.input.softDrop = true;
-    if (!event.repeat) {
-      state.input.softDropTimer = 0;
-      move(0, 1);
-    }
-  }
-  else if (!event.repeat && isActionKey("rotateCW", key)) rotate(1);
-  else if (!event.repeat && isActionKey("rotateCCW", key)) rotate(-1);
-  else if (!event.repeat && isActionKey("rotate180", key)) rotate180();
-  else if (!event.repeat && isActionKey("hardDrop", key)) hardDrop();
-  else if (!event.repeat && isActionKey("hold", key)) holdPiece();
+const inputController = installInputController({
+  canvas,
+  state,
+  audio,
+  width: W,
+  height: H,
+  uiLayout: UI_LAYOUT,
+  settingsTabs: SETTINGS_TABS,
+  controlActions: CONTROL_ACTIONS,
+  defaultControls: DEFAULT_CONTROLS,
+  defaultTuning: DEFAULT_TUNING,
+  tuningSliders: TUNING_SLIDERS,
+  githubFeedbackUrl: GITHUB_FEEDBACK_URL,
+  getMainMenuButtonRects,
+  getSettingsContentOrigin,
+  getSettingsBackButtonRect,
+  getSettingsFeedbackCardRect,
+  getControlsResetButtonRect,
+  getHandlingResetButtonRect,
+  getCurrentBuildButtonRect,
+  getCurrentBuildCloseRect,
+  getUpgradeDetailToggleRect,
+  getUpgradeCardRect,
+  getResultButtonRects,
+  actions: {
+    applyAudioSettings,
+    bindControl,
+    chooseUpgrade,
+    getAllControlKeys: allControlKeys,
+    getControlKeys,
+    handleAscensionResultPointerDown,
+    handleMetaUpgradePointerDown,
+    hardDrop,
+    holdPiece,
+    isBattleCountdownActive,
+    isPointOverMenuHero,
+    loadMetaProgress,
+    move,
+    moveUpgradeSelection,
+    normalizeControlsMap,
+    playSfx,
+    pressHorizontal,
+    previewSfx,
+    previewUpgradeChoice,
+    releaseHorizontal,
+    resetGame,
+    resetInputRepeat,
+    returnToMetaUpgradeFromAscension,
+    rotate,
+    rotate180,
+    saveGame,
+    setGameMode,
+    setLanguage,
+    startAscensionChallenge,
+    syncControlHints,
+    toggleMute,
+    toggleUpgradeDetail,
+    triggerMenuHeroAction,
+    unlockAudio,
+    updateMenuHeroHoverFromPointer,
+  },
 });
-
-window.addEventListener("keyup", (event) => {
-  if (isActionKey("left", event.key)) releaseHorizontal(-1);
-  else if (isActionKey("right", event.key)) releaseHorizontal(1);
-  else if (isActionKey("softDrop", event.key)) {
-    state.input.softDrop = false;
-    state.input.softDropTimer = 0;
-  }
-});
-
-function isGameKey(key, code) {
-  const normalized = normalizeControlKey(key);
-  return allControlKeys().includes(normalized)
-    || key === "Enter"
-    || key === "Escape"
-    || (state.mode === "upgrade" && (key === "ArrowLeft" || key === "ArrowRight"))
-    || ["1", "2", "3"].includes(key)
-    || (state.mode === "paused" && state.pauseView === "menu" && normalized === "r")
-    || ((state.mode === "victory" || state.mode === "defeat") && normalized === "r")
-    || (state.mode === "ascensionResult" && normalized === "r")
-    || code === "Space";
-}
-
-function isActionKey(action, key) {
-  return getControlKeys(action).includes(normalizeControlKey(key));
-}
-
-function bindControl(action, key) {
-  const normalized = normalizeControlKey(key);
-  for (const { id } of CONTROL_ACTIONS) {
-    if (id !== action) state.controls[id] = getControlKeys(id).filter((existing) => existing !== normalized);
-  }
-  state.controls[action] = [normalized];
-}
-
-function normalizeControlKey(key) {
-  if (key === " ") return " ";
-  if (key.length === 1) return key.toLowerCase();
-  return key.toLowerCase();
-}
-
-canvas.addEventListener(CANVAS_POINTER_MOVE_EVENT, (event) => {
-  const p = getCanvasPoint(event);
-  state.pointer.x = p.x;
-  state.pointer.y = p.y;
-  const heroHovered = updateMenuHeroHoverFromPointer(p.x, p.y);
-  canvas.style.cursor = heroHovered ? "pointer" : "";
-  if (state.pointer.down && state.pointer.dragging) {
-    event.preventDefault();
-    updateSliderFromPointer(state.pointer.dragging, p.x);
-  }
-});
-
-canvas.addEventListener(CANVAS_POINTER_DOWN_EVENT, (event) => {
-  event.preventDefault();
-  if (HAS_POINTER_EVENTS && typeof canvas.setPointerCapture === "function" && Number.isFinite(event.pointerId)) {
-    try {
-      canvas.setPointerCapture(event.pointerId);
-    } catch {
-      // Pointer capture is a drag convenience; losing it should not block input.
-    }
-  }
-  unlockAudio();
-  const p = getCanvasPoint(event);
-  state.pointer = { ...state.pointer, x: p.x, y: p.y, down: true };
-  const b = UI_LAYOUT.pauseButton;
-
-  if (state.mode === "playing" && pointInRect(p.x, p.y, b.x, b.y, b.w, b.h)) {
-    setGameMode("paused");
-    state.pauseView = "menu";
-    state.settingsOpen = false;
-    state.bindingAction = null;
-    playSfx("uiConfirm");
-    return;
-  }
-
-  if (state.mode === "paused") {
-    handlePausePointerDown(p.x, p.y);
-    return;
-  }
-
-  if (state.mode === "start" && state.settingsOpen) {
-    handleSettingsPointerDown(p.x, p.y, "start");
-    return;
-  }
-
-  if (state.mode === "start" && state.assetLoadingDone && !state.settingsOpen && isPointOverMenuHero(p.x, p.y)) {
-    triggerMenuHeroAction("click");
-    return;
-  }
-
-  if (!state.settingsOpen && state.mode !== "playing") {
-    if (state.mode === "ascensionResult") {
-      handleAscensionResultPointerDown(p.x, p.y);
-      return;
-    }
-    if (state.mode === "metaUpgrade") {
-      handleMetaUpgradePointerDown(p.x, p.y);
-      return;
-    }
-    if (state.mode === "upgrade") {
-      if (state.upgradePickConfirm) return;
-      if (state.currentBuildOpen) {
-        handleCurrentBuildPointerDown(p.x, p.y);
-        return;
-      }
-      const buildButton = getCurrentBuildButtonRect();
-      if (pointInRect(p.x, p.y, buildButton.x, buildButton.y, buildButton.w, buildButton.h)) {
-        state.currentBuildOpen = true;
-        playSfx("uiConfirm");
-        return;
-      }
-      const detailToggle = getUpgradeDetailToggleRect();
-      if (pointInRect(p.x, p.y, detailToggle.x, detailToggle.y, detailToggle.w, detailToggle.h)) {
-        toggleUpgradeDetail();
-        return;
-      }
-      for (let i = 0; i < 3; i += 1) {
-        const card = getUpgradeCardRect(i);
-        if (pointInRect(p.x, p.y, card.x, card.y, card.w, card.h)) {
-          previewUpgradeChoice(i);
-          return;
-        }
-      }
-    }
-    if (state.mode === "start" && state.assetLoadingDone) {
-      const buttons = getMainMenuButtonRects();
-      if (pointInRect(p.x, p.y, buttons.start.x, buttons.start.y, buttons.start.w, buttons.start.h)) resetGame("endless");
-      else if (pointInRect(p.x, p.y, buttons.mainStage.x, buttons.mainStage.y, buttons.mainStage.w, buttons.mainStage.h)) resetGame("storyEgypt");
-      else if (pointInRect(p.x, p.y, buttons.metaUpgrade.x, buttons.metaUpgrade.y, buttons.metaUpgrade.w, buttons.metaUpgrade.h)) {
-        setGameMode("metaUpgrade");
-        state.metaProgress = loadMetaProgress();
-        state.metaUpgradeMessage = { key: "", vars: {}, until: 0 };
-        playSfx("uiConfirm");
-      }
-      else if (pointInRect(p.x, p.y, buttons.guide.x, buttons.guide.y, buttons.guide.w, buttons.guide.h)) {
-        setGameMode("guide");
-        playSfx("uiConfirm");
-      }
-      else if (pointInRect(p.x, p.y, buttons.settings.x, buttons.settings.y, buttons.settings.w, buttons.settings.h)) {
-        state.settingsOpen = true;
-        state.settingsTab = "controls";
-        playSfx("uiConfirm");
-      }
-      return;
-    }
-    if (state.mode === "guide" && pointInRect(p.x, p.y, 232, 606, 180, 40)) {
-      setGameMode("start");
-      playSfx("uiCancel");
-      return;
-    }
-    if (state.mode === "paused" && pointInRect(p.x, p.y, 384, 408, 178, 44)) {
-      setGameMode("playing");
-      return;
-    }
-    if (state.mode === "paused" && pointInRect(p.x, p.y, 578, 408, 178, 44)) {
-      resetGame(state.runMode);
-      return;
-    }
-    if (state.mode === "paused" && pointInRect(p.x, p.y, 772, 408, 122, 44)) {
-      setGameMode("start");
-      return;
-    }
-    if (state.mode === "victory" || state.mode === "defeat") {
-      const buttons = getResultButtonRects();
-      if (pointInRect(p.x, p.y, buttons.retry.x, buttons.retry.y, buttons.retry.w, buttons.retry.h)) {
-        resetGame(state.runMode);
-        return;
-      }
-      if (pointInRect(p.x, p.y, buttons.upgrade.x, buttons.upgrade.y, buttons.upgrade.w, buttons.upgrade.h)) {
-        setGameMode("metaUpgrade");
-        state.metaProgress = loadMetaProgress();
-        state.metaUpgradeMessage = { key: "", vars: {}, until: 0 };
-        playSfx("uiConfirm");
-        return;
-      }
-      if (pointInRect(p.x, p.y, buttons.menu.x, buttons.menu.y, buttons.menu.w, buttons.menu.h)) {
-        setGameMode("start");
-        playSfx("uiCancel");
-        return;
-      }
-    }
-  }
-});
-
-function handleCurrentBuildPointerDown(x, y) {
-  const closeRect = getCurrentBuildCloseRect();
-  if (pointInRect(x, y, closeRect.x, closeRect.y, closeRect.w, closeRect.h)) {
-    state.currentBuildOpen = false;
-    playSfx("uiCancel");
-  }
-}
-
-function handlePausePointerDown(x, y) {
-  if (state.pauseView === "settings") {
-    handleSettingsPointerDown(x, y, "pause");
-    return;
-  }
-  const m = UI_LAYOUT.pauseMenu;
-  if (pointInRect(x, y, m.x + 56, m.y + 156, m.w - 112, 48)) {
-    setGameMode("playing");
-    state.pauseView = "menu";
-    playSfx("uiConfirm");
-    return;
-  }
-  if (pointInRect(x, y, m.x + 56, m.y + 216, m.w - 112, 44)) {
-    resetGame(state.runMode);
-    return;
-  }
-  if (pointInRect(x, y, m.x + 56, m.y + 270, m.w - 112, 44)) {
-    state.pauseView = "settings";
-    state.settingsTab = "controls";
-    playSfx("uiConfirm");
-    return;
-  }
-  if (pointInRect(x, y, m.x + 56, m.y + 324, m.w - 112, 44)) {
-    setGameMode("start");
-    state.pauseView = "menu";
-    state.settingsOpen = false;
-    playSfx("uiCancel");
-  }
-}
-
-function handleSettingsPointerDown(x, y, source) {
-  const backButton = getSettingsBackButtonRect();
-  if (pointInRect(x, y, backButton.x, backButton.y, backButton.w, backButton.h)) {
-    state.bindingAction = null;
-    if (source === "start") state.settingsOpen = false;
-    else state.pauseView = "menu";
-    playSfx("uiCancel");
-    return;
-  }
-  const tab = hitSettingsTab(x, y);
-  if (tab) {
-    state.settingsTab = tab;
-    state.bindingAction = null;
-    playSfx("uiConfirm");
-    return;
-  }
-  const resetAction = hitSettingsResetButton(x, y);
-  if (resetAction) {
-    if (resetAction === "keybinds") resetKeybindsToDefault();
-    else if (resetAction === "handling") resetHandlingToDefault();
-    playSfx("uiConfirm");
-    return;
-  }
-  const feedbackUrl = hitSettingsFeedbackLink(x, y);
-  if (feedbackUrl) {
-    openFeedbackLink(feedbackUrl);
-    playSfx("uiConfirm");
-    return;
-  }
-  const slider = hitSlider(x, y);
-  if (slider) {
-    state.pointer.dragging = slider;
-    updateSliderFromPointer(slider, x);
-    previewSfx();
-    return;
-  }
-  const origin = getSettingsContentOrigin();
-  if (state.settingsTab === "audio" && pointInRect(x, y, origin.x + 116, origin.y + 250, 64, 30)) {
-    toggleMute();
-    playSfx("hold");
-    return;
-  }
-  if (state.settingsTab === "language") {
-    if (pointInRect(x, y, origin.x, origin.y + 72, 72, 34)) {
-      setLanguage("zh");
-      playSfx("hold");
-      return;
-    }
-    if (pointInRect(x, y, origin.x + 80, origin.y + 72, 72, 34)) {
-      setLanguage("en");
-      playSfx("hold");
-      return;
-    }
-  }
-  const action = hitControlBind(x, y);
-  if (action) {
-    state.bindingAction = action;
-    playSfx("hold");
-  }
-}
-
-function hitSettingsTab(x, y) {
-  const s = UI_LAYOUT.settings;
-  for (let i = 0; i < SETTINGS_TABS.length; i += 1) {
-    if (pointInRect(x, y, s.tabX, s.y + 112 + i * 62, 164, 46)) return SETTINGS_TABS[i];
-  }
-  return null;
-}
-
-function hitSettingsResetButton(x, y) {
-  if (state.settingsTab === "controls") {
-    const rect = getControlsResetButtonRect();
-    if (pointInRect(x, y, rect.x, rect.y, rect.w, rect.h)) return "keybinds";
-  }
-  if (state.settingsTab === "handling") {
-    const rect = getHandlingResetButtonRect();
-    if (pointInRect(x, y, rect.x, rect.y, rect.w, rect.h)) return "handling";
-  }
-  return "";
-}
-
-function resetKeybindsToDefault() {
-  state.controls = normalizeControlsMap(DEFAULT_CONTROLS);
-  state.bindingAction = null;
-  syncControlHints();
-  saveGame();
-}
-
-function resetHandlingToDefault() {
-  state.tuning = {
-    ...state.tuning,
-    das: DEFAULT_TUNING.das,
-    arr: DEFAULT_TUNING.arr,
-    softDrop: DEFAULT_TUNING.softDrop,
-    lockDelay: DEFAULT_TUNING.lockDelay,
-  };
-  resetInputRepeat();
-  saveGame();
-}
-
-function getSettingsSliderTrackX(kind) {
-  const origin = getSettingsContentOrigin();
-  return kind === "tuning" ? origin.x + 248 : origin.x;
-}
-
-function getSettingsSliderTrackWidth(kind) {
-  return kind === "tuning" ? 278 : 270;
-}
-
-function hitSettingsFeedbackLink(x, y) {
-  if (state.settingsTab !== "feedback") return "";
-  const card = getSettingsFeedbackCardRect();
-  const buttonRect = getSettingsFeedbackButtonRect(card.x, card.y, card.w, card.h);
-  if (pointInRect(x, y, buttonRect.x, buttonRect.y, buttonRect.w, buttonRect.h)) return GITHUB_FEEDBACK_URL;
-  return "";
-}
-
-function openFeedbackLink(url) {
-  const opened = window.open(url, "_blank");
-  if (opened) opened.opener = null;
-}
-
-window.addEventListener(CANVAS_POINTER_UP_EVENT, () => {
-  const dragging = state.pointer.dragging;
-  if (dragging?.startsWith("audio:") || dragging?.startsWith("tuning:")) {
-    const slider = state.pointer.elasticSlider || {};
-    state.pointer.elasticSlider = {
-      key: "",
-      overflow: 0,
-      releaseKey: dragging,
-      releaseOverflow: slider.key === dragging ? slider.overflow || 0 : 0,
-      releaseStartedAt: performance.now(),
-    };
-  }
-  state.pointer.down = false;
-  state.pointer.dragging = null;
-});
-
-function getCanvasPoint(event) {
-  const rect = canvas.getBoundingClientRect();
-  return {
-    x: ((event.clientX - rect.left) / rect.width) * W,
-    y: ((event.clientY - rect.top) / rect.height) * H,
-  };
-}
-
-function hitSlider(x, y) {
-  const origin = getSettingsContentOrigin();
-  const sliders = [];
-  if (state.settingsTab === "audio") {
-    sliders.push(
-      ["audio:masterVolume", origin.x, origin.y + 64, getSettingsSliderTrackWidth("audio")],
-      ["audio:musicVolume", origin.x, origin.y + 128, getSettingsSliderTrackWidth("audio")],
-      ["audio:sfxVolume", origin.x, origin.y + 192, getSettingsSliderTrackWidth("audio")],
-    );
-  } else if (state.settingsTab === "handling") {
-    const trackX = getSettingsSliderTrackX("tuning");
-    const trackW = getSettingsSliderTrackWidth("tuning");
-    sliders.push(
-      ["tuning:das", trackX, origin.y + 66 + 34, trackW],
-      ["tuning:arr", trackX, origin.y + 154 + 34, trackW],
-      ["tuning:softDrop", trackX, origin.y + 242 + 34, trackW],
-      ["tuning:lockDelay", trackX, origin.y + 330 + 34, trackW],
-    );
-  }
-  for (const [key, sx, sy, sw] of sliders) {
-    if (pointInRect(x, y, sx - 16, sy - 18, sw + 32, 50)) return key;
-  }
-  return null;
-}
-
-function updateSliderFromPointer(key, x) {
-  const [kind, name] = key.split(":");
-  const sliderX = getSettingsSliderTrackX(kind);
-  const trackW = getSettingsSliderTrackWidth(kind);
-  if (kind === "audio") {
-    const result = getElasticRiftSliderValueFromPointer({
-      pointerX: x,
-      trackX: sliderX,
-      trackWidth: trackW,
-      min: 0,
-      max: 1,
-    });
-    audio[name] = result.value;
-    state.pointer.elasticSlider = {
-      key,
-      overflow: result.overflow,
-      releaseKey: "",
-      releaseOverflow: 0,
-      releaseStartedAt: 0,
-    };
-  } else if (kind === "tuning") {
-    const spec = TUNING_SLIDERS[name];
-    const result = getElasticRiftSliderValueFromPointer({
-      pointerX: x,
-      trackX: sliderX,
-      trackWidth: trackW,
-      min: spec.min,
-      max: spec.max,
-      step: 1,
-    });
-    state.tuning[name] = result.value;
-    state.pointer.elasticSlider = {
-      key,
-      overflow: result.overflow,
-      releaseKey: "",
-      releaseOverflow: 0,
-      releaseStartedAt: 0,
-    };
-  }
-  applyAudioSettings();
-  saveGame();
-}
-
-function hitControlBind(x, y) {
-  if (state.settingsTab !== "controls") return null;
-  const origin = getSettingsContentOrigin();
-  const layout = UI_LAYOUT.controlsGrid;
-  const baseX = origin.x;
-  const baseY = origin.y + 112;
-  for (let i = 0; i < CONTROL_ACTIONS.length; i += 1) {
-    const col = i % layout.columns;
-    const row = Math.floor(i / layout.columns);
-    const rowX = baseX + col * layout.gapX;
-    const rowY = baseY + row * layout.rowH;
-    const keyX = rowX + layout.rowW - layout.keyW;
-    if (pointInRect(x, y, keyX, rowY + 3, layout.keyW, layout.keyH)) return CONTROL_ACTIONS[i].id;
-  }
-  return null;
-}
 
 applySavedSettings();
 syncControlHints();
