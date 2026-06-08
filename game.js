@@ -148,6 +148,7 @@ import { createBattleBoardRenderer } from "./src/render/battleBoardRenderer.js";
 import { createBattleParticleRenderer } from "./src/render/battleParticleRenderer.js";
 import { createBattleParticleSpawner } from "./src/render/battleParticleSpawner.js";
 import { createBattleSceneRenderer } from "./src/render/battleSceneRenderer.js";
+import { createCombatAnimationStateController } from "./src/render/combatAnimationStateController.js";
 import {
   alignDrawBoxToBaseline,
   createCharacterStageHelpers,
@@ -203,6 +204,7 @@ import {
   drawAscensionResultOverlay as renderAscensionResultOverlay,
 } from "./src/ui/ascensionChallengeOverlay.js";
 import { createBattleHudRenderer } from "./src/ui/battleHud.js";
+import { createBattleFeedbackController } from "./src/ui/battleFeedbackController.js";
 import { createBattleUiPrimitives } from "./src/ui/battleUiPrimitives.js";
 import { createCombatFeedbackRenderer } from "./src/ui/combatFeedbackRenderer.js";
 import { createEnemyPanelRenderer } from "./src/ui/enemyPanel.js";
@@ -262,6 +264,7 @@ import { createMoveGuideOverlayRenderer } from "./src/ui/moveGuideOverlay.js";
 import { createPauseOverlayRenderer } from "./src/ui/pauseOverlay.js";
 import { createResultOverlayRenderer } from "./src/ui/resultOverlayRenderer.js";
 import { createResultOverlayModel } from "./src/ui/resultOverlayModel.js";
+import { createOverlayRenderController } from "./src/ui/overlayRenderController.js";
 import { createScreenPrimitives } from "./src/ui/screenPrimitives.js";
 import { createScreenNoteController } from "./src/ui/screenNoteController.js";
 import { createMenuButtonRenderer } from "./src/ui/menuButtonRenderer.js";
@@ -1082,6 +1085,26 @@ const {
 });
 
 const {
+  addCombatPopup,
+  pushOperationReadout,
+  showBattleClearFeedback,
+  showEnemyDamageFeedback,
+  showPlayerDamageFeedback,
+} = createBattleFeedbackController({
+  state,
+  translate: t,
+  format: fmt,
+  positions: GSAP_FEEDBACK_POSITIONS,
+  buildOperationReadout,
+  buildCombatPopup,
+  showComboFeedback,
+  showB2BFeedback,
+  showTSpinFeedback,
+  showPerfectClearFeedback,
+  showDamageNumber,
+});
+
+const {
   showSpecialBondEffectCallout,
   showSpecialBondUpgradeCallout,
 } = createBondCalloutController({
@@ -1117,6 +1140,42 @@ const drawMenuButton = createMenuButtonRenderer({
   fitLabel,
   roundedRect,
 });
+
+const {
+  drawAscensionChallengeHud,
+  drawAscensionResultOverlay,
+  drawMetaUpgradeOverlay,
+  drawSettingsOverlay,
+  drawStartOverlay,
+  drawUpgradeOverlay,
+} = createOverlayRenderController(() => ({
+  ctx,
+  state,
+  t,
+  fmt,
+  getMessage,
+  canvasFont,
+  label,
+  fitLabel,
+  wrapText,
+  roundedRect,
+  drawImageContain,
+  drawMainMenuScene,
+  drawStartMenuOverlay,
+  drawDimOverlay,
+  drawCard,
+  drawCornerGlyph,
+  drawMenuButton,
+  drawMetaUpgradeScreen,
+  renderAscensionResultOverlay,
+  renderAscensionChallengeHud,
+  settingsScreenRenderer,
+  upgradeScreenRenderer,
+  resultScrim: OVERLAY_READABILITY.scrim.result,
+  metaUpgradeIcons,
+  riftEnergyIcon,
+  now: () => performance.now(),
+}));
 
 const {
   drawCharacterShadow,
@@ -1327,6 +1386,45 @@ const {
   enemyDeathParticleCount: ENEMY_DEATH_TRANSITION.particleCount,
   getUltimateWellRange,
   isUltimateWellColumn,
+});
+
+const {
+  getEnemyAnimationDuration,
+  getEnemyHitDelay,
+  getHeroAnimationDuration,
+  getHeroHitDelay,
+  startBossWindup,
+  startEnemyAttackAnimation,
+  startEnemyAttackPresentation,
+  startEnemyDeathTransition,
+  startHeroAttackAnimation,
+  startHeroLevelUpEffect,
+  startPlayerAttackPresentation,
+  triggerHeavyAttackWarning,
+  triggerBossPhaseSignal,
+} = createCombatAnimationStateController({
+  state,
+  heroAnimations: HERO_ANIMATIONS,
+  heroLevelUpEffect: HERO_LEVEL_UP_EFFECT,
+  enemyAttackAnimations: ENEMY_ATTACK_ANIMATIONS,
+  enemyAttackDurationMs: ENEMY_ATTACK_DURATION_MS,
+  enemyHitDelayMs: ENEMY_HIT_DELAY_MS,
+  bossWindupMs: BOSS_WINDUP_MS,
+  bossPhaseBannerMs: BOSS_PHASE_BANNER_MS,
+  enemyDeathDurationMs: ENEMY_DEATH_DURATION_MS,
+  heavyAttackWarningDamage: HEAVY_ATTACK_WARNING_DAMAGE,
+  boardX: BOARD_X,
+  boardY: BOARD_Y,
+  cols: COLS,
+  tileSize: TILE,
+  resolvePlayerAttackVfx,
+  resolveEnemyAttackVfx,
+  getAnimationDuration,
+  getBossPhase,
+  format: fmt,
+  translate: t,
+  playSfx,
+  spawnEnemyDeathParticles,
 });
 
 const {
@@ -2473,12 +2571,7 @@ function damageEnemyFromUpgrade(amount, floaterKey, color, x = 920, y = 430) {
   state.enemyHpTrail = Math.max(state.enemyHpTrail || beforeEnemyHp, beforeEnemyHp);
   state.enemyHp = Math.max(0, state.enemyHp - damage);
   state.stats.damage += damage;
-  state.enemyHit = Math.max(state.enemyHit, 220);
-  state.enemyHitIntensity = Math.max(state.enemyHitIntensity, 1.08);
-  showDamageNumber({
-    amount: damage,
-    position: GSAP_FEEDBACK_POSITIONS.damage,
-  });
+  showEnemyDamageFeedback(damage);
   state.floaters.push({
     x,
     y,
@@ -2538,23 +2631,6 @@ function triggerLastStarProtocol(projectedHp = state.playerHp) {
   });
   playSfx("upgradeReady");
   return gained;
-}
-
-function getHeroAnimationDuration(kind, comboAttackStyle = "") {
-  return resolvePlayerAttackVfx(kind, comboAttackStyle).totalDurationMs;
-}
-
-function getHeroHitDelay(kind, comboAttackStyle = "") {
-  return resolvePlayerAttackVfx(kind, comboAttackStyle).hitDelayMs;
-}
-
-function getEnemyAnimationDuration(kind) {
-  const vfx = resolveEnemyAttackVfx(kind);
-  return vfx?.bodyDurationMs || ENEMY_ATTACK_DURATION_MS;
-}
-
-function getEnemyHitDelay() {
-  return ENEMY_HIT_DELAY_MS;
 }
 
 function schedulePendingHit(hit) {
@@ -2622,13 +2698,7 @@ function applyPlayerHit(hit) {
   state.enemyHpTrail = Math.max(state.enemyHpTrail || beforeEnemyHp, beforeEnemyHp);
   state.enemyHp = Math.max(0, state.enemyHp - damage);
   checkBossPhaseTransition(beforeEnemyHp, state.enemyHp);
-  const impact = getHitFeedbackIntensity(hit);
-  state.enemyHit = Math.max(state.enemyHit, 230 + impact * 110);
-  state.enemyHitIntensity = Math.max(state.enemyHitIntensity, impact);
-  showDamageNumber({
-    amount: damage,
-    position: GSAP_FEEDBACK_POSITIONS.damage,
-  });
+  showPlayerDamageFeedback(hit);
   if (context.perfect) state.hitStopMs = Math.max(state.hitStopMs, PERFECT_HIT_STOP_MS);
   state.shake = Math.max(state.shake, hit.shake);
   state.floaters.push(...hit.floaters);
@@ -2662,18 +2732,6 @@ function reinforceHitAudioLayer(hit) {
   }
 }
 
-function getHitFeedbackIntensity(hit) {
-  const damageTier = Math.min(1.8, Math.max(0.35, hit.damage / 72));
-  const specialTier =
-    hit.context?.perfect ? 2.4 :
-    hit.context?.spinType ? 1.65 :
-    hit.b2bHit ? 1.35 :
-    hit.comboBurst ? 1.22 :
-    hit.context?.lines >= 4 ? 1.18 :
-    0.82;
-  return Math.min(2.6, Math.max(damageTier, specialTier));
-}
-
 function finishPlayerTurnAfterHit(context) {
   if (state.mode !== "playing") return;
   state.enemyCountdown -= 1;
@@ -2696,26 +2754,6 @@ function triggerEnemyWarningCue() {
   triggerHeavyAttackWarning();
   if (!audio.ctx || audio.muted || audio.sfxVolume <= 0 || audio.masterVolume <= 0) return;
   playSfx(state.enemyType?.id === "king" || state.miniBoss ? "enemyWarnStrong" : "enemyWarn");
-}
-
-function triggerHeavyAttackWarning() {
-  if (state.enemyCountdown > 1 || state.enemyAttackDamage < HEAVY_ATTACK_WARNING_DAMAGE) return;
-  state.floaters.push({
-    x: BOARD_X + COLS * TILE + 214,
-    y: BOARD_Y + 278,
-    text: t("heavyAttackIncoming"),
-    color: "#ff8ca0",
-    life: 1250,
-  });
-  state.bursts.push({
-    x: BOARD_X + COLS * TILE + 232,
-    y: BOARD_Y + 326,
-    radius: 18,
-    color: "#ff6f9f",
-    life: 420,
-    duration: 420,
-    intensity: 1.1,
-  });
 }
 
 function updateAudioCues(now = performance.now()) {
@@ -2780,12 +2818,7 @@ function applyEnemyHit(hit) {
       state.enemyHpTrail = Math.max(state.enemyHpTrail || beforeEnemyHp, beforeEnemyHp);
       state.enemyHp = Math.max(0, state.enemyHp - reflectDamage);
       state.stats.damage += reflectDamage;
-      state.enemyHit = Math.max(state.enemyHit, 220);
-      state.enemyHitIntensity = Math.max(state.enemyHitIntensity, 1.05);
-      showDamageNumber({
-        amount: reflectDamage,
-        position: GSAP_FEEDBACK_POSITIONS.damage,
-      });
+      showEnemyDamageFeedback(reflectDamage, { intensity: 1.05 });
       state.floaters.push({
         x: 920,
         y: 430,
@@ -3696,67 +3729,8 @@ function applyDamageResult(result) {
   return true;
 }
 
-function showBattleClearFeedback(result) {
-  if (!result || result.lines <= 0) return;
-  const comboCount = result.context?.combo || 0;
-  if (comboCount >= 2) {
-    showComboFeedback({
-      combo: comboCount,
-      label: fmt("floaterCombo", { combo: comboCount }),
-      subtitle: result.damage > 0 ? `${result.damage} ${t("dmgShort")}` : "",
-      position: GSAP_FEEDBACK_POSITIONS.combo,
-    });
-  }
-
-  const isDifficultClear = result.lines === 4 || Boolean(result.spinType);
-  if (isDifficultClear && state.b2bActive) {
-    showB2BFeedback({
-      chain: state.b2bChain,
-      label: state.b2bChain > 1 ? fmt("b2bChain", { count: state.b2bChain }) : t("b2bReady"),
-      subtitle: result.damage > 0 ? `${result.damage} ${t("dmgShort")}` : "",
-      position: GSAP_FEEDBACK_POSITIONS.b2b,
-    });
-  }
-
-  const isTSpin = result.pieceType === "T" && (result.spinType === "full" || result.spinType === "mini");
-  if (isTSpin) {
-    showTSpinFeedback({
-      spinType: result.spinType,
-      label: result.spinType === "mini" ? t("hitTSpinMini") : t("hitTSpin"),
-      subtitle: result.damage > 0 ? `${result.damage} ${t("dmgShort")}` : "",
-      position: GSAP_FEEDBACK_POSITIONS.tspin,
-    });
-  }
-
-  if (result.context?.perfect) {
-    showPerfectClearFeedback({
-      label: t("perfectClearTitle"),
-      subtitle: result.damage > 0 ? `${result.damage} ${t("dmgShort")}` : "",
-      position: GSAP_FEEDBACK_POSITIONS.perfect,
-    });
-  }
-}
-
 function playDamageFeedback(result) {
-  const vfx = resolvePlayerAttackVfx(result.attackStyle, result.comboAttackStyle);
-  startHeroAttackAnimation(result.attackStyle, result.comboAttackStyle);
-  playSfx(getPlayerAttackSfx(result));
-  state.attacks.push({
-    type: "player",
-    x0: 244,
-    y0: 358,
-    x1: 994,
-    y1: 346,
-    life: vfx.totalDurationMs,
-    duration: vfx.totalDurationMs,
-    damage: result.damage,
-    spin: result.isTSpin,
-    heroStyle: result.attackStyle,
-    comboStyle: result.comboAttackStyle,
-    vfxStyle: vfx.style,
-    special: result.special,
-    lines: result.lines,
-  });
+  startPlayerAttackPresentation(result);
   schedulePendingHit({
     type: "player",
     delay: getHeroHitDelay(result.attackStyle, result.comboAttackStyle),
@@ -3780,12 +3754,6 @@ function playDamageFeedback(result) {
       intensity: state.lastPerfectClear ? 2.2 : 1.65,
     } : null,
   });
-}
-
-function getPlayerAttackSfx(result) {
-  if (result.context?.perfect || result.spinType || result.attackStyle === "ultimate") return "playerAttackArcane";
-  if (result.lines >= 3 || result.b2bHit || result.comboBurst) return "playerAttackHeavy";
-  return "playerAttackLight";
 }
 
 function getComboMilestoneDamage(combo) {
@@ -3963,34 +3931,6 @@ function duckMusic(depth = 0.5, seconds = 0.8) {
   audio.musicGain.gain.linearRampToValueAtTime(base, now + seconds);
 }
 
-function startHeroAttackAnimation(kind, comboAttackStyle = "") {
-  const vfx = resolvePlayerAttackVfx(kind, comboAttackStyle);
-  const config = vfx.heroConfig || HERO_ANIMATIONS.slash;
-  state.heroAnimation = {
-    kind: vfx.heroKind,
-    startedAt: performance.now(),
-    duration: getAnimationDuration(config),
-  };
-}
-
-function startHeroLevelUpEffect() {
-  state.heroLevelUpFx = {
-    startedAt: performance.now(),
-    duration: getAnimationDuration(HERO_LEVEL_UP_EFFECT),
-  };
-}
-
-function startEnemyAttackAnimation(kind, resolvedConfig = null) {
-  const config = resolvedConfig || ENEMY_ATTACK_ANIMATIONS[kind];
-  if (!config) return;
-  state.enemyAnimation = {
-    kind,
-    config,
-    startedAt: performance.now(),
-    duration: getAnimationDuration(config),
-  };
-}
-
 function getWeaknessBonus(lines, spinType) {
   if (lines <= 0) return { multiplier: 1, label: "" };
   const weakness = state.enemyType.weakness;
@@ -4001,19 +3941,6 @@ function getWeaknessBonus(lines, spinType) {
     (weakness === "perfect" && state.lastPerfectClear) ||
     (weakness === "b2b" && state.b2bActive);
   return hit ? { multiplier: 1.35, label: t("weaknessHit") } : { multiplier: 1, label: "" };
-}
-
-function pushOperationReadout(lines, pieceType, spinType, meta = {}) {
-  const readout = buildOperationReadout(lines, pieceType, spinType, meta);
-  if (!readout) return;
-  state.operationReadouts.unshift(readout);
-  state.operationReadouts = state.operationReadouts.slice(0, 4);
-  addCombatPopup(buildCombatPopup(lines, pieceType, spinType, meta));
-}
-
-function addCombatPopup(popup) {
-  state.combatPopups.unshift(popup);
-  state.combatPopups = state.combatPopups.slice(0, 5);
 }
 
 function cancelIncomingGarbage(lines) {
@@ -4132,22 +4059,7 @@ function resolveEnemyAttack() {
   state.enemyCountdown = getEnemyCountdownForWave();
   if (enemy.id === "king" && getBossPhase() >= 3) state.enemyCountdown = Math.max(4, state.enemyCountdown - 1);
   if (enemy.id === "king" && getBossPhase() >= 4) state.enemyCountdown = Math.max(3, state.enemyCountdown - 1);
-  if (enemy.id === "king") startBossWindup(bossPhase, enemyVfx?.shake);
-  if (enemy.attackSprite === false && !enemyVfx) state.enemyAnimation = null;
-  else startEnemyAttackAnimation(enemy.id, enemyVfx?.bodyConfig);
-  const enemyAttackDuration = enemyVfx?.totalDurationMs
-    || (enemy.attackSprite === false ? 860 : getEnemyAnimationDuration(enemy.id));
-  state.attacks.push({
-    type: "enemy",
-    attackKind: enemy.id,
-    bossPhase,
-    x0: 994,
-    y0: 344,
-    x1: 266,
-    y1: 330,
-    life: enemyAttackDuration,
-    duration: enemyAttackDuration,
-  });
+  startEnemyAttackPresentation(enemy, bossPhase, enemyVfx);
   schedulePendingHit({
     type: "enemy",
     delay: getEnemyHitDelay(),
@@ -4242,52 +4154,11 @@ function getBossPhase() {
   return getBossPhaseByHp(state.enemyHp, state.enemyMaxHp);
 }
 
-function startBossWindup(phase = getBossPhase(), shake = 8 + phase * 2) {
-  if (state.enemyType?.id !== "king") return;
-  state.bossWindup = {
-    phase,
-    life: BOSS_WINDUP_MS,
-    duration: BOSS_WINDUP_MS,
-    startedAt: performance.now(),
-  };
-  state.shake = Math.max(state.shake, shake);
-}
-
-function triggerBossPhaseSignal(phase) {
-  state.lastBossPhase = phase;
-  state.bossPhaseBanner = {
-    phase,
-    life: BOSS_PHASE_BANNER_MS,
-    duration: BOSS_PHASE_BANNER_MS,
-  };
-  state.floaters.push({
-    x: BOARD_X + COLS * TILE + 36,
-    y: BOARD_Y + 96,
-    text: fmt("bossPhaseShift", { phase }),
-    color: "#fff0a6",
-    life: BOSS_PHASE_BANNER_MS,
-  });
-  startBossWindup(phase);
-  playSfx("enemyWarnStrong");
-}
-
 function checkBossPhaseTransition(beforeHp, afterHp) {
   if (state.enemyType.id !== "king" || afterHp <= 0) return;
   const beforePhase = getBossPhaseByHp(beforeHp, state.enemyMaxHp);
   const afterPhase = getBossPhaseByHp(afterHp, state.enemyMaxHp);
   if (afterPhase > beforePhase && afterPhase > state.lastBossPhase) triggerBossPhaseSignal(afterPhase);
-}
-
-function startEnemyDeathTransition(enemy, revealNext) {
-  if (!enemy) return;
-  state.enemyDeathVfx = {
-    enemy,
-    revealNext,
-    startedAt: performance.now(),
-    duration: ENEMY_DEATH_DURATION_MS,
-  };
-  state.enemyAnimation = null;
-  spawnEnemyDeathParticles(enemy);
 }
 
 function startNextWave() {
@@ -6086,36 +5957,6 @@ function drawOverlay() {
   drawModeOverlay(overlayPath);
 }
 
-function drawMetaUpgradeOverlay() {
-  drawMetaUpgradeScreen({
-    ctx,
-    progress: state.metaProgress,
-    pointer: state.pointer,
-    message: state.metaUpgradeMessage,
-    now: performance.now(),
-    t,
-    fmt,
-    canvasFont,
-    label,
-    fitLabel,
-    wrapText,
-    roundedRect,
-    drawImageContain,
-    drawMainMenuScene,
-    drawDimOverlay,
-    drawCard,
-    drawCornerGlyph,
-    drawMenuButton,
-    metaUpgradeIcons,
-    riftEnergyIcon,
-  });
-}
-
-function drawStartOverlay() {
-  drawStartMenuOverlay();
-  if (state.settingsOpen) drawSettingsOverlay("start");
-}
-
 function drawResultOverlay() {
   state.debug.resultOverlayDrawn = true;
   resultOverlayRenderer.drawResultOverlay(createResultOverlayModel({
@@ -6124,39 +5965,6 @@ function drawResultOverlay() {
     buttons: getResultButtonRects(),
     translate: t,
   }));
-}
-
-function drawSettingsOverlay(source = "pause") {
-  settingsScreenRenderer.draw(source);
-}
-
-function drawAscensionResultOverlay() {
-  renderAscensionResultOverlay({
-    ctx,
-    run: state.ascensionRun,
-    metaProgress: state.metaProgress,
-    message: getMessage(),
-    t,
-    fmt,
-    drawDimOverlay,
-    resultScrim: OVERLAY_READABILITY.scrim.result,
-    drawCard,
-    drawCornerGlyph,
-    label,
-    wrapText,
-    roundedRect,
-    drawMenuButton,
-  });
-}
-
-function drawAscensionChallengeHud() {
-  renderAscensionChallengeHud({
-    ctx,
-    run: state.ascensionRun,
-    fmt,
-    fitLabel,
-    roundedRect,
-  });
 }
 
 function startAscensionChallenge() {
@@ -6264,9 +6072,6 @@ function purchaseMetaUpgrade(id) {
   return false;
 }
 
-function drawUpgradeOverlay() {
-  upgradeScreenRenderer.drawUpgradeOverlay();
-}
 function setLanguage(language) {
   state.language = language === "en" ? "en" : "zh";
   syncControlHints();
