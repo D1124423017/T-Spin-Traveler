@@ -138,6 +138,7 @@ import {
 } from "./src/core/assetReadiness.js";
 import { getAssetLoadingTransition } from "./src/core/assetLoadingController.js";
 import { createGameModeSetter } from "./src/core/gameModeHelpers.js";
+import { createModeOverlayRouter } from "./src/core/modeRouter.js";
 import {
   clamp,
   drawRoundedRect,
@@ -268,8 +269,10 @@ import { createPauseOverlayRenderer } from "./src/ui/pauseOverlay.js";
 import { createResultOverlayRenderer } from "./src/ui/resultOverlayRenderer.js";
 import { createResultOverlayModel } from "./src/ui/resultOverlayModel.js";
 import { createScreenPrimitives } from "./src/ui/screenPrimitives.js";
+import { createScreenNoteController } from "./src/ui/screenNoteController.js";
 import { createUiTextHelpers } from "./src/ui/uiTextHelpers.js";
 import { createCombatReadoutModel } from "./src/ui/combatReadoutModel.js";
+import { createBondCalloutController } from "./src/ui/bondCalloutController.js";
 import {
   DEBUG_HUD_BUILD,
   createDebugHudState,
@@ -284,15 +287,10 @@ import {
 } from "./src/debug/debugStateReaders.js";
 import { createRuntimeSmokeReaderFactory } from "./src/debug/runtimeSmoke.js";
 import { createGameState } from "./src/core/gameStateFactory.js";
-import {
-  bindControl as bindControlForState,
-  getAllControlKeys,
-  getControlKeys as getControlKeysForState,
-  normalizeControlKeys,
-  normalizeControlsMap as normalizeControlsForActions,
-  serializeControls as serializeControlsForActions,
-} from "./src/input/controlBindings.js";
+import { normalizeControlKeys } from "./src/input/controlBindings.js";
+import { createControlStateAdapter } from "./src/input/controlStateAdapter.js";
 import { installInputController } from "./src/input/inputController.js";
+import { createMetaScreenPointerRouter } from "./src/input/metaScreenPointerRouter.js";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -929,43 +927,17 @@ const getControlsResetButtonRect = () => getControlsResetButtonRectForLayout(
 );
 const getHandlingResetButtonRect = () => getHandlingResetButtonRectForLayout(getSettingsContentOrigin());
 
-function normalizeControlsMap(source = {}) {
-  return normalizeControlsForActions(source, {
-    controlActions: CONTROL_ACTIONS,
-    defaultControls: DEFAULT_CONTROLS,
-  });
-}
-
-function serializeControls(controls) {
-  return serializeControlsForActions(controls, {
-    controlActions: CONTROL_ACTIONS,
-    defaultControls: DEFAULT_CONTROLS,
-  });
-}
-
-function getControlKeys(action) {
-  return getControlKeysForState(action, {
-    controls: state && state.controls ? state.controls : DEFAULT_CONTROLS,
-    defaultControls: DEFAULT_CONTROLS,
-  });
-}
-
-function allControlKeys() {
-  return getAllControlKeys({
-    controlActions: CONTROL_ACTIONS,
-    controls: state && state.controls ? state.controls : DEFAULT_CONTROLS,
-    defaultControls: DEFAULT_CONTROLS,
-  });
-}
-
-function bindControl(action, key) {
-  bindControlForState(state.controls, action, key, {
-    controlActions: CONTROL_ACTIONS,
-    defaultControls: DEFAULT_CONTROLS,
-  });
-}
-
-
+const {
+  allControlKeys,
+  bindControl,
+  getControlKeys,
+  normalizeControlsMap,
+  serializeControls,
+} = createControlStateAdapter({
+  getState: () => state,
+  controlActions: CONTROL_ACTIONS,
+  defaultControls: DEFAULT_CONTROLS,
+});
 
 const TEXT = translations;
 
@@ -1066,6 +1038,26 @@ const {
   buildDamageEquation,
   boardX: BOARD_X,
   boardY: BOARD_Y,
+});
+
+const {
+  showSpecialBondEffectCallout,
+  showSpecialBondUpgradeCallout,
+} = createBondCalloutController({
+  translate: t,
+  format: fmt,
+  showBondCallout,
+});
+
+const {
+  syncControlHints,
+  updateScreenNoteMode,
+} = createScreenNoteController({
+  state,
+  uiLayout: UI_LAYOUT,
+  translate: t,
+  isBattleCountdownActive,
+  documentTarget: document,
 });
 
 const {
@@ -1566,6 +1558,17 @@ const upgradeScreenRenderer = createUpgradeScreenRenderer({
   getTraitEffectText,
   getCurrentBuildDirectionText,
   getTraitFullCount,
+});
+
+const drawModeOverlay = createModeOverlayRouter({
+  drawAscensionResultOverlay,
+  drawMetaUpgradeOverlay,
+  drawUpgradeOverlay,
+  drawMoveGuideOverlay,
+  drawPauseOverlay,
+  drawAssetLoadingScreen,
+  drawStartOverlay,
+  drawFallbackModeOverlay,
 });
 
 function makeBoard() {
@@ -2834,30 +2837,6 @@ function getAngelBondTier() {
 
 function getDevilBondTier() {
   return getSpecialBondTier("devil", getSpecialBondCountsForRun());
-}
-
-function showSpecialBondUpgradeCallout(preview) {
-  if (!preview?.activates) return;
-  showBondCallout({
-    family: preview.family.key,
-    text: fmt("bondHintUpgrade", {
-      bond: t(preview.family.labelKey),
-      before: preview.before,
-      after: preview.after,
-    }),
-    detail: t("bondCalloutActivated"),
-    durationMs: 1450,
-  });
-}
-
-function showSpecialBondEffectCallout(family, text) {
-  if (!text) return;
-  showBondCallout({
-    family,
-    text,
-    detail: t("bondCalloutEffect"),
-    durationMs: 1250,
-  });
 }
 
 function isPlayerLowHp() {
@@ -5660,46 +5639,6 @@ function toggleMute() {
   saveGame();
 }
 
-function syncControlHints() {
-  document.documentElement.lang = state.language === "zh" ? "zh-Hant" : "en";
-  document.title = t("startTitle");
-  const shell = document.querySelector(".shell");
-  if (shell) shell.setAttribute("aria-label", t("ariaPrototype"));
-  const note = document.querySelector(".screen-note");
-  if (!note) return;
-  const hints = UI_LAYOUT.compactHints.map((key) => t(key));
-  const makeHint = (text, className, id = "") => {
-    const span = document.createElement("span");
-    if (id) span.id = id;
-    span.className = className;
-    span.textContent = text;
-    return span;
-  };
-  note.replaceChildren(
-    ...hints.map((hint, index) => {
-      const hintType = index >= hints.length - 2 ? "utility-hint" : "play-hint";
-      return makeHint(hint, hintType, `hint-${index}`);
-    }),
-  );
-  updateScreenNoteMode();
-}
-
-function updateScreenNoteMode() {
-  const note = document.querySelector(".screen-note");
-  if (!note) return;
-  const showPlayHints = state.mode === "playing";
-  const showReferenceHints = state.mode === "paused" || state.settingsOpen || state.mode === "guide";
-  const showHints = showPlayHints || showReferenceHints;
-  const faded = showPlayHints
-    && !isBattleCountdownActive()
-    && !state.tutorial
-    && performance.now() > (state.controlHintsFullUntil || 0);
-  note.classList.toggle("menu", !showHints);
-  note.classList.toggle("compact", showHints);
-  note.classList.toggle("countdown", showPlayHints && isBattleCountdownActive());
-  note.classList.toggle("faded", faded);
-}
-
 function previewSfx() {
   if (!audio.ctx || audio.muted) return;
   const t = audio.ctx.currentTime;
@@ -5759,18 +5698,6 @@ function drawTraitList() {
   battleHudRenderer.drawTraitList();
 }
 
-function drawBuildChip(x, y, w) {
-  const items = getBuildSummary();
-  ctx.save();
-  ctx.fillStyle = "rgba(7, 10, 16, 0.44)";
-  roundedRect(x, y, w, 26, 8, true, false);
-  ctx.strokeStyle = "rgba(183, 146, 255, 0.2)";
-  roundedRect(x, y, w, 26, 8, false, true);
-  label(t("buildCompact"), x + 12, y + 17, 11, "#c7a7ff");
-  fitLabel(items[0], x + 76, y + 17, w - 90, 12, "rgba(238,244,252,0.68)", 9, "800");
-  ctx.restore();
-}
-
 function drawHeroIdleBase(context = "battle") {
   if (context === "menu") {
     if (drawMenuHeroIdleSprite(performance.now())) return;
@@ -5791,225 +5718,6 @@ function drawHeroIdleBase(context = "battle") {
   } else {
     drawNoaFallback(false);
   }
-}
-
-function drawBuildPanel(x = 54, y = 510, w = 198) {
-  const items = getBuildSummary();
-  ctx.save();
-  ctx.fillStyle = "rgba(5, 8, 12, 0.34)";
-  roundedRect(x, y, w, 70, 8, true, false);
-  ctx.strokeStyle = "rgba(126, 231, 255, 0.14)";
-  ctx.lineWidth = 1.5;
-  roundedRect(x, y, w, 70, 8, false, true);
-  label(t("buildCompact").toUpperCase(), x + 16, y + 21, 12, "#7ee7ff");
-  label(t("buildDetailPause"), x + 76, y + 21, 10, "rgba(238,244,252,0.38)");
-  for (let i = 0; i < Math.min(2, items.length); i += 1) {
-    const yy = y + 42 + i * 16;
-    ctx.fillStyle = i === 0 && items[i] === t("noUpgrades") ? "rgba(238,244,252,0.08)" : "rgba(157,247,218,0.08)";
-    roundedRect(x + 14, yy - 11, w - 34, 13, 5, true, false);
-    label(items[i], x + 20, yy, 11, i === 0 && items[i] === t("noUpgrades") ? "rgba(238,244,252,0.42)" : "#f3f2ea");
-  }
-  if (items.length > 2) label(`+${items.length - 2}`, x + w - 28, y + 58, 10, "#fff0a6");
-  ctx.restore();
-}
-
-function getBuildSummary() {
-  const items = [];
-  if (state.upgrades.maxHpBonus > 0) items.push(fmt("build.maxHp", { value: state.upgrades.maxHpBonus }));
-  if (state.upgrades.damageMultiplier > 0) items.push(fmt("build.damage", { value: (1 + state.upgrades.damageMultiplier).toFixed(2) }));
-  if (state.upgrades.lineDamage > 0) items.push(fmt("build.lineDmg", { value: state.upgrades.lineDamage }));
-  if (state.upgrades.tspinBonus > 0) items.push(fmt("build.tCore", { value: state.upgrades.tspinBonus }));
-  if (state.upgrades.garbageCancel > 0) items.push(fmt("build.garbageCancel", { value: state.upgrades.garbageCancel }));
-  if (state.upgrades.comboDelay > 0) items.push(fmt("build.comboDelay", { value: state.upgrades.comboDelay }));
-  if (state.upgrades.b2bBonus > 0) items.push(fmt("build.b2bBlade", { value: state.upgrades.b2bBonus }));
-  if (state.upgrades.waveHeal > 0) items.push(fmt("build.waveHeal", { value: state.upgrades.waveHeal }));
-  if (state.upgrades.spinBonus > 0) items.push(fmt("build.spinFlow", { value: state.upgrades.spinBonus }));
-  if (state.upgrades.comboDamage > 0) items.push(fmt("build.comboFlow", { value: state.upgrades.comboDamage }));
-  if (state.upgrades.defense > 0) items.push(fmt("build.guard", { value: state.upgrades.defense }));
-  if (state.upgrades.bossDamage > 0) items.push(fmt("build.bossbreaker", { value: state.upgrades.bossDamage }));
-  if (state.upgrades.clearHeal > 0) items.push(fmt("build.clearHeal", { value: state.upgrades.clearHeal }));
-  if (state.upgrades.spinHeal > 0) items.push(fmt("build.spinHeal", { value: state.upgrades.spinHeal }));
-  if (state.upgrades.spinGuardStrike > 0) items.push(fmt("build.spinGuardStrike", { value: state.upgrades.spinGuardStrike }));
-  if (state.upgrades.comboEchoDamage > 0) items.push(fmt("build.comboEcho", { value: state.upgrades.comboEchoDamage }));
-  if (state.upgrades.guardReflect > 0) items.push(fmt("build.guardReflect", { value: state.upgrades.guardReflect.toFixed(1) }));
-  if (state.upgrades.garbageCounterDamage > 0) items.push(fmt("build.garbageCounter", { value: state.upgrades.garbageCounterDamage }));
-  if (state.upgrades.burstCharge > 0) items.push(fmt("build.burstCharge", { value: state.upgrades.burstCharge }));
-  if (state.upgrades.perfectBossDelay > 0) items.push(fmt("build.perfectBossDelay", { value: state.upgrades.perfectBossDelay }));
-  if (state.upgrades.guardGain > 0) items.push(`${t("guardLabel")} +${state.upgrades.guardGain}`);
-  if (state.upgrades.comboGuardGain > 0) items.push(`Combo ${t("guardLabel")} +${state.upgrades.comboGuardGain}`);
-  if (state.upgrades.b2bShield > 0) items.push(`B2B ${t("guardLabel")} ${state.upgrades.b2bShield}`);
-  return items.length ? items.slice(0, 3) : [t("noUpgrades")];
-}
-
-function drawIntentMetricRow(x, y, w, labelText, value, color) {
-  ctx.save();
-  const accent = color.startsWith("#") ? color : "#dce8ee";
-  ctx.fillStyle = hexToRgba(accent, 0.08);
-  roundedRect(x, y, w, 18, 5, true, false);
-  ctx.strokeStyle = hexToRgba(accent, 0.14);
-  roundedRect(x, y, w, 18, 5, false, true);
-  label(labelText, x + 8, y + 12, 10, "rgba(238,244,252,0.56)");
-  ctx.textAlign = "right";
-  label(String(value), x + w - 8, y + 13, 12, color);
-  ctx.restore();
-}
-
-function drawEnemyIntentCompact(x, y, intent) {
-  const enemy = state.enemyType;
-  const garbage = getEnemyAttackGarbagePreview(enemy);
-  ctx.save();
-  ctx.fillStyle = "rgba(7, 10, 16, 0.44)";
-  roundedRect(x, y, 154, 34, 8, true, false);
-  ctx.strokeStyle = hexToRgba(intent.color, 0.28);
-  roundedRect(x, y, 154, 34, 8, false, true);
-  fitLabel(intent.title.toUpperCase(), x + 10, y + 13, 134, 10, intent.color, 8, "900");
-  drawIntentMiniChip(x + 10, y + 17, "DMG", state.enemyAttackDamage, "#ffb7bd", 44);
-  drawIntentMiniChip(x + 58, y + 17, "G", garbage, garbage > 0 ? "#c9d4da" : "rgba(238,244,252,0.36)", 34);
-  drawIntentMiniChip(x + 96, y + 17, "W", enemyWeaknessToken(enemy), "#fff0a6", 48);
-  ctx.restore();
-}
-
-function drawIntentMiniChip(x, y, key, value, color, w = 48) {
-  ctx.save();
-  ctx.fillStyle = hexToRgba(color.startsWith("#") ? color : "#dce8ee", 0.1);
-  roundedRect(x, y, w, 18, 5, true, false);
-  ctx.strokeStyle = hexToRgba(color.startsWith("#") ? color : "#dce8ee", 0.22);
-  roundedRect(x, y, w, 18, 5, false, true);
-  label(key, x + 5, y + 12, 8, "rgba(238,244,252,0.42)");
-  label(String(value), x + 26, y + 12, 9, color);
-  ctx.restore();
-}
-
-function drawCountdownBadgeCompact(x, y, count) {
-  ctx.save();
-  const danger = count <= 1;
-  ctx.fillStyle = danger ? "rgba(76, 14, 24, 0.7)" : "rgba(8, 13, 20, 0.5)";
-  roundedRect(x, y, 88, 34, 8, true, false);
-  ctx.strokeStyle = danger ? "rgba(255, 119, 130, 0.7)" : "rgba(139, 238, 184, 0.24)";
-  roundedRect(x, y, 88, 34, 8, false, true);
-  label(t("enemyStrike").toUpperCase(), x + 8, y + 12, 8, danger ? "#ffb7bd" : "rgba(216, 238, 229, 0.62)");
-  label(String(count), x + 56, y + 28, 22, danger ? "#ff7782" : "#98f07e");
-  ctx.restore();
-}
-
-function drawOperationReadouts() {
-  if (!state.operationReadouts.length) return;
-  const x = BOARD_X - 160;
-  const y = BOARD_Y + 176;
-  ctx.save();
-  const visibleReadouts = Math.min(2, state.operationReadouts.length);
-  for (let i = 0; i < visibleReadouts; i += 1) {
-    const readout = state.operationReadouts[i];
-    const progress = 1 - readout.life / readout.duration;
-    const alpha = Math.max(0, Math.min(1, readout.life / 260));
-    const yy = y + i * 44 - progress * 12;
-    ctx.globalAlpha = alpha * (i === 0 ? 1 : 0.5);
-    ctx.save();
-    ctx.translate(i === 0 ? Math.sin(progress * Math.PI) * 5 : 0, 0);
-    ctx.shadowColor = readout.color;
-    ctx.shadowBlur = i === 0 ? 22 : 8;
-    ctx.fillStyle = hexToRgba(readout.color, i === 0 ? 0.22 : 0.08);
-    roundedRect(x, yy - 29, 146, 42, 9, true, false);
-    ctx.strokeStyle = hexToRgba(readout.color, i === 0 ? 0.44 : 0.16);
-    roundedRect(x, yy - 29, 146, 42, 9, false, true);
-    ctx.fillStyle = readout.color;
-    const titleSize = i === 0 ? (readout.title.length > 14 ? 16 : readout.title.length > 9 ? 20 : 24) : 15;
-    ctx.font = canvasFont(i === 0 ? "900" : "800", titleSize, readout.title, true);
-    ctx.textAlign = "left";
-    ctx.fillText(readout.title, x + 10, yy - 7);
-    ctx.font = canvasFont("800", 12, readout.title, true);
-    ctx.fillStyle = readout.b2b ? "#fff0a6" : "rgba(238,244,252,0.64)";
-    const comboText = readout.combo >= 2 ? fmt("floaterCombo", { combo: readout.combo }) : "";
-    const b2bText = readout.b2b ? "B2B" : "";
-    const effectiveText = `E${readout.effectiveLines}`;
-    const damageText = readout.damage ? `= ${readout.damage} ${t("dmgShort")}` : "";
-    ctx.fillText([comboText, b2bText, effectiveText, damageText].filter(Boolean).join("  "), x + 10, yy + 9);
-    ctx.restore();
-  }
-  ctx.globalAlpha = 1;
-  ctx.restore();
-}
-
-function drawDamageFormulaPanel(x, y) {
-  const breakdown = state.lastDamageBreakdown;
-  ctx.save();
-  ctx.fillStyle = "rgba(3, 5, 10, 0.26)";
-  roundedRect(x, y, 142, 72, 10, true, false);
-  ctx.strokeStyle = "rgba(145, 232, 222, 0.16)";
-  roundedRect(x, y, 142, 72, 10, false, true);
-  label(t("lastHit").toUpperCase(), x + 12, y + 21, 12, "#8fe8dc");
-  if (!breakdown) {
-    wrapText(t("damageEquationHint"), x + 12, y + 43, 116, 14, "rgba(238,244,252,0.48)", 10);
-    ctx.restore();
-    return;
-  }
-  label(`${breakdown.total} ${t("dmgShort")}`, x + 12, y + 45, 21, "#fff0a6");
-  const title = breakdown.title.length > 16 ? `${breakdown.title.slice(0, 15)}...` : breakdown.title;
-  label(title, x + 12, y + 61, 10, "rgba(238,244,252,0.58)");
-  label(t("detailPauseHint"), x + 12, y + 69, 8, "rgba(157,247,218,0.46)");
-  ctx.restore();
-}
-
-function drawCombatReadout() {
-  ctx.save();
-  const board = UI_LAYOUT.boardFrame;
-  const x = board.x + 22;
-  const y = H - 32;
-  const nextBoss = state.wave % 10 === 0
-    ? `P${getBossPhase()}`
-    : state.miniBoss
-      ? t("miniBoss")
-      : `${10 - (state.wave % 10)}`;
-  ctx.fillStyle = "rgba(4, 7, 14, 0.56)";
-  roundedRect(x - 14, y - 14, board.w - 16, 40, 12, true, false);
-  ctx.strokeStyle = "rgba(183, 146, 255, 0.18)";
-  roundedRect(x - 14, y - 14, board.w - 16, 40, 12, false, true);
-  drawMetricChip(x, y - 6, t("waveLabel"), state.wave, "#98f07e", 84);
-  drawMetricChip(x + 94, y - 6, t("nextBossLabel"), nextBoss, state.enemyType.id === "king" ? "#fff0a6" : "#d7c2ff", 94);
-  drawMetricChip(x + 198, y - 6, t("incomingShort"), state.pendingGarbage, state.pendingGarbage > 0 ? "#ffb7bd" : "#7b8791", 78);
-  if (state.challenge) {
-    const config = CHALLENGES.find((challenge) => challenge.id === state.challenge.id);
-    if (config) label(`${config.title}: ${state.challenge.progress}/${config.target}`, x, y + 42, 11, state.challenge.complete ? "#fff0a6" : "#9df7da");
-  }
-  ctx.restore();
-}
-
-function drawMetricChip(x, y, labelText, value, color, w = 78) {
-  ctx.save();
-  ctx.fillStyle = hexToRgba(color, 0.09);
-  roundedRect(x, y, w, 32, 8, true, false);
-  ctx.strokeStyle = hexToRgba(color, 0.22);
-  roundedRect(x, y, w, 32, 8, false, true);
-  label(String(labelText).toUpperCase(), x + 8, y + 12, 9, "rgba(238,244,252,0.48)");
-  label(String(value), x + 8, y + 27, 15, color);
-  ctx.restore();
-}
-
-function drawB2BStatusLight(x, y) {
-  const status = getB2BStatus();
-  ctx.save();
-  ctx.fillStyle = hexToRgba(status.color, 0.18);
-  roundedRect(x, y - 13, 144, 18, 9, true, false);
-  ctx.strokeStyle = hexToRgba(status.color, 0.48);
-  roundedRect(x, y - 13, 144, 18, 9, false, true);
-  ctx.fillStyle = status.color;
-  ctx.beginPath();
-  ctx.arc(x + 10, y - 4, 4.5 + (state.b2bActive ? Math.sin(performance.now() * 0.01) * 1.4 : 0), 0, Math.PI * 2);
-  ctx.fill();
-  label(status.text, x + 22, y + 1, 12, status.color);
-  if (state.upgrades.b2bShield > 0) label(`x${state.upgrades.b2bShield}`, x + 116, y + 1, 12, "#fff0a6");
-  ctx.restore();
-}
-
-function getB2BStatus() {
-  if (state.b2bActive) {
-    return {
-      text: state.b2bChain > 1 ? fmt("b2bChain", { count: state.b2bChain }) : t("b2bReady"),
-      color: "#fff0a6",
-    };
-  }
-  if (state.b2bBrokenFlash > 0) return { text: t("b2bBroken"), color: "#ff7782" };
-  return { text: `B2B ${t("off")}`, color: "#7b8791" };
 }
 
 function isMenuHeroInteractive() {
@@ -6481,57 +6189,37 @@ function drawOverlay() {
     drawResultOverlay();
     return;
   }
-  if (overlayPath === "ascensionResult") {
-    drawAscensionResultOverlay();
-    return;
-  }
-  if (overlayPath === "metaUpgrade") {
-    drawMetaUpgradeScreen({
-      ctx,
-      progress: state.metaProgress,
-      pointer: state.pointer,
-      message: state.metaUpgradeMessage,
-      now: performance.now(),
-      t,
-      fmt,
-      canvasFont,
-      label,
-      fitLabel,
-      wrapText,
-      roundedRect,
-      drawImageContain,
-      drawMainMenuScene,
-      drawDimOverlay,
-      drawCard,
-      drawCornerGlyph,
-      drawMenuButton,
-      metaUpgradeIcons,
-      riftEnergyIcon,
-    });
-    return;
-  }
-  if (overlayPath === "upgrade") {
-    drawUpgradeOverlay();
-    return;
-  }
-  if (overlayPath === "guide") {
-    drawMoveGuideOverlay();
-    return;
-  }
-  if (overlayPath === "pause") {
-    drawPauseOverlay();
-    return;
-  }
-  if (overlayPath === "assetLoading") {
-    drawAssetLoadingScreen();
-    return;
-  }
-  if (overlayPath === "start") {
-    drawStartMenuOverlay();
-    if (state.settingsOpen) drawSettingsOverlay("start");
-    return;
-  }
-  drawFallbackModeOverlay();
+  drawModeOverlay(overlayPath);
+}
+
+function drawMetaUpgradeOverlay() {
+  drawMetaUpgradeScreen({
+    ctx,
+    progress: state.metaProgress,
+    pointer: state.pointer,
+    message: state.metaUpgradeMessage,
+    now: performance.now(),
+    t,
+    fmt,
+    canvasFont,
+    label,
+    fitLabel,
+    wrapText,
+    roundedRect,
+    drawImageContain,
+    drawMainMenuScene,
+    drawDimOverlay,
+    drawCard,
+    drawCornerGlyph,
+    drawMenuButton,
+    metaUpgradeIcons,
+    riftEnergyIcon,
+  });
+}
+
+function drawStartOverlay() {
+  drawStartMenuOverlay();
+  if (state.settingsOpen) drawSettingsOverlay("start");
 }
 
 function drawResultOverlay() {
@@ -6645,30 +6333,6 @@ function recordAscensionClear(lines) {
   return completeAscensionChallenge(true);
 }
 
-function handleMetaUpgradePointerDown(x, y) {
-  const back = getMetaUpgradeBackButtonRect();
-  if (pointInRect(x, y, back.x, back.y, back.w, back.h)) {
-    setGameMode("start");
-    state.metaUpgradeMessage = { key: "", vars: {}, until: 0 };
-    playSfx("hold");
-    return true;
-  }
-  const ascension = getMetaAscensionEntryRect();
-  if (pointInRect(x, y, ascension.x, ascension.y, ascension.w, ascension.h)) {
-    startAscensionChallenge();
-    return true;
-  }
-  const rows = getMetaUpgradeRowRects();
-  for (const def of Object.values(META_UPGRADE_DEFS)) {
-    const rect = rows[def.id];
-    if (pointInRect(x, y, rect.buyX, rect.buyY, rect.buyW, rect.buyH)) {
-      purchaseMetaUpgrade(def.id);
-      return true;
-    }
-  }
-  return false;
-}
-
 function returnToMetaUpgradeFromAscension() {
   setGameMode("metaUpgrade");
   state.metaProgress = loadMetaProgress();
@@ -6680,30 +6344,6 @@ function returnToMetaUpgradeFromAscension() {
     until: performance.now() + 2600,
   };
   playSfx("uiConfirm");
-}
-
-function handleAscensionResultPointerDown(x, y) {
-  const buttons = getAscensionResultButtonRects();
-  const primary = state.ascensionRun?.status === "success" ? buttons.single : buttons.primary;
-  if (pointInRect(x, y, primary.x, primary.y, primary.w, primary.h)) {
-    returnToMetaUpgradeFromAscension();
-    return true;
-  }
-  if (
-    state.ascensionRun?.status === "failed"
-    && pointInRect(
-      x,
-      y,
-      buttons.secondary.x,
-      buttons.secondary.y,
-      buttons.secondary.w,
-      buttons.secondary.h,
-    )
-  ) {
-    startAscensionChallenge();
-    return true;
-  }
-  return false;
 }
 
 function purchaseMetaUpgrade(id) {
@@ -6820,6 +6460,25 @@ function controlDisplayValue(action) {
 function drawPauseButton() {
   battleHudRenderer.drawPauseButton();
 }
+
+const {
+  handleAscensionResultPointerDown,
+  handleMetaUpgradePointerDown,
+} = createMetaScreenPointerRouter({
+  state,
+  metaUpgradeDefs: META_UPGRADE_DEFS,
+  getMetaUpgradeBackButtonRect,
+  getMetaAscensionEntryRect,
+  getMetaUpgradeRowRects,
+  getAscensionResultButtonRects,
+  actions: {
+    playSfx,
+    purchaseMetaUpgrade,
+    returnToMetaUpgradeFromAscension,
+    setGameMode,
+    startAscensionChallenge,
+  },
+});
 
 const inputController = installInputController({
   canvas,
