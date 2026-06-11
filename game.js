@@ -164,6 +164,10 @@ import { createHeroCombatFallbackRenderer } from "./src/render/heroCombatFallbac
 import { createImageRenderer } from "./src/render/imageRenderer.js";
 import { createKeyedSpriteRenderer } from "./src/render/keyedSpriteRenderer.js";
 import { getAnimationDuration } from "./src/render/animationTiming.js";
+import {
+  ROSTER_CELLS,
+  createBattlePresentationConfig,
+} from "./src/render/battlePresentationConfig.js";
 import { createPlayerStageRenderer } from "./src/render/playerStageRenderer.js";
 import {
   PLAYER_ATTACK_HERO_ANIMATIONS,
@@ -286,6 +290,12 @@ import {
 import { createRuntimeSmokeReaderFactory } from "./src/debug/runtimeSmoke.js";
 import { createGameState } from "./src/core/gameStateFactory.js";
 import { normalizeControlKeys } from "./src/input/controlBindings.js";
+import {
+  CONTROL_ACTIONS,
+  DEFAULT_CONTROLS,
+  SETTINGS_TABS,
+  TUNING_SLIDERS,
+} from "./src/input/controlSettingsConfig.js";
 import { createControlStateAdapter } from "./src/input/controlStateAdapter.js";
 import { installInputController } from "./src/input/inputController.js";
 import { createMetaScreenPointerRouter } from "./src/input/metaScreenPointerRouter.js";
@@ -750,13 +760,6 @@ const DEFAULT_TUNING = {
   gravity: DROP_MS,
 };
 
-const TUNING_SLIDERS = {
-  das: { min: 60, max: 240, unit: "ms" },
-  arr: { min: 0, max: 80, unit: "ms" },
-  softDrop: { min: 1, max: 32, unit: "ms" },
-  lockDelay: { min: 200, max: 900, unit: "ms" },
-};
-
 const COLORS = {
   I: "#5fd7f4",
   O: "#f0ce5a",
@@ -788,19 +791,6 @@ const RUN_MODES = {
 
 const NORMAL_ENEMY_CYCLES_BEFORE_BOSS = 2;
 
-const DEFAULT_CONTROLS = {
-  left: ["arrowleft"],
-  right: ["arrowright"],
-  softDrop: ["arrowdown"],
-  hardDrop: [" "],
-  rotateCW: ["arrowup", "x"],
-  rotateCCW: ["z"],
-  rotate180: ["a"],
-  hold: ["shift", "c"],
-  pause: ["p", "escape"],
-  mute: ["m"],
-};
-
 const UI_LAYOUT = createHudLayout({
   boardX: BOARD_X,
   boardY: BOARD_Y,
@@ -809,12 +799,16 @@ const UI_LAYOUT = createHudLayout({
   tile: TILE,
 });
 
-const GSAP_FEEDBACK_POSITIONS = Object.freeze({
-  combo: { x: BOARD_X - 92, y: BOARD_Y + 196 },
-  b2b: { x: BOARD_X - 92, y: BOARD_Y + 250 },
-  tspin: { x: BOARD_X - 92, y: BOARD_Y + 304 },
-  perfect: { x: BOARD_X + (COLS * TILE) / 2, y: BOARD_Y + ROWS * TILE * 0.42 },
-  damage: { x: UI_LAYOUT.enemyStage.x + 34, y: UI_LAYOUT.enemyStage.y + 126 },
+const {
+  feedbackPositions: GSAP_FEEDBACK_POSITIONS,
+  characterBaselines: BATTLE_CHARACTER_BASELINES,
+} = createBattlePresentationConfig({
+  boardX: BOARD_X,
+  boardY: BOARD_Y,
+  cols: COLS,
+  rows: ROWS,
+  tile: TILE,
+  uiLayout: UI_LAYOUT,
 });
 
 const MENU_HERO_DIALOGUE_KEYS = {
@@ -829,41 +823,13 @@ const MENU_HERO_DIALOGUE_MS = {
 
 const MENU_HERO_IDLE_TRIGGER_COOLDOWN_MS = 5000;
 
-const STAGE_BASELINE_OFFSETS = {
-  player: { centerX: -6, groundY: 384 },
-  enemy: { centerX: 12, groundY: 352 },
-};
-
 const CHARACTER_BASELINES = {
-  player: {
-    groundY: UI_LAYOUT.playerStage.y + STAGE_BASELINE_OFFSETS.player.groundY,
-    centerOffsetX: STAGE_BASELINE_OFFSETS.player.centerX,
-    localY: 120,
-    scale: 0.88,
-    glowRadius: 150,
-    sigilRadius: 116,
-    sigilYOffset: -2,
-    shadowW: 112,
-    animationScale: 1,
-    animationBottomOffset: 18,
-  },
-  enemy: {
-    groundY: UI_LAYOUT.enemyStage.y + STAGE_BASELINE_OFFSETS.enemy.groundY,
-    centerOffsetX: STAGE_BASELINE_OFFSETS.enemy.centerX,
-    localY: 104,
-    scale: 1,
-    glowRadius: 176,
-    sigilRadius: 144,
-    sigilYOffset: -2,
-    shadowW: 134,
-  },
+  ...BATTLE_CHARACTER_BASELINES,
   menu: {
     localY: 116,
     shadowW: 118,
   },
 };
-
-const SETTINGS_TABS = ["controls", "handling", "audio", "language", "feedback"];
 
 const MENU_IDLE_SEQUENCE = [
   { id: "idleA", duration: 2200 },
@@ -901,19 +867,6 @@ const MENU_HERO_SPECIAL_ANIMATIONS = {
   },
 };
 
-const CONTROL_ACTIONS = [
-  { id: "left", labelKey: "control.left" },
-  { id: "right", labelKey: "control.right" },
-  { id: "softDrop", labelKey: "control.softDrop" },
-  { id: "hardDrop", labelKey: "control.hardDrop" },
-  { id: "rotateCW", labelKey: "control.rotateCW" },
-  { id: "rotateCCW", labelKey: "control.rotateCCW" },
-  { id: "rotate180", labelKey: "control.rotate180" },
-  { id: "hold", labelKey: "control.hold" },
-  { id: "pause", labelKey: "control.pause" },
-  { id: "mute", labelKey: "control.mute" },
-];
-
 const getMainMenuButtonRects = () => getMainMenuButtonRectsForLayout(UI_LAYOUT.menu);
 const getSettingsContentOrigin = () => getSettingsContentOriginForLayout(UI_LAYOUT.settings);
 const getSettingsBackButtonRect = () => getSettingsBackButtonRectForLayout(UI_LAYOUT.settings);
@@ -943,20 +896,6 @@ const controlDisplayValue = (action) => getControlDisplayValue(action, {
 });
 
 const TEXT = translations;
-
-const ROSTER_CELLS = {
-  noa: [0, 0],
-  slime: [1, 0],
-  vine: [2, 0],
-  mushroom: [3, 0],
-  beetle: [0, 1],
-  mist: [1, 1],
-  thorn: [2, 0],
-  wisp: [1, 1],
-  stalker: [2, 1],
-  sentinel: [3, 1],
-  king: [3, 1],
-};
 
 const CHALLENGES = [
   {
