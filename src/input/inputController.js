@@ -1,6 +1,7 @@
 import { pointInRect } from "../render/drawUtils.js";
 import { normalizeControlKey } from "./controlBindings.js";
 import { createMainMenuInputRouter } from "./mainMenuInputRouter.js";
+import { createEquipmentInputRouter } from "./equipmentInputRouter.js";
 import { createSettingsInputRouter } from "./settingsInputRouter.js";
 
 export function getCanvasPoint(event, canvas, width, height) {
@@ -46,6 +47,8 @@ export function installInputController({
     getControlKeys,
     handleAscensionResultPointerDown,
     handleMetaUpgradePointerDown,
+    drawEquipmentRoulette,
+    equipEquipmentItem,
     hardDrop,
     holdPiece,
     isBattleCountdownActive,
@@ -53,17 +56,19 @@ export function installInputController({
     loadMetaProgress,
     move,
     moveUpgradeSelection,
+    openEquipmentScreen,
+    openEquipmentRoulette,
     playSfx,
     pressHorizontal,
     previewUpgradeChoice,
     releaseHorizontal,
     resetGame,
+    returnToEquipmentInventory,
     returnToMetaUpgradeFromAscension,
     rotate,
     rotate180,
     saveGame,
     setGameMode,
-    showEquipmentComingSoon,
     startAscensionChallenge,
     syncControlHints,
     toggleMute,
@@ -71,6 +76,7 @@ export function installInputController({
     triggerMenuHeroAction,
     unlockAudio,
     updateMenuHeroHoverFromPointer,
+    upgradeEquipmentRoulette,
   } = actions;
 
   const hasPointerEvents = typeof target.PointerEvent !== "undefined";
@@ -102,7 +108,7 @@ export function installInputController({
     actions: {
       start: () => resetGame("endless"),
       mainStage: () => resetGame("storyEgypt"),
-      equipment: () => showEquipmentComingSoon?.(),
+      equipment: () => openEquipmentScreen?.(),
       metaUpgrade: () => {
         setGameMode("metaUpgrade");
         state.metaProgress = loadMetaProgress();
@@ -118,6 +124,20 @@ export function installInputController({
         state.settingsTab = "controls";
         playSfx("uiConfirm");
       },
+    },
+  });
+  const equipmentInput = createEquipmentInputRouter({
+    state,
+    actions: {
+      backToMain: () => {
+        setGameMode("start");
+        playSfx("uiCancel");
+      },
+      backToInventory: returnToEquipmentInventory,
+      draw: drawEquipmentRoulette,
+      equip: equipEquipmentItem,
+      openRoulette: openEquipmentRoulette,
+      upgrade: upgradeEquipmentRoulette,
     },
   });
 
@@ -166,6 +186,17 @@ export function installInputController({
     }
 
     if (state.mode === "upgrade" && state.upgradePickConfirm) return;
+
+    if (
+      state.mode === "equipment"
+      && equipmentInput.handleKeyDown({
+        key,
+        code,
+        repeat: event.repeat,
+      })
+    ) {
+      return;
+    }
 
     if (state.mode === "upgrade") {
       if (key === "ArrowLeft" || key === "ArrowRight") {
@@ -306,7 +337,9 @@ export function installInputController({
       && state.assetLoadingDone
       && !state.settingsOpen
       && mainMenuInput.updatePointerSelection(point.x, point.y);
-    canvas.style.cursor = heroHovered || menuHovered ? "pointer" : "";
+    const equipmentHovered = state.mode === "equipment"
+      && equipmentInput.isInteractivePoint(point.x, point.y);
+    canvas.style.cursor = heroHovered || menuHovered || equipmentHovered ? "pointer" : "";
     if (state.pointer.down && state.pointer.dragging) {
       event.preventDefault();
       settingsInput.updateSliderFromPointer(state.pointer.dragging, point.x);
@@ -379,6 +412,10 @@ export function installInputController({
     }
 
     if (!state.settingsOpen && state.mode !== "playing") {
+      if (state.mode === "equipment") {
+        equipmentInput.handlePointerDown(point.x, point.y);
+        return;
+      }
       if (state.mode === "ascensionResult") {
         handleAscensionResultPointerDown(point.x, point.y);
         return;

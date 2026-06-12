@@ -148,12 +148,48 @@ const heroPresentationAssets = [
   { path: "assets/images/clean/noa_feedback_thanks_alpha.png", width: 1024, height: 1536 },
 ];
 
+const retiredNoaStaticAssets = [
+  "assets/images/clean/ET_Character_alpha.png",
+  "assets/images/clean/noa_menu_showcase.png",
+];
+
 const mainMenuDialogueAsset = {
   path: "assets/images/menu/main-menu-dialogue-frame.png",
   width: 1942,
   height: 809,
   colorType: 6,
 };
+
+const equipmentAssets = [
+  {
+    path: "assets/images/equipment/equipment-roulette-wheel.png",
+    width: 1254,
+    height: 1254,
+  },
+  {
+    path: "assets/images/equipment/noa-cheat-hand.png",
+    width: 1792,
+    height: 878,
+  },
+];
+
+const equipmentIconPaths = [
+  "wanderer-observer-hood",
+  "torn-traveler-cloak",
+  "shard-crystal-dagger",
+  "star-pattern-headwrap",
+  "resonance-cloak",
+  "pulse-crystal-blade",
+  "rift-observer-crown",
+  "phase-long-cloak",
+  "orbital-longsword",
+  "royal-crystal-crown",
+  "royal-nightfall-cloak",
+  "rift-sovereignty-blade",
+  "rift-king-mask",
+  "fate-deception-cloak",
+  "cheaters-amethyst-sword",
+].map((id) => `assets/images/equipment/icons/${id}.png`);
 
 const heroAttackVfxSheets = [
   "assets/images/clean/hero_line_clear_slash_16_spritesheet_alpha.png",
@@ -402,6 +438,35 @@ describe("image assets", () => {
     }
   });
 
+  it("uses the canonical full-body NOA art for menu and equipment presentation", () => {
+    const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
+    const gameSource = fs.readFileSync(path.join(projectRoot, "game.js"), "utf8");
+
+    expect(assetsSource).toContain(
+      'registerImageAsset("hero-idle-canonical", "assets/images/clean/ET_Character_fullbody_alpha.png")',
+    );
+    expect(gameSource).toContain("noaPreviewArt: heroIdleArt");
+    expect(gameSource).toContain(
+      "getMenuHeroIdlePlayback(now).active && drawMenuHeroIdleSprite(now)",
+    );
+    expect(gameSource).toContain("if (isImageReady(heroIdleArt))");
+    expect(gameSource).not.toContain("noaMenuShowcaseArt");
+  });
+
+  it("removes retired static NOA art without touching combat spritesheets", () => {
+    const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
+    const gameSource = fs.readFileSync(path.join(projectRoot, "game.js"), "utf8");
+
+    for (const legacyPath of retiredNoaStaticAssets) {
+      expect(fs.existsSync(path.join(projectRoot, legacyPath))).toBe(false);
+      expect(assetsSource).not.toContain(legacyPath);
+      expect(gameSource).not.toContain(legacyPath);
+    }
+    for (const sheet of heroAttackVfxSheets) {
+      expect(fs.existsSync(path.join(projectRoot, sheet))).toBe(true);
+    }
+  });
+
   it("keeps the formal main menu dialogue frame as an alpha PNG", () => {
     const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
 
@@ -411,6 +476,33 @@ describe("image assets", () => {
       height: mainMenuDialogueAsset.height,
       colorType: mainMenuDialogueAsset.colorType,
     });
+  });
+
+  it("keeps the large equipment wheel and NOA cheat presentation as formal alpha assets", () => {
+    const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
+    for (const asset of equipmentAssets) {
+      expect(assetsSource).toContain(asset.path);
+      expect(readPngInfo(asset.path)).toEqual({
+        width: asset.width,
+        height: asset.height,
+        colorType: 6,
+      });
+    }
+  });
+
+  it("keeps one distinct formal alpha icon for every equipment item", () => {
+    const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
+    const hashes = new Set();
+    for (const iconPath of equipmentIconPaths) {
+      expect(assetsSource).toContain(iconPath);
+      expect(readPngInfo(iconPath)).toEqual({
+        width: 1254,
+        height: 1254,
+        colorType: 6,
+      });
+      hashes.add(fs.readFileSync(path.join(projectRoot, iconPath)).toString("base64"));
+    }
+    expect(hashes.size).toBe(equipmentIconPaths.length);
   });
 
   it("keeps upgrade type icons as 512px alpha PNGs", () => {

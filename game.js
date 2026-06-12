@@ -1,5 +1,7 @@
 import {
   ASSET_REGISTRY,
+  equipmentIcons,
+  equipmentRouletteWheelArt,
   enemyBattlePortraits,
   forestBg,
   getImageAssetRecord,
@@ -16,9 +18,9 @@ import {
   menuIdleMeditateSheet,
   musicLoopAssets,
   noaBattleIdleArt,
+  noaCheatHandArt,
   noaFeedbackBowArt,
   noaLevelUpSheet,
-  noaMenuShowcaseArt,
   oneShotAudioAssets,
   riftEnergyIcon,
   rosterArt,
@@ -116,7 +118,9 @@ import {
   grantRiftEnergy,
   loadMetaProgress,
   saveMetaProgress,
+  spendRiftEnergy,
 } from "./src/core/metaProgress.js";
+import { createEquipmentController } from "./src/core/equipmentController.js";
 import {
   advanceAscensionChallengeRun,
   applyAscensionChallengeResult,
@@ -218,6 +222,12 @@ import { createBattleFeedbackController } from "./src/ui/battleFeedbackControlle
 import { createBattleUiPrimitives } from "./src/ui/battleUiPrimitives.js";
 import { createCombatFeedbackRenderer } from "./src/ui/combatFeedbackRenderer.js";
 import { createEnemyPanelRenderer } from "./src/ui/enemyPanel.js";
+import { createEquipmentScreenRenderer } from "./src/ui/equipmentScreen.js";
+import {
+  createEquipmentSpinMotion,
+  createEquipmentUpgradeMotion,
+  getEquipmentMotionState,
+} from "./src/ui/equipmentMotion.js";
 import { createGameplayPromptRenderer } from "./src/ui/gameplayPromptRenderer.js";
 import {
   createSidePieceLayout,
@@ -1034,6 +1044,29 @@ const setGameMode = createGameModeSetter({
 });
 
 const {
+  drawEquipmentRoulette,
+  equipEquipmentItem,
+  openEquipmentScreen,
+  openEquipmentRoulette,
+  returnToEquipmentInventory,
+  upgradeEquipmentRoulette,
+} = createEquipmentController({
+  state,
+  loadMetaProgress,
+  saveMetaProgress,
+  spendRiftEnergy,
+  setGameMode,
+  translate: t,
+  format: fmt,
+  prefersReducedMotion,
+  createSpinMotion: createEquipmentSpinMotion,
+  createUpgradeMotion: createEquipmentUpgradeMotion,
+  getMotionState: getEquipmentMotionState,
+  showToast,
+  playSfx,
+});
+
+const {
   buildCombatPopup,
   buildOperationReadout,
   getOperationTitle,
@@ -1108,6 +1141,7 @@ const drawMenuButton = createMenuButtonRenderer({
 const {
   drawAscensionChallengeHud,
   drawAscensionResultOverlay,
+  drawEquipmentOverlay,
   drawMetaUpgradeOverlay,
   drawSettingsOverlay,
   drawStartOverlay,
@@ -1131,6 +1165,7 @@ const {
   drawCornerGlyph,
   drawMenuButton,
   drawMetaUpgradeScreen,
+  equipmentScreenRenderer,
   renderAscensionResultOverlay,
   renderAscensionChallengeHud,
   settingsScreenRenderer,
@@ -1468,6 +1503,29 @@ const {
   prefersReducedMotion,
 });
 
+const equipmentScreenRenderer = createEquipmentScreenRenderer({
+  ctx,
+  state,
+  t,
+  fmt,
+  canvasFont,
+  label,
+  fitLabel,
+  wrapText,
+  roundedRect,
+  drawImageContain,
+  drawMainMenuScene: drawMainMenuSceneBackground,
+  drawDimOverlay,
+  drawCard,
+  drawMenuButton,
+  equipmentIcons,
+  equipmentWheelArt: equipmentRouletteWheelArt,
+  noaCheatHandArt,
+  noaPreviewArt: heroIdleArt,
+  riftEnergyIcon,
+  isImageReady,
+});
+
 const {
   drawPauseOverlay,
 } = createPauseOverlayRenderer({
@@ -1706,6 +1764,7 @@ const upgradeScreenRenderer = createUpgradeScreenRenderer({
 
 const drawModeOverlay = createModeOverlayRouter({
   drawAscensionResultOverlay,
+  drawEquipmentOverlay,
   drawMetaUpgradeOverlay,
   drawUpgradeOverlay,
   drawMoveGuideOverlay,
@@ -5058,7 +5117,7 @@ function getMusicStageByWave(wave) {
 }
 
 function getCurrentMusicStage() {
-  if (state.mode === "start" || state.mode === "guide" || state.mode === "metaUpgrade" || state.mode === "victory" || state.mode === "defeat") return "menu";
+  if (state.mode === "start" || state.mode === "guide" || state.mode === "equipment" || state.mode === "metaUpgrade" || state.mode === "victory" || state.mode === "defeat") return "menu";
   if (state.mode === "upgrade") return "upgrade";
   return getMusicStageByWave(state.wave || 1);
 }
@@ -5442,9 +5501,10 @@ function previewSfx() {
 
 function drawHeroIdleBase(context = "battle") {
   if (context === "menu") {
-    if (drawMenuHeroIdleSprite(performance.now())) return;
-    if (isImageReady(noaMenuShowcaseArt)) {
-      drawImageContain(noaMenuShowcaseArt, -170, -328, 340, 510);
+    const now = performance.now();
+    if (getMenuHeroIdlePlayback(now).active && drawMenuHeroIdleSprite(now)) return;
+    if (isImageReady(heroIdleArt)) {
+      drawImageContain(heroIdleArt, -170, -328, 340, 510);
       return;
     }
   }
@@ -6076,6 +6136,8 @@ const inputController = installInputController({
     applyAudioSettings,
     bindControl,
     chooseUpgrade,
+    drawEquipmentRoulette,
+    equipEquipmentItem,
     getAllControlKeys: allControlKeys,
     getControlKeys,
     handleAscensionResultPointerDown,
@@ -6088,6 +6150,8 @@ const inputController = installInputController({
     move,
     moveUpgradeSelection,
     normalizeControlsMap,
+    openEquipmentScreen,
+    openEquipmentRoulette,
     playSfx,
     pressHorizontal,
     previewSfx,
@@ -6095,21 +6159,13 @@ const inputController = installInputController({
     releaseHorizontal,
     resetGame,
     resetInputRepeat,
+    returnToEquipmentInventory,
     returnToMetaUpgradeFromAscension,
     rotate,
     rotate180,
     saveGame,
     setGameMode,
     setLanguage,
-    showEquipmentComingSoon: () => {
-      showToast({
-        type: "equipment-coming-soon",
-        text: t("equipmentComingSoon"),
-        tone: "rift",
-        durationMs: 1800,
-      });
-      playSfx("uiConfirm");
-    },
     startAscensionChallenge,
     syncControlHints,
     toggleMute,
@@ -6117,6 +6173,7 @@ const inputController = installInputController({
     triggerMenuHeroAction,
     unlockAudio,
     updateMenuHeroHoverFromPointer,
+    upgradeEquipmentRoulette,
   },
 });
 

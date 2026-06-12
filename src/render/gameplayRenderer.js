@@ -53,7 +53,7 @@ export function drawGameplayFrame({
     drawTutorialPrompt();
     drawPerfectClearFx();
     drawOverlay();
-    if (!["start", "guide", "upgrade", "metaUpgrade", "victory", "defeat"].includes(state.mode)) {
+    if (!["start", "guide", "upgrade", "equipment", "metaUpgrade", "victory", "defeat"].includes(state.mode)) {
       drawSettings();
     }
   } finally {

@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-12-main-menu-dialogue";
+export const ASSET_VERSION = "2026-06-12-noa-fullbody-portrait";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -126,6 +126,25 @@ export const mainMenuRuneArcBack = registerImageAsset("main-menu-rune-arc-back",
 export const mainMenuPrimaryFrame = registerImageAsset("main-menu-primary-frame", "assets/images/menu/main-menu-primary-frame.png");
 export const mainMenuSecondaryFrame = registerImageAsset("main-menu-secondary-frame", "assets/images/menu/main-menu-secondary-frame.png");
 export const mainMenuDialogueFrame = registerImageAsset("main-menu-dialogue-frame", "assets/images/menu/main-menu-dialogue-frame.png");
+export const equipmentRouletteWheelArt = registerImageAsset("equipment-roulette-wheel", "assets/images/equipment/equipment-roulette-wheel.png");
+export const noaCheatHandArt = registerImageAsset("equipment-noa-cheat-hand", "assets/images/equipment/noa-cheat-hand.png");
+export const equipmentIcons = {
+  "wanderer-observer-hood": registerImageAsset("equipment-icon-wanderer-observer-hood", "assets/images/equipment/icons/wanderer-observer-hood.png"),
+  "torn-traveler-cloak": registerImageAsset("equipment-icon-torn-traveler-cloak", "assets/images/equipment/icons/torn-traveler-cloak.png"),
+  "shard-crystal-dagger": registerImageAsset("equipment-icon-shard-crystal-dagger", "assets/images/equipment/icons/shard-crystal-dagger.png"),
+  "star-pattern-headwrap": registerImageAsset("equipment-icon-star-pattern-headwrap", "assets/images/equipment/icons/star-pattern-headwrap.png"),
+  "resonance-cloak": registerImageAsset("equipment-icon-resonance-cloak", "assets/images/equipment/icons/resonance-cloak.png"),
+  "pulse-crystal-blade": registerImageAsset("equipment-icon-pulse-crystal-blade", "assets/images/equipment/icons/pulse-crystal-blade.png"),
+  "rift-observer-crown": registerImageAsset("equipment-icon-rift-observer-crown", "assets/images/equipment/icons/rift-observer-crown.png"),
+  "phase-long-cloak": registerImageAsset("equipment-icon-phase-long-cloak", "assets/images/equipment/icons/phase-long-cloak.png"),
+  "orbital-longsword": registerImageAsset("equipment-icon-orbital-longsword", "assets/images/equipment/icons/orbital-longsword.png"),
+  "royal-crystal-crown": registerImageAsset("equipment-icon-royal-crystal-crown", "assets/images/equipment/icons/royal-crystal-crown.png"),
+  "royal-nightfall-cloak": registerImageAsset("equipment-icon-royal-nightfall-cloak", "assets/images/equipment/icons/royal-nightfall-cloak.png"),
+  "rift-sovereignty-blade": registerImageAsset("equipment-icon-rift-sovereignty-blade", "assets/images/equipment/icons/rift-sovereignty-blade.png"),
+  "rift-king-mask": registerImageAsset("equipment-icon-rift-king-mask", "assets/images/equipment/icons/rift-king-mask.png"),
+  "fate-deception-cloak": registerImageAsset("equipment-icon-fate-deception-cloak", "assets/images/equipment/icons/fate-deception-cloak.png"),
+  "cheaters-amethyst-sword": registerImageAsset("equipment-icon-cheaters-amethyst-sword", "assets/images/equipment/icons/cheaters-amethyst-sword.png"),
+};
 export const stageEgyptStarTombRiftBg = registerImageAsset("stage-egypt-star-tomb-rift", "assets/backgrounds/egypt_star_tomb_rift_battle_bg.png");
 export const stageEgyptStarTombExteriorRiftBg = registerImageAsset("stage-egypt-star-tomb-exterior-rift", "assets/backgrounds/egypt_star_tomb_exterior_rift_bg.png");
 export const stageEgyptPyramidObservatoryRiftBg = registerImageAsset("stage-egypt-pyramid-observatory-rift", "assets/backgrounds/egypt_pyramid_observatory_rift_bg.png");
@@ -134,8 +153,7 @@ export const stageAtlantisSunkenCrystalTempleRiftBg = registerImageAsset("stage-
 export const slimeArt = registerImageAsset("fallback-enemy-battle-portrait", "assets/enemies/battle/enemy_egypt_rift_scarab_scout_battle.png");
 export const rosterArt = registerImageAsset("character-roster", "assets/character-roster-v4-alpha.png");
 export const heroIdleArt = registerImageAsset("hero-idle-canonical", "assets/images/clean/ET_Character_fullbody_alpha.png");
-export const noaMenuShowcaseArt = registerImageAsset("noa-menu-showcase", "assets/images/clean/noa_menu_showcase.png");
-export const noaBattleIdleArt = registerImageAsset("noa-battle-idle-canonical", "assets/images/clean/ET_Character_fullbody_alpha.png");
+export const noaBattleIdleArt = heroIdleArt;
 export const noaFeedbackBowArt = registerImageAsset("noa-feedback-thanks-canonical", "assets/images/clean/noa_feedback_thanks_alpha.png");
 export const menuIdleCubeSheet = registerImageAsset("menu-idle-cube-sheet-16", "assets/images/clean/noa_menu_idle_cube_16.png");
 export const menuIdleMeditateSheet = registerImageAsset("menu-idle-meditate-sheet-16", "assets/images/clean/noa_menu_idle_meditate_16.png");

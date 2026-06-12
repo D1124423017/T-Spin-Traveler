@@ -1,5 +1,6 @@
 export function createModeOverlayRouter({
   drawAscensionResultOverlay,
+  drawEquipmentOverlay,
   drawMetaUpgradeOverlay,
   drawUpgradeOverlay,
   drawMoveGuideOverlay,
@@ -10,6 +11,7 @@ export function createModeOverlayRouter({
 } = {}) {
   const handlers = {
     ascensionResult: drawAscensionResultOverlay,
+    equipment: drawEquipmentOverlay,
     metaUpgrade: drawMetaUpgradeOverlay,
     upgrade: drawUpgradeOverlay,
     guide: drawMoveGuideOverlay,

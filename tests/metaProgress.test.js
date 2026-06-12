@@ -11,7 +11,9 @@ import {
   loadMetaProgress,
   normalizeMetaProgress,
   saveMetaProgress,
+  spendRiftEnergy,
 } from "../src/core/metaProgress.js";
+import { DEFAULT_EQUIPMENT_PROGRESS } from "../src/core/equipmentProgress.js";
 
 function createMemoryStorage(initial = {}) {
   const values = new Map(Object.entries(initial));
@@ -142,6 +144,27 @@ describe("meta upgrades", () => {
       guardBonus: 6,
     });
   });
+
+  it("spends Rift Energy without changing permanent upgrade or equipment data", () => {
+    const result = spendRiftEnergy({
+      riftEnergy: 12000,
+      metaUpgrades: { hpLevel: 3, attackLevel: 2, guardLevel: 1 },
+      equipment: {
+        wheelLevel: 2,
+        ownedEquipment: ["wanderer-observer-hood"],
+        equipped: { head: "wanderer-observer-hood" },
+      },
+    }, 10000);
+
+    expect(result).toMatchObject({ ok: true, cost: 10000 });
+    expect(result.progress.riftEnergy).toBe(2000);
+    expect(result.progress.metaUpgrades).toEqual({
+      hpLevel: 3,
+      attackLevel: 2,
+      guardLevel: 1,
+    });
+    expect(result.progress.equipment.wheelLevel).toBe(2);
+  });
 });
 
 describe("meta progress v2 migration", () => {
@@ -152,6 +175,7 @@ describe("meta progress v2 migration", () => {
       completedAscensions: [],
       riftEnergy: 0,
       metaUpgrades: { hpLevel: 0, attackLevel: 0, guardLevel: 0 },
+      equipment: DEFAULT_EQUIPMENT_PROGRESS,
     });
   });
 
@@ -170,6 +194,7 @@ describe("meta progress v2 migration", () => {
       completedAscensions: [],
       riftEnergy: 8253,
       metaUpgrades: { hpLevel: 10, attackLevel: 7, guardLevel: 4 },
+      equipment: DEFAULT_EQUIPMENT_PROGRESS,
     });
 
     const snapshot = storage.snapshot();
@@ -225,6 +250,35 @@ describe("meta progress v2 migration", () => {
       schemaVersion: 2,
       ascensionTier: 1,
       riftEnergy: 34,
+    });
+  });
+
+  it("round-trips wheel level, ownership, equipped slots, and latest draw", () => {
+    const storage = createMemoryStorage();
+    saveMetaProgress({
+      riftEnergy: 500,
+      equipment: {
+        wheelLevel: 4,
+        ownedEquipment: ["star-pattern-headwrap", "pulse-crystal-blade"],
+        equipped: {
+          head: "star-pattern-headwrap",
+          weapon: "pulse-crystal-blade",
+        },
+        recentDrop: "pulse-crystal-blade",
+        drawCount: 9,
+      },
+    }, storage);
+
+    expect(loadMetaProgress(storage).equipment).toEqual({
+      wheelLevel: 4,
+      ownedEquipment: ["star-pattern-headwrap", "pulse-crystal-blade"],
+      equipped: {
+        head: "star-pattern-headwrap",
+        cloak: null,
+        weapon: "pulse-crystal-blade",
+      },
+      recentDrop: "pulse-crystal-blade",
+      drawCount: 9,
     });
   });
 });

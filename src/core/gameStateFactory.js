@@ -166,6 +166,13 @@ export function createGameState({
     messageKey: "",
     messageVars: {},
     metaUpgradeMessage: { key: "", vars: {}, until: 0 },
+    equipmentUi: {
+      view: "inventory",
+      filter: "all",
+      motion: null,
+      message: { key: "", vars: {}, until: 0 },
+      selectedOwnedIndex: 0,
+    },
     settingsOpen: false,
     settingsTab: "controls",
     pauseView: "menu",

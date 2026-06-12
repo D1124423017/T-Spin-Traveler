@@ -83,9 +83,11 @@ describe("screen note controller", () => {
 describe("presentation routing helpers", () => {
   it("routes known modes and falls back for unknown modes", () => {
     const drawPauseOverlay = vi.fn();
+    const drawEquipmentOverlay = vi.fn();
     const drawFallbackModeOverlay = vi.fn();
     const drawModeOverlay = createModeOverlayRouter({
       drawAscensionResultOverlay: vi.fn(),
+      drawEquipmentOverlay,
       drawMetaUpgradeOverlay: vi.fn(),
       drawUpgradeOverlay: vi.fn(),
       drawMoveGuideOverlay: vi.fn(),
@@ -97,6 +99,8 @@ describe("presentation routing helpers", () => {
 
     expect(drawModeOverlay("pause")).toBe("pause");
     expect(drawPauseOverlay).toHaveBeenCalledOnce();
+    expect(drawModeOverlay("equipment")).toBe("equipment");
+    expect(drawEquipmentOverlay).toHaveBeenCalledOnce();
     drawModeOverlay("unknown");
     expect(drawFallbackModeOverlay).toHaveBeenCalledOnce();
   });

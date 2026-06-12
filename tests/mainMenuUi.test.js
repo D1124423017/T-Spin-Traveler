@@ -48,7 +48,6 @@ describe("main menu model and layout", () => {
       }
       expect(translations[language].menuControlHint).toBeTruthy();
       expect(translations[language].menuWorldLocation).toBeTruthy();
-      expect(translations[language].equipmentComingSoon).toBeTruthy();
     }
   });
 

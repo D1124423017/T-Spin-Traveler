@@ -1,4 +1,8 @@
 import { getAscensionMaxLevel } from "./ascensionChallenge.js";
+import {
+  DEFAULT_EQUIPMENT_PROGRESS,
+  normalizeEquipmentProgress,
+} from "./equipmentProgress.js";
 
 export const META_PROGRESS_SCHEMA_VERSION = 2;
 export const META_PROGRESS_STORAGE_KEY = "tspin-traveler-meta-progress-v2";
@@ -54,6 +58,7 @@ export const DEFAULT_META_PROGRESS = Object.freeze({
     attackLevel: 0,
     guardLevel: 0,
   }),
+  equipment: DEFAULT_EQUIPMENT_PROGRESS,
 });
 
 function toNonNegativeInt(value) {
@@ -78,6 +83,7 @@ export function normalizeMetaProgress(value = {}) {
       attackLevel: toNonNegativeInt(upgrades.attackLevel ?? value?.attackLevel),
       guardLevel: toNonNegativeInt(upgrades.guardLevel ?? value?.guardLevel),
     },
+    equipment: normalizeEquipmentProgress(value?.equipment),
   };
   const maxLevel = getAscensionMaxLevel(ascensionTier);
   for (const def of Object.values(META_UPGRADE_DEFS)) {
@@ -145,6 +151,16 @@ export function grantRiftEnergy(progress, amount) {
   const nextProgress = normalizeMetaProgress(progress);
   nextProgress.riftEnergy += toNonNegativeInt(amount);
   return nextProgress;
+}
+
+export function spendRiftEnergy(progress, amount) {
+  const nextProgress = normalizeMetaProgress(progress);
+  const cost = toNonNegativeInt(amount);
+  if (nextProgress.riftEnergy < cost) {
+    return { ok: false, reason: "notEnough", cost, progress: nextProgress };
+  }
+  nextProgress.riftEnergy -= cost;
+  return { ok: true, cost, progress: nextProgress };
 }
 
 export function getMetaBonuses(progress) {

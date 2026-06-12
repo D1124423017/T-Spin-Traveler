@@ -50,6 +50,10 @@ export function createOverlayRenderController(getBindings) {
     });
   }
 
+  function drawEquipmentOverlay() {
+    bindings().equipmentScreenRenderer.drawEquipmentScreen();
+  }
+
   function drawSettingsOverlay(source = "pause") {
     bindings().settingsScreenRenderer.draw(source);
   }
@@ -122,6 +126,7 @@ export function createOverlayRenderController(getBindings) {
   return {
     drawAscensionChallengeHud,
     drawAscensionResultOverlay,
+    drawEquipmentOverlay,
     drawMetaUpgradeOverlay,
     drawSettingsOverlay,
     drawStartOverlay,
