@@ -42,6 +42,7 @@ const DEBUG_ART_TUNING_KEY = "tspin-traveler-debug-art-tuning-v1";
 let domHud = null;
 let domArtTuning = null;
 let debugArtTuning = null;
+let debugEnergyTool = null;
 
 export function getDebugArtTuning({ enabled = isDebugHudEnabled() } = {}) {
   if (!enabled) return DEFAULT_DEBUG_ART_TUNING;
@@ -73,12 +74,14 @@ export function updateDebugDomHud({
 export function updateDebugArtTuningDom({
   enabled = isDebugHudEnabled(),
   tuning = getDebugArtTuning({ enabled }),
+  energyTool = null,
 } = {}) {
   if (!enabled || !tuning) {
     if (domArtTuning?.isConnected) domArtTuning.remove();
     domArtTuning = null;
     return;
   }
+  debugEnergyTool = energyTool;
   const panel = ensureDebugArtTuningDom();
   if (!panel) return;
   for (const input of panel.querySelectorAll("input[data-debug-art-key]")) {
@@ -87,6 +90,14 @@ export function updateDebugArtTuningDom({
     if (document.activeElement !== input) input.value = String(value);
     const output = panel.querySelector(`[data-debug-art-value="${key}"]`);
     if (output) output.textContent = value.toFixed(2);
+  }
+  const energyButton = panel.querySelector("[data-debug-energy-add]");
+  if (energyButton && energyTool?.buttonLabel) {
+    energyButton.textContent = energyTool.buttonLabel;
+  }
+  const energyValue = panel.querySelector("[data-debug-energy-value]");
+  if (energyValue && energyTool?.valueLabel) {
+    energyValue.textContent = energyTool.valueLabel;
   }
 }
 
@@ -206,6 +217,32 @@ function ensureDebugArtTuningDom() {
   });
   actions.append(reset, copy);
   panel.appendChild(actions);
+
+  const energySection = document.createElement("div");
+  Object.assign(energySection.style, {
+    marginTop: "12px",
+    paddingTop: "10px",
+    borderTop: "1px solid rgba(185, 135, 255, 0.28)",
+  });
+  const energyValue = document.createElement("div");
+  energyValue.dataset.debugEnergyValue = "true";
+  energyValue.textContent = "Rift Energy";
+  Object.assign(energyValue.style, {
+    marginBottom: "7px",
+    color: "#d9c5ff",
+    fontVariantNumeric: "tabular-nums",
+  });
+  const addEnergy = createDebugButton("Add 10000 Rift Energy");
+  addEnergy.dataset.debugEnergyAdd = "true";
+  addEnergy.style.width = "100%";
+  addEnergy.addEventListener("click", () => {
+    const nextValue = debugEnergyTool?.onActivate?.();
+    if (Number.isFinite(nextValue) && debugEnergyTool?.formatValue) {
+      energyValue.textContent = debugEnergyTool.formatValue(nextValue);
+    }
+  });
+  energySection.append(energyValue, addEnergy);
+  panel.appendChild(energySection);
 
   document.body.appendChild(panel);
   domArtTuning = panel;

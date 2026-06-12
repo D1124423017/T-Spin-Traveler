@@ -307,6 +307,7 @@ import {
   updateDebugArtTuningDom,
   updateDebugDomHud,
 } from "./src/debug/debugHud.js";
+import { createDebugProgressTools } from "./src/debug/debugProgressTools.js";
 import {
   readActivePieceDebugInfo,
   readHiddenRowsDebugInfo,
@@ -1041,6 +1042,13 @@ const setGameMode = createGameModeSetter({
   state,
   setDomOverlayMode,
   setFeedbackMode,
+});
+
+const debugProgressTools = createDebugProgressTools({
+  state,
+  loadMetaProgress,
+  saveMetaProgress,
+  grantRiftEnergy,
 });
 
 const {
@@ -4708,6 +4716,14 @@ function update(time) {
       updateDebugArtTuningDom({
         enabled: DEBUG_HUD_ENABLED,
         tuning: getDebugArtTuning({ enabled: DEBUG_HUD_ENABLED }),
+        energyTool: {
+          buttonLabel: t("debugAddRiftEnergy10000"),
+          valueLabel: fmt("debugRiftEnergyValue", {
+            amount: state.metaProgress?.riftEnergy || 0,
+          }),
+          formatValue: (amount) => fmt("debugRiftEnergyValue", { amount }),
+          onActivate: debugProgressTools.addRiftEnergy,
+        },
       });
     }
     draw();
@@ -6199,6 +6215,14 @@ if (DEBUG_HUD_ENABLED) {
   updateDebugArtTuningDom({
     enabled: DEBUG_HUD_ENABLED,
     tuning: getDebugArtTuning({ enabled: DEBUG_HUD_ENABLED }),
+    energyTool: {
+      buttonLabel: t("debugAddRiftEnergy10000"),
+      valueLabel: fmt("debugRiftEnergyValue", {
+        amount: state.metaProgress?.riftEnergy || 0,
+      }),
+      formatValue: (amount) => fmt("debugRiftEnergyValue", { amount }),
+      onActivate: debugProgressTools.addRiftEnergy,
+    },
   });
 }
 requestAnimationFrame(update);

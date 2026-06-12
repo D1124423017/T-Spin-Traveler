@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-12-noa-fullbody-portrait";
+export const ASSET_VERSION = "2026-06-12-equipment-roulette-polish";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";

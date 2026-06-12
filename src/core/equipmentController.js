@@ -86,6 +86,8 @@ export function createEquipmentController({
       now: now(),
       wheelLevel: result.progress.wheelLevel,
       rarity: result.rarity,
+      itemId: result.item.id,
+      duplicate: result.duplicate,
       reducedMotion: prefersReducedMotion(),
       random,
     });
@@ -125,6 +127,7 @@ export function createEquipmentController({
     saveMetaProgress(state.metaProgress);
     state.equipmentUi.motion = createUpgradeMotion({
       now: now(),
+      wheelLevel: upgrade.level,
       reducedMotion: prefersReducedMotion(),
     });
     const wheel = getEquipmentWheelLevel(upgrade.level);

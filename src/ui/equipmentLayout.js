@@ -19,7 +19,7 @@ export const EQUIPMENT_INVENTORY_LAYOUT = Object.freeze({
 
 export const EQUIPMENT_ROULETTE_LAYOUT = Object.freeze({
   title: Object.freeze({ x: 44, y: 28, w: 650, h: 58 }),
-  backButton: Object.freeze({ x: 1060, y: 28, w: 180, h: 42 }),
+  backButton: Object.freeze({ x: 1030, y: 28, w: 210, h: 42 }),
   wheel: Object.freeze({ cx: 342, cy: 382, radius: 292 }),
   wheelImage: Object.freeze({ x: 36, y: 76, w: 612, h: 612 }),
   status: Object.freeze({ x: 688, y: 92, w: 552, h: 108 }),

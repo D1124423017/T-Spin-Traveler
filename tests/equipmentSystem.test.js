@@ -26,6 +26,10 @@ import {
   createEquipmentSpinMotion,
   getEquipmentMotionState,
 } from "../src/ui/equipmentMotion.js";
+import {
+  getEquipmentRewardDuration,
+  getEquipmentWheelPresentation,
+} from "../src/ui/equipmentWheelPresentation.js";
 import { createEquipmentScreenRenderer } from "../src/ui/equipmentScreen.js";
 import { createEquipmentInputRouter } from "../src/input/equipmentInputRouter.js";
 import {
@@ -118,10 +122,10 @@ describe("equipment data", () => {
   });
 
   it("uses the requested draw prices and a progressive wheel upgrade curve", () => {
-    expect(EQUIPMENT_DRAW_COSTS).toEqual({ first: 100, repeat: 500 });
+    expect(EQUIPMENT_DRAW_COSTS).toEqual({ first: 100, repeat: 300 });
     expect(getEquipmentDrawCost({ drawCount: 0 })).toBe(100);
-    expect(getEquipmentDrawCost({ drawCount: 1 })).toBe(500);
-    expect(getEquipmentDrawCost({ drawCount: 99 })).toBe(500);
+    expect(getEquipmentDrawCost({ drawCount: 1 })).toBe(300);
+    expect(getEquipmentDrawCost({ drawCount: 99 })).toBe(300);
     expect(EQUIPMENT_WHEEL_UPGRADE_COSTS).toEqual([2000, 5000, 10000, 20000]);
     expect([1, 2, 3, 4, 5].map(getEquipmentWheelUpgradeCost))
       .toEqual([2000, 5000, 10000, 20000, null]);
@@ -218,13 +222,65 @@ describe("equipment presentation and input", () => {
       now: 100,
       wheelLevel: 4,
       rarity: "legendary",
+      itemId: "rift-sovereignty-blade",
       random: () => 0,
     });
     const segments = buildEquipmentWheelSegments(4);
 
     expect(segments[motion.targetIndex].rarity).toBe("legendary");
     expect(motion.cheat).toBe(true);
+    expect(motion.itemId).toBe("rift-sovereignty-blade");
     expect(getEquipmentMotionState(motion, 100 + motion.durationMs).settled).toBe(true);
+  });
+
+  it("makes each wheel level visibly and rhythmically more elaborate", () => {
+    const levels = [1, 2, 3, 4, 5].map(getEquipmentWheelPresentation);
+    expect(levels.map(({ ringCount }) => ringCount)).toEqual([1, 2, 3, 4, 5]);
+    expect(levels.map(({ particleCount }) => particleCount))
+      .toEqual([10, 15, 21, 29, 38]);
+    expect(levels.map(({ spinTurns }) => spinTurns)).toEqual([5, 6, 7, 8, 10]);
+    expect(levels.map(({ spinDurationMs }) => spinDurationMs))
+      .toEqual([1920, 2070, 2240, 2440, 2680]);
+    expect(levels[4].interferenceStrength).toBeGreaterThan(levels[0].interferenceStrength);
+  });
+
+  it("reveals the acquired equipment briefly after the wheel nears its stop", () => {
+    const motion = createEquipmentSpinMotion({
+      now: 100,
+      wheelLevel: 5,
+      rarity: "legendary",
+      itemId: "cheaters-amethyst-sword",
+      reducedMotion: false,
+      random: () => 0,
+    });
+    const beforeReveal = getEquipmentMotionState(motion, motion.revealStartedAt - 1);
+    const duringReveal = getEquipmentMotionState(
+      motion,
+      motion.revealStartedAt + motion.revealDurationMs / 2,
+    );
+    const afterReveal = getEquipmentMotionState(
+      motion,
+      motion.revealStartedAt + motion.revealDurationMs + 1,
+    );
+
+    expect(beforeReveal.revealActive).toBe(false);
+    expect(duringReveal.revealActive).toBe(true);
+    expect(duringReveal.revealProgress).toBeCloseTo(0.5);
+    expect(afterReveal.revealActive).toBe(false);
+    expect(getEquipmentRewardDuration("legendary", false))
+      .toBeGreaterThan(getEquipmentRewardDuration("common", false));
+    expect(getEquipmentRewardDuration("legendary", true)).toBe(760);
+
+    const reduced = createEquipmentSpinMotion({
+      now: 100,
+      wheelLevel: 5,
+      rarity: "legendary",
+      itemId: "cheaters-amethyst-sword",
+      reducedMotion: true,
+      random: () => 0,
+    });
+    expect(reduced.durationMs).toBe(1);
+    expect(reduced.endRotation).toBeLessThan(Math.PI * 2);
   });
 
   it("keeps inventory and roulette input focus in separate sub-screens", () => {

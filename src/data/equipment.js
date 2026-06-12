@@ -17,7 +17,7 @@ export const EQUIPMENT_RARITY_ORDER = Object.freeze([
 ]);
 export const EQUIPMENT_DRAW_COSTS = Object.freeze({
   first: 100,
-  repeat: 500,
+  repeat: 300,
 });
 export const EQUIPMENT_WHEEL_UPGRADE_COSTS = Object.freeze([
   2000,

@@ -15,6 +15,8 @@ import {
   EQUIPMENT_RARITY_RUNES,
   hexAlpha,
 } from "./equipmentUiPrimitives.js";
+import { createEquipmentRewardRevealRenderer } from "./equipmentRewardReveal.js";
+import { getEquipmentWheelPresentation } from "./equipmentWheelPresentation.js";
 
 const TAU = Math.PI * 2;
 
@@ -38,6 +40,16 @@ export function createEquipmentRouletteScreenRenderer({
   layout = EQUIPMENT_ROULETTE_LAYOUT,
   now = () => performance.now(),
 } = {}) {
+  const rewardRevealRenderer = createEquipmentRewardRevealRenderer({
+    ctx,
+    t,
+    fitLabel,
+    label,
+    drawImageContain,
+    equipmentIcons,
+    isImageReady,
+  });
+
   function draw() {
     const currentTime = now();
     const equipment = state.metaProgress?.equipment || {};
@@ -52,6 +64,7 @@ export function createEquipmentRouletteScreenRenderer({
     drawOdds(wheel);
     drawMessage();
     drawCheatHand(motion);
+    rewardRevealRenderer.draw(state.equipmentUi?.motion, motion, currentTime);
   }
 
   function drawHeader(wheel) {
@@ -67,11 +80,12 @@ export function createEquipmentRouletteScreenRenderer({
       "#cbb5ff",
     );
     const back = layout.backButton;
-    drawMenuButton(back.x, back.y, back.w, back.h, t("equipmentReturnToInventory"), "Esc");
+    drawMenuButton(back.x, back.y, back.w, back.h, t("equipmentReturnToInventory"), "");
   }
 
   function drawWheel(wheel, motion, currentTime) {
     const { cx, cy, radius } = layout.wheel;
+    const presentation = getEquipmentWheelPresentation(wheel.level);
     const visualPower = wheel.visualPower;
     const pulse = 0.5 + Math.sin(currentTime * 0.0024) * 0.5;
     const glowRadius = radius * (0.88 + visualPower * 0.14);
@@ -82,7 +96,7 @@ export function createEquipmentRouletteScreenRenderer({
     ctx.fillStyle = glow;
     ctx.fillRect(cx - radius - 36, cy - radius - 36, radius * 2 + 72, radius * 2 + 72);
 
-    drawWheelEnergyRings(wheel, currentTime, pulse);
+    drawWheelEnergyRings(wheel, presentation, currentTime, pulse);
     drawWheelSegments(wheel, motion.rotation);
 
     if (isImageReady(equipmentWheelArt)) {
@@ -99,7 +113,9 @@ export function createEquipmentRouletteScreenRenderer({
       ctx.restore();
     }
 
-    drawPointerFlash(motion, pulse);
+    drawWheelCore(wheel, presentation, currentTime, pulse);
+    drawWheelInterference(presentation, motion, currentTime);
+    drawPointerFlash(motion, presentation, pulse);
   }
 
   function drawWheelSegments(wheel, rotation) {
@@ -148,13 +164,12 @@ export function createEquipmentRouletteScreenRenderer({
     ctx.restore();
   }
 
-  function drawWheelEnergyRings(wheel, currentTime, pulse) {
+  function drawWheelEnergyRings(wheel, presentation, currentTime, pulse) {
     const { cx, cy, radius } = layout.wheel;
-    const ringCount = 1 + Math.floor(wheel.visualPower * 4);
     ctx.save();
     ctx.translate(cx, cy);
     ctx.globalCompositeOperation = "lighter";
-    for (let index = 0; index < ringCount; index += 1) {
+    for (let index = 0; index < presentation.ringCount; index += 1) {
       const phase = currentTime
         * (0.00014 + index * 0.00003)
         * (index % 2 ? -1 : 1);
@@ -169,8 +184,7 @@ export function createEquipmentRouletteScreenRenderer({
       ctx.stroke();
     }
     ctx.setLineDash([]);
-    const particles = 7 + wheel.level * 4;
-    for (let index = 0; index < particles; index += 1) {
+    for (let index = 0; index < presentation.particleCount; index += 1) {
       const angle = currentTime * 0.0003 * (index % 2 ? 1 : -1) + index * 2.17;
       const orbit = radius * (0.86 + (index % 3) * 0.055);
       ctx.globalAlpha = 0.16 + pulse * 0.18;
@@ -185,8 +199,58 @@ export function createEquipmentRouletteScreenRenderer({
     ctx.restore();
   }
 
-  function drawPointerFlash(motion, pulse) {
+  function drawWheelCore(wheel, presentation, currentTime, pulse) {
     const { cx, cy, radius } = layout.wheel;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.globalCompositeOperation = "lighter";
+    for (let layer = 0; layer < presentation.coreLayers; layer += 1) {
+      const direction = layer % 2 ? -1 : 1;
+      ctx.save();
+      ctx.rotate(currentTime * 0.00024 * direction + layer * 0.42);
+      ctx.strokeStyle = layer % 2
+        ? `rgba(116, 230, 255, ${0.12 + presentation.glowStrength * 0.12})`
+        : `rgba(203, 153, 255, ${0.14 + presentation.glowStrength * 0.14})`;
+      ctx.lineWidth = 1.2 + layer * 0.34;
+      ctx.setLineDash([5 + layer * 2, 9]);
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * (0.12 + layer * 0.026), 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.setLineDash([]);
+    ctx.fillStyle = `rgba(222, 196, 255, ${0.18 + pulse * presentation.shimmerStrength * 0.3})`;
+    ctx.shadowColor = "#b86fff";
+    ctx.shadowBlur = 10 + presentation.glowStrength * 18;
+    ctx.beginPath();
+    ctx.arc(0, 0, 4 + wheel.level * 1.5, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawWheelInterference(presentation, motion, currentTime) {
+    if (presentation.interferenceStrength <= 0) return;
+    const { cx, cy, radius } = layout.wheel;
+    const strength = presentation.interferenceStrength
+      * (motion.active ? 1 : 0.46)
+      * (0.65 + Math.sin(currentTime * 0.014) * 0.35);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.globalCompositeOperation = "lighter";
+    ctx.strokeStyle = `rgba(195, 113, 255, ${0.14 + strength * 1.4})`;
+    ctx.lineWidth = 1 + strength * 8;
+    for (let index = 0; index < 2 + presentation.level; index += 1) {
+      const start = currentTime * 0.0005 + index * 1.31;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * (0.72 + index * 0.035), start, start + 0.28 + strength);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawPointerFlash(motion, presentation, pulse) {
+    const { cx, cy, radius } = layout.wheel;
+    const scale = presentation.pointerScale;
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     ctx.shadowColor = "#d8b6ff";
@@ -194,8 +258,8 @@ export function createEquipmentRouletteScreenRenderer({
     ctx.fillStyle = `rgba(238, 219, 255, ${motion.active ? 0.34 + pulse * 0.24 : 0.18})`;
     ctx.beginPath();
     ctx.moveTo(cx, cy - radius + 16);
-    ctx.lineTo(cx - 15, cy - radius + 52);
-    ctx.lineTo(cx + 15, cy - radius + 52);
+    ctx.lineTo(cx - 15 * scale, cy - radius + 16 + 36 * scale);
+    ctx.lineTo(cx + 15 * scale, cy - radius + 16 + 36 * scale);
     ctx.closePath();
     ctx.fill();
     ctx.restore();
@@ -246,7 +310,7 @@ export function createEquipmentRouletteScreenRenderer({
       drawRect.w,
       drawRect.h,
       motion.active ? t("equipmentWheelSpinning") : t("equipmentDraw"),
-      fmt("equipmentDrawCost", { cost: drawCost }),
+      "",
       canDraw ? "primary" : "muted",
     );
     drawMenuButton(
@@ -255,11 +319,31 @@ export function createEquipmentRouletteScreenRenderer({
       upgradeRect.w,
       upgradeRect.h,
       maxed ? t("equipmentWheelMaxed") : t("equipmentUpgradeWheel"),
-      maxed
-        ? ""
-        : fmt("equipmentUpgradeCost", { cost: upgradeCost }),
+      "",
       canUpgrade ? "secondary" : "muted",
     );
+    fitLabel(
+      fmt("equipmentDrawCost", { cost: drawCost }),
+      drawRect.x + 14,
+      drawRect.y + drawRect.h + 15,
+      drawRect.w - 28,
+      11,
+      canDraw ? "rgba(255, 240, 166, 0.74)" : "rgba(225, 232, 255, 0.46)",
+      9,
+      "800",
+    );
+    if (!maxed) {
+      fitLabel(
+        fmt("equipmentUpgradeCost", { cost: upgradeCost }),
+        upgradeRect.x + 14,
+        upgradeRect.y + upgradeRect.h + 15,
+        upgradeRect.w - 28,
+        11,
+        canUpgrade ? "rgba(158, 223, 248, 0.74)" : "rgba(225, 232, 255, 0.46)",
+        9,
+        "800",
+      );
+    }
   }
 
   function drawRecentResult(equipment) {
@@ -365,13 +449,13 @@ export function createEquipmentRouletteScreenRenderer({
   function drawCheatHand(motion) {
     if (motion.cheatProgress <= 0 || !isImageReady(noaCheatHandArt)) return;
     const progress = motion.cheatProgress;
-    const x = -402 + progress * 302;
-    const y = 134;
+    const x = -350 + progress * 280;
+    const y = 176;
     ctx.save();
     ctx.globalAlpha = Math.min(1, progress * 1.15);
     ctx.shadowColor = "rgba(166, 102, 255, 0.66)";
     ctx.shadowBlur = 24;
-    ctx.drawImage(noaCheatHandArt, x, y, 500, 333);
+    ctx.drawImage(noaCheatHandArt, x, y, 470, 254);
     ctx.restore();
     label(t("equipmentNoaCheat"), 78, 586, 13, "#e5d4ff");
   }

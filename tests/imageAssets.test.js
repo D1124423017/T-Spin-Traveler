@@ -168,8 +168,8 @@ const equipmentAssets = [
   },
   {
     path: "assets/images/equipment/noa-cheat-hand.png",
-    width: 1792,
-    height: 878,
+    width: 1705,
+    height: 923,
   },
 ];
 
