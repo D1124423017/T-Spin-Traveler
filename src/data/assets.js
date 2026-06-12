@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-07-grey-alien-meta-icons-v1";
+export const ASSET_VERSION = "2026-06-12-main-menu-dialogue";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -120,6 +120,12 @@ if (typeof window !== "undefined") {
 }
 
 export const forestBg = registerImageAsset("default-ancient-rift-background", "assets/backgrounds/egypt_star_tomb_exterior_rift_bg.png");
+export const mainMenuHomeKingdomBg = registerImageAsset("main-menu-home-kingdom-background", "assets/images/menu/main-menu-home-kingdom-bg.png");
+export const mainMenuRiftKingdomBg = registerImageAsset("main-menu-rift-kingdom-background", "assets/images/menu/main-menu-rift-kingdom-bg.png");
+export const mainMenuRuneArcBack = registerImageAsset("main-menu-rune-arc-back", "assets/images/menu/main-menu-rune-arc-back.png");
+export const mainMenuPrimaryFrame = registerImageAsset("main-menu-primary-frame", "assets/images/menu/main-menu-primary-frame.png");
+export const mainMenuSecondaryFrame = registerImageAsset("main-menu-secondary-frame", "assets/images/menu/main-menu-secondary-frame.png");
+export const mainMenuDialogueFrame = registerImageAsset("main-menu-dialogue-frame", "assets/images/menu/main-menu-dialogue-frame.png");
 export const stageEgyptStarTombRiftBg = registerImageAsset("stage-egypt-star-tomb-rift", "assets/backgrounds/egypt_star_tomb_rift_battle_bg.png");
 export const stageEgyptStarTombExteriorRiftBg = registerImageAsset("stage-egypt-star-tomb-exterior-rift", "assets/backgrounds/egypt_star_tomb_exterior_rift_bg.png");
 export const stageEgyptPyramidObservatoryRiftBg = registerImageAsset("stage-egypt-pyramid-observatory-rift", "assets/backgrounds/egypt_pyramid_observatory_rift_bg.png");

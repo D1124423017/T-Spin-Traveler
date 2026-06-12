@@ -60,6 +60,39 @@ const upgradedBackgrounds = [
   "assets/backgrounds/atlantis_sunken_crystal_temple_rift_bg.png",
 ];
 
+const mainMenuAssets = [
+  {
+    path: "assets/images/menu/main-menu-home-kingdom-bg.png",
+    width: 2560,
+    height: 1440,
+    colorType: 2,
+  },
+  {
+    path: "assets/images/menu/main-menu-rift-kingdom-bg.png",
+    width: 2560,
+    height: 1440,
+    colorType: 2,
+  },
+  {
+    path: "assets/images/menu/main-menu-rune-arc-back.png",
+    width: 1024,
+    height: 1536,
+    colorType: 6,
+  },
+  {
+    path: "assets/images/menu/main-menu-primary-frame.png",
+    width: 1536,
+    height: 384,
+    colorType: 6,
+  },
+  {
+    path: "assets/images/menu/main-menu-secondary-frame.png",
+    width: 1536,
+    height: 256,
+    colorType: 6,
+  },
+];
+
 const legacyAnimationNames = [
   "hero_melee_16_spritesheet_alpha.png",
   "hero_ranged_16_spritesheet_alpha.png",
@@ -114,6 +147,13 @@ const heroPresentationAssets = [
   { path: "assets/images/clean/ET_Character_fullbody_alpha.png", width: 1024, height: 1536 },
   { path: "assets/images/clean/noa_feedback_thanks_alpha.png", width: 1024, height: 1536 },
 ];
+
+const mainMenuDialogueAsset = {
+  path: "assets/images/menu/main-menu-dialogue-frame.png",
+  width: 1942,
+  height: 809,
+  colorType: 6,
+};
 
 const heroAttackVfxSheets = [
   "assets/images/clean/hero_line_clear_slash_16_spritesheet_alpha.png",
@@ -321,6 +361,33 @@ describe("image assets", () => {
     }
   });
 
+  it("keeps the formal main menu background and alpha button frames at production sizes", () => {
+    const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
+    for (const asset of mainMenuAssets) {
+      expect(assetsSource).toContain(asset.path);
+      expect(readPngInfo(asset.path)).toEqual({
+        width: asset.width,
+        height: asset.height,
+        colorType: asset.colorType,
+      });
+    }
+  });
+
+  it("uses the home kingdom key art with the previous menu background as fallback", () => {
+    const gameSource = fs.readFileSync(path.join(projectRoot, "game.js"), "utf8");
+
+    expect(gameSource).toContain("mainMenuBackground: mainMenuHomeKingdomBg");
+    expect(gameSource).toContain("fallbackBackground: mainMenuRiftKingdomBg");
+  });
+
+  it("keeps the superseded portal shrine file without loading it at runtime", () => {
+    const legacyShrine = "assets/images/menu/main-menu-portal-shrine.png";
+    const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
+
+    expect(fs.existsSync(path.join(projectRoot, legacyShrine))).toBe(true);
+    expect(assetsSource).not.toContain(`registerImageAsset("main-menu-portal-shrine"`);
+  });
+
   it("keeps generated Rift Energy and meta upgrade icons as 1024px alpha PNGs", () => {
     for (const icon of metaUpgradeIcons) {
       expect(readPngInfo(icon)).toEqual({ width: 1024, height: 1024, colorType: 6 });
@@ -333,6 +400,17 @@ describe("image assets", () => {
       expect(assetsSource).toContain(asset.path);
       expect(readPngInfo(asset.path)).toEqual({ width: asset.width, height: asset.height, colorType: 6 });
     }
+  });
+
+  it("keeps the formal main menu dialogue frame as an alpha PNG", () => {
+    const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
+
+    expect(assetsSource).toContain(mainMenuDialogueAsset.path);
+    expect(readPngInfo(mainMenuDialogueAsset.path)).toEqual({
+      width: mainMenuDialogueAsset.width,
+      height: mainMenuDialogueAsset.height,
+      colorType: mainMenuDialogueAsset.colorType,
+    });
   });
 
   it("keeps upgrade type icons as 512px alpha PNGs", () => {

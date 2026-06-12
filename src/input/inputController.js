@@ -1,5 +1,6 @@
 import { pointInRect } from "../render/drawUtils.js";
 import { normalizeControlKey } from "./controlBindings.js";
+import { createMainMenuInputRouter } from "./mainMenuInputRouter.js";
 import { createSettingsInputRouter } from "./settingsInputRouter.js";
 
 export function getCanvasPoint(event, canvas, width, height) {
@@ -62,6 +63,7 @@ export function installInputController({
     rotate180,
     saveGame,
     setGameMode,
+    showEquipmentComingSoon,
     startAscensionChallenge,
     syncControlHints,
     toggleMute,
@@ -92,6 +94,31 @@ export function installInputController({
     getControlsResetButtonRect,
     getHandlingResetButtonRect,
     actions,
+  });
+  const mainMenuInput = createMainMenuInputRouter({
+    state,
+    getButtonRects: getMainMenuButtonRects,
+    playSfx,
+    actions: {
+      start: () => resetGame("endless"),
+      mainStage: () => resetGame("storyEgypt"),
+      equipment: () => showEquipmentComingSoon?.(),
+      metaUpgrade: () => {
+        setGameMode("metaUpgrade");
+        state.metaProgress = loadMetaProgress();
+        state.metaUpgradeMessage = { key: "", vars: {}, until: 0 };
+        playSfx("uiConfirm");
+      },
+      guide: () => {
+        setGameMode("guide");
+        playSfx("uiConfirm");
+      },
+      settings: () => {
+        state.settingsOpen = true;
+        state.settingsTab = "controls";
+        playSfx("uiConfirm");
+      },
+    },
   });
 
   function isActionKey(action, key) {
@@ -158,14 +185,23 @@ export function installInputController({
         return;
       }
     }
+    if (
+      state.mode === "start"
+      && state.assetLoadingDone
+      && !state.settingsOpen
+      && mainMenuInput.handleKeyDown({
+        key,
+        code,
+        repeat: event.repeat,
+      })
+    ) {
+      return;
+    }
     if (key === "Enter" && state.mode !== "playing") {
       if (state.mode === "upgrade") chooseUpgrade(state.upgradeSelectedIndex);
       else if (state.mode === "ascensionResult") {
         if (state.ascensionRun?.status === "failed") startAscensionChallenge();
         else returnToMetaUpgradeFromAscension();
-      }
-      else if (state.mode === "start" && state.assetLoadingDone && !state.settingsOpen) {
-        resetGame("endless");
       }
       return;
     }
@@ -266,7 +302,11 @@ export function installInputController({
     state.pointer.x = point.x;
     state.pointer.y = point.y;
     const heroHovered = updateMenuHeroHoverFromPointer(point.x, point.y);
-    canvas.style.cursor = heroHovered ? "pointer" : "";
+    const menuHovered = state.mode === "start"
+      && state.assetLoadingDone
+      && !state.settingsOpen
+      && mainMenuInput.updatePointerSelection(point.x, point.y);
+    canvas.style.cursor = heroHovered || menuHovered ? "pointer" : "";
     if (state.pointer.down && state.pointer.dragging) {
       event.preventDefault();
       settingsInput.updateSliderFromPointer(state.pointer.dragging, point.x);
@@ -329,6 +369,14 @@ export function installInputController({
       triggerMenuHeroAction("click");
       return;
     }
+    if (
+      state.mode === "start"
+      && state.assetLoadingDone
+      && !state.settingsOpen
+      && mainMenuInput.handlePointerDown(point.x, point.y)
+    ) {
+      return;
+    }
 
     if (!state.settingsOpen && state.mode !== "playing") {
       if (state.mode === "ascensionResult") {
@@ -381,72 +429,6 @@ export function installInputController({
             return;
           }
         }
-      }
-      if (state.mode === "start" && state.assetLoadingDone) {
-        const buttons = getMainMenuButtonRects();
-        if (
-          pointInRect(
-            point.x,
-            point.y,
-            buttons.start.x,
-            buttons.start.y,
-            buttons.start.w,
-            buttons.start.h,
-          )
-        ) resetGame("endless");
-        else if (
-          pointInRect(
-            point.x,
-            point.y,
-            buttons.mainStage.x,
-            buttons.mainStage.y,
-            buttons.mainStage.w,
-            buttons.mainStage.h,
-          )
-        ) resetGame("storyEgypt");
-        else if (
-          pointInRect(
-            point.x,
-            point.y,
-            buttons.metaUpgrade.x,
-            buttons.metaUpgrade.y,
-            buttons.metaUpgrade.w,
-            buttons.metaUpgrade.h,
-          )
-        ) {
-          setGameMode("metaUpgrade");
-          state.metaProgress = loadMetaProgress();
-          state.metaUpgradeMessage = { key: "", vars: {}, until: 0 };
-          playSfx("uiConfirm");
-        }
-        else if (
-          pointInRect(
-            point.x,
-            point.y,
-            buttons.guide.x,
-            buttons.guide.y,
-            buttons.guide.w,
-            buttons.guide.h,
-          )
-        ) {
-          setGameMode("guide");
-          playSfx("uiConfirm");
-        }
-        else if (
-          pointInRect(
-            point.x,
-            point.y,
-            buttons.settings.x,
-            buttons.settings.y,
-            buttons.settings.w,
-            buttons.settings.h,
-          )
-        ) {
-          state.settingsOpen = true;
-          state.settingsTab = "controls";
-          playSfx("uiConfirm");
-        }
-        return;
       }
       if (state.mode === "guide" && pointInRect(point.x, point.y, 232, 606, 180, 40)) {
         setGameMode("start");

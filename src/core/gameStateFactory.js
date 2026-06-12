@@ -170,6 +170,7 @@ export function createGameState({
     settingsTab: "controls",
     pauseView: "menu",
     menuRevealStartedAt: 0,
+    mainMenuSelectedIndex: 0,
     bindingAction: null,
     menuSpecialIdleStartedAt: now,
     menuHeroInteraction: {

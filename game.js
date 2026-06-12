@@ -5,6 +5,12 @@ import {
   getImageAssetRecord,
   heroIdleArt,
   isImageReady,
+  mainMenuHomeKingdomBg,
+  mainMenuDialogueFrame,
+  mainMenuPrimaryFrame,
+  mainMenuRuneArcBack,
+  mainMenuRiftKingdomBg,
+  mainMenuSecondaryFrame,
   metaUpgradeIcons,
   menuIdleCubeSheet,
   menuIdleMeditateSheet,
@@ -163,6 +169,7 @@ import { drawGameplayFrame } from "./src/render/gameplayRenderer.js";
 import { createHeroCombatFallbackRenderer } from "./src/render/heroCombatFallbackRenderer.js";
 import { createImageRenderer } from "./src/render/imageRenderer.js";
 import { createKeyedSpriteRenderer } from "./src/render/keyedSpriteRenderer.js";
+import { createMainMenuSceneRenderer } from "./src/render/mainMenuSceneRenderer.js";
 import { getAnimationDuration } from "./src/render/animationTiming.js";
 import {
   ROSTER_CELLS,
@@ -193,7 +200,6 @@ import {
   getAscensionResultButtonRects,
   getControlsResetButtonRect as getControlsResetButtonRectForLayout,
   getHandlingResetButtonRect as getHandlingResetButtonRectForLayout,
-  getMainMenuButtonRects as getMainMenuButtonRectsForLayout,
   getResultButtonRects,
   getSettingsBackButtonRect as getSettingsBackButtonRectForLayout,
   getSettingsContentOrigin as getSettingsContentOriginForLayout,
@@ -263,6 +269,14 @@ import {
 } from "./src/ui/upgradeCards.js";
 import { createUpgradeScreenRenderer } from "./src/ui/upgradeScreen.js";
 import { createMenuScreenRenderer } from "./src/ui/menuScreen.js";
+import {
+  MAIN_MENU_HERO_DIALOGUE_KEYS,
+  drawMainMenuHeroDialogue,
+} from "./src/ui/mainMenuDialogueRenderer.js";
+import {
+  createMainMenuLayout,
+  getMainMenuButtonRects as getMainMenuButtonRectsForLayout,
+} from "./src/ui/mainMenuLayout.js";
 import { createGameModeOverlayRenderer } from "./src/ui/gameModeOverlays.js";
 import { createMoveGuideOverlayRenderer } from "./src/ui/moveGuideOverlay.js";
 import { createPauseOverlayRenderer } from "./src/ui/pauseOverlay.js";
@@ -798,6 +812,10 @@ const UI_LAYOUT = createHudLayout({
   rows: ROWS,
   tile: TILE,
 });
+const MAIN_MENU_LAYOUT = createMainMenuLayout({
+  width: W,
+  height: H,
+});
 
 const {
   feedbackPositions: GSAP_FEEDBACK_POSITIONS,
@@ -812,8 +830,8 @@ const {
 });
 
 const MENU_HERO_DIALOGUE_KEYS = {
-  hover: ["menuHeroHover1", "menuHeroHover2", "menuHeroHover3"],
-  click: ["menuHeroClick1", "menuHeroClick2", "menuHeroClick3"],
+  hover: MAIN_MENU_HERO_DIALOGUE_KEYS,
+  click: MAIN_MENU_HERO_DIALOGUE_KEYS,
 };
 
 const MENU_HERO_DIALOGUE_MS = {
@@ -867,7 +885,11 @@ const MENU_HERO_SPECIAL_ANIMATIONS = {
   },
 };
 
-const getMainMenuButtonRects = () => getMainMenuButtonRectsForLayout(UI_LAYOUT.menu);
+let mainMenuHitMotion = { groupOffsetX: 0, buttonOffsets: {} };
+const getMainMenuButtonRects = () => getMainMenuButtonRectsForLayout(
+  MAIN_MENU_LAYOUT,
+  mainMenuHitMotion,
+);
 const getSettingsContentOrigin = () => getSettingsContentOriginForLayout(UI_LAYOUT.settings);
 const getSettingsBackButtonRect = () => getSettingsBackButtonRectForLayout(UI_LAYOUT.settings);
 const getSettingsFeedbackCardRect = () => getSettingsFeedbackCardRectForLayout(getSettingsContentOrigin());
@@ -1078,6 +1100,9 @@ const drawMenuButton = createMenuButtonRenderer({
   canvasFont,
   fitLabel,
   roundedRect,
+  mainMenuPrimaryFrame,
+  mainMenuSecondaryFrame,
+  isImageReady,
 });
 
 const {
@@ -1408,26 +1433,39 @@ const {
 });
 
 const {
+  drawMainMenuScene: drawMainMenuSceneBackground,
+} = createMainMenuSceneRenderer({
+  ctx,
+  width: W,
+  height: H,
+  state,
+  mainMenuBackground: mainMenuHomeKingdomBg,
+  mainMenuRuneArcBack,
+  fallbackBackground: mainMenuRiftKingdomBg,
+  isImageReady,
+  mainMenuLayout: MAIN_MENU_LAYOUT,
+  prefersReducedMotion,
+});
+
+const {
   drawMainMenuScene,
   drawStartMenuOverlay,
 } = createMenuScreenRenderer({
   ctx,
   state,
-  width: W,
-  height: H,
-  uiLayout: UI_LAYOUT,
-  forestBg,
-  isImageReady,
+  mainMenuLayout: MAIN_MENU_LAYOUT,
   t,
   canvasFont,
   label,
   wrapText,
-  drawCard,
-  drawCornerGlyph,
   drawMenuButton,
-  getMainMenuButtonRects,
+  drawMainMenuScene: drawMainMenuSceneBackground,
   drawMenuHeroShowcase,
   drawMenuHeroDialogueBubble,
+  onMenuMotionUpdate: (motion) => {
+    mainMenuHitMotion = motion;
+  },
+  prefersReducedMotion,
 });
 
 const {
@@ -5429,7 +5467,7 @@ function isMenuHeroInteractive() {
 }
 
 function getMenuHeroHitRect() {
-  const hero = UI_LAYOUT.menuHero;
+  const hero = MAIN_MENU_LAYOUT.hero;
   return {
     x: hero.x - 150 * hero.scale,
     y: hero.y - 328 * hero.scale,
@@ -5590,45 +5628,20 @@ function drawMenuHeroIdleSprite(now = performance.now(), alpha = 1) {
 function drawMenuHeroDialogueBubble() {
   const interaction = state.menuHeroInteraction;
   const now = performance.now();
-  if (!interaction.lineKey || now >= interaction.lineUntil || !isMenuHeroInteractive()) return;
-  const age = now - interaction.lineStartedAt;
-  const remaining = interaction.lineUntil - now;
-  const alpha = Math.min(clamp(age / 180, 0, 1), clamp(remaining / 320, 0, 1));
-  if (alpha <= 0) return;
-
-  const hero = UI_LAYOUT.menuHero;
-  const bubbleW = state.language === "en" ? 342 : 316;
-  const bubbleH = state.language === "en" ? 86 : 76;
-  const x = clamp(hero.x + 116 * hero.scale, 96, UI_LAYOUT.menu.x - bubbleW - 28);
-  const y = clamp(hero.y - 260 * hero.scale, 286, 456);
-  const tailX = hero.x + 42 * hero.scale;
-  const tailY = hero.y - 120 * hero.scale;
-
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.shadowColor = "rgba(126, 231, 255, 0.28)";
-  ctx.shadowBlur = 18;
-  ctx.fillStyle = "rgba(5, 9, 17, 0.84)";
-  ctx.beginPath();
-  ctx.moveTo(x + 42, y + bubbleH - 2);
-  ctx.lineTo(x + 72, y + bubbleH - 2);
-  ctx.lineTo(tailX, tailY);
-  ctx.closePath();
-  ctx.fill();
-  roundedRect(x, y, bubbleW, bubbleH, 10, true, false);
-  ctx.shadowBlur = 0;
-  const glow = ctx.createLinearGradient(x, y, x + bubbleW, y + bubbleH);
-  glow.addColorStop(0, "rgba(126, 231, 255, 0.14)");
-  glow.addColorStop(0.55, "rgba(183, 146, 255, 0.13)");
-  glow.addColorStop(1, "rgba(255, 240, 166, 0.12)");
-  ctx.fillStyle = glow;
-  roundedRect(x + 5, y + 5, bubbleW - 10, bubbleH - 10, 8, true, false);
-  ctx.strokeStyle = interaction.lineKind === "click" ? "rgba(255, 240, 166, 0.62)" : "rgba(126, 231, 255, 0.44)";
-  ctx.lineWidth = 1.8;
-  roundedRect(x, y, bubbleW, bubbleH, 10, false, true);
-  label("NOA", x + 18, y + 24, 11, "#fff0a6");
-  wrapText(t(interaction.lineKey), x + 18, y + 48, bubbleW - 34, 19, "#f5f1e6", 13);
-  ctx.restore();
+  drawMainMenuHeroDialogue({
+    ctx,
+    frameImage: mainMenuDialogueFrame,
+    interaction,
+    now,
+    language: state.language,
+    text: interaction.lineKey ? t(interaction.lineKey) : "",
+    hero: MAIN_MENU_LAYOUT.hero,
+    menuX: MAIN_MENU_LAYOUT.menu.x,
+    uiScale: MAIN_MENU_LAYOUT.scale,
+    canvasFont,
+    isImageReady,
+    interactive: isMenuHeroInteractive(),
+  });
 }
 
 function drawMenuHeroShowcase() {
@@ -5636,7 +5649,7 @@ function drawMenuHeroShowcase() {
   const pose = getMenuIdlePose(now);
   const motion = getMenuIdleMotion(pose, now);
   const interaction = getMenuHeroInteractionMotion(now);
-  const hero = UI_LAYOUT.menuHero;
+  const hero = MAIN_MENU_LAYOUT.hero;
   const anchorX = hero.x;
   const anchorY = hero.y;
   drawMenuIdleParticles(anchorX, anchorY, pose, motion, now);
@@ -6088,6 +6101,15 @@ const inputController = installInputController({
     saveGame,
     setGameMode,
     setLanguage,
+    showEquipmentComingSoon: () => {
+      showToast({
+        type: "equipment-coming-soon",
+        text: t("equipmentComingSoon"),
+        tone: "rift",
+        durationMs: 1800,
+      });
+      playSfx("uiConfirm");
+    },
     startAscensionChallenge,
     syncControlHints,
     toggleMute,

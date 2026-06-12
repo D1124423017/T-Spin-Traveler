@@ -1,7 +1,10 @@
 import { clamp, hexToRgba } from "../render/drawUtils.js";
 
 export const MENU_REVEAL_DURATION_MS = 1280;
-export const MENU_BUTTON_STAGGER_MS = 82;
+export const MENU_PANEL_ENTER_DURATION_MS = 560;
+export const MENU_BUTTON_STAGGER_MS = 48;
+export const MENU_FOCUS_IN_DURATION_MS = 210;
+export const MENU_FOCUS_OUT_DURATION_MS = 180;
 
 function easeOutCubic(t) {
   const n = clamp(t, 0, 1);
@@ -13,17 +16,39 @@ function easeOutQuart(t) {
   return 1 - Math.pow(1 - n, 4);
 }
 
-export function createMenuMotionModel({ now = 0, startedAt = 0 } = {}) {
+function easeOutBack(t, overshoot = 1.24) {
+  const n = clamp(t, 0, 1);
+  const shifted = n - 1;
+  return 1 + (overshoot + 1) * Math.pow(shifted, 3) + overshoot * Math.pow(shifted, 2);
+}
+
+export function createMenuMotionModel({
+  now = 0,
+  startedAt = 0,
+  reducedMotion = false,
+} = {}) {
   const elapsed = Math.max(0, now - startedAt);
-  const revealRaw = clamp(elapsed / MENU_REVEAL_DURATION_MS, 0, 1);
+  const revealRaw = reducedMotion ? 1 : clamp(elapsed / MENU_REVEAL_DURATION_MS, 0, 1);
   const reveal = easeOutCubic(revealRaw);
+  const panelEnterRaw = reducedMotion
+    ? 1
+    : clamp((elapsed - 80) / MENU_PANEL_ENTER_DURATION_MS, 0, 1);
+  const panelEnter = easeOutBack(panelEnterRaw);
+  const rightPanelOffsetX = panelEnterRaw <= 0
+    ? -76
+    : panelEnterRaw >= 1
+      ? 0
+      : -76 * (1 - panelEnter);
   return {
     now,
     elapsed,
+    reducedMotion,
     reveal,
     revealRaw,
-    titleAlpha: easeOutQuart((elapsed - 80) / 620),
-    panelAlpha: easeOutCubic((elapsed - 180) / 620),
+    titleAlpha: reducedMotion ? 1 : easeOutQuart((elapsed - 80) / 620),
+    panelAlpha: reducedMotion ? 1 : easeOutCubic((elapsed - 180) / 620),
+    rightPanelAlpha: reducedMotion ? 1 : easeOutCubic((elapsed - 60) / 300),
+    rightPanelOffsetX: reducedMotion ? 0 : rightPanelOffsetX,
     ambientAlpha: 0.46 + Math.sin(now * 0.0018) * 0.08,
     riftPhase: now * 0.001,
     shimmerPhase: (now * 0.00018) % 1,
@@ -31,13 +56,81 @@ export function createMenuMotionModel({ now = 0, startedAt = 0 } = {}) {
 }
 
 export function getMenuButtonMotion(model, index = 0) {
+  if (model?.reducedMotion) {
+    return {
+      reveal: 1,
+      alpha: 1,
+      glow: 0,
+      offsetX: 0,
+    };
+  }
   const elapsed = Math.max(0, model?.elapsed || 0);
-  const reveal = easeOutCubic((elapsed - 360 - index * MENU_BUTTON_STAGGER_MS) / 520);
+  const revealRaw = clamp((elapsed - 140 - index * MENU_BUTTON_STAGGER_MS) / 420, 0, 1);
+  const reveal = easeOutCubic(revealRaw);
+  const slide = easeOutBack(revealRaw, 1.08);
   return {
     reveal,
-    alpha: 0.38 + reveal * 0.62,
+    alpha: reveal,
     glow: reveal * (0.72 + Math.sin((model?.now || 0) * 0.003 + index) * 0.08),
+    offsetX: -22 * (1 - slide),
   };
+}
+
+export function createMenuFocusMotionController({ count = 6 } = {}) {
+  let selectedIndex = -1;
+  const transitions = Array.from({ length: count }, () => ({
+    from: 0,
+    to: 0,
+    startedAt: 0,
+    duration: MENU_FOCUS_OUT_DURATION_MS,
+  }));
+
+  function sample(transition, now) {
+    const raw = clamp((now - transition.startedAt) / transition.duration, 0, 1);
+    const eased = transition.to > transition.from
+      ? easeOutBack(raw, 0.72)
+      : easeOutCubic(raw);
+    return transition.from + (transition.to - transition.from) * eased;
+  }
+
+  function update({
+    selected = 0,
+    now = 0,
+    reducedMotion = false,
+  } = {}) {
+    const normalized = Math.max(0, Math.min(count - 1, Math.trunc(selected) || 0));
+    if (reducedMotion) {
+      selectedIndex = normalized;
+      return transitions.map((_, index) => ({
+        scaleProgress: index === normalized ? 1 : 0,
+        focusProgress: index === normalized ? 1 : 0,
+      }));
+    }
+
+    if (selectedIndex !== normalized) {
+      transitions.forEach((transition, index) => {
+        const current = sample(transition, now);
+        const target = index === normalized ? 1 : 0;
+        transitions[index] = {
+          from: current,
+          to: target,
+          startedAt: now,
+          duration: target ? MENU_FOCUS_IN_DURATION_MS : MENU_FOCUS_OUT_DURATION_MS,
+        };
+      });
+      selectedIndex = normalized;
+    }
+
+    return transitions.map((transition) => {
+      const value = sample(transition, now);
+      return {
+        scaleProgress: value,
+        focusProgress: clamp(value, 0, 1),
+      };
+    });
+  }
+
+  return { update };
 }
 
 export function drawMenuAmbientMotion(ctx, model, {

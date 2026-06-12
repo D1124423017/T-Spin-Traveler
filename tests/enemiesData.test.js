@@ -126,13 +126,13 @@ describe("enemy data", () => {
     expect(translations.en.floaterVineBlocksRemoved).toBe("STONE BLOCKS REMOVED");
 
     const visibleCopyLines = [
-      translations.zh.menuHeroClick2,
+      translations.zh.menuHeroDialogue13,
       translations.zh.navigationCore,
       translations.zh.messageVictory,
       translations.zh.floaterRootPressure,
       translations.zh.floaterMistHolesDrift,
       translations.zh.floaterVineBlocksRemoved,
-      translations.en.menuHeroClick2,
+      translations.en.menuHeroDialogue13,
       translations.en.navigationCore,
       translations.en.messageVictory,
       translations.en.floaterRootPressure,
