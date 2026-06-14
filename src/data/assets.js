@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-14-equipment-wheel-body-redesign";
+export const ASSET_VERSION = "2026-06-15-noa-menu-idles";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -232,6 +232,8 @@ export const noaBattleIdleArt = heroIdleArt;
 export const noaFeedbackBowArt = registerImageAsset("noa-feedback-thanks-canonical", "assets/images/clean/noa_feedback_thanks_alpha.png");
 export const menuIdleCubeSheet = registerImageAsset("menu-idle-cube-sheet-16", "assets/images/clean/noa_menu_idle_cube_16.png");
 export const menuIdleMeditateSheet = registerImageAsset("menu-idle-meditate-sheet-16", "assets/images/clean/noa_menu_idle_meditate_16.png");
+export const menuIdleRiftWayfinderSheet = registerImageAsset("menu-idle-rift-wayfinder-sheet-16", "assets/images/clean/noa_menu_idle_rift_wayfinder_16.png");
+export const menuIdleStarMapListenerSheet = registerImageAsset("menu-idle-star-map-listener-sheet-16", "assets/images/clean/noa_menu_idle_star_map_listener_16.png");
 export const heroLineClearSlashSheet = registerImageAsset("hero-line-clear-slash-sheet-16", "assets/images/clean/hero_line_clear_slash_16_spritesheet_alpha.png");
 export const heroCombo1Sheet = registerImageAsset("hero-combo-1-sheet-16", "assets/images/clean/hero_attack_combo_01_16_spritesheet_alpha.png");
 export const heroCombo2Sheet = registerImageAsset("hero-combo-2-sheet-16", "assets/images/clean/hero_attack_combo_02_16_spritesheet_alpha.png");

@@ -228,3 +228,51 @@ describe("main menu NOA dialogue presentation", () => {
     expect(getMainMenuDialogueAlpha(interaction, 4000)).toBe(0);
   });
 });
+
+describe("main menu NOA idle variants", () => {
+  it("wires all four special idles through one rotating configuration table", () => {
+    const gameSource = fs.readFileSync(path.join(process.cwd(), "game.js"), "utf8");
+    const configBlock = gameSource.slice(
+      gameSource.indexOf("const MENU_HERO_SPECIAL_ANIMATIONS"),
+      gameSource.indexOf("let mainMenuHitMotion"),
+    );
+
+    for (const id of [
+      "menu-idle-cube",
+      "menu-idle-meditate",
+      "menu-idle-rift-wayfinder",
+      "menu-idle-star-map-listener",
+    ]) {
+      expect(configBlock).toContain(`id: "${id}"`);
+    }
+    expect(configBlock.match(/columns: 4/g)).toHaveLength(4);
+    expect(configBlock.match(/rows: 4/g)).toHaveLength(4);
+    expect(gameSource).toContain("Object.keys(MENU_HERO_SPECIAL_ANIMATIONS)");
+    expect(gameSource).toContain(
+      "MENU_HERO_SPECIAL_ANIMATIONS[kind] || MENU_HERO_SPECIAL_ANIMATIONS.cube",
+    );
+    expect(gameSource).toContain(
+      "getMenuHeroIdlePlayback(now).active ? null : getMenuSpecialIdle(now)",
+    );
+    expect(gameSource).toContain(
+      "if (specialIdle) drawMenuSpecialIdleFrame(specialIdle)",
+    );
+    expect(gameSource).not.toContain(
+      'interaction.idleTriggerCount % 2 === 0 ? "cube" : "meditate"',
+    );
+  });
+
+  it("keeps the new portrait cells proportional and baseline aligned", () => {
+    const gameSource = fs.readFileSync(path.join(process.cwd(), "game.js"), "utf8");
+    const configBlock = gameSource.slice(
+      gameSource.indexOf("const MENU_HERO_SPECIAL_ANIMATIONS"),
+      gameSource.indexOf("let mainMenuHitMotion"),
+    );
+
+    expect(configBlock.match(/draw: \{ x: -166, y: -382, w: 332, h: 498 \}/g))
+      .toHaveLength(2);
+    expect(gameSource).toContain(
+      "alignDrawBoxToBaseline(config.draw, CHARACTER_BASELINES.menu.localY)",
+    );
+  });
+});

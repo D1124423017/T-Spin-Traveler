@@ -41,6 +41,19 @@ describe("sprite sheet test catalog", () => {
     }
   });
 
+  it("previews both new menu idles with relaxed loop timing", () => {
+    const menuSheets = SPRITE_SHEET_CATALOG
+      .filter((sheet) => sheet.groupKey === "spriteTestGroupMenu")
+      .map(({ id, frameMs }) => ({ id, frameMs }));
+
+    expect(menuSheets).toEqual([
+      { id: "menu-idle-cube-sheet-16", frameMs: 122 },
+      { id: "menu-idle-meditate-sheet-16", frameMs: 142 },
+      { id: "menu-idle-rift-wayfinder-sheet-16", frameMs: 110 },
+      { id: "menu-idle-star-map-listener-sheet-16", frameMs: 125 },
+    ]);
+  });
+
   it("previews Scarab at 80ms and the other enemy bodies at 90ms", () => {
     const scarab = SPRITE_SHEET_CATALOG.find(
       (sheet) => sheet.id === "enemy-egypt-rift-scarab-attack-sheet-16",

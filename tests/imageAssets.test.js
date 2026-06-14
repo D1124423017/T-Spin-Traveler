@@ -36,6 +36,8 @@ const runtimeAnimationSheets = [
   { path: "assets/effects/noa_level_up_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/noa_menu_idle_cube_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/noa_menu_idle_meditate_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/noa_menu_idle_rift_wayfinder_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/noa_menu_idle_star_map_listener_16.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/hero_hit_16_spritesheet_alpha.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/enemy_egypt_rift_scarab_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
   { path: "assets/images/clean/enemy_egypt_mummy_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
@@ -146,6 +148,11 @@ const legacyAnimationNames = [
 const heroPresentationAssets = [
   { path: "assets/images/clean/ET_Character_fullbody_alpha.png", width: 1024, height: 1536 },
   { path: "assets/images/clean/noa_feedback_thanks_alpha.png", width: 1024, height: 1536 },
+];
+
+const menuIdleSpritesheetAssets = [
+  "assets/images/clean/noa_menu_idle_rift_wayfinder_16.png",
+  "assets/images/clean/noa_menu_idle_star_map_listener_16.png",
 ];
 
 const retiredNoaStaticAssets = [
@@ -461,6 +468,14 @@ describe("image assets", () => {
     for (const asset of heroPresentationAssets) {
       expect(assetsSource).toContain(asset.path);
       expect(readPngInfo(asset.path)).toEqual({ width: asset.width, height: asset.height, colorType: 6 });
+    }
+  });
+
+  it("keeps the new NOA menu idles at 512 x 768 per transparent frame", () => {
+    const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
+    for (const assetPath of menuIdleSpritesheetAssets) {
+      expect(assetsSource).toContain(assetPath);
+      expect(readPngInfo(assetPath)).toEqual({ width: 2048, height: 3072, colorType: 6 });
     }
   });
 

@@ -65,6 +65,8 @@ function sheet(id, groupKey, path, frameMs, grid = GRID_4_BY_4) {
 export const SPRITE_SHEET_CATALOG = Object.freeze([
   sheet("menu-idle-cube-sheet-16", "spriteTestGroupMenu", "assets/images/clean/noa_menu_idle_cube_16.png", 122),
   sheet("menu-idle-meditate-sheet-16", "spriteTestGroupMenu", "assets/images/clean/noa_menu_idle_meditate_16.png", 142),
+  sheet("menu-idle-rift-wayfinder-sheet-16", "spriteTestGroupMenu", "assets/images/clean/noa_menu_idle_rift_wayfinder_16.png", 110),
+  sheet("menu-idle-star-map-listener-sheet-16", "spriteTestGroupMenu", "assets/images/clean/noa_menu_idle_star_map_listener_16.png", 125),
   sheet("hero-line-clear-slash-sheet-16", "spriteTestGroupHero", "assets/images/clean/hero_line_clear_slash_16_spritesheet_alpha.png", 58, HERO_ATTACK_GRID),
   sheet("hero-combo-1-sheet-16", "spriteTestGroupHero", "assets/images/clean/hero_attack_combo_01_16_spritesheet_alpha.png", 52, HERO_ATTACK_GRID),
   sheet("hero-combo-2-sheet-16", "spriteTestGroupHero", "assets/images/clean/hero_attack_combo_02_16_spritesheet_alpha.png", 54, HERO_ATTACK_GRID),

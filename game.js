@@ -19,6 +19,8 @@ import {
   metaUpgradeIcons,
   menuIdleCubeSheet,
   menuIdleMeditateSheet,
+  menuIdleRiftWayfinderSheet,
+  menuIdleStarMapListenerSheet,
   musicLoopAssets,
   noaBattleIdleArt,
   noaCheatHandArt,
@@ -900,6 +902,26 @@ const MENU_HERO_SPECIAL_ANIMATIONS = {
     frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     frameMs: 142,
     draw: { x: -166, y: -252, w: 332, h: 438 },
+    noKeying: true,
+  },
+  riftWayfinder: {
+    id: "menu-idle-rift-wayfinder",
+    image: menuIdleRiftWayfinderSheet,
+    columns: 4,
+    rows: 4,
+    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    frameMs: 110,
+    draw: { x: -166, y: -382, w: 332, h: 498 },
+    noKeying: true,
+  },
+  starMapListener: {
+    id: "menu-idle-star-map-listener",
+    image: menuIdleStarMapListenerSheet,
+    columns: 4,
+    rows: 4,
+    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    frameMs: 125,
+    draw: { x: -166, y: -382, w: 332, h: 498 },
     noKeying: true,
   },
 };
@@ -5614,7 +5636,8 @@ function triggerMenuHeroAction(kind = "click") {
   interaction.actionStartedAt = now;
   interaction.actionUntil = now + 1120;
   if (canTriggerIdle) {
-    const idleKind = interaction.idleTriggerCount % 2 === 0 ? "cube" : "meditate";
+    const idleKinds = Object.keys(MENU_HERO_SPECIAL_ANIMATIONS);
+    const idleKind = idleKinds[interaction.idleTriggerCount % idleKinds.length];
     const config = getMenuHeroIdleConfig(idleKind);
     const duration = getAnimationDuration(config) || ((config?.frames?.length || 1) * (config?.frameMs || 120));
     interaction.idleKind = idleKind;
@@ -5694,9 +5717,7 @@ function drawMenuHeroInteractionGlow(motion, now) {
 }
 
 function getMenuHeroIdleConfig(kind = "cube") {
-  return kind === "meditate"
-    ? MENU_HERO_SPECIAL_ANIMATIONS.meditate
-    : MENU_HERO_SPECIAL_ANIMATIONS.cube;
+  return MENU_HERO_SPECIAL_ANIMATIONS[kind] || MENU_HERO_SPECIAL_ANIMATIONS.cube;
 }
 
 function getMenuHeroIdlePlayback(now = performance.now()) {
@@ -5746,6 +5767,7 @@ function drawMenuHeroShowcase() {
   const pose = getMenuIdlePose(now);
   const motion = getMenuIdleMotion(pose, now);
   const interaction = getMenuHeroInteractionMotion(now);
+  const specialIdle = getMenuHeroIdlePlayback(now).active ? null : getMenuSpecialIdle(now);
   const hero = MAIN_MENU_LAYOUT.hero;
   const anchorX = hero.x;
   const anchorY = hero.y;
@@ -5765,7 +5787,8 @@ function drawMenuHeroShowcase() {
     drawHeroIdleBase("menu");
     ctx.restore();
   }
-  drawHeroIdleBase("menu");
+  if (specialIdle) drawMenuSpecialIdleFrame(specialIdle);
+  else drawHeroIdleBase("menu");
   drawMenuCloakSway(motion, now);
   drawMenuWeaponPulse(motion, now);
   drawMenuEyeGlow(motion, now);
