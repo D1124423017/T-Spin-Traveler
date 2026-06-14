@@ -160,9 +160,18 @@ const mainMenuDialogueAsset = {
   colorType: 6,
 };
 
-const equipmentAssets = [
+const equipmentWheelLayerAssets = [
+  ...[1, 2, 3, 4, 5].map((level) => ({
+    path: `assets/images/equipment/roulette/equipment-roulette-body-lv${level}.png`,
+    width: 1254,
+    height: 1254,
+    layer: "body",
+  })),
+];
+
+const equipmentPresentationAssets = [
   {
-    path: "assets/images/equipment/equipment-roulette-wheel.png",
+    path: "assets/images/equipment/equipment-roulette-pointer.png",
     width: 1254,
     height: 1254,
   },
@@ -172,6 +181,23 @@ const equipmentAssets = [
     height: 923,
   },
 ];
+
+const equipmentRewardAssets = [1, 2, 3, 4, 5].map((level) => ({
+  path: `assets/images/equipment/reward/equipment-reward-panel-lv${level}.png`,
+  width: 1536,
+  height: 1024,
+}));
+
+const equipmentRarityAssets = [
+  "common",
+  "rare",
+  "relic",
+  "legendary",
+].map((rarity) => ({
+  path: `assets/images/equipment/rarity/equipment-rarity-${rarity}.png`,
+  width: 512,
+  height: 512,
+}));
 
 const equipmentIconPaths = [
   "wanderer-observer-hood",
@@ -478,15 +504,75 @@ describe("image assets", () => {
     });
   });
 
-  it("keeps the large equipment wheel and NOA cheat presentation as formal alpha assets", () => {
+  it("keeps five distinct cohesive wheel bodies and fixed presentation assets", () => {
     const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
-    for (const asset of equipmentAssets) {
+    const bodyHashes = new Set();
+    for (const asset of equipmentWheelLayerAssets) {
       expect(assetsSource).toContain(asset.path);
       expect(readPngInfo(asset.path)).toEqual({
         width: asset.width,
         height: asset.height,
         colorType: 6,
       });
+      const hash = fs.readFileSync(path.join(projectRoot, asset.path)).toString("base64");
+      if (asset.layer === "body") bodyHashes.add(hash);
+    }
+    for (const asset of equipmentPresentationAssets) {
+      expect(assetsSource).toContain(asset.path);
+      expect(readPngInfo(asset.path)).toEqual({
+        width: asset.width,
+        height: asset.height,
+        colorType: 6,
+      });
+    }
+    const rewardHashes = new Set();
+    for (const asset of equipmentRewardAssets) {
+      expect(assetsSource).toContain(asset.path);
+      expect(readPngInfo(asset.path)).toEqual({
+        width: asset.width,
+        height: asset.height,
+        colorType: 6,
+      });
+      rewardHashes.add(
+        fs.readFileSync(path.join(projectRoot, asset.path)).toString("base64"),
+      );
+    }
+    expect(rewardHashes.size).toBe(5);
+    expect(assetsSource).not.toContain(
+      "assets/images/equipment/equipment-reward-panel.png",
+    );
+    expect(bodyHashes.size).toBe(5);
+    expect(assetsSource).not.toContain(
+      "assets/images/equipment/equipment-roulette-rotor.png",
+    );
+    expect(fs.existsSync(path.join(
+      projectRoot,
+      "assets/images/equipment/equipment-roulette-rotor.png",
+    ))).toBe(false);
+    expect(fs.existsSync(path.join(
+      projectRoot,
+      "assets/images/equipment/equipment-roulette-slot-cradle.png",
+    ))).toBe(false);
+    for (const asset of equipmentRarityAssets) {
+      expect(assetsSource).toContain(asset.path);
+      expect(readPngInfo(asset.path)).toEqual({
+        width: asset.width,
+        height: asset.height,
+        colorType: 6,
+      });
+    }
+    const rarityHashes = new Set(equipmentRarityAssets.map(({ path: assetPath }) => (
+      fs.readFileSync(path.join(projectRoot, assetPath)).toString("base64")
+    )));
+    expect(rarityHashes.size).toBe(4);
+    expect(assetsSource).not.toContain("assets/images/equipment/equipment-roulette-wheel.png");
+    for (const level of [1, 2, 3, 4, 5]) {
+      const retiredPath = `assets/images/equipment/equipment-roulette-wheel-lv${level}.png`;
+      expect(assetsSource).not.toContain(retiredPath);
+      expect(fs.existsSync(path.join(projectRoot, retiredPath))).toBe(false);
+      const retiredRotorPath = `assets/images/equipment/equipment-roulette-rotor-lv${level}.png`;
+      expect(assetsSource).not.toContain(retiredRotorPath);
+      expect(fs.existsSync(path.join(projectRoot, retiredRotorPath))).toBe(false);
     }
   });
 

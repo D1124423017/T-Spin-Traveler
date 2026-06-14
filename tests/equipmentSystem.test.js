@@ -7,6 +7,7 @@ import {
   EQUIPMENT_ITEMS,
   EQUIPMENT_SCREEN_VIEWS,
   EQUIPMENT_SLOT_ORDER,
+  EQUIPMENT_WHEEL_SEGMENT_COUNT,
   EQUIPMENT_WHEEL_LEVELS,
   EQUIPMENT_WHEEL_UPGRADE_COSTS,
   buildEquipmentWheelSegments,
@@ -30,6 +31,7 @@ import {
   getEquipmentRewardDuration,
   getEquipmentWheelPresentation,
 } from "../src/ui/equipmentWheelPresentation.js";
+import { getEquipmentWheelSegmentAngle } from "../src/ui/equipmentWheelGeometry.js";
 import { createEquipmentScreenRenderer } from "../src/ui/equipmentScreen.js";
 import { createEquipmentInputRouter } from "../src/input/equipmentInputRouter.js";
 import {
@@ -107,17 +109,18 @@ describe("equipment data", () => {
     });
   });
 
-  it("builds a readable 24-segment visual wheel at every level", () => {
+  it("builds a readable 20-segment visual wheel at every level", () => {
     for (let level = 1; level <= 5; level += 1) {
       const segments = buildEquipmentWheelSegments(level);
-      expect(segments).toHaveLength(24);
+      expect(segments).toHaveLength(20);
       expect(segments.map(({ index }) => index)).toEqual(
-        Array.from({ length: 24 }, (_, index) => index),
+        Array.from({ length: 20 }, (_, index) => index),
       );
     }
+    expect(EQUIPMENT_WHEEL_SEGMENT_COUNT).toBe(20);
     const levelOne = buildEquipmentWheelSegments(1);
-    expect(levelOne.filter(({ rarity }) => rarity === "common")).toHaveLength(17);
-    expect(levelOne.filter(({ rarity }) => rarity === "rare")).toHaveLength(6);
+    expect(levelOne.filter(({ rarity }) => rarity === "common")).toHaveLength(14);
+    expect(levelOne.filter(({ rarity }) => rarity === "rare")).toHaveLength(5);
     expect(levelOne.filter(({ rarity }) => rarity === "relic")).toHaveLength(1);
   });
 
@@ -233,6 +236,33 @@ describe("equipment presentation and input", () => {
     expect(getEquipmentMotionState(motion, 100 + motion.durationMs).settled).toBe(true);
   });
 
+  it("settles the selected result segment directly beneath the fixed top pointer", () => {
+    const motion = createEquipmentSpinMotion({
+      now: 250,
+      wheelLevel: 5,
+      rarity: "legendary",
+      itemId: "cheaters-amethyst-sword",
+      random: () => 0.5,
+    });
+    const settled = getEquipmentMotionState(
+      motion,
+      motion.startedAt + motion.durationMs,
+    );
+    const targetAngle = getEquipmentWheelSegmentAngle(
+      motion.targetIndex,
+      EQUIPMENT_WHEEL_SEGMENT_COUNT,
+      settled.rotation,
+    );
+    const normalizedTarget = Math.atan2(
+      Math.sin(targetAngle),
+      Math.cos(targetAngle),
+    );
+
+    expect(normalizedTarget).toBeCloseTo(-Math.PI / 2, 8);
+    expect(buildEquipmentWheelSegments(5)[motion.targetIndex].rarity)
+      .toBe(motion.rarity);
+  });
+
   it("makes each wheel level visibly and rhythmically more elaborate", () => {
     const levels = [1, 2, 3, 4, 5].map(getEquipmentWheelPresentation);
     expect(levels.map(({ ringCount }) => ringCount)).toEqual([1, 2, 3, 4, 5]);
@@ -241,6 +271,8 @@ describe("equipment presentation and input", () => {
     expect(levels.map(({ spinTurns }) => spinTurns)).toEqual([5, 6, 7, 8, 10]);
     expect(levels.map(({ spinDurationMs }) => spinDurationMs))
       .toEqual([1920, 2070, 2240, 2440, 2680]);
+    expect(levels.map(({ markerAlpha }) => markerAlpha))
+      .toEqual([0.9, 0.92, 0.94, 0.96, 0.98]);
     expect(levels[4].interferenceStrength).toBeGreaterThan(levels[0].interferenceStrength);
   });
 

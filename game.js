@@ -1,7 +1,10 @@
 import {
   ASSET_REGISTRY,
   equipmentIcons,
-  equipmentRouletteWheelArt,
+  equipmentRarityEmblems,
+  equipmentRewardPanelArts,
+  equipmentRouletteLayers,
+  equipmentRoulettePointer,
   enemyBattlePortraits,
   forestBg,
   getImageAssetRecord,
@@ -308,6 +311,7 @@ import {
   updateDebugDomHud,
 } from "./src/debug/debugHud.js";
 import { createDebugProgressTools } from "./src/debug/debugProgressTools.js";
+import { createDebugUiController } from "./src/debug/debugUiController.js";
 import {
   readActivePieceDebugInfo,
   readHiddenRowsDebugInfo,
@@ -554,6 +558,10 @@ const BOSS_WINDUP_MS = 1350;
 const HEAVY_ATTACK_WARNING_DAMAGE = 20;
 const GITHUB_FEEDBACK_URL = "https://github.com/D1124423017/T-Spin-Traveler/issues";
 const DEBUG_HUD_ENABLED = isDebugHudEnabled();
+const debugUiController = createDebugUiController({
+  allowed: DEBUG_HUD_ENABLED,
+  initialVisible: DEBUG_HUD_ENABLED,
+});
 
 const BALANCE = {
   enemyWaveHp: 10,
@@ -1049,7 +1057,36 @@ const debugProgressTools = createDebugProgressTools({
   loadMetaProgress,
   saveMetaProgress,
   grantRiftEnergy,
+  persistGameSave: saveGame,
 });
+
+function updateDebugTools(now) {
+  const enabled = DEBUG_HUD_ENABLED && debugUiController.isVisible();
+  updateDebugDomHud({
+    enabled,
+    debugState: state.debug,
+    readers: getDebugHudReaders(now),
+    now,
+  });
+  updateDebugArtTuningDom({
+    enabled,
+    tuning: getDebugArtTuning({ enabled }),
+    progressTool: {
+      toggleHint: t("debugToggleHint"),
+      energyButtonLabel: t("debugAddRiftEnergy10000"),
+      energyValueLabel: fmt("debugRiftEnergyValue", {
+        amount: state.metaProgress?.riftEnergy || 0,
+      }),
+      formatEnergyValue: (amount) => fmt("debugRiftEnergyValue", { amount }),
+      addRiftEnergy: debugProgressTools.addRiftEnergy,
+      resetButtonLabel: t("debugResetAll"),
+      resetConfirmLabel: t("debugResetAllConfirm"),
+      resetDoneLabel: t("debugResetAllDone"),
+      getResetStatus: debugProgressTools.getResetStatus,
+      resetAllProgress: debugProgressTools.resetAllProgress,
+    },
+  });
+}
 
 const {
   drawEquipmentRoulette,
@@ -1527,7 +1564,10 @@ const equipmentScreenRenderer = createEquipmentScreenRenderer({
   drawCard,
   drawMenuButton,
   equipmentIcons,
-  equipmentWheelArt: equipmentRouletteWheelArt,
+  equipmentRarityEmblems,
+  equipmentRewardPanelArts,
+  equipmentWheelLayers: equipmentRouletteLayers,
+  equipmentWheelPointerArt: equipmentRoulettePointer,
   noaCheatHandArt,
   noaPreviewArt: heroIdleArt,
   riftEnergyIcon,
@@ -4706,26 +4746,7 @@ function update(time) {
 
     tickEffects(dt);
     updateScreenNoteMode();
-    if (DEBUG_HUD_ENABLED) {
-      updateDebugDomHud({
-        enabled: DEBUG_HUD_ENABLED,
-        debugState: state.debug,
-        readers: getDebugHudReaders(time),
-        now: time,
-      });
-      updateDebugArtTuningDom({
-        enabled: DEBUG_HUD_ENABLED,
-        tuning: getDebugArtTuning({ enabled: DEBUG_HUD_ENABLED }),
-        energyTool: {
-          buttonLabel: t("debugAddRiftEnergy10000"),
-          valueLabel: fmt("debugRiftEnergyValue", {
-            amount: state.metaProgress?.riftEnergy || 0,
-          }),
-          formatValue: (amount) => fmt("debugRiftEnergyValue", { amount }),
-          onActivate: debugProgressTools.addRiftEnergy,
-        },
-      });
-    }
+    updateDebugTools(time);
     draw();
   } catch (error) {
     state.debug.drawError = String(error?.message || error);
@@ -6137,6 +6158,7 @@ const inputController = installInputController({
   defaultTuning: DEFAULT_TUNING,
   tuningSliders: TUNING_SLIDERS,
   githubFeedbackUrl: GITHUB_FEEDBACK_URL,
+  debugUiEnabled: DEBUG_HUD_ENABLED,
   getMainMenuButtonRects,
   getSettingsContentOrigin,
   getSettingsBackButtonRect,
@@ -6184,6 +6206,11 @@ const inputController = installInputController({
     setLanguage,
     startAscensionChallenge,
     syncControlHints,
+    toggleDebugUi: () => {
+      if (!DEBUG_HUD_ENABLED) return;
+      debugUiController.toggle();
+      updateDebugTools(performance.now());
+    },
     toggleMute,
     toggleUpgradeDetail,
     triggerMenuHeroAction,
@@ -6204,25 +6231,5 @@ try {
   state.debug.drawError = String(error?.message || error);
   console.error("[T-Spin Traveler] Initial draw failed:", error);
 }
-if (DEBUG_HUD_ENABLED) {
-  const initialDebugNow = performance.now();
-  updateDebugDomHud({
-    enabled: DEBUG_HUD_ENABLED,
-    debugState: state.debug,
-    readers: getDebugHudReaders(initialDebugNow),
-    now: initialDebugNow,
-  });
-  updateDebugArtTuningDom({
-    enabled: DEBUG_HUD_ENABLED,
-    tuning: getDebugArtTuning({ enabled: DEBUG_HUD_ENABLED }),
-    energyTool: {
-      buttonLabel: t("debugAddRiftEnergy10000"),
-      valueLabel: fmt("debugRiftEnergyValue", {
-        amount: state.metaProgress?.riftEnergy || 0,
-      }),
-      formatValue: (amount) => fmt("debugRiftEnergyValue", { amount }),
-      onActivate: debugProgressTools.addRiftEnergy,
-    },
-  });
-}
+updateDebugTools(performance.now());
 requestAnimationFrame(update);

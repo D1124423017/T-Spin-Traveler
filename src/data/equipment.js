@@ -25,7 +25,7 @@ export const EQUIPMENT_WHEEL_UPGRADE_COSTS = Object.freeze([
   10000,
   20000,
 ]);
-export const EQUIPMENT_WHEEL_SEGMENT_COUNT = 24;
+export const EQUIPMENT_WHEEL_SEGMENT_COUNT = 20;
 
 export const EQUIPMENT_WHEEL_LEVELS = Object.freeze([
   Object.freeze({

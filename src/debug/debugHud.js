@@ -42,7 +42,7 @@ const DEBUG_ART_TUNING_KEY = "tspin-traveler-debug-art-tuning-v1";
 let domHud = null;
 let domArtTuning = null;
 let debugArtTuning = null;
-let debugEnergyTool = null;
+let debugProgressTool = null;
 
 export function getDebugArtTuning({ enabled = isDebugHudEnabled() } = {}) {
   if (!enabled) return DEFAULT_DEBUG_ART_TUNING;
@@ -56,7 +56,11 @@ export function updateDebugDomHud({
   readers = {},
   now = getNow(),
 } = {}) {
-  if (!enabled || !debugState) return;
+  if (!enabled || !debugState) {
+    if (domHud?.isConnected) domHud.remove();
+    domHud = null;
+    return;
+  }
   updateFlowStuckState(debugState, readers, now);
   const hud = ensureDebugDomHud();
   if (!hud) return;
@@ -74,16 +78,18 @@ export function updateDebugDomHud({
 export function updateDebugArtTuningDom({
   enabled = isDebugHudEnabled(),
   tuning = getDebugArtTuning({ enabled }),
-  energyTool = null,
+  progressTool = null,
 } = {}) {
   if (!enabled || !tuning) {
     if (domArtTuning?.isConnected) domArtTuning.remove();
     domArtTuning = null;
     return;
   }
-  debugEnergyTool = energyTool;
+  debugProgressTool = progressTool;
   const panel = ensureDebugArtTuningDom();
   if (!panel) return;
+  const title = panel.querySelector("[data-debug-title]");
+  if (title && progressTool?.toggleHint) title.textContent = progressTool.toggleHint;
   for (const input of panel.querySelectorAll("input[data-debug-art-key]")) {
     const key = input.dataset.debugArtKey;
     const value = Number(tuning[key] ?? DEFAULT_DEBUG_ART_TUNING[key] ?? 1);
@@ -92,12 +98,25 @@ export function updateDebugArtTuningDom({
     if (output) output.textContent = value.toFixed(2);
   }
   const energyButton = panel.querySelector("[data-debug-energy-add]");
-  if (energyButton && energyTool?.buttonLabel) {
-    energyButton.textContent = energyTool.buttonLabel;
+  if (energyButton && progressTool?.energyButtonLabel) {
+    energyButton.textContent = progressTool.energyButtonLabel;
   }
   const energyValue = panel.querySelector("[data-debug-energy-value]");
-  if (energyValue && energyTool?.valueLabel) {
-    energyValue.textContent = energyTool.valueLabel;
+  if (energyValue && progressTool?.energyValueLabel) {
+    energyValue.textContent = progressTool.energyValueLabel;
+  }
+  const resetButton = panel.querySelector("[data-debug-reset-all]");
+  const resetStatus = progressTool?.getResetStatus?.() || "idle";
+  if (resetButton) {
+    resetButton.textContent = resetStatus === "confirm"
+      ? progressTool?.resetConfirmLabel
+      : progressTool?.resetButtonLabel;
+  }
+  const resetMessage = panel.querySelector("[data-debug-reset-message]");
+  if (resetMessage) {
+    resetMessage.textContent = resetStatus === "reset"
+      ? progressTool?.resetDoneLabel || ""
+      : "";
   }
 }
 
@@ -173,6 +192,7 @@ function ensureDebugArtTuningDom() {
 
   const title = document.createElement("div");
   title.textContent = "Battle Art Tuning";
+  title.dataset.debugTitle = "true";
   Object.assign(title.style, {
     fontWeight: "800",
     letterSpacing: "0.04em",
@@ -236,12 +256,32 @@ function ensureDebugArtTuningDom() {
   addEnergy.dataset.debugEnergyAdd = "true";
   addEnergy.style.width = "100%";
   addEnergy.addEventListener("click", () => {
-    const nextValue = debugEnergyTool?.onActivate?.();
-    if (Number.isFinite(nextValue) && debugEnergyTool?.formatValue) {
-      energyValue.textContent = debugEnergyTool.formatValue(nextValue);
+    const nextValue = debugProgressTool?.addRiftEnergy?.();
+    if (Number.isFinite(nextValue) && debugProgressTool?.formatEnergyValue) {
+      energyValue.textContent = debugProgressTool.formatEnergyValue(nextValue);
     }
   });
-  energySection.append(energyValue, addEnergy);
+  const resetAll = createDebugButton("Reset All");
+  resetAll.dataset.debugResetAll = "true";
+  resetAll.style.width = "100%";
+  resetAll.style.marginTop = "7px";
+  resetAll.addEventListener("click", () => {
+    debugProgressTool?.resetAllProgress?.();
+    updateDebugArtTuningDom({
+      enabled: true,
+      tuning: getDebugArtTuning({ enabled: true }),
+      progressTool: debugProgressTool,
+    });
+  });
+  const resetMessage = document.createElement("div");
+  resetMessage.dataset.debugResetMessage = "true";
+  Object.assign(resetMessage.style, {
+    minHeight: "16px",
+    marginTop: "5px",
+    color: "#9df7da",
+    fontWeight: "700",
+  });
+  energySection.append(energyValue, addEnergy, resetAll, resetMessage);
   panel.appendChild(energySection);
 
   document.body.appendChild(panel);

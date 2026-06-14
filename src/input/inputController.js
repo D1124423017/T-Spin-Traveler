@@ -3,6 +3,7 @@ import { normalizeControlKey } from "./controlBindings.js";
 import { createMainMenuInputRouter } from "./mainMenuInputRouter.js";
 import { createEquipmentInputRouter } from "./equipmentInputRouter.js";
 import { createSettingsInputRouter } from "./settingsInputRouter.js";
+import { handleDebugUiShortcut } from "../debug/debugUiController.js";
 
 export function getCanvasPoint(event, canvas, width, height) {
   const rect = canvas.getBoundingClientRect();
@@ -26,6 +27,7 @@ export function installInputController({
   defaultTuning,
   tuningSliders,
   githubFeedbackUrl,
+  debugUiEnabled = false,
   getMainMenuButtonRects,
   getSettingsContentOrigin,
   getSettingsBackButtonRect,
@@ -72,6 +74,7 @@ export function installInputController({
     startAscensionChallenge,
     syncControlHints,
     toggleMute,
+    toggleDebugUi,
     toggleUpgradeDetail,
     triggerMenuHeroAction,
     unlockAudio,
@@ -159,6 +162,9 @@ export function installInputController({
   }
 
   function onKeyDown(event) {
+    if (handleDebugUiShortcut(event, toggleDebugUi, {
+      enabled: debugUiEnabled,
+    })) return;
     const key = event.key;
     const code = event.code;
     const normalized = normalizeControlKey(key);

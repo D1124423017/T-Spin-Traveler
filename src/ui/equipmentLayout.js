@@ -21,14 +21,13 @@ export const EQUIPMENT_ROULETTE_LAYOUT = Object.freeze({
   title: Object.freeze({ x: 44, y: 28, w: 650, h: 58 }),
   backButton: Object.freeze({ x: 1030, y: 28, w: 210, h: 42 }),
   wheel: Object.freeze({ cx: 342, cy: 382, radius: 292 }),
-  wheelImage: Object.freeze({ x: 36, y: 76, w: 612, h: 612 }),
-  status: Object.freeze({ x: 688, y: 92, w: 552, h: 108 }),
-  drawButton: Object.freeze({ x: 688, y: 220, w: 260, h: 58 }),
-  upgradeButton: Object.freeze({ x: 966, y: 220, w: 274, h: 58 }),
-  recent: Object.freeze({ x: 688, y: 302, w: 552, h: 120 }),
-  odds: Object.freeze({ x: 688, y: 446, w: 552, h: 112 }),
-  message: Object.freeze({ x: 688, y: 582, w: 552, h: 22 }),
-  controlsHint: Object.freeze({ x: 688, y: 636, w: 552, h: 18 }),
+  wheelImage: Object.freeze({ w: 612, h: 612 }),
+  status: Object.freeze({ x: 694, y: 104, w: 546, h: 122 }),
+  drawButton: Object.freeze({ x: 694, y: 250, w: 258, h: 60 }),
+  upgradeButton: Object.freeze({ x: 970, y: 250, w: 270, h: 60 }),
+  odds: Object.freeze({ x: 694, y: 350, w: 546, h: 168 }),
+  message: Object.freeze({ x: 694, y: 552, w: 546, h: 22 }),
+  controlsHint: Object.freeze({ x: 694, y: 636, w: 546, h: 18 }),
 });
 
 export const EQUIPMENT_SCREEN_LAYOUT = EQUIPMENT_ROULETTE_LAYOUT;

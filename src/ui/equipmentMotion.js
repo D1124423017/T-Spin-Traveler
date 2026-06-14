@@ -6,6 +6,7 @@ import {
   getEquipmentRewardDuration,
   getEquipmentWheelPresentation,
 } from "./equipmentWheelPresentation.js";
+import { getEquipmentWheelTargetRotation } from "./equipmentWheelGeometry.js";
 
 const TAU = Math.PI * 2;
 
@@ -22,8 +23,10 @@ export function createEquipmentSpinMotion({
   const segments = buildEquipmentWheelSegments(wheelLevel);
   const matches = segments.filter((segment) => segment.rarity === rarity);
   const target = matches[Math.floor((Number(random()) || 0) * matches.length)] || segments[0];
-  const step = TAU / EQUIPMENT_WHEEL_SEGMENT_COUNT;
-  const targetRotation = -(target.index + 0.5) * step;
+  const targetRotation = getEquipmentWheelTargetRotation(
+    target.index,
+    EQUIPMENT_WHEEL_SEGMENT_COUNT,
+  );
   const durationMs = reducedMotion ? 1 : presentation.spinDurationMs;
   const revealDurationMs = getEquipmentRewardDuration(rarity, reducedMotion);
   return {

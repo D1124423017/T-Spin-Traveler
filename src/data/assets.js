@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-12-equipment-roulette-polish";
+export const ASSET_VERSION = "2026-06-14-equipment-wheel-body-redesign";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -126,7 +126,82 @@ export const mainMenuRuneArcBack = registerImageAsset("main-menu-rune-arc-back",
 export const mainMenuPrimaryFrame = registerImageAsset("main-menu-primary-frame", "assets/images/menu/main-menu-primary-frame.png");
 export const mainMenuSecondaryFrame = registerImageAsset("main-menu-secondary-frame", "assets/images/menu/main-menu-secondary-frame.png");
 export const mainMenuDialogueFrame = registerImageAsset("main-menu-dialogue-frame", "assets/images/menu/main-menu-dialogue-frame.png");
-export const equipmentRouletteWheelArt = registerImageAsset("equipment-roulette-wheel", "assets/images/equipment/equipment-roulette-wheel.png");
+export const equipmentRouletteLayers = Object.freeze({
+  1: Object.freeze({
+    body: registerImageAsset(
+      "equipment-roulette-body-lv1",
+      "assets/images/equipment/roulette/equipment-roulette-body-lv1.png",
+    ),
+  }),
+  2: Object.freeze({
+    body: registerImageAsset(
+      "equipment-roulette-body-lv2",
+      "assets/images/equipment/roulette/equipment-roulette-body-lv2.png",
+    ),
+  }),
+  3: Object.freeze({
+    body: registerImageAsset(
+      "equipment-roulette-body-lv3",
+      "assets/images/equipment/roulette/equipment-roulette-body-lv3.png",
+    ),
+  }),
+  4: Object.freeze({
+    body: registerImageAsset(
+      "equipment-roulette-body-lv4",
+      "assets/images/equipment/roulette/equipment-roulette-body-lv4.png",
+    ),
+  }),
+  5: Object.freeze({
+    body: registerImageAsset(
+      "equipment-roulette-body-lv5",
+      "assets/images/equipment/roulette/equipment-roulette-body-lv5.png",
+    ),
+  }),
+});
+export const equipmentRoulettePointer = registerImageAsset(
+  "equipment-roulette-pointer",
+  "assets/images/equipment/equipment-roulette-pointer.png",
+);
+export const equipmentRarityEmblems = Object.freeze({
+  common: registerImageAsset(
+    "equipment-rarity-common",
+    "assets/images/equipment/rarity/equipment-rarity-common.png",
+  ),
+  rare: registerImageAsset(
+    "equipment-rarity-rare",
+    "assets/images/equipment/rarity/equipment-rarity-rare.png",
+  ),
+  relic: registerImageAsset(
+    "equipment-rarity-relic",
+    "assets/images/equipment/rarity/equipment-rarity-relic.png",
+  ),
+  legendary: registerImageAsset(
+    "equipment-rarity-legendary",
+    "assets/images/equipment/rarity/equipment-rarity-legendary.png",
+  ),
+});
+export const equipmentRewardPanelArts = Object.freeze({
+  1: registerImageAsset(
+    "equipment-reward-panel-lv1",
+    "assets/images/equipment/reward/equipment-reward-panel-lv1.png",
+  ),
+  2: registerImageAsset(
+    "equipment-reward-panel-lv2",
+    "assets/images/equipment/reward/equipment-reward-panel-lv2.png",
+  ),
+  3: registerImageAsset(
+    "equipment-reward-panel-lv3",
+    "assets/images/equipment/reward/equipment-reward-panel-lv3.png",
+  ),
+  4: registerImageAsset(
+    "equipment-reward-panel-lv4",
+    "assets/images/equipment/reward/equipment-reward-panel-lv4.png",
+  ),
+  5: registerImageAsset(
+    "equipment-reward-panel-lv5",
+    "assets/images/equipment/reward/equipment-reward-panel-lv5.png",
+  ),
+});
 export const noaCheatHandArt = registerImageAsset("equipment-noa-cheat-hand", "assets/images/equipment/noa-cheat-hand.png");
 export const equipmentIcons = {
   "wanderer-observer-hood": registerImageAsset("equipment-icon-wanderer-observer-hood", "assets/images/equipment/icons/wanderer-observer-hood.png"),

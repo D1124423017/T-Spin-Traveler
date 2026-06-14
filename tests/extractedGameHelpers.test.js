@@ -197,6 +197,7 @@ describe("extracted game helpers", () => {
       defaultTuning: {},
       tuningSliders: {},
       githubFeedbackUrl: "",
+      debugUiEnabled: false,
       getMainMenuButtonRects: () => ({}),
       getSettingsContentOrigin: () => ({ x: 0, y: 0 }),
       getSettingsBackButtonRect: () => ({ x: 0, y: 0, w: 0, h: 0 }),
@@ -242,6 +243,7 @@ describe("extracted game helpers", () => {
         setLanguage: () => {},
         startAscensionChallenge: () => {},
         syncControlHints: () => {},
+        toggleDebugUi: () => calls.push(["toggleDebugUi"]),
         toggleMute: () => {},
         toggleUpgradeDetail: () => {},
         triggerMenuHeroAction: () => {},
@@ -266,6 +268,7 @@ describe("extracted game helpers", () => {
     keyDown(event("Shift"));
     keyDown(event(" ", "Space"));
     keyDown(event("p"));
+    keyDown(event("F1"));
 
     state.mode = "start";
     keyDown(event("Enter"));

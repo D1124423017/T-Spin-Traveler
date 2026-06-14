@@ -1,10 +1,8 @@
 import {
   EQUIPMENT_RARITY_ORDER,
   EQUIPMENT_WHEEL_LEVELS,
-  EQUIPMENT_WHEEL_SEGMENT_COUNT,
   buildEquipmentWheelSegments,
   getEquipmentDrawCost,
-  getEquipmentById,
   getEquipmentRarityStyle,
   getEquipmentWheelLevel,
   getEquipmentWheelUpgradeCost,
@@ -13,19 +11,23 @@ import { EQUIPMENT_ROULETTE_LAYOUT } from "./equipmentLayout.js";
 import { getEquipmentMotionState } from "./equipmentMotion.js";
 import {
   EQUIPMENT_RARITY_RUNES,
-  hexAlpha,
 } from "./equipmentUiPrimitives.js";
+import { drawEquipmentCanvasRotor } from "../render/equipmentCanvasRotorRenderer.js";
+import {
+  drawEquipmentWheelBody,
+  drawEquipmentWheelPointer,
+} from "../render/equipmentWheelLayerRenderer.js";
 import { createEquipmentRewardRevealRenderer } from "./equipmentRewardReveal.js";
 import { getEquipmentWheelPresentation } from "./equipmentWheelPresentation.js";
-
-const TAU = Math.PI * 2;
+import {
+  createEquipmentWheelGeometry,
+} from "./equipmentWheelGeometry.js";
 
 export function createEquipmentRouletteScreenRenderer({
   ctx,
   state,
   t,
   fmt,
-  canvasFont,
   label,
   fitLabel,
   wrapText,
@@ -33,21 +35,29 @@ export function createEquipmentRouletteScreenRenderer({
   drawCard,
   drawMenuButton,
   equipmentIcons = {},
-  equipmentWheelArt,
+  equipmentRarityEmblems = {},
+  equipmentRewardPanelArts = {},
+  equipmentWheelLayers = {},
+  equipmentWheelPointerArt,
   noaCheatHandArt,
   riftEnergyIcon,
   isImageReady,
   layout = EQUIPMENT_ROULETTE_LAYOUT,
   now = () => performance.now(),
 } = {}) {
+  const wheelGeometry = createEquipmentWheelGeometry(layout);
   const rewardRevealRenderer = createEquipmentRewardRevealRenderer({
     ctx,
     t,
     fitLabel,
     label,
+    wrapText,
     drawImageContain,
     equipmentIcons,
+    equipmentRarityEmblems,
+    equipmentRewardPanelArts,
     isImageReady,
+    layout,
   });
 
   function draw() {
@@ -55,16 +65,20 @@ export function createEquipmentRouletteScreenRenderer({
     const equipment = state.metaProgress?.equipment || {};
     const wheel = getEquipmentWheelLevel(equipment.wheelLevel);
     const motion = getEquipmentMotionState(state.equipmentUi?.motion, currentTime);
+    const revealActive = Boolean(
+      motion.revealActive && state.equipmentUi?.motion?.itemId,
+    );
 
     drawHeader(wheel);
     drawWheel(wheel, motion, currentTime);
-    drawStatus(wheel);
-    drawControls(equipment, motion);
-    drawRecentResult(equipment);
-    drawOdds(wheel);
-    drawMessage();
-    drawCheatHand(motion);
+    if (!revealActive) {
+      drawStatus(wheel);
+      drawControls(equipment, motion);
+      drawOdds(wheel);
+      drawMessage();
+    }
     rewardRevealRenderer.draw(state.equipmentUi?.motion, motion, currentTime);
+    drawCheatHand(motion);
   }
 
   function drawHeader(wheel) {
@@ -84,10 +98,40 @@ export function createEquipmentRouletteScreenRenderer({
   }
 
   function drawWheel(wheel, motion, currentTime) {
-    const { cx, cy, radius } = layout.wheel;
     const presentation = getEquipmentWheelPresentation(wheel.level);
     const visualPower = wheel.visualPower;
     const pulse = 0.5 + Math.sin(currentTime * 0.0024) * 0.5;
+    const layers = equipmentWheelLayers[wheel.level] || equipmentWheelLayers[1];
+    const segments = buildEquipmentWheelSegments(wheel.level);
+
+    drawWheelBackgroundGlow(visualPower);
+    drawWheelBackgroundParticles(presentation, currentTime, pulse);
+    drawEquipmentCanvasRotor({
+      ctx,
+      geometry: wheelGeometry,
+      segments,
+      rotation: motion.rotation,
+      presentation,
+      visualPower,
+      currentTime,
+    });
+    drawRotorInterferenceUnderFrame(presentation, motion, currentTime);
+    drawEquipmentWheelBody({
+      ctx,
+      bodyArt: layers?.body,
+      isImageReady,
+      geometry: wheelGeometry,
+      visualPower,
+    });
+    drawPointerAuraUnderFrame(motion, presentation, pulse);
+    drawFixedWheelPointer(visualPower);
+  }
+
+  function drawWheelBackgroundGlow(visualPower) {
+    const {
+      center: { x: cx, y: cy },
+      radius,
+    } = wheelGeometry;
     const glowRadius = radius * (0.88 + visualPower * 0.14);
     const glow = ctx.createRadialGradient(cx, cy, radius * 0.12, cx, cy, glowRadius);
     glow.addColorStop(0, `rgba(160, 92, 255, ${0.14 + visualPower * 0.16})`);
@@ -95,95 +139,13 @@ export function createEquipmentRouletteScreenRenderer({
     glow.addColorStop(1, "rgba(13, 5, 35, 0)");
     ctx.fillStyle = glow;
     ctx.fillRect(cx - radius - 36, cy - radius - 36, radius * 2 + 72, radius * 2 + 72);
-
-    drawWheelEnergyRings(wheel, presentation, currentTime, pulse);
-    drawWheelSegments(wheel, motion.rotation);
-
-    if (isImageReady(equipmentWheelArt)) {
-      ctx.save();
-      ctx.shadowColor = `rgba(156, 96, 255, ${0.36 + visualPower * 0.3})`;
-      ctx.shadowBlur = 16 + visualPower * 18;
-      ctx.drawImage(
-        equipmentWheelArt,
-        layout.wheelImage.x,
-        layout.wheelImage.y,
-        layout.wheelImage.w,
-        layout.wheelImage.h,
-      );
-      ctx.restore();
-    }
-
-    drawWheelCore(wheel, presentation, currentTime, pulse);
-    drawWheelInterference(presentation, motion, currentTime);
-    drawPointerFlash(motion, presentation, pulse);
   }
 
-  function drawWheelSegments(wheel, rotation) {
-    const { cx, cy, radius } = layout.wheel;
-    const segments = buildEquipmentWheelSegments(wheel.level);
-    const step = TAU / EQUIPMENT_WHEEL_SEGMENT_COUNT;
-    const outerRadius = radius * 0.79;
-    const innerRadius = radius * 0.34;
-
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(rotation);
-    for (const segment of segments) {
-      const start = -Math.PI / 2 + segment.index * step + 0.006;
-      const end = start + step - 0.012;
-      const style = getEquipmentRarityStyle(segment.rarity);
-      ctx.beginPath();
-      ctx.arc(0, 0, outerRadius, start, end);
-      ctx.arc(0, 0, innerRadius, end, start, true);
-      ctx.closePath();
-      ctx.fillStyle = hexAlpha(style.color, 0.18 + wheel.visualPower * 0.12);
-      ctx.fill();
-      ctx.strokeStyle = hexAlpha(style.color, 0.28 + wheel.visualPower * 0.2);
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-
-      const angle = start + step * 0.5;
-      const runeRadius = radius * 0.61;
-      ctx.save();
-      ctx.translate(Math.cos(angle) * runeRadius, Math.sin(angle) * runeRadius);
-      ctx.rotate(angle + Math.PI / 2);
-      ctx.font = canvasFont(
-        "900",
-        17,
-        EQUIPMENT_RARITY_RUNES[segment.rarity],
-        true,
-      );
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.shadowColor = style.color;
-      ctx.shadowBlur = 8 + wheel.visualPower * 8;
-      ctx.fillStyle = hexAlpha(style.titleColor, 0.82);
-      ctx.fillText(EQUIPMENT_RARITY_RUNES[segment.rarity], 0, 0);
-      ctx.restore();
-    }
-    ctx.restore();
-  }
-
-  function drawWheelEnergyRings(wheel, presentation, currentTime, pulse) {
+  function drawWheelBackgroundParticles(presentation, currentTime, pulse) {
     const { cx, cy, radius } = layout.wheel;
     ctx.save();
     ctx.translate(cx, cy);
     ctx.globalCompositeOperation = "lighter";
-    for (let index = 0; index < presentation.ringCount; index += 1) {
-      const phase = currentTime
-        * (0.00014 + index * 0.00003)
-        * (index % 2 ? -1 : 1);
-      ctx.rotate(phase);
-      ctx.strokeStyle = index % 2
-        ? `rgba(113, 224, 255, ${0.07 + wheel.visualPower * 0.05})`
-        : `rgba(180, 115, 255, ${0.09 + wheel.visualPower * 0.07})`;
-      ctx.lineWidth = 1 + index * 0.2;
-      ctx.setLineDash([4 + index * 2, 12 - Math.min(6, index)]);
-      ctx.beginPath();
-      ctx.arc(0, 0, radius * (0.82 + index * 0.045), 0, TAU);
-      ctx.stroke();
-    }
-    ctx.setLineDash([]);
     for (let index = 0; index < presentation.particleCount; index += 1) {
       const angle = currentTime * 0.0003 * (index % 2 ? 1 : -1) + index * 2.17;
       const orbit = radius * (0.86 + (index % 3) * 0.055);
@@ -199,70 +161,75 @@ export function createEquipmentRouletteScreenRenderer({
     ctx.restore();
   }
 
-  function drawWheelCore(wheel, presentation, currentTime, pulse) {
-    const { cx, cy, radius } = layout.wheel;
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.globalCompositeOperation = "lighter";
-    for (let layer = 0; layer < presentation.coreLayers; layer += 1) {
-      const direction = layer % 2 ? -1 : 1;
-      ctx.save();
-      ctx.rotate(currentTime * 0.00024 * direction + layer * 0.42);
-      ctx.strokeStyle = layer % 2
-        ? `rgba(116, 230, 255, ${0.12 + presentation.glowStrength * 0.12})`
-        : `rgba(203, 153, 255, ${0.14 + presentation.glowStrength * 0.14})`;
-      ctx.lineWidth = 1.2 + layer * 0.34;
-      ctx.setLineDash([5 + layer * 2, 9]);
-      ctx.beginPath();
-      ctx.arc(0, 0, radius * (0.12 + layer * 0.026), 0, TAU);
-      ctx.stroke();
-      ctx.restore();
-    }
-    ctx.setLineDash([]);
-    ctx.fillStyle = `rgba(222, 196, 255, ${0.18 + pulse * presentation.shimmerStrength * 0.3})`;
-    ctx.shadowColor = "#b86fff";
-    ctx.shadowBlur = 10 + presentation.glowStrength * 18;
-    ctx.beginPath();
-    ctx.arc(0, 0, 4 + wheel.level * 1.5, 0, TAU);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  function drawWheelInterference(presentation, motion, currentTime) {
+  function drawRotorInterferenceUnderFrame(presentation, motion, currentTime) {
     if (presentation.interferenceStrength <= 0) return;
-    const { cx, cy, radius } = layout.wheel;
+    const {
+      center: { x: cx, y: cy },
+      rotorOuterRadius,
+    } = wheelGeometry;
     const strength = presentation.interferenceStrength
       * (motion.active ? 1 : 0.46)
       * (0.65 + Math.sin(currentTime * 0.014) * 0.35);
     ctx.save();
     ctx.translate(cx, cy);
+    ctx.beginPath();
+    ctx.arc(0, 0, rotorOuterRadius, 0, Math.PI * 2);
+    ctx.clip();
     ctx.globalCompositeOperation = "lighter";
     ctx.strokeStyle = `rgba(195, 113, 255, ${0.14 + strength * 1.4})`;
     ctx.lineWidth = 1 + strength * 8;
     for (let index = 0; index < 2 + presentation.level; index += 1) {
       const start = currentTime * 0.0005 + index * 1.31;
       ctx.beginPath();
-      ctx.arc(0, 0, radius * (0.72 + index * 0.035), start, start + 0.28 + strength);
+      ctx.arc(
+        0,
+        0,
+        rotorOuterRadius * (0.72 + index * 0.035),
+        start,
+        start + 0.28 + strength,
+      );
       ctx.stroke();
     }
     ctx.restore();
   }
 
-  function drawPointerFlash(motion, presentation, pulse) {
-    const { cx, cy, radius } = layout.wheel;
-    const scale = presentation.pointerScale;
+  function drawPointerAuraUnderFrame(motion, presentation, pulse) {
+    const { x: cx, y: pointerY } = wheelGeometry.pointerTarget;
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
-    ctx.shadowColor = "#d8b6ff";
-    ctx.shadowBlur = motion.active ? 24 : 12;
-    ctx.fillStyle = `rgba(238, 219, 255, ${motion.active ? 0.34 + pulse * 0.24 : 0.18})`;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - radius + 16);
-    ctx.lineTo(cx - 15 * scale, cy - radius + 16 + 36 * scale);
-    ctx.lineTo(cx + 15 * scale, cy - radius + 16 + 36 * scale);
-    ctx.closePath();
-    ctx.fill();
+    const auraRadius = 22 * presentation.pointerScale;
+    const aura = ctx.createRadialGradient(
+      cx,
+      pointerY,
+      0,
+      cx,
+      pointerY,
+      auraRadius,
+    );
+    aura.addColorStop(
+      0,
+      `rgba(246, 232, 255, ${motion.active ? 0.46 + pulse * 0.26 : 0.2})`,
+    );
+    aura.addColorStop(0.36, "rgba(190, 117, 255, 0.18)");
+    aura.addColorStop(1, "rgba(126, 73, 255, 0)");
+    ctx.fillStyle = aura;
+    ctx.fillRect(
+      cx - auraRadius,
+      pointerY - auraRadius,
+      auraRadius * 2,
+      auraRadius * 2,
+    );
     ctx.restore();
+  }
+
+  function drawFixedWheelPointer(visualPower) {
+    drawEquipmentWheelPointer({
+      ctx,
+      pointerArt: equipmentWheelPointerArt,
+      isImageReady,
+      geometry: wheelGeometry,
+      visualPower,
+    });
   }
 
   function drawStatus(wheel) {
@@ -344,45 +311,6 @@ export function createEquipmentRouletteScreenRenderer({
         "800",
       );
     }
-  }
-
-  function drawRecentResult(equipment) {
-    const rect = layout.recent;
-    drawCard(rect.x, rect.y, rect.w, rect.h);
-    const item = getEquipmentById(equipment.recentDrop);
-    label(t("equipmentRecentResult"), rect.x + 18, rect.y + 27, 11, "#9edff8");
-    if (!item) {
-      label(
-        t("equipmentNoRecentResult"),
-        rect.x + 18,
-        rect.y + 66,
-        15,
-        "rgba(235,240,252,0.5)",
-      );
-      return;
-    }
-    const style = getEquipmentRarityStyle(item.rarity);
-    drawEquipmentIcon(item, rect.x + 16, rect.y + 38, 70, 70);
-    fitLabel(
-      t(item.nameKey),
-      rect.x + 98,
-      rect.y + 62,
-      rect.w - 118,
-      20,
-      style.titleColor,
-      12,
-      "900",
-      true,
-    );
-    wrapText(
-      t(item.effectKey),
-      rect.x + 98,
-      rect.y + 88,
-      rect.w - 118,
-      18,
-      "rgba(240,244,255,0.72)",
-      12,
-    );
   }
 
   function drawOdds(wheel) {
