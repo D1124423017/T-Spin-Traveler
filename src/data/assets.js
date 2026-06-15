@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-15-noa-attack-runtime-sheets";
+export const ASSET_VERSION = "2026-06-15-archive-cleanup";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -119,13 +119,13 @@ if (typeof window !== "undefined") {
   };
 }
 
-export const forestBg = registerImageAsset("default-ancient-rift-background", "assets/backgrounds/egypt_star_tomb_exterior_rift_bg.png");
-export const mainMenuHomeKingdomBg = registerImageAsset("main-menu-home-kingdom-background", "assets/images/menu/main-menu-home-kingdom-bg.png");
-export const mainMenuRiftKingdomBg = registerImageAsset("main-menu-rift-kingdom-background", "assets/images/menu/main-menu-rift-kingdom-bg.png");
-export const mainMenuRuneArcBack = registerImageAsset("main-menu-rune-arc-back", "assets/images/menu/main-menu-rune-arc-back.png");
-export const mainMenuPrimaryFrame = registerImageAsset("main-menu-primary-frame", "assets/images/menu/main-menu-primary-frame.png");
-export const mainMenuSecondaryFrame = registerImageAsset("main-menu-secondary-frame", "assets/images/menu/main-menu-secondary-frame.png");
-export const mainMenuDialogueFrame = registerImageAsset("main-menu-dialogue-frame", "assets/images/menu/main-menu-dialogue-frame.png");
+export const forestBg = registerImageAsset("default-ancient-rift-background", "assets/images/regions/egypt/backgrounds/egypt_star_tomb_exterior_rift_bg.png");
+export const mainMenuHomeKingdomBg = registerImageAsset("main-menu-home-kingdom-background", "assets/images/ui/menu/main-menu-home-kingdom-bg.png");
+export const mainMenuRiftKingdomBg = registerImageAsset("main-menu-rift-kingdom-background", "assets/images/ui/menu/main-menu-rift-kingdom-bg.png");
+export const mainMenuRuneArcBack = registerImageAsset("main-menu-rune-arc-back", "assets/images/ui/menu/main-menu-rune-arc-back.png");
+export const mainMenuPrimaryFrame = registerImageAsset("main-menu-primary-frame", "assets/images/ui/menu/main-menu-primary-frame.png");
+export const mainMenuSecondaryFrame = registerImageAsset("main-menu-secondary-frame", "assets/images/ui/menu/main-menu-secondary-frame.png");
+export const mainMenuDialogueFrame = registerImageAsset("main-menu-dialogue-frame", "assets/images/ui/menu/main-menu-dialogue-frame.png");
 export const equipmentRouletteLayers = Object.freeze({
   1: Object.freeze({
     body: registerImageAsset(
@@ -220,75 +220,75 @@ export const equipmentIcons = {
   "fate-deception-cloak": registerImageAsset("equipment-icon-fate-deception-cloak", "assets/images/equipment/icons/fate-deception-cloak.png"),
   "cheaters-amethyst-sword": registerImageAsset("equipment-icon-cheaters-amethyst-sword", "assets/images/equipment/icons/cheaters-amethyst-sword.png"),
 };
-export const stageEgyptStarTombRiftBg = registerImageAsset("stage-egypt-star-tomb-rift", "assets/backgrounds/egypt_star_tomb_rift_battle_bg.png");
-export const stageEgyptStarTombExteriorRiftBg = registerImageAsset("stage-egypt-star-tomb-exterior-rift", "assets/backgrounds/egypt_star_tomb_exterior_rift_bg.png");
-export const stageEgyptPyramidObservatoryRiftBg = registerImageAsset("stage-egypt-pyramid-observatory-rift", "assets/backgrounds/egypt_pyramid_observatory_rift_bg.png");
-export const stageMayaEclipseTempleRiftBg = registerImageAsset("stage-maya-eclipse-temple-rift", "assets/backgrounds/maya_eclipse_temple_rift_bg.png");
-export const stageAtlantisSunkenCrystalTempleRiftBg = registerImageAsset("stage-atlantis-sunken-crystal-temple-rift", "assets/backgrounds/atlantis_sunken_crystal_temple_rift_bg.png");
-export const slimeArt = registerImageAsset("fallback-enemy-battle-portrait", "assets/enemies/battle/enemy_egypt_rift_scarab_scout_battle.png");
-export const heroIdleArt = registerImageAsset("hero-idle-canonical", "assets/images/clean/ET_Character_fullbody_alpha.png");
+export const stageEgyptStarTombRiftBg = registerImageAsset("stage-egypt-star-tomb-rift", "assets/images/regions/egypt/backgrounds/egypt_star_tomb_rift_battle_bg.png");
+export const stageEgyptStarTombExteriorRiftBg = registerImageAsset("stage-egypt-star-tomb-exterior-rift", "assets/images/regions/egypt/backgrounds/egypt_star_tomb_exterior_rift_bg.png");
+export const stageEgyptPyramidObservatoryRiftBg = registerImageAsset("stage-egypt-pyramid-observatory-rift", "assets/images/regions/egypt/backgrounds/egypt_pyramid_observatory_rift_bg.png");
+export const stageMayaEclipseTempleRiftBg = registerImageAsset("stage-maya-eclipse-temple-rift", "assets/future/regions/maya/backgrounds/maya_eclipse_temple_rift_bg.png");
+export const stageAtlantisSunkenCrystalTempleRiftBg = registerImageAsset("stage-atlantis-sunken-crystal-temple-rift", "assets/future/regions/atlantis/backgrounds/atlantis_sunken_crystal_temple_rift_bg.png");
+export const slimeArt = registerImageAsset("fallback-enemy-battle-portrait", "assets/images/regions/egypt/enemies/enemy_egypt_rift_scarab_scout_battle.png");
+export const heroIdleArt = registerImageAsset("hero-idle-canonical", "assets/images/characters/noa/ET_Character_fullbody_alpha.png");
 export const noaBattleIdleArt = heroIdleArt;
-export const noaFeedbackBowArt = registerImageAsset("noa-feedback-thanks-canonical", "assets/images/clean/noa_feedback_thanks_alpha.png");
-export const menuIdleCubeSheet = registerImageAsset("menu-idle-cube-sheet-16", "assets/images/clean/noa_menu_idle_cube_16.png");
-export const menuIdleMeditateSheet = registerImageAsset("menu-idle-meditate-sheet-16", "assets/images/clean/noa_menu_idle_meditate_16.png");
-export const menuIdleRiftWayfinderSheet = registerImageAsset("menu-idle-rift-wayfinder-sheet-16", "assets/images/clean/noa_menu_idle_rift_wayfinder_16.png");
-export const menuIdleStarMapListenerSheet = registerImageAsset("menu-idle-star-map-listener-sheet-16", "assets/images/clean/noa_menu_idle_star_map_listener_16.png");
-export const heroLineClearSlashSheet = registerImageAsset("hero-line-clear-slash-sheet-16", "assets/images/clean/noa_attack_line_clear_slash_16.png");
-export const heroCombo1Sheet = registerImageAsset("hero-combo-1-sheet-16", "assets/images/clean/noa_attack_combo1_16.png");
-export const heroCombo2Sheet = registerImageAsset("hero-combo-2-sheet-16", "assets/images/clean/noa_attack_combo2_16.png");
-export const heroCombo3Sheet = registerImageAsset("hero-combo-3-sheet-16", "assets/images/clean/noa_attack_combo3_16.png");
-export const heroUltimateSheet = registerImageAsset("hero-ultimate-sheet-16", "assets/images/clean/noa_attack_ultimate_16.png");
-export const heroTetrisSheet = registerImageAsset("hero-tetris-sheet-16", "assets/images/clean/noa_attack_tetris_16.png");
-export const heroTSpinSheet = registerImageAsset("hero-tspin-sheet-16", "assets/images/clean/noa_attack_tspin_16.png");
-export const heroB2BSheet = registerImageAsset("hero-b2b-sheet-16", "assets/images/clean/noa_attack_b2b_16.png");
-export const heroSwordWaveSheet = registerImageAsset("hero-sword-wave-sheet-16", "assets/effects/hero_sword_wave_16_spritesheet_alpha.png");
-export const heroImpactBurstSheet = registerImageAsset("hero-impact-burst-sheet-16", "assets/effects/hero_impact_burst_16_spritesheet_alpha.png");
-export const heroHitSheet = registerImageAsset("hero-hit-sheet-16", "assets/images/clean/hero_hit_16_spritesheet_alpha.png");
-export const enemyRiftProjectileSheet = registerImageAsset("enemy-rift-projectile-sheet-16", "assets/effects/enemy_rift_projectile_16_spritesheet_alpha.png");
-export const enemyImpactPhysicalSheet = registerImageAsset("enemy-impact-physical-sheet-16", "assets/effects/enemy_impact_physical_16_spritesheet_alpha.png");
-export const enemyImpactArcaneSheet = registerImageAsset("enemy-impact-arcane-sheet-16", "assets/effects/enemy_impact_arcane_16_spritesheet_alpha.png");
-export const enemyImpactStoneSheet = registerImageAsset("enemy-impact-stone-sheet-16", "assets/effects/enemy_impact_stone_16_spritesheet_alpha.png");
-export const enemyDeathSheet = registerImageAsset("enemy-death-sheet-16", "assets/effects/enemy_death_16_spritesheet_alpha.png");
-export const enemyPharaohProjectileSheet = registerImageAsset("enemy-pharaoh-projectile-sheet-16", "assets/effects/enemy_pharaoh_projectile_16_spritesheet_alpha.png");
-export const enemyPharaohImpactSheet = registerImageAsset("enemy-pharaoh-impact-sheet-16", "assets/effects/enemy_pharaoh_impact_16_spritesheet_alpha.png");
-export const noaLevelUpSheet = registerImageAsset("noa-level-up-sheet-16", "assets/effects/noa_level_up_16.png");
+export const noaFeedbackBowArt = registerImageAsset("noa-feedback-thanks-canonical", "assets/images/characters/noa/noa_feedback_thanks_alpha.png");
+export const menuIdleCubeSheet = registerImageAsset("menu-idle-cube-sheet-16", "assets/images/characters/noa/noa_menu_idle_cube_16.png");
+export const menuIdleMeditateSheet = registerImageAsset("menu-idle-meditate-sheet-16", "assets/images/characters/noa/noa_menu_idle_meditate_16.png");
+export const menuIdleRiftWayfinderSheet = registerImageAsset("menu-idle-rift-wayfinder-sheet-16", "assets/images/characters/noa/noa_menu_idle_rift_wayfinder_16.png");
+export const menuIdleStarMapListenerSheet = registerImageAsset("menu-idle-star-map-listener-sheet-16", "assets/images/characters/noa/noa_menu_idle_star_map_listener_16.png");
+export const heroLineClearSlashSheet = registerImageAsset("hero-line-clear-slash-sheet-16", "assets/images/characters/noa/noa_attack_line_clear_slash_16.png");
+export const heroCombo1Sheet = registerImageAsset("hero-combo-1-sheet-16", "assets/images/characters/noa/noa_attack_combo1_16.png");
+export const heroCombo2Sheet = registerImageAsset("hero-combo-2-sheet-16", "assets/images/characters/noa/noa_attack_combo2_16.png");
+export const heroCombo3Sheet = registerImageAsset("hero-combo-3-sheet-16", "assets/images/characters/noa/noa_attack_combo3_16.png");
+export const heroUltimateSheet = registerImageAsset("hero-ultimate-sheet-16", "assets/images/characters/noa/noa_attack_ultimate_16.png");
+export const heroTetrisSheet = registerImageAsset("hero-tetris-sheet-16", "assets/images/characters/noa/noa_attack_tetris_16.png");
+export const heroTSpinSheet = registerImageAsset("hero-tspin-sheet-16", "assets/images/characters/noa/noa_attack_tspin_16.png");
+export const heroB2BSheet = registerImageAsset("hero-b2b-sheet-16", "assets/images/characters/noa/noa_attack_b2b_16.png");
+export const heroSwordWaveSheet = registerImageAsset("hero-sword-wave-sheet-16", "assets/images/vfx/hero_sword_wave_16_spritesheet_alpha.png");
+export const heroImpactBurstSheet = registerImageAsset("hero-impact-burst-sheet-16", "assets/images/vfx/hero_impact_burst_16_spritesheet_alpha.png");
+export const heroHitSheet = registerImageAsset("hero-hit-sheet-16", "assets/images/characters/noa/hero_hit_16_spritesheet_alpha.png");
+export const enemyRiftProjectileSheet = registerImageAsset("enemy-rift-projectile-sheet-16", "assets/images/vfx/enemy_rift_projectile_16_spritesheet_alpha.png");
+export const enemyImpactPhysicalSheet = registerImageAsset("enemy-impact-physical-sheet-16", "assets/images/vfx/enemy_impact_physical_16_spritesheet_alpha.png");
+export const enemyImpactArcaneSheet = registerImageAsset("enemy-impact-arcane-sheet-16", "assets/images/vfx/enemy_impact_arcane_16_spritesheet_alpha.png");
+export const enemyImpactStoneSheet = registerImageAsset("enemy-impact-stone-sheet-16", "assets/images/vfx/enemy_impact_stone_16_spritesheet_alpha.png");
+export const enemyDeathSheet = registerImageAsset("enemy-death-sheet-16", "assets/images/vfx/enemy_death_16_spritesheet_alpha.png");
+export const enemyPharaohProjectileSheet = registerImageAsset("enemy-pharaoh-projectile-sheet-16", "assets/images/vfx/enemy_pharaoh_projectile_16_spritesheet_alpha.png");
+export const enemyPharaohImpactSheet = registerImageAsset("enemy-pharaoh-impact-sheet-16", "assets/images/vfx/enemy_pharaoh_impact_16_spritesheet_alpha.png");
+export const noaLevelUpSheet = registerImageAsset("noa-level-up-sheet-16", "assets/images/vfx/noa_level_up_16.png");
 export const enemyBattlePortraits = {
-  egyptRiftScarabScout: registerImageAsset("enemy-battle-egypt-rift-scarab-scout-left", "assets/enemies/battle/enemy_egypt_rift_scarab_scout_battle.png"),
-  sandTombMummy: registerImageAsset("enemy-battle-egypt-sand-tomb-mummy-left", "assets/enemies/battle/enemy_egypt_sand_tomb_mummy_battle.png"),
-  egyptianPriest: registerImageAsset("enemy-battle-egyptian-priest-left", "assets/enemies/battle/enemy_egyptian_priest_battle.png"),
-  anubisGuard: registerImageAsset("enemy-battle-egypt-anubis-guard-left", "assets/enemies/battle/enemy_egypt_anubis_guard_battle.png"),
-  sphinxStoneGuardian: registerImageAsset("enemy-battle-egypt-sphinx-stone-guardian-left", "assets/enemies/battle/enemy_egypt_sphinx_stone_guardian_battle.png"),
-  pharaohKing: registerImageAsset("enemy-battle-egypt-pharaoh-king-left", "assets/enemies/battle/enemy_egypt_pharaoh_king_battle.png"),
+  egyptRiftScarabScout: registerImageAsset("enemy-battle-egypt-rift-scarab-scout-left", "assets/images/regions/egypt/enemies/enemy_egypt_rift_scarab_scout_battle.png"),
+  sandTombMummy: registerImageAsset("enemy-battle-egypt-sand-tomb-mummy-left", "assets/images/regions/egypt/enemies/enemy_egypt_sand_tomb_mummy_battle.png"),
+  egyptianPriest: registerImageAsset("enemy-battle-egyptian-priest-left", "assets/images/regions/egypt/enemies/enemy_egyptian_priest_battle.png"),
+  anubisGuard: registerImageAsset("enemy-battle-egypt-anubis-guard-left", "assets/images/regions/egypt/enemies/enemy_egypt_anubis_guard_battle.png"),
+  sphinxStoneGuardian: registerImageAsset("enemy-battle-egypt-sphinx-stone-guardian-left", "assets/images/regions/egypt/enemies/enemy_egypt_sphinx_stone_guardian_battle.png"),
+  pharaohKing: registerImageAsset("enemy-battle-egypt-pharaoh-king-left", "assets/images/regions/egypt/enemies/enemy_egypt_pharaoh_king_battle.png"),
 };
 
 export const upgradeCardFrames = {
-  common: registerImageAsset("upgrade-card-frame-common-formal", "assets/ui/upgrade_cards/frames/formal_common_frame.png"),
-  rare: registerImageAsset("upgrade-card-frame-rare-formal", "assets/ui/upgrade_cards/frames/formal_rare_frame.png"),
-  relic: registerImageAsset("upgrade-card-frame-epic-formal", "assets/ui/upgrade_cards/frames/formal_epic_frame.png"),
-  legendary: registerImageAsset("upgrade-card-frame-relic-formal", "assets/ui/upgrade_cards/frames/formal_relic_frame.png"),
+  common: registerImageAsset("upgrade-card-frame-common-formal", "assets/images/cards/upgrade_cards/frames/formal_common_frame.png"),
+  rare: registerImageAsset("upgrade-card-frame-rare-formal", "assets/images/cards/upgrade_cards/frames/formal_rare_frame.png"),
+  relic: registerImageAsset("upgrade-card-frame-epic-formal", "assets/images/cards/upgrade_cards/frames/formal_epic_frame.png"),
+  legendary: registerImageAsset("upgrade-card-frame-relic-formal", "assets/images/cards/upgrade_cards/frames/formal_relic_frame.png"),
 };
 
 export const upgradeTypeIcons = {
-  attack: registerImageAsset("upgrade-type-icon-attack", "assets/ui/upgrade_cards/icons/upgrade_icon_attack.png"),
-  defense: registerImageAsset("upgrade-type-icon-defense", "assets/ui/upgrade_cards/icons/upgrade_icon_defense.png"),
-  survival: registerImageAsset("upgrade-type-icon-survival", "assets/ui/upgrade_cards/icons/upgrade_icon_survival.png"),
-  guard: registerImageAsset("upgrade-type-icon-guard", "assets/ui/upgrade_cards/icons/upgrade_icon_guard.png"),
-  combo: registerImageAsset("upgrade-type-icon-combo", "assets/ui/upgrade_cards/icons/upgrade_icon_combo.png"),
-  spin: registerImageAsset("upgrade-type-icon-spin", "assets/ui/upgrade_cards/icons/upgrade_icon_spin.png"),
-  garbage: registerImageAsset("upgrade-type-icon-garbage", "assets/ui/upgrade_cards/icons/upgrade_icon_garbage.png"),
-  rift: registerImageAsset("upgrade-type-icon-rift", "assets/ui/upgrade_cards/icons/upgrade_icon_rift.png"),
+  attack: registerImageAsset("upgrade-type-icon-attack", "assets/images/cards/upgrade_cards/icons/upgrade_icon_attack.png"),
+  defense: registerImageAsset("upgrade-type-icon-defense", "assets/images/cards/upgrade_cards/icons/upgrade_icon_defense.png"),
+  survival: registerImageAsset("upgrade-type-icon-survival", "assets/images/cards/upgrade_cards/icons/upgrade_icon_survival.png"),
+  guard: registerImageAsset("upgrade-type-icon-guard", "assets/images/cards/upgrade_cards/icons/upgrade_icon_guard.png"),
+  combo: registerImageAsset("upgrade-type-icon-combo", "assets/images/cards/upgrade_cards/icons/upgrade_icon_combo.png"),
+  spin: registerImageAsset("upgrade-type-icon-spin", "assets/images/cards/upgrade_cards/icons/upgrade_icon_spin.png"),
+  garbage: registerImageAsset("upgrade-type-icon-garbage", "assets/images/cards/upgrade_cards/icons/upgrade_icon_garbage.png"),
+  rift: registerImageAsset("upgrade-type-icon-rift", "assets/images/cards/upgrade_cards/icons/upgrade_icon_rift.png"),
 };
 
 export const legendaryUpgradeEmblems = {
-  singularity_spin_core: registerImageAsset("upgrade-emblem-singularity-spin-core", "assets/ui/upgrade_cards/emblems/upgrade_emblem_singularity_spin_core.png"),
-  combo_constellation: registerImageAsset("upgrade-emblem-combo-constellation", "assets/ui/upgrade_cards/emblems/upgrade_emblem_combo_constellation.png"),
-  aegis_star_mirror: registerImageAsset("upgrade-emblem-aegis-star-mirror", "assets/ui/upgrade_cards/emblems/upgrade_emblem_aegis_star_mirror.png"),
-  garbage_alchemy_core: registerImageAsset("upgrade-emblem-garbage-alchemy-core", "assets/ui/upgrade_cards/emblems/upgrade_emblem_garbage_alchemy_core.png"),
-  perfect_rift_crown: registerImageAsset("upgrade-emblem-perfect-rift-crown", "assets/ui/upgrade_cards/emblems/upgrade_emblem_perfect_rift_crown.png"),
+  singularity_spin_core: registerImageAsset("upgrade-emblem-singularity-spin-core", "assets/images/cards/upgrade_cards/emblems/upgrade_emblem_singularity_spin_core.png"),
+  combo_constellation: registerImageAsset("upgrade-emblem-combo-constellation", "assets/images/cards/upgrade_cards/emblems/upgrade_emblem_combo_constellation.png"),
+  aegis_star_mirror: registerImageAsset("upgrade-emblem-aegis-star-mirror", "assets/images/cards/upgrade_cards/emblems/upgrade_emblem_aegis_star_mirror.png"),
+  garbage_alchemy_core: registerImageAsset("upgrade-emblem-garbage-alchemy-core", "assets/images/cards/upgrade_cards/emblems/upgrade_emblem_garbage_alchemy_core.png"),
+  perfect_rift_crown: registerImageAsset("upgrade-emblem-perfect-rift-crown", "assets/images/cards/upgrade_cards/emblems/upgrade_emblem_perfect_rift_crown.png"),
 };
 
-const specialAngelCardFrame = registerImageAsset("special-upgrade-frame-angel-formal", "assets/ui/upgrade_cards/special/formal_angel_card.png");
-const specialDevilCardFrame = registerImageAsset("special-upgrade-frame-devil-formal", "assets/ui/upgrade_cards/special/formal_devil_card.png");
+const specialAngelCardFrame = registerImageAsset("special-upgrade-frame-angel-formal", "assets/images/cards/upgrade_cards/special/formal_angel_card.png");
+const specialDevilCardFrame = registerImageAsset("special-upgrade-frame-devil-formal", "assets/images/cards/upgrade_cards/special/formal_devil_card.png");
 
 export const specialUpgradeCardFrames = {
   angel_halo_sanctuary: specialAngelCardFrame,
@@ -299,21 +299,21 @@ export const specialUpgradeCardFrames = {
   devil_fallen_crown: specialDevilCardFrame,
 };
 
-export const riftEnergyIcon = registerImageAsset("rift-energy-icon", "assets/ui/icons/rift_energy_icon.png");
+export const riftEnergyIcon = registerImageAsset("rift-energy-icon", "assets/images/ui/icons/rift_energy_icon.png");
 
 export const metaUpgradeIcons = {
-  hp: registerImageAsset("meta-upgrade-hp-icon", "assets/ui/meta_upgrades/meta_upgrade_hp.png"),
-  attack: registerImageAsset("meta-upgrade-attack-icon", "assets/ui/meta_upgrades/meta_upgrade_attack.png"),
-  guard: registerImageAsset("meta-upgrade-guard-icon", "assets/ui/meta_upgrades/meta_upgrade_guard.png"),
+  hp: registerImageAsset("meta-upgrade-hp-icon", "assets/images/ui/meta_upgrades/meta_upgrade_hp.png"),
+  attack: registerImageAsset("meta-upgrade-attack-icon", "assets/images/ui/meta_upgrades/meta_upgrade_attack.png"),
+  guard: registerImageAsset("meta-upgrade-guard-icon", "assets/images/ui/meta_upgrades/meta_upgrade_guard.png"),
 };
 
 export const enemyAttackSheets = {
-  riftScarab16: registerImageAsset("enemy-egypt-rift-scarab-attack-sheet-16", "assets/images/clean/enemy_egypt_rift_scarab_attack_16_spritesheet_alpha.png"),
-  mummy16: registerImageAsset("enemy-egypt-mummy-attack-sheet-16", "assets/images/clean/enemy_egypt_mummy_attack_16_spritesheet_alpha.png"),
-  priest16: registerImageAsset("enemy-egypt-priest-attack-sheet-16", "assets/images/clean/enemy_egypt_priest_attack_16_spritesheet_alpha.png"),
-  anubisGuard16: registerImageAsset("enemy-egypt-anubis-guard-attack-sheet-16", "assets/images/clean/enemy_egypt_anubis_guard_attack_16_spritesheet_alpha.png"),
-  sphinx16: registerImageAsset("enemy-egypt-sphinx-attack-sheet-16", "assets/images/clean/enemy_egypt_sphinx_attack_16_spritesheet_alpha.png"),
-  pharaohKing16: registerImageAsset("enemy-egypt-pharaoh-king-attack-sheet-16", "assets/images/clean/enemy_egypt_pharaoh_king_attack_16_spritesheet_alpha.png"),
+  riftScarab16: registerImageAsset("enemy-egypt-rift-scarab-attack-sheet-16", "assets/images/regions/egypt/enemies/enemy_egypt_rift_scarab_attack_16_spritesheet_alpha.png"),
+  mummy16: registerImageAsset("enemy-egypt-mummy-attack-sheet-16", "assets/images/regions/egypt/enemies/enemy_egypt_mummy_attack_16_spritesheet_alpha.png"),
+  priest16: registerImageAsset("enemy-egypt-priest-attack-sheet-16", "assets/images/regions/egypt/enemies/enemy_egypt_priest_attack_16_spritesheet_alpha.png"),
+  anubisGuard16: registerImageAsset("enemy-egypt-anubis-guard-attack-sheet-16", "assets/images/regions/egypt/enemies/enemy_egypt_anubis_guard_attack_16_spritesheet_alpha.png"),
+  sphinx16: registerImageAsset("enemy-egypt-sphinx-attack-sheet-16", "assets/images/regions/egypt/enemies/enemy_egypt_sphinx_attack_16_spritesheet_alpha.png"),
+  pharaohKing16: registerImageAsset("enemy-egypt-pharaoh-king-attack-sheet-16", "assets/images/regions/egypt/enemies/enemy_egypt_pharaoh_king_attack_16_spritesheet_alpha.png"),
 };
 
 export const musicLoopAssets = {
@@ -323,12 +323,6 @@ export const musicLoopAssets = {
   bgmMenu04: registerAudioAsset("bgm-menu-04", "assets/audio/bgm/bgm_menu_04.wav"),
   bgmMenu05: registerAudioAsset("bgm-menu-05", "assets/audio/bgm/bgm_menu_05.wav"),
   bgmMenu06: registerAudioAsset("bgm-menu-06", "assets/audio/bgm/bgm_menu_06.wav"),
-  menuAncientRift: registerAudioAsset("bgm-menu-ancient-rift-loop", "assets/audio/bgm/bgm_menu_ancient_rift_loop.wav", { loop: true }),
-  battleForestRuins: registerAudioAsset("bgm-battle-forest-ruins-loop", "assets/audio/bgm/bgm_battle_forest_ruins_loop.wav", { loop: true }),
-  battleDeepRuins: registerAudioAsset("bgm-battle-deep-ruins-loop", "assets/audio/bgm/bgm_battle_deep_ruins_loop.wav", { loop: true }),
-  battleRiftPressure: registerAudioAsset("bgm-battle-rift-pressure-loop", "assets/audio/bgm/bgm_battle_rift_pressure_loop.wav", { loop: true }),
-  bossAncientRiftColossus: registerAudioAsset("bgm-boss-ancient-rift-colossus-loop", "assets/audio/bgm/bgm_boss_ancient_rift_colossus_loop.wav", { loop: true }),
-  upgradeRelicCards: registerAudioAsset("bgm-upgrade-relic-cards-loop", "assets/audio/bgm/bgm_upgrade_relic_cards_loop.wav", { loop: true }),
 };
 
 export const jingleAudioAssets = {

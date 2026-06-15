@@ -32,17 +32,17 @@ const EXPECTED_SCALES = Object.freeze({
 });
 
 const EXPECTED_RUNTIME_SHEETS = Object.freeze({
-  slash: "assets/images/clean/noa_attack_line_clear_slash_16.png",
-  doubleSlash: "assets/images/clean/noa_attack_line_clear_slash_16.png",
-  tripleSlash: "assets/images/clean/noa_attack_line_clear_slash_16.png",
-  combo1: "assets/images/clean/noa_attack_combo1_16.png",
-  combo2: "assets/images/clean/noa_attack_combo2_16.png",
-  combo3: "assets/images/clean/noa_attack_combo3_16.png",
-  combo: "assets/images/clean/noa_attack_combo2_16.png",
-  tetris: "assets/images/clean/noa_attack_tetris_16.png",
-  tspin: "assets/images/clean/noa_attack_tspin_16.png",
-  b2b: "assets/images/clean/noa_attack_b2b_16.png",
-  ultimate: "assets/images/clean/noa_attack_ultimate_16.png",
+  slash: "assets/images/characters/noa/noa_attack_line_clear_slash_16.png",
+  doubleSlash: "assets/images/characters/noa/noa_attack_line_clear_slash_16.png",
+  tripleSlash: "assets/images/characters/noa/noa_attack_line_clear_slash_16.png",
+  combo1: "assets/images/characters/noa/noa_attack_combo1_16.png",
+  combo2: "assets/images/characters/noa/noa_attack_combo2_16.png",
+  combo3: "assets/images/characters/noa/noa_attack_combo3_16.png",
+  combo: "assets/images/characters/noa/noa_attack_combo2_16.png",
+  tetris: "assets/images/characters/noa/noa_attack_tetris_16.png",
+  tspin: "assets/images/characters/noa/noa_attack_tspin_16.png",
+  b2b: "assets/images/characters/noa/noa_attack_b2b_16.png",
+  ultimate: "assets/images/characters/noa/noa_attack_ultimate_16.png",
 });
 
 const EXPECTED_TIMING = Object.freeze({

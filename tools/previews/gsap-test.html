@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>T-Spin Traveler GSAP Motion Test</title>
+    <base href="../../" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2305070d'/%3E%3Cpath d='M32 8 53 32 32 56 11 32Z' fill='%237ef7ff' fill-opacity='.2' stroke='%23b88dff' stroke-width='4'/%3E%3Cpath d='M32 18 43 32 32 46 21 32Z' fill='%23fff0a6' fill-opacity='.76'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="tools/previews/gsap-test.css" />
+  </head>
+  <body>
+    <main class="motion-stage" data-smoke="gsap-test" aria-label="T-Spin Traveler GSAP motion test">
+      <section class="hero-panel" aria-labelledby="gsap-title">
+        <div class="rift-field" aria-hidden="true">
+          <span class="rift-ring ring-a"></span>
+          <span class="rift-ring ring-b"></span>
+          <span class="rift-ring ring-c"></span>
+          <span class="star-line line-a"></span>
+          <span class="star-line line-b"></span>
+          <span class="star-line line-c"></span>
+        </div>
+
+        <div class="title-stack">
+          <p class="kicker">GSAP motion lab</p>
+          <h1 id="gsap-title">T-Spin Traveler</h1>
+          <p class="subtitle">Ancient rift UI motion preview for menu, loading, combat feedback, bonds, and toast timing.</p>
+        </div>
+
+        <div class="menu-preview" aria-label="Main menu motion preview">
+          <button class="menu-button primary" type="button">Begin Rift Run</button>
+          <button class="menu-button" type="button">Relic Draft</button>
+          <button class="menu-button" type="button">Move Guide</button>
+          <button class="menu-button" type="button">Settings</button>
+        </div>
+
+        <div class="noa-orbit" aria-hidden="true">
+          <img src="assets/images/characters/noa/ET_Character_fullbody_alpha.png" alt="" />
+          <span class="orbit-glow"></span>
+        </div>
+      </section>
+
+      <section class="demo-grid" aria-label="GSAP animation previews">
+        <article class="demo-panel loading-demo">
+          <div class="panel-heading">
+            <span>Loading Gate</span>
+            <button class="mini-action" type="button" data-action="loading">Replay</button>
+          </div>
+          <div class="loading-shell">
+            <div class="loading-orbit" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="loading-text">Aligning star map</div>
+            <div class="loading-bar" aria-label="Loading progress">
+              <span class="loading-fill"></span>
+              <span class="loading-spark"></span>
+            </div>
+          </div>
+        </article>
+
+        <article class="demo-panel combat-demo">
+          <div class="panel-heading">
+            <span>Combat Feedback</span>
+            <button class="mini-action" type="button" data-action="combat">Burst</button>
+          </div>
+          <div class="enemy-slate">
+            <div class="enemy-core" aria-hidden="true"></div>
+            <div class="damage-layer" aria-live="polite"></div>
+            <div class="impact-runes" aria-hidden="true">
+              <span></span><span></span><span></span><span></span>
+            </div>
+          </div>
+        </article>
+
+        <article class="demo-panel callout-demo">
+          <div class="panel-heading">
+            <span>Clear Callouts</span>
+            <button class="mini-action" type="button" data-action="callout">Cycle</button>
+          </div>
+          <div class="callout-stage" aria-live="polite">
+            <div class="callout-word">T-SPIN</div>
+            <div class="callout-sub">Combo x7 / 268 DMG</div>
+          </div>
+        </article>
+
+        <article class="demo-panel bond-demo">
+          <div class="panel-heading">
+            <span>Angel / Devil Bond</span>
+            <button class="mini-action" type="button" data-action="bond">Ignite</button>
+          </div>
+          <div class="bond-stage">
+            <div class="bond-card angel">
+              <span class="bond-mark">A</span>
+              <strong>Angel</strong>
+              <small>Ward awakened</small>
+            </div>
+            <div class="bond-card devil">
+              <span class="bond-mark">D</span>
+              <strong>Devil</strong>
+              <small>Pact ignited</small>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <div class="toast-stack" aria-live="polite"></div>
+      <button class="toast-trigger" type="button" data-action="toast">Toast</button>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script type="module" src="tools/previews/gsap-test.js"></script>
+  </body>
+</html>

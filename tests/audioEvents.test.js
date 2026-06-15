@@ -4,7 +4,6 @@ import path from "node:path";
 import {
   BGM_PLAYLISTS,
   FILE_SFX_EVENTS,
-  LEGACY_BGM_PLAYLISTS,
   SPIN_READY_COOLDOWN_MS,
   getFileSfxAssetKeys,
   pickNextBgmAssetKey,
@@ -36,17 +35,6 @@ describe("audio event maps", () => {
       "bgmMenu06",
     ]);
     expect(Object.values(BGM_PLAYLISTS).every((playlist) => playlist === temporaryGlobalBgmRotation)).toBe(true);
-  });
-
-  it("keeps the legacy stage playlists available for future civilization music", () => {
-    expect(LEGACY_BGM_PLAYLISTS).toEqual({
-      menu: ["menuAncientRift"],
-      early: ["battleForestRuins"],
-      mid: ["battleDeepRuins"],
-      late: ["battleRiftPressure"],
-      boss: ["bossAncientRiftColossus"],
-      upgrade: ["upgradeRelicCards"],
-    });
   });
 
   it("advances the temporary bgm rotation sequentially and wraps", () => {

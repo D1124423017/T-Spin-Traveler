@@ -12,7 +12,7 @@
 
 <h1 align="center">T-Spin Traveler</h1>
 
-Project docs: [Testing checklist](TESTING.md) | [Changelog](CHANGELOG.md)
+Project docs: [Structure](docs/PROJECT_STRUCTURE.md) | [Asset workflow](docs/ASSET_WORKFLOW.md) | [Testing checklist](docs/TESTING.md) | [Changelog](CHANGELOG.md)
 
 ---
 
@@ -94,7 +94,7 @@ Participated in the development process and assisted with discussion, testing, f
 
 ## Testing
 
-See [TESTING.md](TESTING.md) for the current testing checklist.
+See [TESTING.md](docs/TESTING.md) for the current testing checklist.
 
 ---
 

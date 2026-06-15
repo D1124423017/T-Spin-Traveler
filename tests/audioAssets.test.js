@@ -13,16 +13,7 @@ const TEMPORARY_GLOBAL_BGM = [
   "assets/audio/bgm/bgm_menu_06.wav",
 ];
 
-const LEGACY_BGM = [
-  "assets/audio/bgm/bgm_menu_ancient_rift_loop.wav",
-  "assets/audio/bgm/bgm_battle_forest_ruins_loop.wav",
-  "assets/audio/bgm/bgm_battle_deep_ruins_loop.wav",
-  "assets/audio/bgm/bgm_battle_rift_pressure_loop.wav",
-  "assets/audio/bgm/bgm_boss_ancient_rift_colossus_loop.wav",
-  "assets/audio/bgm/bgm_upgrade_relic_cards_loop.wav",
-];
-
-const EXPECTED_BGM = [...TEMPORARY_GLOBAL_BGM, ...LEGACY_BGM];
+const EXPECTED_BGM = [...TEMPORARY_GLOBAL_BGM];
 
 const EXPECTED_JINGLES = [
   "assets/audio/jingles/jingle_rift_energy_settlement.wav",
@@ -138,8 +129,7 @@ describe("formal audio assets", () => {
 
   it("keeps the requested formal audio counts", () => {
     expect(TEMPORARY_GLOBAL_BGM).toHaveLength(6);
-    expect(LEGACY_BGM).toHaveLength(6);
-    expect(EXPECTED_BGM).toHaveLength(12);
+    expect(EXPECTED_BGM).toHaveLength(6);
     expect(EXPECTED_JINGLES).toHaveLength(3);
     expect(EXPECTED_SFX).toHaveLength(53);
   });

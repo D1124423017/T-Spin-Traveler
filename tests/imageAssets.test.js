@@ -23,72 +23,72 @@ function readPngInfo(relativePath) {
 }
 
 const runtimeAnimationSheets = [
-  { path: "assets/images/clean/noa_attack_line_clear_slash_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/noa_attack_combo1_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/noa_attack_combo2_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/noa_attack_combo3_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/noa_attack_tetris_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/noa_attack_tspin_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/noa_attack_b2b_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/noa_attack_ultimate_16.png", columns: 4, rows: 4 },
-  { path: "assets/effects/hero_sword_wave_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/effects/hero_impact_burst_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/effects/noa_level_up_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/noa_menu_idle_cube_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/noa_menu_idle_meditate_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/noa_menu_idle_rift_wayfinder_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/noa_menu_idle_star_map_listener_16.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_hit_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_egypt_rift_scarab_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_egypt_mummy_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_egypt_priest_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_egypt_anubis_guard_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_egypt_sphinx_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/enemy_egypt_pharaoh_king_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/effects/enemy_rift_projectile_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/effects/enemy_impact_physical_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/effects/enemy_impact_arcane_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/effects/enemy_impact_stone_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/effects/enemy_pharaoh_projectile_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/effects/enemy_pharaoh_impact_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/effects/enemy_death_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/characters/noa/noa_attack_line_clear_slash_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/characters/noa/noa_attack_combo1_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/characters/noa/noa_attack_combo2_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/characters/noa/noa_attack_combo3_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/characters/noa/noa_attack_tetris_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/characters/noa/noa_attack_tspin_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/characters/noa/noa_attack_b2b_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/characters/noa/noa_attack_ultimate_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/vfx/hero_sword_wave_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/vfx/hero_impact_burst_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/vfx/noa_level_up_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/characters/noa/noa_menu_idle_cube_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/characters/noa/noa_menu_idle_meditate_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/characters/noa/noa_menu_idle_rift_wayfinder_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/characters/noa/noa_menu_idle_star_map_listener_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/characters/noa/hero_hit_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/regions/egypt/enemies/enemy_egypt_rift_scarab_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/regions/egypt/enemies/enemy_egypt_mummy_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/regions/egypt/enemies/enemy_egypt_priest_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/regions/egypt/enemies/enemy_egypt_anubis_guard_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/regions/egypt/enemies/enemy_egypt_sphinx_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/regions/egypt/enemies/enemy_egypt_pharaoh_king_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/vfx/enemy_rift_projectile_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/vfx/enemy_impact_physical_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/vfx/enemy_impact_arcane_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/vfx/enemy_impact_stone_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/vfx/enemy_pharaoh_projectile_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/vfx/enemy_pharaoh_impact_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/vfx/enemy_death_16_spritesheet_alpha.png", columns: 4, rows: 4 },
 ];
 
 const upgradedBackgrounds = [
-  "assets/backgrounds/egypt_star_tomb_rift_battle_bg.png",
-  "assets/backgrounds/egypt_star_tomb_exterior_rift_bg.png",
-  "assets/backgrounds/egypt_pyramid_observatory_rift_bg.png",
-  "assets/backgrounds/maya_eclipse_temple_rift_bg.png",
-  "assets/backgrounds/atlantis_sunken_crystal_temple_rift_bg.png",
+  "assets/images/regions/egypt/backgrounds/egypt_star_tomb_rift_battle_bg.png",
+  "assets/images/regions/egypt/backgrounds/egypt_star_tomb_exterior_rift_bg.png",
+  "assets/images/regions/egypt/backgrounds/egypt_pyramid_observatory_rift_bg.png",
+  "assets/future/regions/maya/backgrounds/maya_eclipse_temple_rift_bg.png",
+  "assets/future/regions/atlantis/backgrounds/atlantis_sunken_crystal_temple_rift_bg.png",
 ];
 
 const mainMenuAssets = [
   {
-    path: "assets/images/menu/main-menu-home-kingdom-bg.png",
+    path: "assets/images/ui/menu/main-menu-home-kingdom-bg.png",
     width: 2560,
     height: 1440,
     colorType: 2,
   },
   {
-    path: "assets/images/menu/main-menu-rift-kingdom-bg.png",
+    path: "assets/images/ui/menu/main-menu-rift-kingdom-bg.png",
     width: 2560,
     height: 1440,
     colorType: 2,
   },
   {
-    path: "assets/images/menu/main-menu-rune-arc-back.png",
+    path: "assets/images/ui/menu/main-menu-rune-arc-back.png",
     width: 1024,
     height: 1536,
     colorType: 6,
   },
   {
-    path: "assets/images/menu/main-menu-primary-frame.png",
+    path: "assets/images/ui/menu/main-menu-primary-frame.png",
     width: 1536,
     height: 384,
     colorType: 6,
   },
   {
-    path: "assets/images/menu/main-menu-secondary-frame.png",
+    path: "assets/images/ui/menu/main-menu-secondary-frame.png",
     width: 1536,
     height: 256,
     colorType: 6,
@@ -146,22 +146,22 @@ const legacyAnimationNames = [
 ];
 
 const heroPresentationAssets = [
-  { path: "assets/images/clean/ET_Character_fullbody_alpha.png", width: 1024, height: 1536 },
-  { path: "assets/images/clean/noa_feedback_thanks_alpha.png", width: 1024, height: 1536 },
+  { path: "assets/images/characters/noa/ET_Character_fullbody_alpha.png", width: 1024, height: 1536 },
+  { path: "assets/images/characters/noa/noa_feedback_thanks_alpha.png", width: 1024, height: 1536 },
 ];
 
 const menuIdleSpritesheetAssets = [
-  "assets/images/clean/noa_menu_idle_rift_wayfinder_16.png",
-  "assets/images/clean/noa_menu_idle_star_map_listener_16.png",
+  "assets/images/characters/noa/noa_menu_idle_rift_wayfinder_16.png",
+  "assets/images/characters/noa/noa_menu_idle_star_map_listener_16.png",
 ];
 
 const retiredNoaStaticAssets = [
-  "assets/images/clean/ET_Character_alpha.png",
-  "assets/images/clean/noa_menu_showcase.png",
+  "assets/images/characters/noa/ET_Character_alpha.png",
+  "assets/images/characters/noa/noa_menu_showcase.png",
 ];
 
 const mainMenuDialogueAsset = {
-  path: "assets/images/menu/main-menu-dialogue-frame.png",
+  path: "assets/images/ui/menu/main-menu-dialogue-frame.png",
   width: 1942,
   height: 809,
   colorType: 6,
@@ -225,27 +225,27 @@ const equipmentIconPaths = [
 ].map((id) => `assets/images/equipment/icons/${id}.png`);
 
 const heroAttackVfxSheets = [
-  "assets/images/clean/noa_attack_line_clear_slash_16.png",
-  "assets/images/clean/noa_attack_combo1_16.png",
-  "assets/images/clean/noa_attack_combo2_16.png",
-  "assets/images/clean/noa_attack_combo3_16.png",
-  "assets/images/clean/noa_attack_tetris_16.png",
-  "assets/images/clean/noa_attack_tspin_16.png",
-  "assets/images/clean/noa_attack_b2b_16.png",
-  "assets/images/clean/noa_attack_ultimate_16.png",
-  "assets/effects/hero_sword_wave_16_spritesheet_alpha.png",
-  "assets/effects/hero_impact_burst_16_spritesheet_alpha.png",
+  "assets/images/characters/noa/noa_attack_line_clear_slash_16.png",
+  "assets/images/characters/noa/noa_attack_combo1_16.png",
+  "assets/images/characters/noa/noa_attack_combo2_16.png",
+  "assets/images/characters/noa/noa_attack_combo3_16.png",
+  "assets/images/characters/noa/noa_attack_tetris_16.png",
+  "assets/images/characters/noa/noa_attack_tspin_16.png",
+  "assets/images/characters/noa/noa_attack_b2b_16.png",
+  "assets/images/characters/noa/noa_attack_ultimate_16.png",
+  "assets/images/vfx/hero_sword_wave_16_spritesheet_alpha.png",
+  "assets/images/vfx/hero_impact_burst_16_spritesheet_alpha.png",
 ];
 
 const noaAttackRuntimeSheets = [
-  "assets/images/clean/noa_attack_line_clear_slash_16.png",
-  "assets/images/clean/noa_attack_combo1_16.png",
-  "assets/images/clean/noa_attack_combo2_16.png",
-  "assets/images/clean/noa_attack_combo3_16.png",
-  "assets/images/clean/noa_attack_tetris_16.png",
-  "assets/images/clean/noa_attack_tspin_16.png",
-  "assets/images/clean/noa_attack_b2b_16.png",
-  "assets/images/clean/noa_attack_ultimate_16.png",
+  "assets/images/characters/noa/noa_attack_line_clear_slash_16.png",
+  "assets/images/characters/noa/noa_attack_combo1_16.png",
+  "assets/images/characters/noa/noa_attack_combo2_16.png",
+  "assets/images/characters/noa/noa_attack_combo3_16.png",
+  "assets/images/characters/noa/noa_attack_tetris_16.png",
+  "assets/images/characters/noa/noa_attack_tspin_16.png",
+  "assets/images/characters/noa/noa_attack_b2b_16.png",
+  "assets/images/characters/noa/noa_attack_ultimate_16.png",
 ];
 
 const formalHeroCatalogIds = [
@@ -285,47 +285,47 @@ const formalEnemyVfxCatalogIds = [
 ];
 
 const metaUpgradeIcons = [
-  "assets/ui/icons/rift_energy_icon.png",
-  "assets/ui/meta_upgrades/meta_upgrade_hp.png",
-  "assets/ui/meta_upgrades/meta_upgrade_attack.png",
-  "assets/ui/meta_upgrades/meta_upgrade_guard.png",
+  "assets/images/ui/icons/rift_energy_icon.png",
+  "assets/images/ui/meta_upgrades/meta_upgrade_hp.png",
+  "assets/images/ui/meta_upgrades/meta_upgrade_attack.png",
+  "assets/images/ui/meta_upgrades/meta_upgrade_guard.png",
 ];
 
 const upgradeTypeIcons = [
-  "assets/ui/upgrade_cards/icons/upgrade_icon_attack.png",
-  "assets/ui/upgrade_cards/icons/upgrade_icon_defense.png",
-  "assets/ui/upgrade_cards/icons/upgrade_icon_survival.png",
-  "assets/ui/upgrade_cards/icons/upgrade_icon_guard.png",
-  "assets/ui/upgrade_cards/icons/upgrade_icon_combo.png",
-  "assets/ui/upgrade_cards/icons/upgrade_icon_spin.png",
-  "assets/ui/upgrade_cards/icons/upgrade_icon_garbage.png",
-  "assets/ui/upgrade_cards/icons/upgrade_icon_rift.png",
+  "assets/images/cards/upgrade_cards/icons/upgrade_icon_attack.png",
+  "assets/images/cards/upgrade_cards/icons/upgrade_icon_defense.png",
+  "assets/images/cards/upgrade_cards/icons/upgrade_icon_survival.png",
+  "assets/images/cards/upgrade_cards/icons/upgrade_icon_guard.png",
+  "assets/images/cards/upgrade_cards/icons/upgrade_icon_combo.png",
+  "assets/images/cards/upgrade_cards/icons/upgrade_icon_spin.png",
+  "assets/images/cards/upgrade_cards/icons/upgrade_icon_garbage.png",
+  "assets/images/cards/upgrade_cards/icons/upgrade_icon_rift.png",
 ];
 
 const upgradeCardFrames = [
-  "assets/ui/upgrade_cards/frames/formal_common_frame.png",
-  "assets/ui/upgrade_cards/frames/formal_rare_frame.png",
-  "assets/ui/upgrade_cards/frames/formal_epic_frame.png",
-  "assets/ui/upgrade_cards/frames/formal_relic_frame.png",
-  "assets/ui/upgrade_cards/special/formal_angel_card.png",
-  "assets/ui/upgrade_cards/special/formal_devil_card.png",
+  "assets/images/cards/upgrade_cards/frames/formal_common_frame.png",
+  "assets/images/cards/upgrade_cards/frames/formal_rare_frame.png",
+  "assets/images/cards/upgrade_cards/frames/formal_epic_frame.png",
+  "assets/images/cards/upgrade_cards/frames/formal_relic_frame.png",
+  "assets/images/cards/upgrade_cards/special/formal_angel_card.png",
+  "assets/images/cards/upgrade_cards/special/formal_devil_card.png",
 ];
 
 const legendaryUpgradeEmblems = [
-  "assets/ui/upgrade_cards/emblems/upgrade_emblem_singularity_spin_core.png",
-  "assets/ui/upgrade_cards/emblems/upgrade_emblem_combo_constellation.png",
-  "assets/ui/upgrade_cards/emblems/upgrade_emblem_aegis_star_mirror.png",
-  "assets/ui/upgrade_cards/emblems/upgrade_emblem_garbage_alchemy_core.png",
-  "assets/ui/upgrade_cards/emblems/upgrade_emblem_perfect_rift_crown.png",
+  "assets/images/cards/upgrade_cards/emblems/upgrade_emblem_singularity_spin_core.png",
+  "assets/images/cards/upgrade_cards/emblems/upgrade_emblem_combo_constellation.png",
+  "assets/images/cards/upgrade_cards/emblems/upgrade_emblem_aegis_star_mirror.png",
+  "assets/images/cards/upgrade_cards/emblems/upgrade_emblem_garbage_alchemy_core.png",
+  "assets/images/cards/upgrade_cards/emblems/upgrade_emblem_perfect_rift_crown.png",
 ];
 
 const enemyBattlePortraits = [
-  { path: "assets/enemies/battle/enemy_egypt_rift_scarab_scout_battle.png", width: 1193, height: 895 },
-  { path: "assets/enemies/battle/enemy_egypt_sand_tomb_mummy_battle.png", width: 605, height: 1208 },
-  { path: "assets/enemies/battle/enemy_egyptian_priest_battle.png", width: 875, height: 1249 },
-  { path: "assets/enemies/battle/enemy_egypt_anubis_guard_battle.png", width: 913, height: 1301 },
-  { path: "assets/enemies/battle/enemy_egypt_sphinx_stone_guardian_battle.png", width: 1148, height: 1053 },
-  { path: "assets/enemies/battle/enemy_egypt_pharaoh_king_battle.png", width: 997, height: 1193 },
+  { path: "assets/images/regions/egypt/enemies/enemy_egypt_rift_scarab_scout_battle.png", width: 1193, height: 895 },
+  { path: "assets/images/regions/egypt/enemies/enemy_egypt_sand_tomb_mummy_battle.png", width: 605, height: 1208 },
+  { path: "assets/images/regions/egypt/enemies/enemy_egyptian_priest_battle.png", width: 875, height: 1249 },
+  { path: "assets/images/regions/egypt/enemies/enemy_egypt_anubis_guard_battle.png", width: 913, height: 1301 },
+  { path: "assets/images/regions/egypt/enemies/enemy_egypt_sphinx_stone_guardian_battle.png", width: 1148, height: 1053 },
+  { path: "assets/images/regions/egypt/enemies/enemy_egypt_pharaoh_king_battle.png", width: 997, height: 1193 },
 ];
 
 describe("image assets", () => {
@@ -379,11 +379,11 @@ describe("image assets", () => {
   });
 
   it("keeps the Pharaoh body and two effect sheets at production alpha dimensions", () => {
-    expect(readPngInfo("assets/images/clean/enemy_egypt_pharaoh_king_attack_16_spritesheet_alpha.png"))
+    expect(readPngInfo("assets/images/regions/egypt/enemies/enemy_egypt_pharaoh_king_attack_16_spritesheet_alpha.png"))
       .toEqual({ width: 1536, height: 2048, colorType: 6 });
     for (const sheet of [
-      "assets/effects/enemy_pharaoh_projectile_16_spritesheet_alpha.png",
-      "assets/effects/enemy_pharaoh_impact_16_spritesheet_alpha.png",
+      "assets/images/vfx/enemy_pharaoh_projectile_16_spritesheet_alpha.png",
+      "assets/images/vfx/enemy_pharaoh_impact_16_spritesheet_alpha.png",
     ]) {
       expect(readPngInfo(sheet)).toEqual({ width: 2048, height: 2048, colorType: 6 });
     }
@@ -421,9 +421,14 @@ describe("image assets", () => {
     expect(ids).toEqual(formalEnemyVfxCatalogIds);
   });
 
-  it("does not keep legacy animation sheets in the clean asset folder", () => {
-    const cleanDir = path.join(projectRoot, "assets/images/clean");
-    const existing = new Set(fs.readdirSync(cleanDir));
+  it("keeps legacy animation sheets out of runtime asset folders", () => {
+    const runtimeDirs = [
+      "assets/images/characters/noa",
+      "assets/images/regions/egypt/enemies",
+    ];
+    const existing = new Set(runtimeDirs.flatMap((directory) => (
+      fs.readdirSync(path.join(projectRoot, directory))
+    )));
     const leftovers = legacyAnimationNames.filter((name) => existing.has(name));
 
     expect(leftovers).toEqual([]);
@@ -468,14 +473,6 @@ describe("image assets", () => {
     expect(gameSource).toContain("fallbackBackground: mainMenuRiftKingdomBg");
   });
 
-  it("keeps the superseded portal shrine file without loading it at runtime", () => {
-    const legacyShrine = "assets/images/menu/main-menu-portal-shrine.png";
-    const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
-
-    expect(fs.existsSync(path.join(projectRoot, legacyShrine))).toBe(true);
-    expect(assetsSource).not.toContain(`registerImageAsset("main-menu-portal-shrine"`);
-  });
-
   it("keeps generated Rift Energy and meta upgrade icons as 1024px alpha PNGs", () => {
     for (const icon of metaUpgradeIcons) {
       expect(readPngInfo(icon)).toEqual({ width: 1024, height: 1024, colorType: 6 });
@@ -503,7 +500,7 @@ describe("image assets", () => {
     const gameSource = fs.readFileSync(path.join(projectRoot, "game.js"), "utf8");
 
     expect(assetsSource).toContain(
-      'registerImageAsset("hero-idle-canonical", "assets/images/clean/ET_Character_fullbody_alpha.png")',
+      'registerImageAsset("hero-idle-canonical", "assets/images/characters/noa/ET_Character_fullbody_alpha.png")',
     );
     expect(gameSource).toContain("noaPreviewArt: heroIdleArt");
     expect(gameSource).toContain(
@@ -599,7 +596,6 @@ describe("image assets", () => {
       fs.readFileSync(path.join(projectRoot, assetPath)).toString("base64")
     )));
     expect(rarityHashes.size).toBe(4);
-    expect(assetsSource).not.toContain("assets/images/equipment/equipment-roulette-wheel.png");
     for (const level of [1, 2, 3, 4, 5]) {
       const retiredPath = `assets/images/equipment/equipment-roulette-wheel-lv${level}.png`;
       expect(assetsSource).not.toContain(retiredPath);
@@ -644,7 +640,7 @@ describe("image assets", () => {
   });
 
   it("keeps the NOA level up effect at the requested 384 x 512 frame grid", () => {
-    expect(readPngInfo("assets/effects/noa_level_up_16.png")).toEqual({ width: 1536, height: 2048, colorType: 6 });
+    expect(readPngInfo("assets/images/vfx/noa_level_up_16.png")).toEqual({ width: 1536, height: 2048, colorType: 6 });
   });
 
   it("keeps enemy battle portraits as registered alpha PNGs", () => {
@@ -680,17 +676,17 @@ describe("image assets", () => {
     ];
 
     for (const portrait of legacyPortraits) {
-      expect(assetsSource).not.toContain(`assets/enemies/battle/${portrait}`);
+      expect(assetsSource).not.toContain(portrait);
     }
   });
 
   it("keeps active Egypt enemy attack sheets at the requested 384 x 512 frame grid", () => {
     const sheets = [
-      "assets/images/clean/enemy_egypt_rift_scarab_attack_16_spritesheet_alpha.png",
-      "assets/images/clean/enemy_egypt_mummy_attack_16_spritesheet_alpha.png",
-      "assets/images/clean/enemy_egypt_priest_attack_16_spritesheet_alpha.png",
-      "assets/images/clean/enemy_egypt_anubis_guard_attack_16_spritesheet_alpha.png",
-      "assets/images/clean/enemy_egypt_sphinx_attack_16_spritesheet_alpha.png",
+      "assets/images/regions/egypt/enemies/enemy_egypt_rift_scarab_attack_16_spritesheet_alpha.png",
+      "assets/images/regions/egypt/enemies/enemy_egypt_mummy_attack_16_spritesheet_alpha.png",
+      "assets/images/regions/egypt/enemies/enemy_egypt_priest_attack_16_spritesheet_alpha.png",
+      "assets/images/regions/egypt/enemies/enemy_egypt_anubis_guard_attack_16_spritesheet_alpha.png",
+      "assets/images/regions/egypt/enemies/enemy_egypt_sphinx_attack_16_spritesheet_alpha.png",
     ];
 
     for (const sheet of sheets) {
@@ -699,15 +695,15 @@ describe("image assets", () => {
   });
 
   it("keeps hero hit at 512 x 768 per frame and enemy VFX at 512 x 512 per frame", () => {
-    expect(readPngInfo("assets/images/clean/hero_hit_16_spritesheet_alpha.png"))
+    expect(readPngInfo("assets/images/characters/noa/hero_hit_16_spritesheet_alpha.png"))
       .toEqual({ width: 2048, height: 3072, colorType: 6 });
 
     for (const sheet of [
-      "assets/effects/enemy_rift_projectile_16_spritesheet_alpha.png",
-      "assets/effects/enemy_impact_physical_16_spritesheet_alpha.png",
-      "assets/effects/enemy_impact_arcane_16_spritesheet_alpha.png",
-      "assets/effects/enemy_impact_stone_16_spritesheet_alpha.png",
-      "assets/effects/enemy_death_16_spritesheet_alpha.png",
+      "assets/images/vfx/enemy_rift_projectile_16_spritesheet_alpha.png",
+      "assets/images/vfx/enemy_impact_physical_16_spritesheet_alpha.png",
+      "assets/images/vfx/enemy_impact_arcane_16_spritesheet_alpha.png",
+      "assets/images/vfx/enemy_impact_stone_16_spritesheet_alpha.png",
+      "assets/images/vfx/enemy_death_16_spritesheet_alpha.png",
     ]) {
       expect(readPngInfo(sheet)).toEqual({ width: 2048, height: 2048, colorType: 6 });
     }
