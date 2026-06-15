@@ -23,14 +23,14 @@ function readPngInfo(relativePath) {
 }
 
 const runtimeAnimationSheets = [
-  { path: "assets/images/clean/hero_line_clear_slash_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_attack_combo_01_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_attack_combo_02_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_attack_combo_03_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_tetris_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_tspin_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_b2b_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
-  { path: "assets/images/clean/hero_ultimate_attack_16_spritesheet_alpha.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/noa_attack_line_clear_slash_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/noa_attack_combo1_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/noa_attack_combo2_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/noa_attack_combo3_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/noa_attack_tetris_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/noa_attack_tspin_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/noa_attack_b2b_16.png", columns: 4, rows: 4 },
+  { path: "assets/images/clean/noa_attack_ultimate_16.png", columns: 4, rows: 4 },
   { path: "assets/effects/hero_sword_wave_16_spritesheet_alpha.png", columns: 4, rows: 4 },
   { path: "assets/effects/hero_impact_burst_16_spritesheet_alpha.png", columns: 4, rows: 4 },
   { path: "assets/effects/noa_level_up_16.png", columns: 4, rows: 4 },
@@ -225,16 +225,27 @@ const equipmentIconPaths = [
 ].map((id) => `assets/images/equipment/icons/${id}.png`);
 
 const heroAttackVfxSheets = [
-  "assets/images/clean/hero_line_clear_slash_16_spritesheet_alpha.png",
-  "assets/images/clean/hero_attack_combo_01_16_spritesheet_alpha.png",
-  "assets/images/clean/hero_attack_combo_02_16_spritesheet_alpha.png",
-  "assets/images/clean/hero_attack_combo_03_16_spritesheet_alpha.png",
-  "assets/images/clean/hero_tetris_attack_16_spritesheet_alpha.png",
-  "assets/images/clean/hero_tspin_attack_16_spritesheet_alpha.png",
-  "assets/images/clean/hero_b2b_attack_16_spritesheet_alpha.png",
-  "assets/images/clean/hero_ultimate_attack_16_spritesheet_alpha.png",
+  "assets/images/clean/noa_attack_line_clear_slash_16.png",
+  "assets/images/clean/noa_attack_combo1_16.png",
+  "assets/images/clean/noa_attack_combo2_16.png",
+  "assets/images/clean/noa_attack_combo3_16.png",
+  "assets/images/clean/noa_attack_tetris_16.png",
+  "assets/images/clean/noa_attack_tspin_16.png",
+  "assets/images/clean/noa_attack_b2b_16.png",
+  "assets/images/clean/noa_attack_ultimate_16.png",
   "assets/effects/hero_sword_wave_16_spritesheet_alpha.png",
   "assets/effects/hero_impact_burst_16_spritesheet_alpha.png",
+];
+
+const noaAttackRuntimeSheets = [
+  "assets/images/clean/noa_attack_line_clear_slash_16.png",
+  "assets/images/clean/noa_attack_combo1_16.png",
+  "assets/images/clean/noa_attack_combo2_16.png",
+  "assets/images/clean/noa_attack_combo3_16.png",
+  "assets/images/clean/noa_attack_tetris_16.png",
+  "assets/images/clean/noa_attack_tspin_16.png",
+  "assets/images/clean/noa_attack_b2b_16.png",
+  "assets/images/clean/noa_attack_ultimate_16.png",
 ];
 
 const formalHeroCatalogIds = [
@@ -355,6 +366,14 @@ describe("image assets", () => {
 
   it("uses 512 x 768 cells for formal player attack and VFX sheets", () => {
     for (const sheet of heroAttackVfxSheets) {
+      expect(readPngInfo(sheet)).toEqual({ width: 2048, height: 3072, colorType: 6 });
+    }
+  });
+
+  it("registers all NOA runtime attacks at 512 x 768 per transparent frame", () => {
+    const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
+    for (const sheet of noaAttackRuntimeSheets) {
+      expect(assetsSource).toContain(sheet);
       expect(readPngInfo(sheet)).toEqual({ width: 2048, height: 3072, colorType: 6 });
     }
   });

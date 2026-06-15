@@ -1,17 +1,3 @@
-export const ROSTER_CELLS = {
-  noa: [0, 0],
-  slime: [1, 0],
-  vine: [2, 0],
-  mushroom: [3, 0],
-  beetle: [0, 1],
-  mist: [1, 1],
-  thorn: [2, 0],
-  wisp: [1, 1],
-  stalker: [2, 1],
-  sentinel: [3, 1],
-  king: [3, 1],
-};
-
 export function createBattlePresentationConfig({
   boardX,
   boardY,

@@ -54,6 +54,33 @@ describe("sprite sheet test catalog", () => {
     ]);
   });
 
+  it("previews all runtime NOA attacks without crop overrides", () => {
+    const runtimeAttackIds = new Set([
+      "hero-line-clear-slash-sheet-16",
+      "hero-combo-1-sheet-16",
+      "hero-combo-2-sheet-16",
+      "hero-combo-3-sheet-16",
+      "hero-tetris-sheet-16",
+      "hero-tspin-sheet-16",
+      "hero-b2b-sheet-16",
+      "hero-ultimate-sheet-16",
+    ]);
+    const previewSheets = SPRITE_SHEET_CATALOG
+      .filter((sheet) => runtimeAttackIds.has(sheet.id))
+      .map(({ id, path, frameMs, frameRects }) => ({ id, path, frameMs, frameRects }));
+
+    expect(previewSheets).toEqual([
+      { id: "hero-line-clear-slash-sheet-16", path: "assets/images/clean/noa_attack_line_clear_slash_16.png", frameMs: 58, frameRects: undefined },
+      { id: "hero-combo-1-sheet-16", path: "assets/images/clean/noa_attack_combo1_16.png", frameMs: 52, frameRects: undefined },
+      { id: "hero-combo-2-sheet-16", path: "assets/images/clean/noa_attack_combo2_16.png", frameMs: 54, frameRects: undefined },
+      { id: "hero-combo-3-sheet-16", path: "assets/images/clean/noa_attack_combo3_16.png", frameMs: 56, frameRects: undefined },
+      { id: "hero-tetris-sheet-16", path: "assets/images/clean/noa_attack_tetris_16.png", frameMs: 64, frameRects: undefined },
+      { id: "hero-tspin-sheet-16", path: "assets/images/clean/noa_attack_tspin_16.png", frameMs: 58, frameRects: undefined },
+      { id: "hero-b2b-sheet-16", path: "assets/images/clean/noa_attack_b2b_16.png", frameMs: 60, frameRects: undefined },
+      { id: "hero-ultimate-sheet-16", path: "assets/images/clean/noa_attack_ultimate_16.png", frameMs: 85, frameRects: undefined },
+    ]);
+  });
+
   it("previews Scarab at 80ms and the other enemy bodies at 90ms", () => {
     const scarab = SPRITE_SHEET_CATALOG.find(
       (sheet) => sheet.id === "enemy-egypt-rift-scarab-attack-sheet-16",

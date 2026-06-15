@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-15-noa-menu-idles";
+export const ASSET_VERSION = "2026-06-15-noa-attack-runtime-sheets";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -226,7 +226,6 @@ export const stageEgyptPyramidObservatoryRiftBg = registerImageAsset("stage-egyp
 export const stageMayaEclipseTempleRiftBg = registerImageAsset("stage-maya-eclipse-temple-rift", "assets/backgrounds/maya_eclipse_temple_rift_bg.png");
 export const stageAtlantisSunkenCrystalTempleRiftBg = registerImageAsset("stage-atlantis-sunken-crystal-temple-rift", "assets/backgrounds/atlantis_sunken_crystal_temple_rift_bg.png");
 export const slimeArt = registerImageAsset("fallback-enemy-battle-portrait", "assets/enemies/battle/enemy_egypt_rift_scarab_scout_battle.png");
-export const rosterArt = registerImageAsset("character-roster", "assets/character-roster-v4-alpha.png");
 export const heroIdleArt = registerImageAsset("hero-idle-canonical", "assets/images/clean/ET_Character_fullbody_alpha.png");
 export const noaBattleIdleArt = heroIdleArt;
 export const noaFeedbackBowArt = registerImageAsset("noa-feedback-thanks-canonical", "assets/images/clean/noa_feedback_thanks_alpha.png");
@@ -234,14 +233,14 @@ export const menuIdleCubeSheet = registerImageAsset("menu-idle-cube-sheet-16", "
 export const menuIdleMeditateSheet = registerImageAsset("menu-idle-meditate-sheet-16", "assets/images/clean/noa_menu_idle_meditate_16.png");
 export const menuIdleRiftWayfinderSheet = registerImageAsset("menu-idle-rift-wayfinder-sheet-16", "assets/images/clean/noa_menu_idle_rift_wayfinder_16.png");
 export const menuIdleStarMapListenerSheet = registerImageAsset("menu-idle-star-map-listener-sheet-16", "assets/images/clean/noa_menu_idle_star_map_listener_16.png");
-export const heroLineClearSlashSheet = registerImageAsset("hero-line-clear-slash-sheet-16", "assets/images/clean/hero_line_clear_slash_16_spritesheet_alpha.png");
-export const heroCombo1Sheet = registerImageAsset("hero-combo-1-sheet-16", "assets/images/clean/hero_attack_combo_01_16_spritesheet_alpha.png");
-export const heroCombo2Sheet = registerImageAsset("hero-combo-2-sheet-16", "assets/images/clean/hero_attack_combo_02_16_spritesheet_alpha.png");
-export const heroCombo3Sheet = registerImageAsset("hero-combo-3-sheet-16", "assets/images/clean/hero_attack_combo_03_16_spritesheet_alpha.png");
-export const heroUltimateSheet = registerImageAsset("hero-ultimate-sheet-16", "assets/images/clean/hero_ultimate_attack_16_spritesheet_alpha.png");
-export const heroTetrisSheet = registerImageAsset("hero-tetris-sheet-16", "assets/images/clean/hero_tetris_attack_16_spritesheet_alpha.png");
-export const heroTSpinSheet = registerImageAsset("hero-tspin-sheet-16", "assets/images/clean/hero_tspin_attack_16_spritesheet_alpha.png");
-export const heroB2BSheet = registerImageAsset("hero-b2b-sheet-16", "assets/images/clean/hero_b2b_attack_16_spritesheet_alpha.png");
+export const heroLineClearSlashSheet = registerImageAsset("hero-line-clear-slash-sheet-16", "assets/images/clean/noa_attack_line_clear_slash_16.png");
+export const heroCombo1Sheet = registerImageAsset("hero-combo-1-sheet-16", "assets/images/clean/noa_attack_combo1_16.png");
+export const heroCombo2Sheet = registerImageAsset("hero-combo-2-sheet-16", "assets/images/clean/noa_attack_combo2_16.png");
+export const heroCombo3Sheet = registerImageAsset("hero-combo-3-sheet-16", "assets/images/clean/noa_attack_combo3_16.png");
+export const heroUltimateSheet = registerImageAsset("hero-ultimate-sheet-16", "assets/images/clean/noa_attack_ultimate_16.png");
+export const heroTetrisSheet = registerImageAsset("hero-tetris-sheet-16", "assets/images/clean/noa_attack_tetris_16.png");
+export const heroTSpinSheet = registerImageAsset("hero-tspin-sheet-16", "assets/images/clean/noa_attack_tspin_16.png");
+export const heroB2BSheet = registerImageAsset("hero-b2b-sheet-16", "assets/images/clean/noa_attack_b2b_16.png");
 export const heroSwordWaveSheet = registerImageAsset("hero-sword-wave-sheet-16", "assets/effects/hero_sword_wave_16_spritesheet_alpha.png");
 export const heroImpactBurstSheet = registerImageAsset("hero-impact-burst-sheet-16", "assets/effects/hero_impact_burst_16_spritesheet_alpha.png");
 export const heroHitSheet = registerImageAsset("hero-hit-sheet-16", "assets/images/clean/hero_hit_16_spritesheet_alpha.png");

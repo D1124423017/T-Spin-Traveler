@@ -28,7 +28,6 @@ import {
   noaLevelUpSheet,
   oneShotAudioAssets,
   riftEnergyIcon,
-  rosterArt,
   slimeArt,
 } from "./src/data/assets.js";
 import {
@@ -180,10 +179,7 @@ import { createImageRenderer } from "./src/render/imageRenderer.js";
 import { createKeyedSpriteRenderer } from "./src/render/keyedSpriteRenderer.js";
 import { createMainMenuSceneRenderer } from "./src/render/mainMenuSceneRenderer.js";
 import { getAnimationDuration } from "./src/render/animationTiming.js";
-import {
-  ROSTER_CELLS,
-  createBattlePresentationConfig,
-} from "./src/render/battlePresentationConfig.js";
+import { createBattlePresentationConfig } from "./src/render/battlePresentationConfig.js";
 import { createPlayerStageRenderer } from "./src/render/playerStageRenderer.js";
 import {
   PLAYER_ATTACK_HERO_ANIMATIONS,
@@ -1262,15 +1258,12 @@ const {
   drawImageCoverRaw,
   drawImageCropContain,
   drawImageFallbackBox,
-  drawRosterSprite,
 } = createImageRenderer({
   ctx,
   isImageReady,
   getImageAssetRecord,
   roundedRect,
   canvasFont,
-  rosterArt,
-  rosterCells: ROSTER_CELLS,
 });
 
 const {
@@ -1778,7 +1771,6 @@ const {
   uiLayout: UI_LAYOUT,
   characterBaselines: CHARACTER_BASELINES,
   enemyBattlePortraits,
-  rosterArt,
   slimeArt,
   enemyDeathAnimation: ENEMY_DEATH_ANIMATION,
   enemyAttackAnimations: ENEMY_ATTACK_ANIMATIONS,
@@ -1795,7 +1787,6 @@ const {
   drawEnemyOverlay,
   drawEnemySilhouette,
   drawSlimeFallback,
-  drawRosterSprite,
   drawImageContain,
   drawSpriteAnimationFrame,
   isImageReady,
@@ -5570,8 +5561,6 @@ function drawHeroIdleBase(context = "battle") {
   if (context !== "menu" && isImageReady(noaBattleIdleArt)) {
     drawImageContain(noaBattleIdleArt, -150, -280, 300, 450);
     return;
-  } else if (isImageReady(rosterArt)) {
-    drawRosterSprite("noa", -118, -214, 236, 402);
   } else if (isImageReady(heroIdleArt)) {
     drawImageContain(heroIdleArt, -150, -280, 300, 450);
   } else if (isImageReady(HERO_ANIMATIONS.slash.image)) {

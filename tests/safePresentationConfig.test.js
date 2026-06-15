@@ -5,10 +5,7 @@ import {
   SETTINGS_TABS,
   TUNING_SLIDERS,
 } from "../src/input/controlSettingsConfig.js";
-import {
-  ROSTER_CELLS,
-  createBattlePresentationConfig,
-} from "../src/render/battlePresentationConfig.js";
+import { createBattlePresentationConfig } from "../src/render/battlePresentationConfig.js";
 
 describe("control settings config", () => {
   it("preserves the supported actions, defaults, tabs, and handling ranges", () => {
@@ -58,7 +55,5 @@ describe("battle presentation config", () => {
       localY: 104,
       scale: 1,
     });
-    expect(ROSTER_CELLS.noa).toEqual([0, 0]);
-    expect(ROSTER_CELLS.king).toEqual([3, 1]);
   });
 });

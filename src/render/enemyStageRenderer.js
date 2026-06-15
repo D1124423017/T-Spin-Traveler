@@ -6,7 +6,6 @@ export function createEnemyStageRenderer({
   uiLayout,
   characterBaselines,
   enemyBattlePortraits,
-  rosterArt,
   slimeArt,
   enemyDeathAnimation,
   enemyAttackAnimations,
@@ -23,7 +22,6 @@ export function createEnemyStageRenderer({
   drawEnemyOverlay,
   drawEnemySilhouette,
   drawSlimeFallback,
-  drawRosterSprite,
   drawImageContain,
   drawSpriteAnimationFrame,
   isImageReady,
@@ -87,26 +85,6 @@ export function createEnemyStageRenderer({
       // Enemy attack animations use the standardized frame sheets.
     } else if (drawEnemyConceptArt(enemy, hit)) {
       // Project-local concept sheets are the primary idle enemy source.
-    } else if (isImageReady(rosterArt)) {
-      ctx.save();
-      ctx.shadowColor = hexToRgba(enemy.color, 0.55);
-      ctx.shadowBlur = hit ? 34 : 22;
-      if (hit) {
-        ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = 0.88;
-      }
-      const tall = ["vine", "king", "mist", "wisp", "sentinel"].includes(enemy.id);
-      const draw = alignDrawBoxToBaseline(
-        {
-          x: tall ? -132 : -126,
-          y: tall ? -158 : -132,
-          w: tall ? 264 : 252,
-          h: tall ? 260 : 222,
-        },
-        characterBaselines.enemy.localY,
-      );
-      drawRosterSprite(enemy.id, draw.x, draw.y, draw.w, draw.h);
-      ctx.restore();
     } else if (enemy.id !== "slime") {
       drawEnemySilhouette(enemy, hit);
     } else if (isImageReady(slimeArt)) {

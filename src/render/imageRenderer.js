@@ -4,8 +4,6 @@ export function createImageRenderer({
   getImageAssetRecord,
   roundedRect,
   canvasFont,
-  rosterArt,
-  rosterCells,
 }) {
   function drawImageContain(img, x, y, w, h) {
     if (!isImageReady(img)) {
@@ -36,22 +34,6 @@ export function createImageRenderer({
     ctx.drawImage(img, sx, sy, sw, sh, x + (w - dw) / 2, y + h - dh, dw, dh);
   }
 
-  function drawRosterSprite(id, x, y, w, h) {
-    if (!isImageReady(rosterArt)) {
-      drawImageFallbackBox(x, y, w, h, "ROSTER");
-      return;
-    }
-    const cell = rosterCells[id] || rosterCells.slime;
-    const cw = rosterArt.naturalWidth / 4;
-    const ch = rosterArt.naturalHeight / 2;
-    const sx = cell[0] * cw;
-    const sy = cell[1] * ch;
-    const scale = Math.min(w / cw, h / ch);
-    const dw = cw * scale;
-    const dh = ch * scale;
-    ctx.drawImage(rosterArt, sx, sy, cw, ch, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
-  }
-
   function getMissingImageLabel(img, fallback) {
     const record = getImageAssetRecord(img);
     return record ? record.id.replace(/-/g, " ").toUpperCase() : fallback;
@@ -79,6 +61,5 @@ export function createImageRenderer({
     drawImageCoverRaw,
     drawImageCropContain,
     drawImageFallbackBox,
-    drawRosterSprite,
   };
 }

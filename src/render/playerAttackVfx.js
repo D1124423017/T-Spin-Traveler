@@ -16,9 +16,8 @@ import {
 } from "./animationTiming.js";
 
 const FRAMES_16 = Object.freeze(Array.from({ length: 16 }, (_, index) => index));
-const HERO_DRAW_STANDARD = Object.freeze({ x: -224, y: -349, w: 448, h: 504 });
-const HERO_DRAW_WIDE = Object.freeze({ x: -232, y: -363, w: 464, h: 522 });
-const HERO_DRAW_ULTIMATE = Object.freeze({ x: -258, y: -303, w: 516, h: 448 });
+const HERO_ATTACK_DRAW = Object.freeze({ x: -320, y: -600, w: 640, h: 720 });
+const HERO_ATTACK_BOTTOM_OFFSET = 85;
 
 function fixedFrameRects({
   cellWidth,
@@ -36,22 +35,14 @@ function fixedFrameRects({
   })));
 }
 
-// Use one viewport for every frame so transparent atlas padding does not shrink
-// the hero or introduce frame-to-frame anchor movement.
-const HERO_TALL_FRAME_RECTS = fixedFrameRects({
+// The generated sheets reserve their top 192px for transparent VFX space.
+// Render from the shared body viewport so that effects do not shrink NOA.
+const HERO_ATTACK_FRAME_RECTS = fixedFrameRects({
   cellWidth: 512,
   cellHeight: 768,
   y: 192,
   w: 512,
   h: 576,
-});
-const HERO_ULTIMATE_FRAME_RECTS = fixedFrameRects({
-  cellWidth: 512,
-  cellHeight: 768,
-  x: 72,
-  y: 448,
-  w: 368,
-  h: 320,
 });
 
 function sheetConfig({
@@ -95,9 +86,9 @@ export const PLAYER_ATTACK_HERO_ANIMATIONS = Object.freeze({
     timing: [70, 66, 60, 56, 52, 48, 46, 50, 58, 64, 68, 70, 72, 76, 82, 86],
     hitFrame: 9,
     label: "Slash",
-    draw: HERO_DRAW_STANDARD,
-    frameRects: HERO_TALL_FRAME_RECTS,
-    bottomOffset: 38,
+    draw: HERO_ATTACK_DRAW,
+    frameRects: HERO_ATTACK_FRAME_RECTS,
+    bottomOffset: HERO_ATTACK_BOTTOM_OFFSET,
   }),
   doubleSlash: sheetConfig({
     id: "doubleSlash",
@@ -106,9 +97,9 @@ export const PLAYER_ATTACK_HERO_ANIMATIONS = Object.freeze({
     timing: [68, 64, 58, 54, 50, 48, 50, 58, 56, 52, 48, 54, 64, 72, 80, 86],
     hitFrame: 11,
     label: "Double Slash",
-    draw: HERO_DRAW_STANDARD,
-    frameRects: HERO_TALL_FRAME_RECTS,
-    bottomOffset: 38,
+    draw: HERO_ATTACK_DRAW,
+    frameRects: HERO_ATTACK_FRAME_RECTS,
+    bottomOffset: HERO_ATTACK_BOTTOM_OFFSET,
   }),
   tripleSlash: sheetConfig({
     id: "tripleSlash",
@@ -117,9 +108,9 @@ export const PLAYER_ATTACK_HERO_ANIMATIONS = Object.freeze({
     timing: [66, 62, 56, 52, 48, 46, 48, 54, 50, 48, 46, 52, 62, 70, 78, 84],
     hitFrame: 12,
     label: "Triple Slash",
-    draw: HERO_DRAW_STANDARD,
-    frameRects: HERO_TALL_FRAME_RECTS,
-    bottomOffset: 38,
+    draw: HERO_ATTACK_DRAW,
+    frameRects: HERO_ATTACK_FRAME_RECTS,
+    bottomOffset: HERO_ATTACK_BOTTOM_OFFSET,
   }),
   combo1: sheetConfig({
     id: "combo1",
@@ -128,9 +119,9 @@ export const PLAYER_ATTACK_HERO_ANIMATIONS = Object.freeze({
     timing: [56, 52, 48, 46, 44, 42, 44, 48, 50, 52, 56, 62, 68, 74, 80, 84],
     hitFrame: 8,
     label: "Combo I",
-    draw: HERO_DRAW_STANDARD,
-    frameRects: HERO_TALL_FRAME_RECTS,
-    bottomOffset: 38,
+    draw: HERO_ATTACK_DRAW,
+    frameRects: HERO_ATTACK_FRAME_RECTS,
+    bottomOffset: HERO_ATTACK_BOTTOM_OFFSET,
   }),
   combo2: sheetConfig({
     id: "combo2",
@@ -139,9 +130,9 @@ export const PLAYER_ATTACK_HERO_ANIMATIONS = Object.freeze({
     timing: [60, 56, 52, 48, 46, 44, 46, 50, 52, 50, 50, 56, 64, 72, 78, 84],
     hitFrame: 9,
     label: "Combo II",
-    draw: HERO_DRAW_STANDARD,
-    frameRects: HERO_TALL_FRAME_RECTS,
-    bottomOffset: 38,
+    draw: HERO_ATTACK_DRAW,
+    frameRects: HERO_ATTACK_FRAME_RECTS,
+    bottomOffset: HERO_ATTACK_BOTTOM_OFFSET,
   }),
   combo3: sheetConfig({
     id: "combo3",
@@ -150,9 +141,9 @@ export const PLAYER_ATTACK_HERO_ANIMATIONS = Object.freeze({
     timing: [64, 60, 56, 52, 48, 46, 48, 52, 54, 52, 50, 56, 66, 76, 84, 90],
     hitFrame: 10,
     label: "Combo III",
-    draw: HERO_DRAW_STANDARD,
-    frameRects: HERO_TALL_FRAME_RECTS,
-    bottomOffset: 38,
+    draw: HERO_ATTACK_DRAW,
+    frameRects: HERO_ATTACK_FRAME_RECTS,
+    bottomOffset: HERO_ATTACK_BOTTOM_OFFSET,
   }),
   combo: sheetConfig({
     id: "combo",
@@ -161,9 +152,9 @@ export const PLAYER_ATTACK_HERO_ANIMATIONS = Object.freeze({
     timing: [64, 60, 56, 52, 48, 46, 48, 52, 50, 48, 48, 54, 62, 70, 78, 84],
     hitFrame: 10,
     label: "COMBO",
-    draw: HERO_DRAW_STANDARD,
-    frameRects: HERO_TALL_FRAME_RECTS,
-    bottomOffset: 38,
+    draw: HERO_ATTACK_DRAW,
+    frameRects: HERO_ATTACK_FRAME_RECTS,
+    bottomOffset: HERO_ATTACK_BOTTOM_OFFSET,
   }),
   tetris: sheetConfig({
     id: "tetris",
@@ -172,9 +163,9 @@ export const PLAYER_ATTACK_HERO_ANIMATIONS = Object.freeze({
     timing: [74, 70, 66, 62, 58, 54, 50, 54, 62, 70, 76, 82, 82, 84, 88, 92],
     hitFrame: 12,
     label: "TETRIS",
-    draw: HERO_DRAW_WIDE,
-    frameRects: HERO_TALL_FRAME_RECTS,
-    bottomOffset: 39,
+    draw: HERO_ATTACK_DRAW,
+    frameRects: HERO_ATTACK_FRAME_RECTS,
+    bottomOffset: HERO_ATTACK_BOTTOM_OFFSET,
   }),
   tspin: sheetConfig({
     id: "tspin",
@@ -183,9 +174,9 @@ export const PLAYER_ATTACK_HERO_ANIMATIONS = Object.freeze({
     timing: [68, 64, 60, 56, 52, 48, 48, 54, 58, 62, 66, 72, 76, 80, 84, 88],
     hitFrame: 10,
     label: "T-SPIN",
-    draw: HERO_DRAW_STANDARD,
-    frameRects: HERO_TALL_FRAME_RECTS,
-    bottomOffset: 38,
+    draw: HERO_ATTACK_DRAW,
+    frameRects: HERO_ATTACK_FRAME_RECTS,
+    bottomOffset: HERO_ATTACK_BOTTOM_OFFSET,
   }),
   b2b: sheetConfig({
     id: "b2b",
@@ -194,9 +185,9 @@ export const PLAYER_ATTACK_HERO_ANIMATIONS = Object.freeze({
     timing: [70, 66, 62, 58, 54, 50, 48, 52, 60, 66, 72, 78, 80, 82, 86, 90],
     hitFrame: 11,
     label: "B2B",
-    draw: HERO_DRAW_STANDARD,
-    frameRects: HERO_TALL_FRAME_RECTS,
-    bottomOffset: 38,
+    draw: HERO_ATTACK_DRAW,
+    frameRects: HERO_ATTACK_FRAME_RECTS,
+    bottomOffset: HERO_ATTACK_BOTTOM_OFFSET,
   }),
   ultimate: sheetConfig({
     id: "ultimate",
@@ -204,9 +195,9 @@ export const PLAYER_ATTACK_HERO_ANIMATIONS = Object.freeze({
     frameMs: 85,
     hitRatio: 0.55,
     label: "Perfect Clear Rift",
-    draw: HERO_DRAW_ULTIMATE,
-    frameRects: HERO_ULTIMATE_FRAME_RECTS,
-    bottomOffset: 25,
+    draw: HERO_ATTACK_DRAW,
+    frameRects: HERO_ATTACK_FRAME_RECTS,
+    bottomOffset: HERO_ATTACK_BOTTOM_OFFSET,
   }),
 });
 

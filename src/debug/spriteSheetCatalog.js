@@ -4,25 +4,6 @@ const GRID_4_BY_4 = Object.freeze({
   frames: Object.freeze(Array.from({ length: 16 }, (_, index) => index)),
 });
 
-function fixedFrameRects(cellWidth, cellHeight, viewport) {
-  return Object.freeze(GRID_4_BY_4.frames.map((frame) => Object.freeze({
-    x: (frame % GRID_4_BY_4.columns) * cellWidth + viewport.x,
-    y: Math.floor(frame / GRID_4_BY_4.columns) * cellHeight + viewport.y,
-    w: viewport.w,
-    h: viewport.h,
-  })));
-}
-
-const HERO_ATTACK_GRID = Object.freeze({
-  ...GRID_4_BY_4,
-  frameRects: fixedFrameRects(512, 768, { x: 0, y: 192, w: 512, h: 576 }),
-});
-
-const HERO_ULTIMATE_GRID = Object.freeze({
-  ...GRID_4_BY_4,
-  frameRects: fixedFrameRects(512, 768, { x: 72, y: 448, w: 368, h: 320 }),
-});
-
 const FIXED_90_GRID = Object.freeze({
   ...GRID_4_BY_4,
   timing: Object.freeze(GRID_4_BY_4.frames.map(() => 90)),
@@ -67,14 +48,14 @@ export const SPRITE_SHEET_CATALOG = Object.freeze([
   sheet("menu-idle-meditate-sheet-16", "spriteTestGroupMenu", "assets/images/clean/noa_menu_idle_meditate_16.png", 142),
   sheet("menu-idle-rift-wayfinder-sheet-16", "spriteTestGroupMenu", "assets/images/clean/noa_menu_idle_rift_wayfinder_16.png", 110),
   sheet("menu-idle-star-map-listener-sheet-16", "spriteTestGroupMenu", "assets/images/clean/noa_menu_idle_star_map_listener_16.png", 125),
-  sheet("hero-line-clear-slash-sheet-16", "spriteTestGroupHero", "assets/images/clean/hero_line_clear_slash_16_spritesheet_alpha.png", 58, HERO_ATTACK_GRID),
-  sheet("hero-combo-1-sheet-16", "spriteTestGroupHero", "assets/images/clean/hero_attack_combo_01_16_spritesheet_alpha.png", 52, HERO_ATTACK_GRID),
-  sheet("hero-combo-2-sheet-16", "spriteTestGroupHero", "assets/images/clean/hero_attack_combo_02_16_spritesheet_alpha.png", 54, HERO_ATTACK_GRID),
-  sheet("hero-combo-3-sheet-16", "spriteTestGroupHero", "assets/images/clean/hero_attack_combo_03_16_spritesheet_alpha.png", 56, HERO_ATTACK_GRID),
-  sheet("hero-tetris-sheet-16", "spriteTestGroupHero", "assets/images/clean/hero_tetris_attack_16_spritesheet_alpha.png", 64, HERO_ATTACK_GRID),
-  sheet("hero-tspin-sheet-16", "spriteTestGroupHero", "assets/images/clean/hero_tspin_attack_16_spritesheet_alpha.png", 58, HERO_ATTACK_GRID),
-  sheet("hero-b2b-sheet-16", "spriteTestGroupHero", "assets/images/clean/hero_b2b_attack_16_spritesheet_alpha.png", 60, HERO_ATTACK_GRID),
-  sheet("hero-ultimate-sheet-16", "spriteTestGroupHero", "assets/images/clean/hero_ultimate_attack_16_spritesheet_alpha.png", 85, HERO_ULTIMATE_GRID),
+  sheet("hero-line-clear-slash-sheet-16", "spriteTestGroupHero", "assets/images/clean/noa_attack_line_clear_slash_16.png", 58),
+  sheet("hero-combo-1-sheet-16", "spriteTestGroupHero", "assets/images/clean/noa_attack_combo1_16.png", 52),
+  sheet("hero-combo-2-sheet-16", "spriteTestGroupHero", "assets/images/clean/noa_attack_combo2_16.png", 54),
+  sheet("hero-combo-3-sheet-16", "spriteTestGroupHero", "assets/images/clean/noa_attack_combo3_16.png", 56),
+  sheet("hero-tetris-sheet-16", "spriteTestGroupHero", "assets/images/clean/noa_attack_tetris_16.png", 64),
+  sheet("hero-tspin-sheet-16", "spriteTestGroupHero", "assets/images/clean/noa_attack_tspin_16.png", 58),
+  sheet("hero-b2b-sheet-16", "spriteTestGroupHero", "assets/images/clean/noa_attack_b2b_16.png", 60),
+  sheet("hero-ultimate-sheet-16", "spriteTestGroupHero", "assets/images/clean/noa_attack_ultimate_16.png", 85),
   sheet("hero-hit-sheet-16", "spriteTestGroupHero", "assets/images/clean/hero_hit_16_spritesheet_alpha.png", 60, HERO_HIT_GRID),
   sheet("hero-sword-wave-sheet-16", "spriteTestGroupEffect", "assets/effects/hero_sword_wave_16_spritesheet_alpha.png", 42),
   sheet("hero-impact-burst-sheet-16", "spriteTestGroupEffect", "assets/effects/hero_impact_burst_16_spritesheet_alpha.png", 36),
