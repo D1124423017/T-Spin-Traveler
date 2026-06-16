@@ -7,6 +7,7 @@ export function createModeOverlayRouter({
   drawPauseOverlay,
   drawAssetLoadingScreen,
   drawStartOverlay,
+  drawStoryOverlay,
   drawFallbackModeOverlay,
 } = {}) {
   const handlers = {
@@ -18,6 +19,7 @@ export function createModeOverlayRouter({
     pause: drawPauseOverlay,
     assetLoading: drawAssetLoadingScreen,
     start: drawStartOverlay,
+    story: drawStoryOverlay,
   };
 
   return function drawModeOverlay(overlayPath) {
@@ -25,4 +27,12 @@ export function createModeOverlayRouter({
     handler();
     return overlayPath;
   };
+}
+
+export function resolveModeOverlayPath({
+  mode = "playing",
+  overlayPath = "none",
+} = {}) {
+  if (mode === "story") return "story";
+  return overlayPath;
 }

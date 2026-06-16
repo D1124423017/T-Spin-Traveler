@@ -3,6 +3,7 @@ import { normalizeControlKey } from "./controlBindings.js";
 import { createMainMenuInputRouter } from "./mainMenuInputRouter.js";
 import { createEquipmentInputRouter } from "./equipmentInputRouter.js";
 import { createSettingsInputRouter } from "./settingsInputRouter.js";
+import { createStoryInputRouter } from "./storyInputRouter.js";
 import { handleDebugUiShortcut } from "../debug/debugUiController.js";
 
 export function getCanvasPoint(event, canvas, width, height) {
@@ -34,6 +35,7 @@ export function installInputController({
   getSettingsFeedbackCardRect,
   getControlsResetButtonRect,
   getHandlingResetButtonRect,
+  getStoryComicLayout,
   getCurrentBuildButtonRect,
   getCurrentBuildCloseRect,
   getUpgradeDetailToggleRect,
@@ -71,11 +73,14 @@ export function installInputController({
     rotate180,
     saveGame,
     setGameMode,
+    skipStoryScene,
     startAscensionChallenge,
+    startStoryScene,
     syncControlHints,
     toggleMute,
     toggleDebugUi,
     toggleUpgradeDetail,
+    nextStoryPanel,
     triggerMenuHeroAction,
     unlockAudio,
     updateMenuHeroHoverFromPointer,
@@ -109,8 +114,8 @@ export function installInputController({
     getButtonRects: getMainMenuButtonRects,
     playSfx,
     actions: {
-      start: () => resetGame("endless"),
-      mainStage: () => resetGame("storyEgypt"),
+      start: () => startStoryScene?.("prologue", "endless"),
+      mainStage: () => startStoryScene?.("prologue", "storyEgypt"),
       equipment: () => openEquipmentScreen?.(),
       metaUpgrade: () => {
         setGameMode("metaUpgrade");
@@ -143,6 +148,14 @@ export function installInputController({
       upgrade: upgradeEquipmentRoulette,
     },
   });
+  const storyInput = createStoryInputRouter({
+    state,
+    getLayout: getStoryComicLayout,
+    actions: {
+      next: nextStoryPanel,
+      skip: skipStoryScene,
+    },
+  });
 
   function isActionKey(action, key) {
     return getControlKeys(action).includes(normalizeControlKey(key));
@@ -153,6 +166,7 @@ export function installInputController({
     return getAllControlKeys().includes(normalized)
       || key === "Enter"
       || key === "Escape"
+      || (state.mode === "story" && normalized === "s")
       || (state.mode === "upgrade" && (key === "ArrowLeft" || key === "ArrowRight"))
       || ["1", "2", "3"].includes(key)
       || (state.mode === "paused" && state.pauseView === "menu" && normalized === "r")
@@ -192,6 +206,17 @@ export function installInputController({
     }
 
     if (state.mode === "upgrade" && state.upgradePickConfirm) return;
+
+    if (
+      state.mode === "story"
+      && storyInput.handleKeyDown({
+        key,
+        code,
+        repeat: event.repeat,
+      })
+    ) {
+      return;
+    }
 
     if (
       state.mode === "equipment"
@@ -345,7 +370,9 @@ export function installInputController({
       && mainMenuInput.updatePointerSelection(point.x, point.y);
     const equipmentHovered = state.mode === "equipment"
       && equipmentInput.isInteractivePoint(point.x, point.y);
-    canvas.style.cursor = heroHovered || menuHovered || equipmentHovered ? "pointer" : "";
+    const storyHovered = state.mode === "story"
+      && storyInput.isInteractivePoint(point.x, point.y);
+    canvas.style.cursor = heroHovered || menuHovered || equipmentHovered || storyHovered ? "pointer" : "";
     if (state.pointer.down && state.pointer.dragging) {
       event.preventDefault();
       settingsInput.updateSliderFromPointer(state.pointer.dragging, point.x);
@@ -391,6 +418,10 @@ export function installInputController({
 
     if (state.mode === "paused") {
       handlePausePointerDown(point.x, point.y);
+      return;
+    }
+
+    if (state.mode === "story" && storyInput.handlePointerDown(point.x, point.y)) {
       return;
     }
 

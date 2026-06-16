@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { createModeOverlayRouter } from "../src/core/modeRouter.js";
+import {
+  createModeOverlayRouter,
+  resolveModeOverlayPath,
+} from "../src/core/modeRouter.js";
 import { createControlStateAdapter } from "../src/input/controlStateAdapter.js";
 import { createMetaScreenPointerRouter } from "../src/input/metaScreenPointerRouter.js";
 import { createBondCalloutController } from "../src/ui/bondCalloutController.js";
@@ -103,6 +106,17 @@ describe("presentation routing helpers", () => {
     expect(drawEquipmentOverlay).toHaveBeenCalledOnce();
     drawModeOverlay("unknown");
     expect(drawFallbackModeOverlay).toHaveBeenCalledOnce();
+  });
+
+  it("keeps story overlay routing outside combat rules", () => {
+    expect(resolveModeOverlayPath({
+      mode: "story",
+      overlayPath: "fallback",
+    })).toBe("story");
+    expect(resolveModeOverlayPath({
+      mode: "upgrade",
+      overlayPath: "upgrade",
+    })).toBe("upgrade");
   });
 
   it("builds bond upgrade and effect callouts", () => {

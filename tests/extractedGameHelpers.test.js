@@ -204,6 +204,11 @@ describe("extracted game helpers", () => {
       getSettingsFeedbackCardRect: () => ({ x: 0, y: 0, w: 0, h: 0 }),
       getControlsResetButtonRect: () => ({ x: 0, y: 0, w: 0, h: 0 }),
       getHandlingResetButtonRect: () => ({ x: 0, y: 0, w: 0, h: 0 }),
+      getStoryComicLayout: () => ({
+        panelHitRect: { x: 0, y: 0, w: 1280, h: 720 },
+        nextButton: { x: 1000, y: 600, w: 160, h: 48 },
+        skipButton: { x: 1100, y: 40, w: 120, h: 40 },
+      }),
       getCurrentBuildButtonRect: () => ({ x: 0, y: 0, w: 0, h: 0 }),
       getCurrentBuildCloseRect: () => ({ x: 0, y: 0, w: 0, h: 0 }),
       getUpgradeDetailToggleRect: () => ({ x: 0, y: 0, w: 0, h: 0 }),
@@ -242,6 +247,7 @@ describe("extracted game helpers", () => {
         },
         setLanguage: () => {},
         startAscensionChallenge: () => {},
+        startStoryScene: (...args) => calls.push(["startStoryScene", ...args]),
         syncControlHints: () => {},
         toggleDebugUi: () => calls.push(["toggleDebugUi"]),
         toggleMute: () => {},
@@ -282,7 +288,7 @@ describe("extracted game helpers", () => {
       ["hold"],
       ["hardDrop"],
       ["setGameMode", "paused"],
-      ["resetGame", "endless"],
+      ["startStoryScene", "prologue", "endless"],
     ]);
 
     controller.destroy();

@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-16-equipment-expansion";
+export const ASSET_VERSION = "2026-06-16-prologue-mine-mvp";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -126,6 +126,56 @@ export const mainMenuRuneArcBack = registerImageAsset("main-menu-rune-arc-back",
 export const mainMenuPrimaryFrame = registerImageAsset("main-menu-primary-frame", "assets/images/ui/menu/main-menu-primary-frame.png");
 export const mainMenuSecondaryFrame = registerImageAsset("main-menu-secondary-frame", "assets/images/ui/menu/main-menu-secondary-frame.png");
 export const mainMenuDialogueFrame = registerImageAsset("main-menu-dialogue-frame", "assets/images/ui/menu/main-menu-dialogue-frame.png");
+export const storyProloguePanels = Object.freeze({
+  panel01: registerImageAsset(
+    "story-prologue-panel-01",
+    "assets/images/story/prologue/prologue-panel-01-royal-rift-poker-table.png",
+  ),
+  panel02: registerImageAsset(
+    "story-prologue-panel-02",
+    "assets/images/story/prologue/prologue-panel-02-rift-cards-and-crystal-chips.png",
+  ),
+  panel03: registerImageAsset(
+    "story-prologue-panel-03",
+    "assets/images/story/prologue/prologue-panel-03-king-reveals-card.png",
+  ),
+  panel04: registerImageAsset(
+    "story-prologue-panel-04",
+    "assets/images/story/prologue/prologue-panel-04-noa-card-resonance.png",
+  ),
+  panel05: registerImageAsset(
+    "story-prologue-panel-05",
+    "assets/images/story/prologue/prologue-panel-05-host-accuses-cheating.png",
+  ),
+  panel06: registerImageAsset(
+    "story-prologue-panel-06",
+    "assets/images/story/prologue/prologue-panel-06-fractured-memory.png",
+  ),
+  panel07: registerImageAsset(
+    "story-prologue-panel-07",
+    "assets/images/story/prologue/prologue-panel-07-king-discovers-resonance.png",
+  ),
+  panel08: registerImageAsset(
+    "story-prologue-panel-08",
+    "assets/images/story/prologue/prologue-panel-08-sent-to-rift-mine.png",
+  ),
+  panel09: registerImageAsset(
+    "story-prologue-panel-09",
+    "assets/images/story/prologue/prologue-panel-09-rift-mine-slave-labor.png",
+  ),
+  panel10: registerImageAsset(
+    "story-prologue-panel-10",
+    "assets/images/story/prologue/prologue-panel-10-noa-mines-rift-energy.png",
+  ),
+  panel11: registerImageAsset(
+    "story-prologue-panel-11",
+    "assets/images/story/prologue/prologue-panel-11-noa-discovers-rift-core.png",
+  ),
+  panel12: registerImageAsset(
+    "story-prologue-panel-12",
+    "assets/images/story/prologue/prologue-panel-12-rift-core-absorbs-noa.png",
+  ),
+});
 export const equipmentRouletteLayers = Object.freeze({
   1: Object.freeze({
     body: registerImageAsset(

@@ -39,6 +39,7 @@ describe("game state factory", () => {
       menuSpecialIdleStartedAt: 1234,
       assetLoadingStartedAt: 1234,
       equipmentCombat: { wave: 1, fatalSaveUsed: false },
+      story: null,
     });
     expect(state.board).toEqual([["board"]]);
     expect(state.metaProgress).toEqual({ riftEnergy: 12 });

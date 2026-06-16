@@ -94,6 +94,7 @@ export function createGameState({
     challenge: null,
     ascensionRun: null,
     tutorial: null,
+    story: null,
     upgradeChoices: [],
     upgradeSelectedIndex: 0,
     upgradeDraftReason: null,

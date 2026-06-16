@@ -38,6 +38,10 @@ import {
 import { createFileSfxPlayer } from "./src/audio/audioManager.js";
 import { ENEMIES, MINI_BOSS_ENEMY_IDS } from "./src/data/enemies.js";
 import { translations } from "./src/data/i18n.js";
+import {
+  STORY_SCENE_IDS,
+  getStoryScene,
+} from "./src/data/storyChapters.js";
 import { UPGRADES } from "./src/data/upgrades.js";
 import {
   getUpgradeById,
@@ -153,8 +157,12 @@ import { createAssetLoadingController } from "./src/core/assetLoadingController.
 import { createBattleCountdownCueReader } from "./src/core/battleCountdownModel.js";
 import { createBuildStatsController } from "./src/core/buildStatsController.js";
 import { createGameModeSetter } from "./src/core/gameModeHelpers.js";
-import { createModeOverlayRouter } from "./src/core/modeRouter.js";
+import {
+  createModeOverlayRouter,
+  resolveModeOverlayPath,
+} from "./src/core/modeRouter.js";
 import { createRunStatsFactory } from "./src/core/runStatsFactory.js";
+import { createStoryModeController } from "./src/core/storyModeController.js";
 import {
   clamp,
   drawRoundedRect,
@@ -188,6 +196,7 @@ import { createHeroCombatFallbackRenderer } from "./src/render/heroCombatFallbac
 import { createImageRenderer } from "./src/render/imageRenderer.js";
 import { createKeyedSpriteRenderer } from "./src/render/keyedSpriteRenderer.js";
 import { createMainMenuSceneRenderer } from "./src/render/mainMenuSceneRenderer.js";
+import { createStoryComicRenderer } from "./src/render/storyComicRenderer.js";
 import { getAnimationDuration } from "./src/render/animationTiming.js";
 import { createBattlePresentationConfig } from "./src/render/battlePresentationConfig.js";
 import { createPlayerStageRenderer } from "./src/render/playerStageRenderer.js";
@@ -244,6 +253,7 @@ import {
   createSidePieceLayout,
   createSidePieceRenderer,
 } from "./src/ui/sidePieceRenderer.js";
+import { getStoryComicLayout } from "./src/ui/storyComicOverlay.js";
 import { buildDamageEquation } from "./src/ui/combatReadout.js";
 import {
   formatControlKey,
@@ -1081,6 +1091,29 @@ const setGameMode = createGameModeSetter({
   setFeedbackMode,
 });
 
+const storyModeController = createStoryModeController({
+  state,
+  getScene: getStoryScene,
+  setGameMode,
+  startGameplay: (runMode) => resetGame(runMode),
+  playSfx,
+  now: () => performance.now(),
+});
+
+function startStoryScene(sceneId = STORY_SCENE_IDS.prologue, runMode = "endless") {
+  unlockAudio();
+  cleanupDomOverlay();
+  return storyModeController.startStory(sceneId, runMode);
+}
+
+function nextStoryPanel() {
+  return storyModeController.nextStoryPanel();
+}
+
+function skipStoryScene() {
+  return storyModeController.skipStory();
+}
+
 const debugProgressTools = createDebugProgressTools({
   state,
   loadMetaProgress,
@@ -1275,6 +1308,23 @@ const {
   getImageAssetRecord,
   roundedRect,
   canvasFont,
+});
+
+const {
+  drawStoryComicOverlay,
+} = createStoryComicRenderer({
+  ctx,
+  width: W,
+  height: H,
+  state,
+  getScene: getStoryScene,
+  t,
+  canvasFont,
+  fitLabel,
+  wrapText,
+  roundedRect,
+  drawMenuButton,
+  isImageReady,
 });
 
 const {
@@ -1844,6 +1894,7 @@ const drawModeOverlay = createModeOverlayRouter({
   drawPauseOverlay,
   drawAssetLoadingScreen,
   drawStartOverlay,
+  drawStoryOverlay: drawStoryComicOverlay,
   drawFallbackModeOverlay,
 });
 
@@ -2184,6 +2235,7 @@ function triggerDefeat(messageKey, source = "triggerDefeat") {
 function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   unlockAudio();
   cleanupDomOverlay();
+  state.story = null;
   setGameMode("playing");
   if (runMode === "ascension") {
     showToast({
@@ -5282,7 +5334,7 @@ function getMusicStageByWave(wave) {
 }
 
 function getCurrentMusicStage() {
-  if (state.mode === "start" || state.mode === "guide" || state.mode === "equipment" || state.mode === "metaUpgrade" || state.mode === "victory" || state.mode === "defeat") return "menu";
+  if (state.mode === "start" || state.mode === "story" || state.mode === "guide" || state.mode === "equipment" || state.mode === "metaUpgrade" || state.mode === "victory" || state.mode === "defeat") return "menu";
   if (state.mode === "upgrade") return "upgrade";
   return getMusicStageByWave(state.wave || 1);
 }
@@ -6111,7 +6163,10 @@ function drawMenuIdleParticles(anchorX, anchorY, pose, motion, now) {
 
 function drawOverlay() {
   if (state.mode === "art") setGameMode("start");
-  const overlayPath = getOverlayRenderPath(state);
+  const overlayPath = resolveModeOverlayPath({
+    mode: state.mode,
+    overlayPath: getOverlayRenderPath(state),
+  });
   if (overlayPath === "none") return;
   if (overlayPath === "result") {
     if (state.mode === "defeat" && !state.defeatRenderTraceWarned) {
@@ -6292,6 +6347,7 @@ const inputController = installInputController({
   getSettingsFeedbackCardRect,
   getControlsResetButtonRect,
   getHandlingResetButtonRect,
+  getStoryComicLayout: () => getStoryComicLayout(W, H),
   getCurrentBuildButtonRect,
   getCurrentBuildCloseRect,
   getUpgradeDetailToggleRect,
@@ -6331,7 +6387,9 @@ const inputController = installInputController({
     saveGame,
     setGameMode,
     setLanguage,
+    skipStoryScene,
     startAscensionChallenge,
+    startStoryScene,
     syncControlHints,
     toggleDebugUi: () => {
       if (!DEBUG_HUD_ENABLED) return;
@@ -6340,6 +6398,7 @@ const inputController = installInputController({
     },
     toggleMute,
     toggleUpgradeDetail,
+    nextStoryPanel,
     triggerMenuHeroAction,
     unlockAudio,
     updateMenuHeroHoverFromPointer,
