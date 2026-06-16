@@ -91,6 +91,17 @@ export function equipOwnedItem(progress, itemId) {
   return { ok: true, item, progress: nextProgress };
 }
 
+export function unequipOwnedItem(progress, itemId) {
+  const nextProgress = normalizeEquipmentProgress(progress);
+  const item = getEquipmentById(itemId);
+  if (!item) return { ok: false, reason: "unknown", progress: nextProgress };
+  if (nextProgress.equipped[item.slot] !== item.id) {
+    return { ok: false, reason: "notEquipped", item, progress: nextProgress };
+  }
+  nextProgress.equipped[item.slot] = null;
+  return { ok: true, item, progress: nextProgress };
+}
+
 export function getEquippedEquipment(progress) {
   const normalized = normalizeEquipmentProgress(progress);
   return Object.fromEntries(EQUIPMENT_SLOT_ORDER.map((slot) => [

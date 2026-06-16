@@ -21,6 +21,7 @@ import {
   equipOwnedItem,
   getOwnedEquipmentForFilter,
   normalizeEquipmentProgress,
+  unequipOwnedItem,
   upgradeEquipmentWheel,
 } from "../src/core/equipmentProgress.js";
 import {
@@ -36,19 +37,32 @@ import { createEquipmentScreenRenderer } from "../src/ui/equipmentScreen.js";
 import { createEquipmentInputRouter } from "../src/input/equipmentInputRouter.js";
 import {
   EQUIPMENT_INVENTORY_LAYOUT,
+  EQUIPMENT_INVENTORY_PAGE_SIZE,
   EQUIPMENT_ROULETTE_LAYOUT,
   getEquipmentFilterRects,
+  getEquipmentInventoryPage,
   getEquipmentInventoryRects,
+  getEquipmentPaginationRects,
 } from "../src/ui/equipmentLayout.js";
 import { createEquipmentController } from "../src/core/equipmentController.js";
+import { buildEquipmentDetailsModel } from "../src/ui/equipmentDetailsModel.js";
 
 describe("equipment data", () => {
-  it("defines fifteen items across the three supported slots", () => {
-    expect(EQUIPMENT_ITEMS).toHaveLength(15);
+  it("defines twenty-seven items across the three supported slots", () => {
+    expect(EQUIPMENT_ITEMS).toHaveLength(27);
     for (const slot of EQUIPMENT_SLOT_ORDER) {
-      expect(EQUIPMENT_ITEMS.filter((item) => item.slot === slot)).toHaveLength(5);
+      expect(EQUIPMENT_ITEMS.filter((item) => item.slot === slot)).toHaveLength(9);
     }
-    expect(new Set(EQUIPMENT_ITEMS.map((item) => item.id)).size).toBe(15);
+    expect(new Set(EQUIPMENT_ITEMS.map((item) => item.id)).size).toBe(27);
+    expect(Object.fromEntries(["common", "rare", "relic", "legendary"].map((rarity) => [
+      rarity,
+      EQUIPMENT_ITEMS.filter((item) => item.rarity === rarity).length,
+    ]))).toEqual({
+      common: 6,
+      rare: 6,
+      relic: 6,
+      legendary: 9,
+    });
   });
 
   it("provides bilingual names, effects, wheel labels, and screen copy", () => {
@@ -64,6 +78,17 @@ describe("equipment data", () => {
       expect(translations[language].equipmentInventoryTitle).toBeTruthy();
       expect(translations[language].equipmentRouletteTitle).toBeTruthy();
       expect(translations[language].equipmentGoToRoulette).toBeTruthy();
+      expect(translations[language].equipmentDetailsTitle).toBeTruthy();
+      expect(translations[language].equipmentCurrentStats).toBeTruthy();
+      expect(translations[language].equipmentStatMaxHp).toBeTruthy();
+      expect(translations[language].equipmentStatAttack).toBeTruthy();
+      expect(translations[language].equipmentStatGuard).toBeTruthy();
+      expect(translations[language].equipmentBaseValue).toBeTruthy();
+      expect(translations[language].equipmentBonusValue).toBeTruthy();
+      expect(translations[language].equipmentFinalValue).toBeTruthy();
+      expect(translations[language].equipmentInventoryPage).toBeTruthy();
+      expect(translations[language].equipmentPreviousPage).toBeTruthy();
+      expect(translations[language].equipmentNextPage).toBeTruthy();
       for (const filter of EQUIPMENT_FILTER_ORDER) {
         expect(translations[language][`equipmentFilter.${filter}`]).toBeTruthy();
       }
@@ -82,11 +107,16 @@ describe("equipment data", () => {
   });
 
   it("gives every item a unique formal icon key and structured numeric effect data", () => {
-    expect(new Set(EQUIPMENT_ITEMS.map((item) => item.iconAssetKey)).size).toBe(15);
+    expect(new Set(EQUIPMENT_ITEMS.map((item) => item.iconAssetKey)).size).toBe(27);
     for (const item of EQUIPMENT_ITEMS) {
       expect(item.iconAssetKey).toBe(item.id);
       expect(item.effect.type).toBeTruthy();
       expect(Object.values(item.effect).some((value) => Number.isFinite(value))).toBe(true);
+      expect(item.stats).toEqual({
+        maxHpBonus: expect.any(Number),
+        attackBonus: expect.any(Number),
+        guardBonus: expect.any(Number),
+      });
     }
   });
 
@@ -172,6 +202,23 @@ describe("equipment progress", () => {
     expect(duplicate.progress.drawCount).toBe(2);
   });
 
+  it("can draw the newly added equipment from every rarity pool", () => {
+    const cases = [
+      { wheelLevel: 1, rng: [0, 0.99], id: "four-column-riftblade" },
+      { wheelLevel: 1, rng: [0.8, 0.99], id: "faultline-greatblade" },
+      { wheelLevel: 1, rng: [0.99, 0.99], id: "zero-boundary-lance" },
+      { wheelLevel: 2, rng: [0.99, 0.99], id: "continuous-riftbreaker-greatsword" },
+    ];
+    for (const testCase of cases) {
+      const result = drawEquipment({
+        ...DEFAULT_EQUIPMENT_PROGRESS,
+        wheelLevel: testCase.wheelLevel,
+      }, sequenceRng(testCase.rng));
+      expect(result.item.id).toBe(testCase.id);
+      expect(result.duplicate).toBe(false);
+    }
+  });
+
   it("equips only owned items in their matching slot", () => {
     const owned = {
       ...DEFAULT_EQUIPMENT_PROGRESS,
@@ -208,6 +255,19 @@ describe("equipment progress", () => {
       .toEqual(["wanderer-observer-hood"]);
   });
 
+  it("unequips only the currently equipped matching item", () => {
+    const equipped = equipOwnedItem({
+      ...DEFAULT_EQUIPMENT_PROGRESS,
+      ownedEquipment: ["pulse-crystal-blade"],
+    }, "pulse-crystal-blade");
+    const result = unequipOwnedItem(equipped.progress, "pulse-crystal-blade");
+
+    expect(result.ok).toBe(true);
+    expect(result.progress.equipped.weapon).toBeNull();
+    expect(unequipOwnedItem(result.progress, "pulse-crystal-blade"))
+      .toMatchObject({ ok: false, reason: "notEquipped" });
+  });
+
   it("upgrades the wheel to level five without overflowing", () => {
     let progress = DEFAULT_EQUIPMENT_PROGRESS;
     for (let level = 2; level <= 5; level += 1) {
@@ -220,6 +280,32 @@ describe("equipment progress", () => {
 });
 
 describe("equipment presentation and input", () => {
+  it("updates current stats and selected details after equip and unequip", () => {
+    const owned = {
+      wheelLevel: 1,
+      ownedEquipment: ["wanderer-observer-hood"],
+      equipped: { head: null, cloak: null, weapon: null },
+      recentDrop: null,
+      drawCount: 1,
+    };
+    const item = EQUIPMENT_ITEMS.find(({ id }) => id === "wanderer-observer-hood");
+    const before = buildEquipmentDetailsModel({ equipment: owned }, item);
+    const equipped = equipOwnedItem(owned, item.id);
+    const afterEquip = buildEquipmentDetailsModel({ equipment: equipped.progress }, item);
+    const unequipped = unequipOwnedItem(equipped.progress, item.id);
+    const afterUnequip = buildEquipmentDetailsModel({ equipment: unequipped.progress }, item);
+
+    expect(before.stats.finalStats).toEqual({ maxHp: 100, attack: 10, guard: 0 });
+    expect(before.selected).toMatchObject({
+      equipped: false,
+      stats: { maxHpBonus: 3, attackBonus: 1, guardBonus: 0 },
+    });
+    expect(afterEquip.stats.finalStats).toEqual({ maxHp: 103, attack: 11, guard: 0 });
+    expect(afterEquip.selected.equipped).toBe(true);
+    expect(afterUnequip.stats.finalStats).toEqual({ maxHp: 100, attack: 10, guard: 0 });
+    expect(afterUnequip.selected.equipped).toBe(false);
+  });
+
   it("targets a matching rarity segment and enables the NOA cheat hook at high level", () => {
     const motion = createEquipmentSpinMotion({
       now: 100,
@@ -387,6 +473,58 @@ describe("equipment presentation and input", () => {
     expect(actions.backToMain).toHaveBeenCalledOnce();
   });
 
+  it("paginates all-equipment inventory without changing global selection indices", () => {
+    expect(EQUIPMENT_INVENTORY_PAGE_SIZE).toBe(15);
+    expect(getEquipmentInventoryPage(0, 27)).toEqual({
+      pageIndex: 0,
+      pageCount: 2,
+      startIndex: 0,
+    });
+    expect(getEquipmentInventoryPage(18, 27)).toEqual({
+      pageIndex: 1,
+      pageCount: 2,
+      startIndex: 15,
+    });
+    expect(getEquipmentInventoryRects(27, EQUIPMENT_INVENTORY_LAYOUT, 0))
+      .toHaveLength(15);
+    const secondPage = getEquipmentInventoryRects(27, EQUIPMENT_INVENTORY_LAYOUT, 1);
+    expect(secondPage).toHaveLength(12);
+    expect(secondPage[0].index).toBe(15);
+    expect(secondPage.at(-1).index).toBe(26);
+  });
+
+  it("supports keyboard and pointer pagination for twenty-seven owned items", () => {
+    const state = {
+      metaProgress: {
+        equipment: {
+          ownedEquipment: EQUIPMENT_ITEMS.map(({ id }) => id),
+          equipped: { head: null, cloak: null, weapon: null },
+        },
+      },
+      equipmentUi: {
+        view: EQUIPMENT_SCREEN_VIEWS.inventory,
+        filter: "all",
+        selectedOwnedIndex: 0,
+      },
+    };
+    const router = createEquipmentInputRouter({ state, actions: {} });
+
+    expect(router.handleKeyDown({ key: "PageDown" })).toBe(true);
+    expect(state.equipmentUi.selectedOwnedIndex).toBe(15);
+    const secondPageRects = getEquipmentInventoryRects(27, EQUIPMENT_INVENTORY_LAYOUT, 1);
+    expect(router.handlePointerDown(
+      secondPageRects[2].x + 3,
+      secondPageRects[2].y + 3,
+    )).toBe(true);
+    expect(state.equipmentUi.selectedOwnedIndex).toBe(17);
+    const pagination = getEquipmentPaginationRects();
+    expect(router.handlePointerDown(
+      pagination.previous.x + 3,
+      pagination.previous.y + 3,
+    )).toBe(true);
+    expect(state.equipmentUi.selectedOwnedIndex).toBe(0);
+  });
+
   it("dispatches inventory and roulette renderers from one equipment overlay", () => {
     const labels = [];
     const ctx = createCanvasContextStub();
@@ -425,6 +563,11 @@ describe("equipment presentation and input", () => {
 
     renderer.drawEquipmentScreen();
     expect(labels).toContain("equipmentInventoryTitle");
+    expect(labels).toContain("equipmentCurrentStats");
+    expect(labels).toContain("equipmentStatMaxHp");
+    expect(labels).toContain("equipmentStatAttack");
+    expect(labels).toContain("equipmentStatGuard");
+    expect(labels).not.toContain("equipmentNoaPreviewHint");
     expect(labels).not.toContain("equipmentRouletteTitle");
 
     labels.length = 0;
@@ -496,12 +639,14 @@ describe("equipment presentation and input", () => {
     expect(state.equipmentUi.view).toBe(EQUIPMENT_SCREEN_VIEWS.inventory);
     expect(controller.equipEquipmentItem("wanderer-observer-hood")).toBe(true);
     expect(persisted.equipment.equipped.head).toBe("wanderer-observer-hood");
+    expect(controller.equipEquipmentItem("wanderer-observer-hood")).toBe(true);
+    expect(persisted.equipment.equipped.head).toBeNull();
     controller.openEquipmentRoulette();
     state.equipmentUi.motion = null;
     expect(controller.upgradeEquipmentRoulette()).toBe(true);
     expect(persisted.riftEnergy).toBe(9900);
     expect(persisted.equipment.wheelLevel).toBe(2);
-    expect(saveMetaProgress).toHaveBeenCalledTimes(3);
+    expect(saveMetaProgress).toHaveBeenCalledTimes(4);
   });
 
   it("does not draw or upgrade when Rift Energy cannot cover the current price", () => {

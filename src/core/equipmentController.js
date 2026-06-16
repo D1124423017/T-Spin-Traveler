@@ -7,6 +7,7 @@ import {
 import {
   drawEquipment,
   equipOwnedItem,
+  unequipOwnedItem,
   upgradeEquipmentWheel,
 } from "./equipmentProgress.js";
 
@@ -146,12 +147,19 @@ export function createEquipmentController({
   function equipEquipmentItem(itemId) {
     if (state.equipmentUi.view !== EQUIPMENT_SCREEN_VIEWS.inventory) return false;
     const nextProgress = loadMetaProgress();
-    const result = equipOwnedItem(nextProgress.equipment, itemId);
+    const equipped = Object.values(nextProgress.equipment?.equipped || {}).includes(itemId);
+    const result = equipped
+      ? unequipOwnedItem(nextProgress.equipment, itemId)
+      : equipOwnedItem(nextProgress.equipment, itemId);
     if (!result.ok) return false;
     nextProgress.equipment = result.progress;
     state.metaProgress = nextProgress;
     saveMetaProgress(state.metaProgress);
-    setMessage("equipmentItemEquipped", { name: translate(result.item.nameKey) }, 1800);
+    setMessage(
+      equipped ? "equipmentItemUnequipped" : "equipmentItemEquipped",
+      { name: translate(result.item.nameKey) },
+      1800,
+    );
     playSfx("hold");
     return true;
   }

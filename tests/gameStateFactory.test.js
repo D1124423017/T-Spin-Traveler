@@ -9,6 +9,7 @@ function createState(overrides = {}) {
     loadMetaProgress: vi.fn(() => ({ riftEnergy: 12 })),
     makeRunStats: vi.fn(() => ({ waveReached: 1 })),
     createDebugHudState: vi.fn(() => ({ drawError: "" })),
+    createEquipmentCombatState: vi.fn(() => ({ wave: 1, fatalSaveUsed: false })),
     normalizeControlsMap: vi.fn((controls) => ({ ...controls })),
     defaultControls: { left: ["a"] },
     defaultTuning: { das: 120 },
@@ -37,6 +38,7 @@ describe("game state factory", () => {
       ultimateTimerMax: 15000,
       menuSpecialIdleStartedAt: 1234,
       assetLoadingStartedAt: 1234,
+      equipmentCombat: { wave: 1, fatalSaveUsed: false },
     });
     expect(state.board).toEqual([["board"]]);
     expect(state.metaProgress).toEqual({ riftEnergy: 12 });

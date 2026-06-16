@@ -62,79 +62,244 @@ export const EQUIPMENT_WHEEL_LEVELS = Object.freeze([
 
 export const EQUIPMENT_ITEMS = Object.freeze([
   equipment("wanderer-observer-hood", "head", "common", {
+    maxHpBonus: 3,
+    attackBonus: 1,
+    guardBonus: 0,
+  }, {
     type: "lineAttackFlat",
     damage: 1,
   }),
   equipment("torn-traveler-cloak", "cloak", "common", {
+    maxHpBonus: 8,
+    attackBonus: 0,
+    guardBonus: 2,
+  }, {
     type: "battleStartGuard",
     guard: 2,
   }),
   equipment("shard-crystal-dagger", "weapon", "common", {
+    maxHpBonus: 2,
+    attackBonus: 2,
+    guardBonus: 0,
+  }, {
     type: "normalAttackFlat",
     damage: 2,
   }),
+  equipment("twin-line-rangefinder", "head", "common", {
+    maxHpBonus: 3,
+    attackBonus: 2,
+    guardBonus: 0,
+  }, {
+    type: "doubleDamageFlat",
+    damage: 2,
+  }),
+  equipment("dustwalk-guardcloak", "cloak", "common", {
+    maxHpBonus: 9,
+    attackBonus: 0,
+    guardBonus: 2,
+  }, {
+    type: "firstMultiLineGuard",
+    minimumLines: 2,
+    guard: 2,
+    usesPerWave: 1,
+  }),
+  equipment("four-column-riftblade", "weapon", "common", {
+    maxHpBonus: 2,
+    attackBonus: 3,
+    guardBonus: 0,
+  }, {
+    type: "tetrisDamageFlat",
+    damage: 3,
+  }),
   equipment("star-pattern-headwrap", "head", "rare", {
+    maxHpBonus: 5,
+    attackBonus: 2,
+    guardBonus: 1,
+  }, {
     type: "tspinDamageFlat",
     damage: 3,
   }),
   equipment("resonance-cloak", "cloak", "rare", {
+    maxHpBonus: 12,
+    attackBonus: 0,
+    guardBonus: 4,
+  }, {
     type: "comboThreeGuard",
     comboThreshold: 3,
     guard: 2,
   }),
   equipment("pulse-crystal-blade", "weapon", "rare", {
+    maxHpBonus: 4,
+    attackBonus: 3,
+    guardBonus: 1,
+  }, {
     type: "b2bDamageFlat",
     damage: 3,
   }),
+  equipment("chain-rhythm-crown", "head", "rare", {
+    maxHpBonus: 5,
+    attackBonus: 3,
+    guardBonus: 1,
+  }, {
+    type: "comboThresholdDamage",
+    comboThreshold: 3,
+    damage: 3,
+  }),
+  equipment("vortex-guard-mantle", "cloak", "rare", {
+    maxHpBonus: 13,
+    attackBonus: 0,
+    guardBonus: 4,
+  }, {
+    type: "firstTspinGuard",
+    guard: 4,
+    usesPerWave: 1,
+  }),
+  equipment("faultline-greatblade", "weapon", "rare", {
+    maxHpBonus: 4,
+    attackBonus: 4,
+    guardBonus: 1,
+  }, {
+    type: "tripleTetrisDamage",
+    damage: 5,
+  }),
   equipment("rift-observer-crown", "head", "relic", {
+    maxHpBonus: 8,
+    attackBonus: 3,
+    guardBonus: 2,
+  }, {
     type: "firstWaveTspinDamage",
     damage: 6,
     usesPerWave: 1,
   }),
   equipment("phase-long-cloak", "cloak", "relic", {
+    maxHpBonus: 18,
+    attackBonus: 0,
+    guardBonus: 6,
+  }, {
     type: "perfectClearGuard",
     guard: 6,
   }),
   equipment("orbital-longsword", "weapon", "relic", {
+    maxHpBonus: 6,
+    attackBonus: 5,
+    guardBonus: 1,
+  }, {
     type: "comboFourDamage",
     comboThreshold: 4,
     damage: 5,
   }),
+  equipment("timeshift-observer-ring", "head", "relic", {
+    maxHpBonus: 8,
+    attackBonus: 4,
+    guardBonus: 2,
+  }, {
+    type: "firstB2bDelay",
+    delay: 1,
+    usesPerWave: 1,
+  }),
+  equipment("afterimage-lifeguard-cloak", "cloak", "relic", {
+    maxHpBonus: 18,
+    attackBonus: 0,
+    guardBonus: 7,
+  }, {
+    type: "guardBreakRetain",
+    guard: 3,
+    usesPerWave: 1,
+  }),
+  equipment("zero-boundary-lance", "weapon", "relic", {
+    maxHpBonus: 6,
+    attackBonus: 6,
+    guardBonus: 1,
+  }, {
+    type: "perfectClearDamage",
+    damage: 10,
+  }),
   equipment("royal-crystal-crown", "head", "legendary", {
+    maxHpBonus: 10,
+    attackBonus: 5,
+    guardBonus: 2,
+  }, {
     type: "allAndTspinDamage",
     allDamage: 3,
     tspinDamage: 3,
   }),
   equipment("royal-nightfall-cloak", "cloak", "legendary", {
+    maxHpBonus: 24,
+    attackBonus: 0,
+    guardBonus: 8,
+  }, {
     type: "lowHpFirstGuardDouble",
     hpThresholdPercent: 50,
     guardMultiplier: 2,
     usesPerWave: 1,
   }),
   equipment("rift-sovereignty-blade", "weapon", "legendary", {
+    maxHpBonus: 8,
+    attackBonus: 7,
+    guardBonus: 2,
+  }, {
     type: "b2bTetrisDamage",
     damage: 8,
   }),
   equipment("rift-king-mask", "head", "legendary", {
+    maxHpBonus: 12,
+    attackBonus: 6,
+    guardBonus: 2,
+  }, {
     type: "fifthLineAttackDamage",
     attackInterval: 5,
     damage: 10,
   }),
   equipment("fate-deception-cloak", "cloak", "legendary", {
+    maxHpBonus: 22,
+    attackBonus: 1,
+    guardBonus: 10,
+  }, {
     type: "fatalSaveOnce",
     hpRetained: 1,
     guard: 10,
     usesPerBattle: 1,
   }),
   equipment("cheaters-amethyst-sword", "weapon", "legendary", {
+    maxHpBonus: 10,
+    attackBonus: 8,
+    guardBonus: 2,
+  }, {
     type: "ultimatePerfectDamage",
     damage: 15,
+  }),
+  equipment("infallible-star-crown", "head", "legendary", {
+    maxHpBonus: 11,
+    attackBonus: 6,
+    guardBonus: 3,
+  }, {
+    type: "firstDifficultDelay",
+    delay: 1,
+    usesPerWave: 1,
+  }),
+  equipment("fate-reversal-barrier-cloak", "cloak", "legendary", {
+    maxHpBonus: 24,
+    attackBonus: 0,
+    guardBonus: 9,
+  }, {
+    type: "fullBlockGuardRestore",
+    guard: 8,
+    usesPerWave: 1,
+  }),
+  equipment("continuous-riftbreaker-greatsword", "weapon", "legendary", {
+    maxHpBonus: 9,
+    attackBonus: 8,
+    guardBonus: 2,
+  }, {
+    type: "comboSixDamage",
+    comboThreshold: 6,
+    damage: 10,
   }),
 ]);
 
 const EQUIPMENT_BY_ID = new Map(EQUIPMENT_ITEMS.map((item) => [item.id, item]));
 
-function equipment(id, slot, rarity, effect) {
+function equipment(id, slot, rarity, stats, effect) {
   return Object.freeze({
     id,
     slot,
@@ -143,6 +308,7 @@ function equipment(id, slot, rarity, effect) {
     descriptionKey: `equipment.${id}.description`,
     effectKey: `equipment.${id}.effect`,
     iconAssetKey: id,
+    stats: Object.freeze({ ...stats }),
     effect: Object.freeze({ ...effect }),
   });
 }

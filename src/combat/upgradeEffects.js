@@ -218,6 +218,10 @@ const UPGRADE_EFFECT_APPLIERS = {
     runtime.state[effect.key] += effect.value;
   },
   addGuard(effect, runtime) {
+    if (typeof runtime.grantGuard === "function") {
+      runtime.grantGuard(effect.value);
+      return;
+    }
     runtime.state.guard = Math.min(runtime.getEffectiveMaxGuard(), runtime.state.guard + effect.value);
   },
   increasePlayerMaxHp(effect, runtime) {

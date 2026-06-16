@@ -6,9 +6,12 @@ import { getOwnedEquipmentForFilter } from "../core/equipmentProgress.js";
 import { pointInRect } from "../render/drawUtils.js";
 import {
   EQUIPMENT_INVENTORY_LAYOUT,
+  EQUIPMENT_INVENTORY_PAGE_SIZE,
   EQUIPMENT_ROULETTE_LAYOUT,
   getEquipmentFilterRects,
+  getEquipmentInventoryPage,
   getEquipmentInventoryRects,
+  getEquipmentPaginationRects,
 } from "../ui/equipmentLayout.js";
 import { clampEquipmentSelection } from "../ui/equipmentUiPrimitives.js";
 
@@ -42,6 +45,10 @@ export function createEquipmentInputRouter({
     }
     if (key === "ArrowUp" || key === "ArrowDown") {
       moveInventorySelection(key === "ArrowUp" ? -1 : 1);
+      return true;
+    }
+    if (key === "PageUp" || key === "PageDown") {
+      moveInventoryPage(key === "PageUp" ? -1 : 1);
       return true;
     }
     if (key === "Enter" || normalized === "e") {
@@ -91,7 +98,21 @@ export function createEquipmentInputRouter({
       return true;
     }
     const owned = filteredOwned();
-    const itemRect = getEquipmentInventoryRects(owned.length, inventoryLayout)
+    const page = currentInventoryPage(owned);
+    const pagination = getEquipmentPaginationRects(inventoryLayout);
+    if (page.pageCount > 1 && pointIn(pagination.previous, x, y)) {
+      moveInventoryPage(-1);
+      return true;
+    }
+    if (page.pageCount > 1 && pointIn(pagination.next, x, y)) {
+      moveInventoryPage(1);
+      return true;
+    }
+    const itemRect = getEquipmentInventoryRects(
+      owned.length,
+      inventoryLayout,
+      page.pageIndex,
+    )
       .find((entry) => pointIn(entry, x, y));
     if (itemRect) {
       state.equipmentUi.selectedOwnedIndex = itemRect.index;
@@ -136,7 +157,20 @@ export function createEquipmentInputRouter({
     ].some((rect) => pointIn(rect, x, y))) {
       return true;
     }
-    return getEquipmentInventoryRects(filteredOwned().length, inventoryLayout)
+    const owned = filteredOwned();
+    const page = currentInventoryPage(owned);
+    const pagination = getEquipmentPaginationRects(inventoryLayout);
+    if (
+      page.pageCount > 1
+      && [pagination.previous, pagination.next].some((rect) => pointIn(rect, x, y))
+    ) {
+      return true;
+    }
+    return getEquipmentInventoryRects(
+      owned.length,
+      inventoryLayout,
+      page.pageIndex,
+    )
       .some((rect) => pointIn(rect, x, y));
   }
 
@@ -159,6 +193,18 @@ export function createEquipmentInputRouter({
       % owned.length;
   }
 
+  function moveInventoryPage(direction) {
+    const owned = filteredOwned();
+    if (!owned.length) return;
+    const current = currentInventoryPage(owned);
+    const nextPage = (current.pageIndex + direction + current.pageCount)
+      % current.pageCount;
+    state.equipmentUi.selectedOwnedIndex = Math.min(
+      owned.length - 1,
+      nextPage * EQUIPMENT_INVENTORY_PAGE_SIZE,
+    );
+  }
+
   function equipSelectedItem() {
     const owned = filteredOwned();
     const index = clampEquipmentSelection(
@@ -173,6 +219,13 @@ export function createEquipmentInputRouter({
     return getOwnedEquipmentForFilter(
       state.metaProgress?.equipment,
       currentFilter(),
+    );
+  }
+
+  function currentInventoryPage(owned = filteredOwned()) {
+    return getEquipmentInventoryPage(
+      state.equipmentUi?.selectedOwnedIndex,
+      owned.length,
     );
   }
 

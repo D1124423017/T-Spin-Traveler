@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-15-archive-cleanup";
+export const ASSET_VERSION = "2026-06-16-equipment-expansion";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -219,6 +219,18 @@ export const equipmentIcons = {
   "rift-king-mask": registerImageAsset("equipment-icon-rift-king-mask", "assets/images/equipment/icons/rift-king-mask.png"),
   "fate-deception-cloak": registerImageAsset("equipment-icon-fate-deception-cloak", "assets/images/equipment/icons/fate-deception-cloak.png"),
   "cheaters-amethyst-sword": registerImageAsset("equipment-icon-cheaters-amethyst-sword", "assets/images/equipment/icons/cheaters-amethyst-sword.png"),
+  "twin-line-rangefinder": registerImageAsset("equipment-icon-twin-line-rangefinder", "assets/images/equipment/icons/twin-line-rangefinder.png"),
+  "dustwalk-guardcloak": registerImageAsset("equipment-icon-dustwalk-guardcloak", "assets/images/equipment/icons/dustwalk-guardcloak.png"),
+  "four-column-riftblade": registerImageAsset("equipment-icon-four-column-riftblade", "assets/images/equipment/icons/four-column-riftblade.png"),
+  "chain-rhythm-crown": registerImageAsset("equipment-icon-chain-rhythm-crown", "assets/images/equipment/icons/chain-rhythm-crown.png"),
+  "vortex-guard-mantle": registerImageAsset("equipment-icon-vortex-guard-mantle", "assets/images/equipment/icons/vortex-guard-mantle.png"),
+  "faultline-greatblade": registerImageAsset("equipment-icon-faultline-greatblade", "assets/images/equipment/icons/faultline-greatblade.png"),
+  "timeshift-observer-ring": registerImageAsset("equipment-icon-timeshift-observer-ring", "assets/images/equipment/icons/timeshift-observer-ring.png"),
+  "afterimage-lifeguard-cloak": registerImageAsset("equipment-icon-afterimage-lifeguard-cloak", "assets/images/equipment/icons/afterimage-lifeguard-cloak.png"),
+  "zero-boundary-lance": registerImageAsset("equipment-icon-zero-boundary-lance", "assets/images/equipment/icons/zero-boundary-lance.png"),
+  "infallible-star-crown": registerImageAsset("equipment-icon-infallible-star-crown", "assets/images/equipment/icons/infallible-star-crown.png"),
+  "fate-reversal-barrier-cloak": registerImageAsset("equipment-icon-fate-reversal-barrier-cloak", "assets/images/equipment/icons/fate-reversal-barrier-cloak.png"),
+  "continuous-riftbreaker-greatsword": registerImageAsset("equipment-icon-continuous-riftbreaker-greatsword", "assets/images/equipment/icons/continuous-riftbreaker-greatsword.png"),
 };
 export const stageEgyptStarTombRiftBg = registerImageAsset("stage-egypt-star-tomb-rift", "assets/images/regions/egypt/backgrounds/egypt_star_tomb_rift_battle_bg.png");
 export const stageEgyptStarTombExteriorRiftBg = registerImageAsset("stage-egypt-star-tomb-exterior-rift", "assets/images/regions/egypt/backgrounds/egypt_star_tomb_exterior_rift_bg.png");

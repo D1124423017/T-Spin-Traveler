@@ -75,6 +75,21 @@ describe("upgrade effects", () => {
     expect(runtime.state.guard).toBe(13);
   });
 
+  it("routes immediate Guard through an injected combat modifier when available", () => {
+    const runtime = createRuntime({
+      runtime: {
+        grantGuard: (amount) => {
+          runtime.state.guard += amount * 2;
+        },
+      },
+    });
+
+    applyUpgradeEffect(getUpgrade("guard_lattice"), runtime);
+
+    expect(runtime.state.maxGuard).toBe(28);
+    expect(runtime.state.guard).toBe(21);
+  });
+
   it("sets the new Angel special card flags without immediate healing", () => {
     const runtime = createRuntime();
 

@@ -91,6 +91,15 @@ import {
   shouldTriggerDefeat,
 } from "./src/combat/combatRules.js";
 import {
+  createEquipmentCombatState,
+  getEquipmentBattleStartGuard,
+  resolveEquipmentAttack,
+  resolveEquipmentFatalHit,
+  resolveEquipmentGuardImpact,
+  resolveEquipmentGuardGain,
+  startEquipmentCombatWave,
+} from "./src/combat/equipmentEffects.js";
+import {
   applyUpgradeEffect,
   getB2BTraitBonus,
   getBossKillerTraitBonus,
@@ -125,6 +134,7 @@ import {
   spendRiftEnergy,
 } from "./src/core/metaProgress.js";
 import { createEquipmentController } from "./src/core/equipmentController.js";
+import { getEquipmentLoadoutStats } from "./src/core/equipmentStats.js";
 import {
   advanceAscensionChallengeRun,
   applyAscensionChallengeResult,
@@ -1003,6 +1013,7 @@ const state = createGameState({
   loadMetaProgress,
   makeRunStats,
   createDebugHudState,
+  createEquipmentCombatState,
   normalizeControlsMap,
   defaultControls: DEFAULT_CONTROLS,
   defaultTuning: DEFAULT_TUNING,
@@ -1585,6 +1596,7 @@ const equipmentScreenRenderer = createEquipmentScreenRenderer({
   equipmentWheelPointerArt: equipmentRoulettePointer,
   noaCheatHandArt,
   noaPreviewArt: heroIdleArt,
+  noaIdleSheet: menuIdleRiftWayfinderSheet,
   riftEnergyIcon,
   isImageReady,
 });
@@ -2276,6 +2288,7 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
   state.angelBlessingCharges = 0;
   state.angelMercyWave = 0;
   state.devilSinMarks = 0;
+  state.equipmentCombat = createEquipmentCombatState({ wave: 1 });
   state.upgrades = {
     tspinBonus: 0,
     garbageCancel: 0,
@@ -2355,10 +2368,16 @@ function resetGame(runMode = state.runMode || "endless", challengeId = null) {
 
 function applyMetaProgressToNewRun() {
   state.metaProgress = loadMetaProgress();
-  const bonuses = getMetaBonuses(state.metaProgress);
-  state.playerMaxHp = PLAYER_MAX_HP + bonuses.hpBonus;
+  const loadoutStats = getEquipmentLoadoutStats(state.metaProgress, {
+    baseMaxHp: PLAYER_MAX_HP,
+  });
+  state.playerMaxHp = loadoutStats.finalStats.maxHp;
   state.playerHp = state.playerMaxHp;
-  state.guard = Math.min(getEffectiveMaxGuard(), bonuses.guardBonus);
+  state.guard = 0;
+  grantGuard(
+    loadoutStats.finalStats.guard
+      + getEquipmentBattleStartGuard(state.metaProgress.equipment),
+  );
 }
 
 function startBattleCountdown() {
@@ -2684,9 +2703,7 @@ function damageEnemyFromUpgrade(amount, floaterKey, color, x = 920, y = 430) {
 function grantGuardFromUpgrade(amount, floaterKey, color = "#9df7da", x = 86, y = 270) {
   const guard = Math.max(0, Math.floor(amount));
   if (guard <= 0) return 0;
-  const before = state.guard;
-  state.guard = Math.min(getEffectiveMaxGuard(), state.guard + guard);
-  const gained = state.guard - before;
+  const gained = grantGuard(guard);
   if (gained <= 0) return 0;
   if (floaterKey) {
     state.floaters.push({
@@ -2698,6 +2715,22 @@ function grantGuardFromUpgrade(amount, floaterKey, color = "#9df7da", x = 86, y 
     });
   }
   return gained;
+}
+
+function grantGuard(amount) {
+  const result = resolveEquipmentGuardGain({
+    progress: state.metaProgress?.equipment,
+    combatState: state.equipmentCombat,
+    wave: state.wave,
+    currentHp: state.playerHp,
+    maxHp: state.playerMaxHp,
+    currentGuard: state.guard,
+    maxGuard: getEffectiveMaxGuard(),
+    baseGain: amount,
+  });
+  state.equipmentCombat = result.combatState;
+  state.guard += result.gain;
+  return result.gain;
 }
 
 function getEffectiveMaxGuard() {
@@ -2880,8 +2913,52 @@ function applyEnemyHit(hit) {
   const angelProtection = applyAngelHitProtection(finalDamage, garbageAdded);
   finalDamage = angelProtection.finalDamage;
   garbageAdded = angelProtection.garbageAdded;
-  state.guard -= blocked;
+  const fatalSave = resolveEquipmentFatalHit({
+    progress: state.metaProgress?.equipment,
+    combatState: state.equipmentCombat,
+    wave: state.wave,
+    currentHp: state.playerHp,
+    damage: finalDamage,
+  });
+  state.equipmentCombat = fatalSave.combatState;
+  finalDamage = fatalSave.damage;
+  const equipmentGuardImpact = resolveEquipmentGuardImpact({
+    progress: state.metaProgress?.equipment,
+    combatState: state.equipmentCombat,
+    wave: state.wave,
+    currentGuard: state.guard,
+    maxGuard: getEffectiveMaxGuard(),
+    blocked,
+    incomingDamage: damageTaken,
+  });
+  state.equipmentCombat = equipmentGuardImpact.combatState;
+  state.guard = equipmentGuardImpact.guardAfter;
   state.playerHp = Math.max(0, state.playerHp - finalDamage);
+  if (equipmentGuardImpact.retainedGuard > 0 || equipmentGuardImpact.restoredGuard > 0) {
+    const retained = equipmentGuardImpact.retainedGuard > 0;
+    state.floaters.push({
+      x: 86,
+      y: 258,
+      text: fmt(
+        retained ? "equipmentGuardRetained" : "equipmentGuardRestored",
+        { guard: retained ? equipmentGuardImpact.retainedGuard : equipmentGuardImpact.restoredGuard },
+      ),
+      color: "#9df7da",
+      life: 1100,
+    });
+    playSfx("shield");
+  }
+  if (fatalSave.saved) {
+    grantGuard(fatalSave.guardGain);
+    state.floaters.push({
+      x: 86,
+      y: 238,
+      text: t("equipmentFatalSaveTriggered"),
+      color: "#fff0a6",
+      life: 1200,
+    });
+    playSfx("upgradeReady");
+  }
   state.pendingGarbage += garbageAdded;
   if (garbageAdded > 0) state.garbageGrace = getGarbageDelayForWave();
   applyEnemyBoardEffect(enemy);
@@ -3444,6 +3521,32 @@ function calculateDamage(context, snapshot) {
   }
   const devilDamage = applyDevilClearRewards({ lines, spinType, highValueClear, isDifficultClear, parts, sources });
   damage += devilDamage;
+  const equipmentAttack = resolveEquipmentAttack({
+    progress: state.metaProgress?.equipment,
+    combatState: state.equipmentCombat,
+    context: {
+      lines,
+      spinType,
+      combo: state.combo,
+      b2bActive: b2bAttackRows > 0,
+      perfect: state.lastPerfectClear,
+      ultimateActive: state.ultimateActive,
+      wave: state.wave,
+    },
+  });
+  state.equipmentCombat = equipmentAttack.combatState;
+  damage += equipmentAttack.damageBonus;
+  addDamagePart(parts, sources, "damageEquipment", equipmentAttack.damageBonus, "upgrade");
+  if (equipmentAttack.enemyDelay > 0) {
+    state.enemyCountdown += equipmentAttack.enemyDelay;
+    state.floaters.push({
+      x: BOARD_X + COLS * TILE + 36,
+      y: BOARD_Y + 242,
+      text: fmt("equipmentEnemyDelayed", { turns: equipmentAttack.enemyDelay }),
+      color: "#9edff8",
+      life: 1100,
+    });
+  }
 
   const multipliers = [];
   if (lines === 1 && state.enemyType.armorSingle && !state.lastPerfectClear) {
@@ -3607,7 +3710,7 @@ function calculateDamage(context, snapshot) {
     });
     if (canceled >= 3) {
       const guardGain = Math.min(8, canceled * 2);
-      state.guard = Math.min(getEffectiveMaxGuard(), state.guard + guardGain);
+      grantGuard(guardGain);
       state.floaters.push({
         x: 86,
         y: 248,
@@ -3716,7 +3819,7 @@ function calculateDamage(context, snapshot) {
     });
     playSfx("cancel");
   }
-  gainGuardFromClear(lines, spinType);
+  gainGuardFromClear(lines, spinType, equipmentAttack.guardBonus);
 
   addUpgradeProgress(effectiveLines);
   addUltimateCharge(lines, spinType);
@@ -3857,16 +3960,20 @@ function getComboMilestoneDamage(combo) {
   return getComboMilestoneDamageBase(combo, BALANCE.comboMilestoneEvery, BALANCE.comboMilestoneDamage);
 }
 
-function gainGuardFromClear(lines, spinType) {
+function gainGuardFromClear(lines, spinType, equipmentGuardBonus = 0) {
   if (lines <= 0) return;
   const traits = getTraitSnapshot();
   const comboGuard = state.combo >= 3 ? state.upgrades.comboGuardGain : 0;
   const traitDefenseGuard = getTraitBonus("Defense", [1, 2, 3]) + getDefenseTraitBonus(traits).clearGuard;
   const traitSpinGuard = spinType ? getTraitBonus("Spin", [1, 2, 4]) + getSpinTraitBonus(traits).guard : 0;
-  const gain = lines * BALANCE.guardPerLine + (spinType ? BALANCE.guardSpinBonus : 0) + state.upgrades.guardGain + comboGuard + traitDefenseGuard + traitSpinGuard;
-  const before = state.guard;
-  state.guard = Math.min(getEffectiveMaxGuard(), state.guard + gain);
-  const gained = state.guard - before;
+  const gain = lines * BALANCE.guardPerLine
+    + (spinType ? BALANCE.guardSpinBonus : 0)
+    + state.upgrades.guardGain
+    + comboGuard
+    + traitDefenseGuard
+    + traitSpinGuard
+    + equipmentGuardBonus;
+  const gained = grantGuard(gain);
   if (gained > 0 && (lines >= 3 || spinType)) {
     state.floaters.push({
       x: 86,
@@ -4275,6 +4382,7 @@ function startNextWave() {
     return;
   }
   state.wave += 1;
+  state.equipmentCombat = startEquipmentCombatWave(state.equipmentCombat, state.wave);
   configureEnemyForWave();
   state.enemyHit = 0;
   state.enemyAnimation = null;
@@ -4414,9 +4522,16 @@ function triggerUpgradeIfReady(forceRelic = false, forceRare = false, reason = "
 function applyUpgrade(upgrade) {
   applyUpgradeEffect(upgrade, {
     state,
-    basePlayerMaxHp: PLAYER_MAX_HP,
+    basePlayerMaxHp: getRunBasePlayerMaxHp(),
     getEffectiveMaxGuard,
+    grantGuard,
   });
+}
+
+function getRunBasePlayerMaxHp() {
+  return getEquipmentLoadoutStats(state.metaProgress, {
+    baseMaxHp: PLAYER_MAX_HP,
+  }).finalStats.maxHp;
 }
 
 function moveUpgradeSelection(direction) {

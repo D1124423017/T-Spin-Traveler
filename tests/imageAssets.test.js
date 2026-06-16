@@ -222,6 +222,18 @@ const equipmentIconPaths = [
   "rift-king-mask",
   "fate-deception-cloak",
   "cheaters-amethyst-sword",
+  "twin-line-rangefinder",
+  "dustwalk-guardcloak",
+  "four-column-riftblade",
+  "chain-rhythm-crown",
+  "vortex-guard-mantle",
+  "faultline-greatblade",
+  "timeshift-observer-ring",
+  "afterimage-lifeguard-cloak",
+  "zero-boundary-lance",
+  "infallible-star-crown",
+  "fate-reversal-barrier-cloak",
+  "continuous-riftbreaker-greatsword",
 ].map((id) => `assets/images/equipment/icons/${id}.png`);
 
 const heroAttackVfxSheets = [
