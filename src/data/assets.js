@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-16-prologue-mine-mvp";
+export const ASSET_VERSION = "2026-06-16-prologue-egypt-intro";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -174,6 +174,22 @@ export const storyProloguePanels = Object.freeze({
   panel12: registerImageAsset(
     "story-prologue-panel-12",
     "assets/images/story/prologue/prologue-panel-12-rift-core-absorbs-noa.png",
+  ),
+  panel13: registerImageAsset(
+    "story-prologue-panel-13",
+    "assets/images/story/prologue/prologue-panel-13-falls-into-egypt-ruins.png",
+  ),
+  panel14: registerImageAsset(
+    "story-prologue-panel-14",
+    "assets/images/story/prologue/prologue-panel-14-bound-in-egypt-research-hall.png",
+  ),
+  panel15: registerImageAsset(
+    "story-prologue-panel-15",
+    "assets/images/story/prologue/prologue-panel-15-restraint-overload.png",
+  ),
+  panel16: registerImageAsset(
+    "story-prologue-panel-16",
+    "assets/images/story/prologue/prologue-panel-16-escape-to-battle.png",
   ),
 });
 export const equipmentRouletteLayers = Object.freeze({

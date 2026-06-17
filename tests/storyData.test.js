@@ -32,7 +32,7 @@ function readPngInfo(relativePath) {
 }
 
 describe("story data", () => {
-  it("defines the prologue as twelve ordered non-empty comic panels", () => {
+  it("defines the prologue as sixteen ordered non-empty comic panels", () => {
     const scene = getStoryScene(STORY_SCENE_IDS.prologue);
 
     expect(scene).toMatchObject({
@@ -40,8 +40,13 @@ describe("story data", () => {
       titleKey: "story.prologue.title",
       afterCompleteAction: "startGameplay",
     });
-    expect(scene.panels).toHaveLength(12);
-    expect(scene.panels.map((panel) => panel.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    expect(scene.panels).toHaveLength(16);
+    expect(scene.panels.map((panel) => panel.order)).toEqual([
+      1, 2, 3, 4,
+      5, 6, 7, 8,
+      9, 10, 11, 12,
+      13, 14, 15, 16,
+    ]);
 
     for (const panel of scene.panels) {
       expect(panel.id).toMatch(/^prologue-panel-\d\d$/);
@@ -55,7 +60,7 @@ describe("story data", () => {
   it("registers every prologue panel as a 1920 x 1080 runtime asset", () => {
     const records = new Map(ASSET_REGISTRY.images.map((record) => [record.id, record]));
 
-    for (let index = 1; index <= 12; index += 1) {
+    for (let index = 1; index <= 16; index += 1) {
       const key = `panel${String(index).padStart(2, "0")}`;
       const assetId = `story-prologue-panel-${String(index).padStart(2, "0")}`;
       const record = records.get(assetId);
@@ -79,6 +84,33 @@ describe("story data", () => {
     expect(panel12.narrationKey).toBe("story.prologue.panel12.narration");
     expect(translations.zh[panel12.narrationKey]).toContain("礦坑崩裂");
     expect(translations.en[panel12.narrationKey]).toContain("mine split open");
+  });
+
+  it("continues from the rift core into Egypt before gameplay starts", () => {
+    const scene = getStoryScene(STORY_SCENE_IDS.prologue);
+    const panel13 = scene.panels[12];
+    const panel14 = scene.panels[13];
+    const panel15 = scene.panels[14];
+    const panel16 = scene.panels[15];
+
+    expect(panel13.imageAssetKey).toBe("story-prologue-panel-13");
+    expect(panel13.narrationKey).toBe("story.prologue.panel13.narration");
+    expect(ASSET_REGISTRY.images.find((record) => record.id === panel13.imageAssetKey)?.path)
+      .toBe("assets/images/story/prologue/prologue-panel-13-falls-into-egypt-ruins.png");
+    expect(translations.zh[panel13.narrationKey]).toContain("陌生神殿");
+    expect(translations.en[panel13.narrationKey]).toContain("strange temple");
+
+    expect(panel14.imageAssetKey).toBe("story-prologue-panel-14");
+    expect(translations.zh[panel14.narrationKey]).toContain("埃及祭司");
+    expect(translations.en[panel14.narrationKey]).toContain("Egyptian priests");
+
+    expect(panel15.imageAssetKey).toBe("story-prologue-panel-15");
+    expect(translations.zh[panel15.narrationKey]).toContain("反向湧回裝置");
+    expect(translations.en[panel15.narrationKey]).toContain("surged backward");
+
+    expect(panel16.imageAssetKey).toBe("story-prologue-panel-16");
+    expect(translations.zh[panel16.narrationKey]).toContain("守衛包圍");
+    expect(translations.en[panel16.narrationKey]).toContain("surrounded");
   });
 
   it("has zh and en story translations without internal spoiler terms", () => {
