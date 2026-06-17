@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createEquipmentHeroPreviewRenderer,
   createEquipmentHeroIdlePlayback,
+  getEquipmentHeroDrawRect,
   getEquipmentHeroFrameIndex,
   getEquipmentHeroFrameSource,
 } from "../src/ui/equipmentHeroPreview.js";
@@ -27,6 +28,13 @@ describe("equipment hero preview", () => {
     });
   });
 
+  it("positions the full-body preview lower without resizing it", () => {
+    const rect = getEquipmentHeroDrawRect({ x: 50, y: 86, w: 316, h: 438 });
+
+    expect(rect).toEqual({ x: 50, y: 110, w: 316, h: 438 });
+    expect(rect.y + rect.h).toBeLessThanOrEqual(666);
+  });
+
   it("schedules one-shot idle bursts after random rest windows", () => {
     const animations = [
       { id: "menu-idle-cube", image: {}, frameMs: 100, frameCount: 10 },
@@ -39,30 +47,30 @@ describe("equipment hero preview", () => {
       .mockReturnValueOnce(0);
     const playback = createEquipmentHeroIdlePlayback({
       animations,
-      delayMinMs: 5000,
-      delayMaxMs: 8000,
+      delayMinMs: 3000,
+      delayMaxMs: 5000,
       fadeMs: 100,
       resetGapMs: Number.POSITIVE_INFINITY,
       random,
     });
 
     expect(playback.get(0)).toBeNull();
-    expect(playback.get(4999)).toBeNull();
-    expect(playback.get(5000)).toMatchObject({
+    expect(playback.get(2999)).toBeNull();
+    expect(playback.get(3000)).toMatchObject({
       animation: { id: "menu-idle-meditate" },
       elapsed: 0,
     });
-    expect(playback.get(5400)).toMatchObject({
+    expect(playback.get(3400)).toMatchObject({
       animation: { id: "menu-idle-meditate" },
       elapsed: 400,
     });
-    expect(playback.get(5800)).toBeNull();
-    expect(playback.get(13799)).toBeNull();
-    expect(playback.get(13800)).toMatchObject({
+    expect(playback.get(3800)).toBeNull();
+    expect(playback.get(8799)).toBeNull();
+    expect(playback.get(8800)).toMatchObject({
       animation: { id: "menu-idle-cube" },
       elapsed: 0,
     });
-    expect(playback.get(13820, { reducedMotion: true })).toBeNull();
+    expect(playback.get(8820, { reducedMotion: true })).toBeNull();
   });
 
   it("keeps the destination box fixed while the fallback idle sheet stays static", () => {
@@ -88,8 +96,8 @@ describe("equipment hero preview", () => {
 
     const firstDraw = ctx.drawImage.mock.calls[0];
     const secondDraw = ctx.drawImage.mock.calls[1];
-    expect(firstDraw.slice(5)).toEqual([50, 86, 316, 438]);
-    expect(secondDraw.slice(5)).toEqual([50, 86, 316, 438]);
+    expect(firstDraw.slice(5)).toEqual([50, 110, 316, 438]);
+    expect(secondDraw.slice(5)).toEqual([50, 110, 316, 438]);
     expect(firstDraw.slice(1, 5)).toEqual([0, 0, 512, 768]);
     expect(secondDraw.slice(1, 5)).toEqual([0, 0, 512, 768]);
   });
@@ -117,10 +125,50 @@ describe("equipment hero preview", () => {
     expect(drawImageContain).toHaveBeenCalledWith(
       fallbackArt,
       imageRect.x,
-      imageRect.y,
+      imageRect.y + 24,
       imageRect.w,
       imageRect.h,
     );
+  });
+
+  it("plays the provided idle sheet as a one-shot burst without extra wiring", () => {
+    const ctx = createCanvasContextStub();
+    const idleSheet = { naturalWidth: 2048, naturalHeight: 3072 };
+    const fallbackArt = {};
+    let elapsed = 0;
+    const renderer = createEquipmentHeroPreviewRenderer({
+      ctx,
+      idleSheet,
+      fallbackArt,
+      isImageReady: (image) => image === idleSheet || image === fallbackArt,
+      drawImageContain: vi.fn(),
+      now: () => elapsed,
+      reducedMotion: () => false,
+      idleDelayMinMs: 3000,
+      idleDelayMaxMs: 3000,
+      idleRandom: vi.fn()
+        .mockReturnValueOnce(0)
+        .mockReturnValueOnce(0),
+    });
+    const imageRect = { x: 50, y: 86, w: 316, h: 438 };
+    const stageRect = { x: 40, y: 104, w: 336, h: 420 };
+
+    const drawAt = (time) => {
+      elapsed = time;
+      renderer.draw({ stageRect, imageRect });
+    };
+
+    drawAt(0);
+    drawAt(1000);
+    drawAt(2000);
+    expect(ctx.drawImage).not.toHaveBeenCalled();
+
+    drawAt(3000);
+    drawAt(3600);
+    const draw = ctx.drawImage.mock.calls.at(-1);
+    expect(draw[0]).toBe(idleSheet);
+    expect(draw.slice(1, 5)).toEqual([1536, 0, 512, 768]);
+    expect(draw.slice(5)).toEqual([50, 110, 316, 438]);
   });
 
   it("uses one active idle burst without moving the preview box", () => {
@@ -140,8 +188,8 @@ describe("equipment hero preview", () => {
       drawImageContain: vi.fn(),
       now: () => elapsed,
       reducedMotion: () => false,
-      idleDelayMinMs: 5000,
-      idleDelayMaxMs: 5000,
+      idleDelayMinMs: 3000,
+      idleDelayMaxMs: 3000,
       idleRandom: vi.fn()
         .mockReturnValueOnce(0)
         .mockReturnValueOnce(0.6)
@@ -159,21 +207,23 @@ describe("equipment hero preview", () => {
     drawAt(0);
     expect(ctx.drawImage).not.toHaveBeenCalled();
 
-    [1000, 2000, 3000, 4000, 5000, 5600].forEach(drawAt);
+    [1000, 2000, 3000, 3600].forEach(drawAt);
 
     const draw = ctx.drawImage.mock.calls.at(-1);
     expect(draw[0]).toBe(meditateSheet);
     expect(draw.slice(1, 5)).toEqual([1024, 768, 512, 768]);
-    expect(draw.slice(5)).toEqual([50, 86, 316, 438]);
+    expect(draw.slice(5)).toEqual([50, 110, 316, 438]);
 
     ctx.drawImage.mockClear();
+    drawAt(4600);
+    drawAt(5600);
     drawAt(6600);
     expect(ctx.drawImage).not.toHaveBeenCalled();
 
-    [7600, 8600, 9600, 10600, 11599].forEach(drawAt);
+    [7599].forEach(drawAt);
     expect(ctx.drawImage).not.toHaveBeenCalled();
 
-    drawAt(11600);
+    drawAt(7600);
     expect(ctx.drawImage).toHaveBeenCalled();
   });
 
@@ -196,8 +246,8 @@ describe("equipment hero preview", () => {
       drawImageContain: vi.fn(),
       now: () => elapsed,
       reducedMotion: () => false,
-      idleDelayMinMs: 5000,
-      idleDelayMaxMs: 5000,
+      idleDelayMinMs: 3000,
+      idleDelayMaxMs: 3000,
       idleRandom: random,
     });
     const imageRect = { x: 50, y: 86, w: 316, h: 438 };
@@ -209,17 +259,17 @@ describe("equipment hero preview", () => {
     };
 
     drawAt(0);
-    [1000, 2000, 3000, 4000, 5000].forEach(drawAt);
+    [1000, 2000, 3000].forEach(drawAt);
     expect(ctx.drawImage).toHaveBeenCalled();
 
     ctx.drawImage.mockClear();
     drawAt(20000);
     expect(ctx.drawImage).not.toHaveBeenCalled();
 
-    [21000, 22000, 23000, 24000, 24999].forEach(drawAt);
+    [21000, 22000, 22999].forEach(drawAt);
     expect(ctx.drawImage).not.toHaveBeenCalled();
 
-    drawAt(25000);
+    drawAt(23000);
     expect(ctx.drawImage).toHaveBeenCalled();
   });
 });

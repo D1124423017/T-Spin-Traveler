@@ -2,10 +2,11 @@ const GRID_COLUMNS = 4;
 const GRID_ROWS = 4;
 const FRAME_COUNT = GRID_COLUMNS * GRID_ROWS;
 const DEFAULT_FRAME_MS = 190;
-const DEFAULT_IDLE_DELAY_MIN_MS = 5000;
-const DEFAULT_IDLE_DELAY_MAX_MS = 8000;
+const DEFAULT_IDLE_DELAY_MIN_MS = 3000;
+const DEFAULT_IDLE_DELAY_MAX_MS = 5000;
 const DEFAULT_IDLE_FADE_MS = 180;
 const DEFAULT_IDLE_RESET_GAP_MS = 1200;
+const HERO_PREVIEW_DRAW_OFFSET_Y = 24;
 
 function easePulse(edge, value) {
   const safeEdge = Math.max(1, Number(edge) || DEFAULT_IDLE_FADE_MS);
@@ -40,6 +41,31 @@ function pickRandomAnimation(animations, random) {
   const t = clamp01(random());
   const index = Math.min(animations.length - 1, Math.floor(t * animations.length));
   return animations[index];
+}
+
+function getDefaultIdleAnimations(idleAnimations, idleSheet) {
+  if (idleAnimations.length) return idleAnimations;
+  if (!idleSheet) return [];
+  return [{
+    id: "equipment-idle-sheet",
+    image: idleSheet,
+    frameMs: DEFAULT_FRAME_MS,
+    frameCount: FRAME_COUNT,
+  }];
+}
+
+export function getEquipmentHeroDrawRect(
+  imageRect,
+  {
+    offsetY = HERO_PREVIEW_DRAW_OFFSET_Y,
+  } = {},
+) {
+  return {
+    x: imageRect.x,
+    y: imageRect.y + offsetY,
+    w: imageRect.w,
+    h: imageRect.h,
+  };
 }
 
 export function getEquipmentHeroFrameIndex(
@@ -178,8 +204,9 @@ export function createEquipmentHeroPreviewRenderer({
   now = () => performance.now(),
   reducedMotion = () => globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true,
 } = {}) {
+  const playableIdleAnimations = getDefaultIdleAnimations(idleAnimations, idleSheet);
   const idlePlayback = createEquipmentHeroIdlePlayback({
-    animations: idleAnimations,
+    animations: playableIdleAnimations,
     delayMinMs: idleDelayMinMs,
     delayMaxMs: idleDelayMaxMs,
     fadeMs: idleFadeMs,
@@ -189,6 +216,7 @@ export function createEquipmentHeroPreviewRenderer({
   function draw({ stageRect, imageRect } = {}) {
     const time = Math.max(0, Number(now()) || 0);
     const motionReduced = Boolean(reducedMotion());
+    const heroRect = getEquipmentHeroDrawRect(imageRect);
     drawRiftAura(stageRect, time, motionReduced);
     drawRiftPlatform(stageRect, time, motionReduced);
 
@@ -204,10 +232,10 @@ export function createEquipmentHeroPreviewRenderer({
         ctx.globalAlpha *= 1 - playback.alpha;
         drawImageContain(
           fallbackArt,
-          imageRect.x,
-          imageRect.y,
-          imageRect.w,
-          imageRect.h,
+          heroRect.x,
+          heroRect.y,
+          heroRect.w,
+          heroRect.h,
         );
         ctx.restore();
       }
@@ -217,11 +245,11 @@ export function createEquipmentHeroPreviewRenderer({
           frameMs: playback.animation.frameMs,
           frameCount: playback.animation.frameCount,
         }),
-        imageRect,
+        heroRect,
         playback.alpha,
       );
     } else {
-      drawStaticHero(imageRect);
+      drawStaticHero(heroRect);
     }
     ctx.restore();
   }
