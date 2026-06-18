@@ -7,6 +7,7 @@ import {
   drawElasticRiftSlider,
   defaultElasticRiftSliderFormatValue,
 } from "./elasticRiftSlider.js";
+import { drawBorderGlow } from "./borderGlow.js";
 
 export function getSettingsTabLabelKey(tab) {
   if (!tab) return "";
@@ -61,13 +62,53 @@ export function drawSettingsScreenOverlay(deps, source = "pause") {
   ctx.save();
   drawDimOverlay(source === "start" ? OVERLAY_READABILITY.scrim.settings : OVERLAY_READABILITY.scrim.standard);
   drawCard(s.x, s.y, s.w, s.h);
+  drawSettingsBorderGlow(deps, { x: s.x, y: s.y, w: s.w, h: s.h }, {
+    edgeSensitivity: 64,
+    glowIntensity: 0.58,
+    glowRadius: 26,
+    radius: 22,
+    selected: true,
+    selectedIntensity: 0.22,
+  });
   label(t("settings"), s.x + 42, s.y + 58, 40, "#f5f1e6");
   const backText = source === "start" ? t("settingsBackMenu") : t("settingsBack");
   const backButton = getSettingsBackButtonRect();
   drawMenuButton(backButton.x, backButton.y, backButton.w, backButton.h, backText, "Esc");
+  drawSettingsBorderGlow(deps, backButton, {
+    edgeSensitivity: 34,
+    fillOpacity: 0.018,
+    glowIntensity: 0.72,
+    glowRadius: 18,
+    radius: 10,
+  });
   drawSettingsTabs(deps, s.tabX, s.y + 112);
   drawSettingsContent(deps, s.contentX, s.contentY);
   ctx.restore();
+}
+
+function getSettingsGlowOptions(deps) {
+  return {
+    now: deps.state?.debug?.lastDrawAt || 0,
+    pointer: deps.state?.pointer,
+    reducedMotion: typeof deps.prefersReducedMotion === "function"
+      ? deps.prefersReducedMotion()
+      : false,
+  };
+}
+
+function drawSettingsBorderGlow(deps, rect, options = {}) {
+  drawBorderGlow(deps.ctx, {
+    rect,
+    roundedRect: deps.roundedRect,
+    ...getSettingsGlowOptions(deps),
+    ...options,
+  });
+}
+
+function isSettingsPointerInRect(state, rect) {
+  const pointer = state?.pointer;
+  if (!pointer) return false;
+  return pointInRect(pointer.x, pointer.y, rect.x, rect.y, rect.w, rect.h);
 }
 
 function drawSettingsTabs(deps, x, y) {
@@ -83,12 +124,32 @@ function drawSettingsTabs(deps, x, y) {
     const tab = settingsTabs[i];
     const active = state.settingsTab === tab;
     const yy = y + i * 62;
+    const rect = { x, y: yy, w: 164, h: 46 };
+    const hovered = isSettingsPointerInRect(state, rect);
     ctx.save();
-    ctx.fillStyle = active ? "rgba(183, 146, 255, 0.3)" : OVERLAY_READABILITY.surface.fillSoft;
-    roundedRect(x, yy, 164, 46, 12, true, false);
-    ctx.strokeStyle = active ? "rgba(255, 240, 166, 0.54)" : "rgba(145, 232, 222, 0.14)";
-    roundedRect(x, yy, 164, 46, 12, false, true);
-    label(t(getSettingsTabLabelKey(tab)), x + 22, yy + 29, 16, active ? "#fff0a6" : "rgba(238,244,252,0.64)");
+    let fill = active ? "rgba(183, 146, 255, 0.34)" : "rgba(9, 17, 28, 0.76)";
+    if (typeof ctx.createLinearGradient === "function") {
+      fill = ctx.createLinearGradient(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h);
+      fill.addColorStop(0, active ? "rgba(183, 146, 255, 0.34)" : "rgba(9, 17, 28, 0.76)");
+      fill.addColorStop(1, active ? "rgba(22, 15, 44, 0.72)" : "rgba(4, 8, 16, 0.72)");
+    }
+    ctx.fillStyle = fill;
+    roundedRect(rect.x, rect.y, rect.w, rect.h, 12, true, false);
+    ctx.strokeStyle = active ? "rgba(255, 240, 166, 0.54)" : "rgba(145, 232, 222, 0.16)";
+    ctx.lineWidth = active ? 1.8 : 1.2;
+    roundedRect(rect.x, rect.y, rect.w, rect.h, 12, false, true);
+    ctx.restore();
+    drawSettingsBorderGlow(deps, rect, {
+      edgeSensitivity: 28,
+      fillOpacity: active ? 0.035 : 0.018,
+      glowIntensity: hovered || active ? 0.86 : 0.42,
+      glowRadius: 18,
+      radius: 12,
+      selected: active,
+      selectedIntensity: active ? 0.42 : 0,
+    });
+    ctx.save();
+    label(t(getSettingsTabLabelKey(tab)), rect.x + 22, rect.y + 29, 16, active ? "#fff0a6" : "rgba(238,244,252,0.68)");
     ctx.restore();
   }
 }
@@ -150,6 +211,15 @@ function drawSettingsFeedbackCard(deps, x, y, w, h) {
   ctx.strokeStyle = "rgba(126, 231, 255, 0.22)";
   ctx.lineWidth = 1.5;
   roundedRect(x, y, w, h, 12, false, true);
+  drawSettingsBorderGlow(deps, { x, y, w, h }, {
+    edgeSensitivity: 40,
+    fillOpacity: 0.018,
+    glowIntensity: 0.44,
+    glowRadius: 20,
+    radius: 12,
+    selected: true,
+    selectedIntensity: 0.14,
+  });
   wrapText(t("feedbackHelp"), x + 24, y + 48, w - 278, 23, "rgba(238,244,252,0.76)", 15);
   drawSettingsFeedbackNoa(deps, x + w - 236, y + 22, 202, h - 42);
   drawSettingsFeedbackButton(deps, buttonRect, t("feedbackOpenGithub"), "#fff0a6");
@@ -163,13 +233,22 @@ function drawSettingsFeedbackButton(deps, rect, text, color) {
     roundedRect,
     state,
   } = deps;
-  const hovered = pointInRect(state.pointer.x, state.pointer.y, rect.x, rect.y, rect.w, rect.h);
+  const hovered = isSettingsPointerInRect(state, rect);
   ctx.save();
   ctx.fillStyle = hovered ? hexToRgba(color, 0.28) : OVERLAY_READABILITY.surface.fillStrong;
   roundedRect(rect.x, rect.y, rect.w, rect.h, 8, true, false);
   ctx.strokeStyle = hovered ? hexToRgba(color, 0.68) : hexToRgba(color, 0.34);
   ctx.lineWidth = hovered ? 2 : 1.4;
   roundedRect(rect.x, rect.y, rect.w, rect.h, 8, false, true);
+  drawSettingsBorderGlow(deps, rect, {
+    edgeSensitivity: 34,
+    fillOpacity: 0.026,
+    glowIntensity: hovered ? 0.94 : 0.46,
+    glowRadius: 20,
+    radius: 8,
+    selected: hovered,
+    selectedIntensity: hovered ? 0.64 : 0,
+  });
   ctx.fillStyle = hovered ? color : "rgba(245,241,230,0.82)";
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
@@ -185,13 +264,22 @@ function drawSettingsUtilityButton(deps, rect, text) {
     roundedRect,
     state,
   } = deps;
-  const hovered = pointInRect(state.pointer.x, state.pointer.y, rect.x, rect.y, rect.w, rect.h);
+  const hovered = isSettingsPointerInRect(state, rect);
   ctx.save();
   ctx.fillStyle = hovered ? "rgba(126, 231, 255, 0.24)" : OVERLAY_READABILITY.surface.fill;
   roundedRect(rect.x, rect.y, rect.w, rect.h, 8, true, false);
   ctx.strokeStyle = hovered ? "rgba(255, 240, 166, 0.52)" : "rgba(126, 231, 255, 0.26)";
   ctx.lineWidth = hovered ? 2 : 1.4;
   roundedRect(rect.x, rect.y, rect.w, rect.h, 8, false, true);
+  drawSettingsBorderGlow(deps, rect, {
+    edgeSensitivity: 30,
+    fillOpacity: 0.02,
+    glowIntensity: hovered ? 0.86 : 0.36,
+    glowRadius: 18,
+    radius: 8,
+    selected: hovered,
+    selectedIntensity: hovered ? 0.52 : 0,
+  });
   fitLabel(text, rect.x + 16, rect.y + 25, rect.w - 32, 14, hovered ? "#fff0a6" : "rgba(245,241,230,0.78)", 11, "800");
   ctx.restore();
 }
@@ -242,6 +330,15 @@ function drawLanguagePill(deps, x, y, w, h, text, active) {
   ctx.strokeStyle = active ? "rgba(255, 244, 168, 0.62)" : "rgba(145, 232, 222, 0.24)";
   ctx.lineWidth = 2;
   roundedRect(x, y, w, h, 8, false, true);
+  drawSettingsBorderGlow(deps, { x, y, w, h }, {
+    edgeSensitivity: 22,
+    fillOpacity: 0.02,
+    glowIntensity: active ? 0.66 : 0.32,
+    glowRadius: 14,
+    radius: 8,
+    selected: active,
+    selectedIntensity: active ? 0.44 : 0,
+  });
   label(text, x + 18, y + 23, 15, active ? "#fff0a6" : "rgba(238,244,252,0.68)");
   ctx.restore();
 }
@@ -338,13 +435,24 @@ function drawHandlingSlider(deps, labelText, helpText, key, x, y) {
   const trackX = getSettingsSliderTrackX("tuning");
   const trackY = y + 34;
   const valueX = trackX + trackW + 28;
-  const active = state.pointer.dragging === `tuning:${key}`;
+  const rect = { x, y, w: 640, h: 70 };
+  const active = state.pointer?.dragging === `tuning:${key}`;
+  const hovered = isSettingsPointerInRect(state, rect);
   ctx.save();
   ctx.fillStyle = active ? "rgba(183, 146, 255, 0.26)" : OVERLAY_READABILITY.surface.fillSoft;
-  roundedRect(x, y, 640, 70, 12, true, false);
+  roundedRect(rect.x, rect.y, rect.w, rect.h, 12, true, false);
   ctx.strokeStyle = active ? "rgba(255, 240, 166, 0.54)" : "rgba(126, 231, 255, 0.2)";
   ctx.lineWidth = active ? 2 : 1.4;
-  roundedRect(x, y, 640, 70, 12, false, true);
+  roundedRect(rect.x, rect.y, rect.w, rect.h, 12, false, true);
+  drawSettingsBorderGlow(deps, rect, {
+    edgeSensitivity: 32,
+    fillOpacity: 0.018,
+    glowIntensity: active || hovered ? 0.78 : 0.34,
+    glowRadius: 18,
+    radius: 12,
+    selected: active,
+    selectedIntensity: active ? 0.54 : 0,
+  });
 
   fitLabel(labelText, x + 18, y + 24, 190, 16, "#f3f2ea", 12, "900");
   wrapText(helpText, x + 18, y + 46, 205, 16, "rgba(238,244,252,0.58)", 11);
@@ -397,18 +505,30 @@ function drawKeyBindRow(deps, x, y, text, value, binding, w = deps.layout.contro
     fitLabel,
     layout,
     roundedRect,
+    state,
     t,
   } = deps;
   const keyW = layout.controlsGrid.keyW;
   const keyH = layout.controlsGrid.keyH;
   const keyX = x + w - keyW;
   const labelW = keyX - x - 22;
+  const rect = { x, y, w, h: 42 };
+  const hovered = isSettingsPointerInRect(state, rect);
   ctx.save();
   ctx.fillStyle = binding ? "rgba(241, 211, 107, 0.22)" : OVERLAY_READABILITY.surface.fillSoft;
-  roundedRect(x, y, w, 42, 8, true, false);
+  roundedRect(rect.x, rect.y, rect.w, rect.h, 8, true, false);
   ctx.strokeStyle = binding ? "rgba(255, 244, 168, 0.44)" : "rgba(145, 232, 222, 0.14)";
   ctx.lineWidth = 1.4;
-  roundedRect(x, y, w, 42, 8, false, true);
+  roundedRect(rect.x, rect.y, rect.w, rect.h, 8, false, true);
+  drawSettingsBorderGlow(deps, rect, {
+    edgeSensitivity: 24,
+    fillOpacity: 0.016,
+    glowIntensity: binding || hovered ? 0.76 : 0.3,
+    glowRadius: 14,
+    radius: 8,
+    selected: binding,
+    selectedIntensity: binding ? 0.5 : 0,
+  });
   fitLabel(text, x + 14, y + 26, labelW, 15, "#f3f2ea", 12, "800");
   ctx.fillStyle = binding ? "rgba(241, 211, 107, 0.34)" : "rgba(109, 232, 255, 0.18)";
   roundedRect(keyX, y + 3, keyW, keyH, 7, true, false);
