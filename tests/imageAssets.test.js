@@ -146,8 +146,20 @@ const legacyAnimationNames = [
 ];
 
 const heroPresentationAssets = [
-  { path: "assets/images/characters/noa/ET_Character_fullbody_alpha.png", width: 1024, height: 1536 },
-  { path: "assets/images/characters/noa/noa_feedback_thanks_alpha.png", width: 1024, height: 1536 },
+  {
+    path: "assets/images/characters/noa/ET_Character_fullbody_alpha.png",
+    width: 1024,
+    height: 1307,
+    minHeight: 1200,
+    maxHeight: 1536,
+  },
+  {
+    path: "assets/images/characters/noa/noa_feedback_thanks_alpha.png",
+    width: 1024,
+    height: 1536,
+    minHeight: 1536,
+    maxHeight: 1536,
+  },
 ];
 
 const menuIdleSpritesheetAssets = [
@@ -495,7 +507,10 @@ describe("image assets", () => {
     const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
     for (const asset of heroPresentationAssets) {
       expect(assetsSource).toContain(asset.path);
-      expect(readPngInfo(asset.path)).toEqual({ width: asset.width, height: asset.height, colorType: 6 });
+      const info = readPngInfo(asset.path);
+      expect(info).toEqual({ width: asset.width, height: asset.height, colorType: 6 });
+      expect(info.height).toBeGreaterThanOrEqual(asset.minHeight);
+      expect(info.height).toBeLessThanOrEqual(asset.maxHeight);
     }
   });
 
