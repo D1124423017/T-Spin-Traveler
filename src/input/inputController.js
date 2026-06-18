@@ -114,7 +114,7 @@ export function installInputController({
     getButtonRects: getMainMenuButtonRects,
     playSfx,
     actions: {
-      start: () => startStoryScene?.("prologue", "endless"),
+      start: () => resetGame?.("endless"),
       mainStage: () => startStoryScene?.("prologue", "storyEgypt"),
       equipment: () => openEquipmentScreen?.(),
       metaUpgrade: () => {

@@ -278,6 +278,9 @@ describe("extracted game helpers", () => {
 
     state.mode = "start";
     keyDown(event("Enter"));
+    state.mode = "start";
+    state.mainMenuSelectedIndex = 1;
+    keyDown(event("Enter"));
 
     expect(calls).toEqual([
       ["pressHorizontal", -1],
@@ -288,7 +291,8 @@ describe("extracted game helpers", () => {
       ["hold"],
       ["hardDrop"],
       ["setGameMode", "paused"],
-      ["startStoryScene", "prologue", "endless"],
+      ["resetGame", "endless"],
+      ["startStoryScene", "prologue", "storyEgypt"],
     ]);
 
     controller.destroy();
