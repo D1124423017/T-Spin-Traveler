@@ -1,3 +1,9 @@
+import {
+  drawOverlayGlassPanel,
+  drawOverlayGlassSection,
+  drawOverlayTitleRule,
+} from "./overlayGlassSkin.js";
+
 export function createPauseOverlayRenderer({
   ctx,
   state,
@@ -8,7 +14,6 @@ export function createPauseOverlayRenderer({
   wrapText,
   roundedRect,
   drawDimOverlay,
-  drawCard,
   drawMenuButton,
   drawSettingsOverlay,
   controlDisplayValue,
@@ -19,10 +24,16 @@ export function createPauseOverlayRenderer({
       return;
     }
     const menu = uiLayout.pauseMenu;
+    const skinDeps = { ctx, roundedRect, state };
     ctx.save();
     drawDimOverlay(overlayReadability.scrim.pause);
-    drawCard(menu.x, menu.y, menu.w, menu.h);
+    drawOverlayGlassPanel(skinDeps, menu, {
+      glowIntensity: 0.68,
+      glowRadius: 26,
+      selectedIntensity: 0.24,
+    });
     label(t("pauseMenu"), menu.x + 48, menu.y + 76, 42, "#f5f1e6");
+    drawOverlayTitleRule(skinDeps, menu.x + 50, menu.y + 94, menu.w - 100, "#8fe8dc");
     wrapText(t("pauseMenuHint"), menu.x + 50, menu.y + 112, menu.w - 100, 22, "rgba(238,244,252,0.62)", 15);
     drawMenuButton(
       menu.x + 56,
@@ -43,10 +54,13 @@ export function createPauseOverlayRenderer({
 
   function drawPauseStat(x, y, name, value) {
     ctx.save();
-    ctx.fillStyle = overlayReadability.surface.fill;
-    roundedRect(x, y - 22, 190, 28, 7, true, false);
-    ctx.strokeStyle = "rgba(145, 232, 222, 0.16)";
-    roundedRect(x, y - 22, 190, 28, 7, false, true);
+    drawOverlayGlassSection({ ctx, roundedRect, state }, { x, y: y - 24, w: 190, h: 32 }, {
+      accent: false,
+      color: "#8fe8dc",
+      edgeSensitivity: 18,
+      glowFillOpacity: 0.01,
+      radius: 8,
+    });
     label(name, x + 14, y - 3, 14, "rgba(238,244,252,0.58)");
     label(String(value), x + 128, y - 3, 15, "#f5f1e6");
     ctx.restore();

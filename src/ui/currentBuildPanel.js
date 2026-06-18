@@ -9,9 +9,16 @@ import {
 import {
   getTraitDetailTitle as getTraitDetailTitleForPanel,
 } from "./traitPanel.js";
+import {
+  drawOverlayGlassPanel,
+  drawOverlayGlassSection,
+  drawOverlayTitleRule,
+} from "./overlayGlassSkin.js";
 
 export function createCurrentBuildPanelRenderer({
   ctx,
+  state,
+  prefersReducedMotion,
   t,
   fmt,
   label,
@@ -19,7 +26,6 @@ export function createCurrentBuildPanelRenderer({
   wrapText,
   roundedRect,
   drawDimOverlay,
-  drawCard,
   drawMenuButton,
   getAcquiredRelicGroups,
   getCurrentBuildFamilyStats,
@@ -36,6 +42,12 @@ export function createCurrentBuildPanelRenderer({
     drawUpgradePill,
     drawUpgradeTagPills,
   } = primitives;
+  const skinDeps = {
+    ctx,
+    roundedRect,
+    state,
+    prefersReducedMotion,
+  };
 
 function drawCurrentBuildPanel() {
   const panel = getCurrentBuildPanelRect();
@@ -44,8 +56,13 @@ function drawCurrentBuildPanel() {
   const stats = getCurrentBuildFamilyStats(groups);
   ctx.save();
   drawDimOverlay(OVERLAY_READABILITY.scrim.nested);
-  drawCard(panel.x, panel.y, panel.w, panel.h);
+  drawOverlayGlassPanel(skinDeps, panel, {
+    glowIntensity: 0.7,
+    glowRadius: 28,
+    selectedIntensity: 0.22,
+  });
   label(t("currentBuildTitle"), panel.x + 42, panel.y + 58, 32, "#f5f1e6");
+  drawOverlayTitleRule(skinDeps, panel.x + 44, panel.y + 74, 340, "#8fe8dc");
   drawMenuButton(closeRect.x, closeRect.y, closeRect.w, closeRect.h, t("currentBuildClose"), "Esc");
   drawCurrentBuildSummary(stats, panel.x + 44, panel.y + 82, 460, 44);
   wrapText(getCurrentBuildDirectionText(stats), panel.x + 526, panel.y + 104, 314, 18, "rgba(238,244,252,0.62)", 12);
@@ -64,10 +81,12 @@ function drawCurrentBuildPanel() {
 
 function drawCurrentBuildEmpty(x, y, w, h) {
   ctx.save();
-  ctx.fillStyle = OVERLAY_READABILITY.surface.fill;
-  roundedRect(x, y, w, h, 10, true, false);
-  ctx.strokeStyle = "rgba(126, 231, 255, 0.2)";
-  roundedRect(x, y, w, h, 10, false, true);
+  drawOverlayGlassSection(skinDeps, { x, y, w, h }, {
+    accent: false,
+    color: "#8fe8dc",
+    edgeSensitivity: 28,
+    radius: 10,
+  });
   wrapText(t("currentBuildEmpty"), x + 22, y + 48, w - 44, 22, "rgba(238,244,252,0.74)", 16);
   ctx.restore();
 }
@@ -75,10 +94,11 @@ function drawCurrentBuildEmpty(x, y, w, h) {
 function drawCurrentBuildSummary(stats, x, y, w, h) {
   const strongest = stats[0];
   ctx.save();
-  ctx.fillStyle = OVERLAY_READABILITY.surface.fill;
-  roundedRect(x, y, w, h, 9, true, false);
-  ctx.strokeStyle = strongest ? hexToRgba(strongest.color, 0.34) : "rgba(126, 231, 255, 0.18)";
-  roundedRect(x, y, w, h, 9, false, true);
+  drawOverlayGlassSection(skinDeps, { x, y, w, h }, {
+    color: strongest ? strongest.color : "#8fe8dc",
+    edgeSensitivity: 24,
+    radius: 9,
+  });
   label(t("currentBuildStrongest").toUpperCase(), x + 16, y + 19, 11, "rgba(238,244,252,0.5)");
   const text = strongest ? `${strongest.label} x${strongest.count}` : t("currentBuildNoDirection");
   fitLabel(text, x + 16, y + 36, w - 32, 16, strongest ? strongest.color : "#8fe8dc", 11, "900", true);
@@ -112,10 +132,13 @@ function drawCurrentBuildTraitDetails(traits, x, y, w, h) {
     const xx = x + index * (cardW + gap);
     const active = trait.stage > 0;
     ctx.save();
-    ctx.fillStyle = active ? hexToRgba(trait.color, 0.22) : OVERLAY_READABILITY.surface.fillSoft;
-    roundedRect(xx, y, cardW, h, 8, true, false);
-    ctx.strokeStyle = active ? hexToRgba(trait.color, 0.42) : "rgba(238,244,252,0.12)";
-    roundedRect(xx, y, cardW, h, 8, false, true);
+    drawOverlayGlassSection(skinDeps, { x: xx, y, w: cardW, h }, {
+      color: trait.color,
+      edgeSensitivity: 18,
+      radius: 8,
+      selected: active,
+      selectedIntensity: active ? 0.28 : 0,
+    });
     fitLabel(getTraitDetailTitleForPanel(trait, { format: fmt, getFullCount: getTraitFullCount }), xx + 12, y + 18, cardW - 24, 12, active ? trait.color : "rgba(238,244,252,0.62)", 8, "900", true);
     fitLabel(getTraitEffectText(trait), xx + 12, y + 39, cardW - 24, 12, "rgba(238,244,252,0.62)", 8, "700");
     ctx.restore();
@@ -150,14 +173,11 @@ function drawAcquiredRelicCard(group, x, y, w, h) {
 function drawAcquiredRelicListRow(group, x, y, w, h) {
   const rarity = getRarityVisual(group.rarity);
   ctx.save();
-  const cardG = ctx.createLinearGradient(x, y, x + w, y + h);
-  cardG.addColorStop(0, hexToRgba(rarity.color, 0.16));
-  cardG.addColorStop(1, OVERLAY_READABILITY.surface.fill);
-  ctx.fillStyle = cardG;
-  roundedRect(x, y, w, h, 7, true, false);
-  ctx.strokeStyle = hexToRgba(rarity.border, 0.32);
-  ctx.lineWidth = 1.1;
-  roundedRect(x, y, w, h, 7, false, true);
+  drawOverlayGlassSection(skinDeps, { x, y, w, h }, {
+    color: rarity.color,
+    edgeSensitivity: 18,
+    radius: 7,
+  });
   ctx.fillStyle = hexToRgba(rarity.color, 0.42);
   roundedRect(x + 5, y + 6, 4, h - 12, 3, true, false);
   const countText = group.count > 1 ? ` x${group.count}` : "";

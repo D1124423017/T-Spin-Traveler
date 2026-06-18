@@ -1,3 +1,9 @@
+import {
+  drawOverlayGlassPanel,
+  drawOverlayGlassSection,
+  drawOverlayTitleRule,
+} from "./overlayGlassSkin.js";
+
 export function getRatingColor(rating) {
   if (rating === "PERFECT") return "#fff0a6";
   if (rating === "ARCANE") return "#d7c2ff";
@@ -22,7 +28,6 @@ export function createResultOverlayRenderer({
   wrapText,
   roundedRect,
   drawDimOverlay,
-  drawCard,
   drawMenuButton,
   drawImageContain,
 }) {
@@ -33,13 +38,21 @@ export function createResultOverlayRenderer({
     damageSources,
   }) {
     const accent = victory ? "#fff0a6" : "#ff8f98";
+    const panel = { x: 318, y: 62, w: 644, h: 536 };
+    const skinDeps = { ctx, roundedRect, state };
     ctx.save();
     drawDimOverlay(overlayReadability.scrim.result);
-    drawCard(318, 62, 644, 536);
+    drawOverlayGlassPanel(skinDeps, panel, {
+      colors: victory
+        ? ["#fff0a6", "#9b78ff", "#6de8ff", "#fff0a6"]
+        : ["#ff8f98", "#9b78ff", "#6de8ff", "#ff8f98"],
+      glowIntensity: 0.72,
+      glowRadius: 28,
+      selectedIntensity: 0.24,
+    });
     ctx.textAlign = "left";
     label(victory ? t("victory") : t("defeat"), 382, 134, 48, "#f5f1e6");
-    ctx.fillStyle = accent;
-    roundedRect(384, 156, 210, 4, 8, true, false);
+    drawOverlayTitleRule(skinDeps, 384, 158, 220, accent);
     wrapText(message, 384, 186, 504, 28, "rgba(238,244,252,0.76)", 19);
     drawRunSummary(damageSources);
     drawMenuButton(
@@ -87,8 +100,13 @@ export function createResultOverlayRenderer({
       const row = Math.floor(i / 2);
       const x = 384 + col * 258;
       const y = 278 + row * 32;
-      ctx.fillStyle = overlayReadability.surface.fillSoft;
-      roundedRect(x, y - 20, 244, 24, 6, true, false);
+      drawOverlayGlassSection({ ctx, roundedRect, state }, { x, y: y - 22, w: 244, h: 28 }, {
+        accent: false,
+        color: "#8fe8dc",
+        edgeSensitivity: 18,
+        glowFillOpacity: 0.01,
+        radius: 7,
+      });
       label(rows[i][0], x + 12, y - 3, 13, "rgba(238,244,252,0.54)");
       label(String(rows[i][1]), x + 118, y - 3, 15, "#f5f1e6");
       if (rows[i][2]) label(rows[i][2], x + 168, y - 3, 11, "#9fb4ff");
@@ -105,18 +123,12 @@ export function createResultOverlayRenderer({
     const total = state.metaProgress?.riftEnergy || 0;
     ctx.save();
     const glow = earned > 0;
-    const background = ctx.createLinearGradient(x, y, x + w, y + h);
-    background.addColorStop(0, "rgba(26, 17, 48, 0.68)");
-    background.addColorStop(0.55, "rgba(8, 13, 24, 0.72)");
-    background.addColorStop(1, "rgba(20, 33, 48, 0.56)");
-    ctx.fillStyle = background;
-    ctx.shadowColor = glow ? "rgba(184, 141, 255, 0.26)" : "rgba(126, 231, 255, 0.1)";
-    ctx.shadowBlur = glow ? 18 : 9;
-    roundedRect(x, y, w, h, 10, true, false);
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = glow ? "rgba(255, 240, 166, 0.38)" : "rgba(145, 232, 222, 0.2)";
-    ctx.lineWidth = 1.4;
-    roundedRect(x, y, w, h, 10, false, true);
+    drawOverlayGlassSection({ ctx, roundedRect, state }, { x, y, w, h }, {
+      color: glow ? "#fff0a6" : "#8fe8dc",
+      edgeSensitivity: 30,
+      selected: glow,
+      selectedIntensity: glow ? 0.36 : 0.12,
+    });
     drawImageContain(riftEnergyIcon, x + 12, y + 8, 44, 44);
     label(t("riftEnergy").toUpperCase(), x + 68, y + 21, 12, "#d7c2ff");
     fitLabel(

@@ -1,5 +1,10 @@
 import { getAscensionStageName } from "../core/ascensionChallenge.js";
 import { getAscensionResultButtonRects } from "./hudLayout.js";
+import {
+  drawOverlayGlassPanel,
+  drawOverlayGlassSection,
+  drawOverlayTitleRule,
+} from "./overlayGlassSkin.js";
 
 export function drawAscensionResultOverlay({
   ctx,
@@ -10,7 +15,6 @@ export function drawAscensionResultOverlay({
   fmt,
   drawDimOverlay,
   resultScrim,
-  drawCard,
   drawCornerGlyph,
   label,
   wrapText,
@@ -20,9 +24,18 @@ export function drawAscensionResultOverlay({
   const succeeded = run?.status === "success";
   const buttons = getAscensionResultButtonRects();
   const accent = succeeded ? "#fff0a6" : "#ff8f98";
+  const panel = { x: 342, y: 126, w: 596, h: 424 };
+  const skinDeps = { ctx, roundedRect };
   ctx.save();
   drawDimOverlay(resultScrim);
-  drawCard(342, 126, 596, 424);
+  drawOverlayGlassPanel(skinDeps, panel, {
+    colors: succeeded
+      ? ["#fff0a6", "#9b78ff", "#6de8ff", "#fff0a6"]
+      : ["#ff8f98", "#9b78ff", "#6de8ff", "#ff8f98"],
+    glowIntensity: 0.68,
+    glowRadius: 26,
+    selectedIntensity: 0.22,
+  });
   drawCornerGlyph(640, 150, accent);
   label(
     t(succeeded ? "ascensionChallengeSuccessTitle" : "ascensionChallengeFailedTitle"),
@@ -31,13 +44,14 @@ export function drawAscensionResultOverlay({
     38,
     "#f5f1e6",
   );
+  drawOverlayTitleRule(skinDeps, 402, 230, 310, accent);
   wrapText(message, 402, 258, 476, 25, "rgba(238,244,252,0.72)", 17);
-  ctx.fillStyle = "rgba(15, 10, 29, 0.68)";
-  roundedRect(402, 320, 476, 86, 10, true, false);
-  ctx.strokeStyle = succeeded
-    ? "rgba(255, 240, 166, 0.34)"
-    : "rgba(255, 143, 152, 0.34)";
-  roundedRect(402, 320, 476, 86, 10, false, true);
+  drawOverlayGlassSection(skinDeps, { x: 402, y: 320, w: 476, h: 86 }, {
+    color: accent,
+    edgeSensitivity: 28,
+    selected: true,
+    selectedIntensity: 0.18,
+  });
   label(
     fmt("ascensionChallengeLinesHud", {
       current: run?.linesCleared || 0,
