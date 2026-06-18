@@ -39,6 +39,7 @@ export function createEquipmentInventoryScreenRenderer({
   equipmentIcons = {},
   noaPreviewArt,
   noaIdleSheet,
+  noaIdleAnimations = [],
   isImageReady,
   layout = EQUIPMENT_INVENTORY_LAYOUT,
   now = () => performance.now(),
@@ -46,6 +47,7 @@ export function createEquipmentInventoryScreenRenderer({
   const heroPreviewRenderer = createEquipmentHeroPreviewRenderer({
     ctx,
     idleSheet: noaIdleSheet,
+    idleAnimations: noaIdleAnimations,
     fallbackArt: noaPreviewArt,
     isImageReady,
     drawImageContain,

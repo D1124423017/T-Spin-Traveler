@@ -1647,6 +1647,12 @@ const equipmentScreenRenderer = createEquipmentScreenRenderer({
   noaCheatHandArt,
   noaPreviewArt: heroIdleArt,
   noaIdleSheet: menuIdleRiftWayfinderSheet,
+  noaIdleAnimations: Object.values(MENU_HERO_SPECIAL_ANIMATIONS).map((config) => ({
+    id: config.id,
+    image: config.image,
+    frameCount: config.frames.length,
+    frameMs: Math.round(config.frameMs * 1.45),
+  })),
   riftEnergyIcon,
   isImageReady,
 });
