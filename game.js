@@ -29,6 +29,7 @@ import {
   oneShotAudioAssets,
   riftEnergyIcon,
   slimeArt,
+  storyComicUiAssets,
 } from "./src/data/assets.js";
 import {
   BGM_PLAYLISTS,
@@ -1322,8 +1323,7 @@ const {
   canvasFont,
   fitLabel,
   wrapText,
-  roundedRect,
-  drawMenuButton,
+  storyUiAssets: storyComicUiAssets,
   isImageReady,
 });
 
