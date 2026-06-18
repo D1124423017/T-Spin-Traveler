@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-16-prologue-egypt-intro";
+export const ASSET_VERSION = "2026-06-18-story-ui-cinematic-motion";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -126,6 +126,24 @@ export const mainMenuRuneArcBack = registerImageAsset("main-menu-rune-arc-back",
 export const mainMenuPrimaryFrame = registerImageAsset("main-menu-primary-frame", "assets/images/ui/menu/main-menu-primary-frame.png");
 export const mainMenuSecondaryFrame = registerImageAsset("main-menu-secondary-frame", "assets/images/ui/menu/main-menu-secondary-frame.png");
 export const mainMenuDialogueFrame = registerImageAsset("main-menu-dialogue-frame", "assets/images/ui/menu/main-menu-dialogue-frame.png");
+export const storyComicUiAssets = Object.freeze({
+  titlePlaque: registerImageAsset(
+    "story-ui-title-plaque",
+    "assets/images/ui/story/story-title-plaque.png",
+  ),
+  dialoguePanel: registerImageAsset(
+    "story-ui-dialogue-panel",
+    "assets/images/ui/story/story-dialogue-panel.png",
+  ),
+  nextButton: registerImageAsset(
+    "story-ui-next-button",
+    "assets/images/ui/story/story-next-button.png",
+  ),
+  skipButton: registerImageAsset(
+    "story-ui-skip-button",
+    "assets/images/ui/story/story-skip-button.png",
+  ),
+});
 export const storyProloguePanels = Object.freeze({
   panel01: registerImageAsset(
     "story-prologue-panel-01",

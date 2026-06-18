@@ -15,6 +15,7 @@ globalThis.Audio = MockMedia;
 
 const {
   ASSET_REGISTRY,
+  storyComicUiAssets,
   storyProloguePanels,
 } = await import("../src/data/assets.js");
 const {
@@ -70,6 +71,47 @@ describe("story data", () => {
       expect(record.path).toMatch(/^assets\/images\/story\/prologue\/prologue-panel-\d\d-/);
       expect(readPngInfo(record.path)).toEqual({ width: 1920, height: 1080, colorType: 6 });
     }
+  });
+
+  it("registers formal story comic UI PNG assets", () => {
+    const records = new Map(ASSET_REGISTRY.images.map((record) => [record.id, record]));
+    const expectedAssets = [
+      {
+        id: "story-ui-title-plaque",
+        key: "titlePlaque",
+        path: "assets/images/ui/story/story-title-plaque.png",
+        info: { width: 2048, height: 256, colorType: 6 },
+      },
+      {
+        id: "story-ui-dialogue-panel",
+        key: "dialoguePanel",
+        path: "assets/images/ui/story/story-dialogue-panel.png",
+        info: { width: 2048, height: 512, colorType: 6 },
+      },
+      {
+        id: "story-ui-next-button",
+        key: "nextButton",
+        path: "assets/images/ui/story/story-next-button.png",
+        info: { width: 1024, height: 256, colorType: 6 },
+      },
+      {
+        id: "story-ui-skip-button",
+        key: "skipButton",
+        path: "assets/images/ui/story/story-skip-button.png",
+        info: { width: 1024, height: 256, colorType: 6 },
+      },
+    ];
+
+    for (const asset of expectedAssets) {
+      const record = records.get(asset.id);
+
+      expect(storyComicUiAssets[asset.key]).toBeTruthy();
+      expect(record, `${asset.id} should be registered`).toBeTruthy();
+      expect(record.path).toBe(asset.path);
+      expect(readPngInfo(record.path)).toEqual(asset.info);
+    }
+    expect(records.get("story-ui-corner-ornament")).toBeUndefined();
+    expect(storyComicUiAssets.cornerOrnament).toBeUndefined();
   });
 
   it("uses the rift mine as the prologue traversal point instead of the poker table", () => {
