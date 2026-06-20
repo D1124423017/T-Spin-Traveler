@@ -4,7 +4,7 @@ import { createMainMenuInputRouter } from "./mainMenuInputRouter.js";
 import { createEquipmentInputRouter } from "./equipmentInputRouter.js";
 import { createSettingsInputRouter } from "./settingsInputRouter.js";
 import { createStoryInputRouter } from "./storyInputRouter.js";
-import { handleDebugUiShortcut } from "../debug/debugUiController.js";
+import { handleDebugUiShortcut } from "../debug/debugBootstrap.js";
 
 export function getCanvasPoint(event, canvas, width, height) {
   const rect = canvas.getBoundingClientRect();

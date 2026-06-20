@@ -324,18 +324,12 @@ import { createBondCalloutController } from "./src/ui/bondCalloutController.js";
 import {
   DEBUG_HUD_BUILD,
   createDebugHudState,
-  getDebugArtTuning,
+  createPendingDebugUiController,
+  DEFAULT_DEBUG_ART_TUNING,
   isDebugHudEnabled,
-  updateDebugArtTuningDom,
-  updateDebugDomHud,
-} from "./src/debug/debugHud.js";
-import { createDebugProgressTools } from "./src/debug/debugProgressTools.js";
-import { createDebugUiController } from "./src/debug/debugUiController.js";
-import {
   readActivePieceDebugInfo,
   readHiddenRowsDebugInfo,
-} from "./src/debug/debugStateReaders.js";
-import { createRuntimeSmokeReaderFactory } from "./src/debug/runtimeSmoke.js";
+} from "./src/debug/debugBootstrap.js";
 import { createGameState } from "./src/core/gameStateFactory.js";
 import { normalizeControlKeys } from "./src/input/controlBindings.js";
 import {
@@ -577,10 +571,17 @@ const BOSS_WINDUP_MS = 1350;
 const HEAVY_ATTACK_WARNING_DAMAGE = 20;
 const GITHUB_FEEDBACK_URL = "https://github.com/D1124423017/T-Spin-Traveler/issues";
 const DEBUG_HUD_ENABLED = isDebugHudEnabled();
-const debugUiController = createDebugUiController({
+let debugUiController = createPendingDebugUiController({
   allowed: DEBUG_HUD_ENABLED,
   initialVisible: DEBUG_HUD_ENABLED,
 });
+let debugDiagnostics = null;
+let debugDiagnosticsPromise = null;
+let debugDiagnosticsLoadFailed = false;
+
+function getDebugArtTuning(options = {}) {
+  return debugDiagnostics?.getDebugArtTuning?.(options) || DEFAULT_DEBUG_ART_TUNING;
+}
 
 const BALANCE = {
   enemyWaveHp: 10,
@@ -1115,16 +1116,78 @@ function skipStoryScene() {
   return storyModeController.skipStory();
 }
 
-const debugProgressTools = createDebugProgressTools({
-  state,
-  loadMetaProgress,
-  saveMetaProgress,
-  grantRiftEnergy,
-  persistGameSave: saveGame,
-});
+function loadDebugDiagnostics() {
+  if (!DEBUG_HUD_ENABLED) return Promise.resolve(null);
+  if (debugDiagnostics) return Promise.resolve(debugDiagnostics);
+  if (debugDiagnosticsLoadFailed) return Promise.resolve(null);
+  if (!debugDiagnosticsPromise) {
+    debugDiagnosticsPromise = Promise.all([
+      import("./src/debug/debugHud.js"),
+      import("./src/debug/debugProgressTools.js"),
+      import("./src/debug/debugUiController.js"),
+      import("./src/debug/runtimeSmoke.js"),
+    ])
+      .then(([debugHud, debugProgress, debugUi, runtimeSmoke]) => {
+        debugUiController = debugUi.createDebugUiController({
+          allowed: DEBUG_HUD_ENABLED,
+          initialVisible: debugUiController.isVisible(),
+        });
+        const debugProgressTools = debugProgress.createDebugProgressTools({
+          state,
+          loadMetaProgress,
+          saveMetaProgress,
+          grantRiftEnergy,
+          persistGameSave: saveGame,
+        });
+        const getDebugHudReaders = runtimeSmoke.createRuntimeSmokeReaderFactory({
+          state,
+          hiddenRows: HIDDEN,
+          isPieceAboveTopBuffer,
+          collides,
+          isActivePieceOverlappingBoard,
+          getHiddenRowsDebugInfo: () => readHiddenRowsDebugInfo(
+            state.board,
+            HIDDEN,
+            rowHasPlayableCells,
+          ),
+          isSpawnBlockedForDefeat,
+          getAssetLoadingSummary,
+        });
+
+        debugDiagnostics = {
+          getDebugArtTuning: debugHud.getDebugArtTuning,
+          getDebugHudReaders,
+          debugProgressTools,
+          updateDebugArtTuningDom: debugHud.updateDebugArtTuningDom,
+          updateDebugDomHud: debugHud.updateDebugDomHud,
+        };
+        return debugDiagnostics;
+      })
+      .catch((error) => {
+        debugDiagnosticsLoadFailed = true;
+        console.error("[T-Spin Traveler] Failed to load debug diagnostics:", error);
+        return null;
+      });
+  }
+  return debugDiagnosticsPromise;
+}
 
 function updateDebugTools(now) {
-  const enabled = DEBUG_HUD_ENABLED && debugUiController.isVisible();
+  if (!DEBUG_HUD_ENABLED) return;
+  const enabled = debugUiController.isVisible();
+  if (!debugDiagnostics) {
+    if (enabled) {
+      void loadDebugDiagnostics().then(() => updateDebugTools(performance.now()));
+    }
+    return;
+  }
+  const {
+    debugProgressTools,
+    getDebugArtTuning,
+    getDebugHudReaders,
+    updateDebugArtTuningDom,
+    updateDebugDomHud,
+  } = debugDiagnostics;
   updateDebugDomHud({
     enabled,
     debugState: state.debug,
@@ -1737,21 +1800,6 @@ const settingsScreenRenderer = createSettingsScreenRenderer(() => ({
   tuningSliders: TUNING_SLIDERS,
   wrapText,
 }));
-
-const getDebugHudReaders = createRuntimeSmokeReaderFactory({
-  state,
-  hiddenRows: HIDDEN,
-  isPieceAboveTopBuffer,
-  collides,
-  isActivePieceOverlappingBoard,
-  getHiddenRowsDebugInfo: () => readHiddenRowsDebugInfo(
-    state.board,
-    HIDDEN,
-    rowHasPlayableCells,
-  ),
-  isSpawnBlockedForDefeat,
-  getAssetLoadingSummary,
-});
 
 const battleHudRenderer = createBattleHudRenderer({
   ctx,
@@ -6399,8 +6447,12 @@ const inputController = installInputController({
     syncControlHints,
     toggleDebugUi: () => {
       if (!DEBUG_HUD_ENABLED) return;
-      debugUiController.toggle();
-      updateDebugTools(performance.now());
+      const visible = debugUiController.toggle();
+      if (!debugDiagnostics && visible) {
+        void loadDebugDiagnostics().then(() => updateDebugTools(performance.now()));
+        return;
+      }
+      if (debugDiagnostics) updateDebugTools(performance.now());
     },
     toggleMute,
     toggleUpgradeDetail,

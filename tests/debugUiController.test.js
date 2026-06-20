@@ -4,6 +4,10 @@ import {
   handleDebugUiShortcut,
   isTextEntryTarget,
 } from "../src/debug/debugUiController.js";
+import {
+  createPendingDebugUiController,
+  isDebugHudEnabled,
+} from "../src/debug/debugBootstrap.js";
 
 describe("debug UI controller", () => {
   it("toggles visibility without changing game state", () => {
@@ -70,5 +74,23 @@ describe("debug UI controller", () => {
     expect(isTextEntryTarget({ isContentEditable: true })).toBe(true);
     expect(isTextEntryTarget({ tagName: "TEXTAREA" })).toBe(true);
     expect(isTextEntryTarget({ tagName: "DIV" })).toBe(false);
+  });
+
+  it("keeps pending visibility before the debug UI controller lazy-loads", () => {
+    const controller = createPendingDebugUiController({
+      allowed: true,
+      initialVisible: true,
+    });
+
+    expect(controller.isAllowed()).toBe(true);
+    expect(controller.isVisible()).toBe(true);
+    expect(controller.toggle()).toBe(false);
+    expect(controller.setVisible(true)).toBe(true);
+  });
+
+  it("detects debug mode from the URL query", () => {
+    expect(isDebugHudEnabled("?debug=1")).toBe(true);
+    expect(isDebugHudEnabled("?debug=0")).toBe(false);
+    expect(isDebugHudEnabled("not a query")).toBe(false);
   });
 });

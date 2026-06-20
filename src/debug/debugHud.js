@@ -3,39 +3,18 @@ import {
   formatDebugValue,
   readDebugReader,
 } from "./debugFormatting.js";
+import {
+  DEBUG_HUD_BUILD,
+  DEFAULT_DEBUG_ART_TUNING,
+  isDebugHudEnabled,
+} from "./debugBootstrap.js";
 
-export const DEBUG_HUD_BUILD = "debug-hud-2026-05-31-module";
-
-export function isDebugHudEnabled(search = globalThis?.location?.search || "") {
-  try {
-    return new URLSearchParams(search).get("debug") === "1";
-  } catch {
-    return false;
-  }
-}
-
-export function createDebugHudState() {
-  return {
-    lastDefeatSource: "",
-    lastDefeatMessageKey: "",
-    triggerDefeatCalled: false,
-    finishRunCalled: false,
-    resultOverlayDrawn: false,
-    stuckActiveKey: "",
-    stuckSince: 0,
-    flowStuck: false,
-    lastUpdateAt: 0,
-    lastDrawAt: 0,
-    drawError: "",
-  };
-}
-
-export const DEFAULT_DEBUG_ART_TUNING = Object.freeze({
-  playerScale: 1,
-  enemyScale: 1,
-  heroAttackScale: 1,
-  enemyAttackScale: 1,
-});
+export {
+  DEBUG_HUD_BUILD,
+  createDebugHudState,
+  DEFAULT_DEBUG_ART_TUNING,
+  isDebugHudEnabled,
+} from "./debugBootstrap.js";
 
 const DEBUG_ART_TUNING_KEY = "tspin-traveler-debug-art-tuning-v1";
 
