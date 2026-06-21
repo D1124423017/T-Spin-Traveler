@@ -1271,18 +1271,60 @@ function loadReactDebugPanel() {
       import("./src/react/reactOverlayBootstrap.js"),
       import("./src/react/bridge/gameStateSnapshot.js"),
       import("./src/react/bridge/uiIntentBridge.js"),
+      import("./src/react/bridge/reactUiSandboxModel.js"),
     ])
-      .then(([reactOverlay, snapshotBridge, intentBridge]) => {
+      .then(([reactOverlay, snapshotBridge, intentBridge, sandboxBridge]) => {
+        const readReactUiSandboxModel = sandboxBridge.createReactUiSandboxModelReader({
+          audio,
+          controlActions: CONTROL_ACTIONS,
+          controlDisplayValue,
+          defaultTuning: DEFAULT_TUNING,
+          format: fmt,
+          getAcquiredRelicGroups,
+          getCurrentBuildDirectionText,
+          getCurrentBuildFamilyStats,
+          getMessage,
+          getResultButtonRects,
+          getTraitEffectText,
+          getTraitEntries,
+          githubFeedbackUrl: GITHUB_FEEDBACK_URL,
+          playerMaxHp: PLAYER_MAX_HP,
+          rarityLabel,
+          settingsTabs: SETTINGS_TABS,
+          state,
+          translate: t,
+          tuningSliders: TUNING_SLIDERS,
+          upgradeName,
+        });
+        const reactUiSandboxHandlers = sandboxBridge.createReactUiSandboxIntentHandlers({
+          loadMetaProgress,
+          playSfx,
+          resetGame,
+          setGameMode,
+          settingsTabs: SETTINGS_TABS,
+          state,
+        });
         readReactDebugSnapshot = snapshotBridge.createReactDebugSnapshotReader({
           state,
           getAssetLoadingSummary: () => getAssetLoadingSummary(window.TST_ASSETS),
           getDomOverlayDiagnostics,
           getLegacyDebugVisible: () => debugUiController.isVisible(),
           getReactDebugLoadState,
+          getUiSandboxModel: readReactUiSandboxModel,
           now: () => performance.now(),
         });
         reactDebugIntentBridge = intentBridge.createReactDebugIntentBridge({
+          closeCurrentBuild: reactUiSandboxHandlers.closeCurrentBuild,
+          closeGuide: reactUiSandboxHandlers.closeGuide,
+          closeSettings: reactUiSandboxHandlers.closeSettings,
+          openMetaUpgrade: reactUiSandboxHandlers.openMetaUpgrade,
+          openPauseSettings: reactUiSandboxHandlers.openPauseSettings,
           refreshSnapshot: () => readReactDebugSnapshot?.(),
+          restartRun: reactUiSandboxHandlers.restartRun,
+          resumeGame: reactUiSandboxHandlers.resumeGame,
+          retryRun: reactUiSandboxHandlers.retryRun,
+          returnToMainMenu: reactUiSandboxHandlers.returnToMainMenu,
+          setSettingsTab: reactUiSandboxHandlers.setSettingsTab,
           toggleLegacyDebugHud: toggleLegacyDebugUi,
         });
         reactDebugPanelController = reactOverlay.mountReactDebugPanel({

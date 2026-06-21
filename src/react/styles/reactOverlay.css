@@ -1,4 +1,6 @@
 .tst-react-debug-layer {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
@@ -194,6 +196,436 @@
   gap: 8px;
 }
 
+.tst-react-overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 44px;
+  pointer-events: auto;
+  background:
+    radial-gradient(circle at 50% 14%, rgba(154, 111, 255, 0.2), transparent 34%),
+    radial-gradient(circle at 82% 78%, rgba(126, 247, 255, 0.13), transparent 28%),
+    rgba(2, 5, 12, 0.58);
+  backdrop-filter: blur(4px);
+  animation: tst-react-overlay-backdrop-enter 220ms ease-out both;
+}
+
+.tst-react-overlay-card {
+  position: relative;
+  width: min(880px, 76vw);
+  max-height: min(640px, calc(100% - 42px));
+  overflow: hidden;
+  pointer-events: auto;
+  color: #f8f3cf;
+  border: 1px solid rgba(126, 247, 255, 0.42);
+  border-radius: 8px;
+  background:
+    linear-gradient(132deg, rgba(3, 8, 17, 0.95), rgba(14, 10, 32, 0.84)),
+    radial-gradient(circle at 86% 12%, rgba(184, 137, 255, 0.2), transparent 36%),
+    radial-gradient(circle at 16% 96%, rgba(126, 247, 255, 0.12), transparent 32%);
+  box-shadow:
+    inset 0 0 34px rgba(126, 247, 255, 0.09),
+    inset 0 1px 0 rgba(255, 240, 166, 0.16),
+    0 24px 70px rgba(0, 0, 0, 0.58),
+    0 0 44px rgba(126, 247, 255, 0.16);
+  font-family: "TSpin Traveler Display", "Trebuchet MS", "Segoe UI", sans-serif;
+  letter-spacing: 0;
+  animation: tst-react-overlay-card-enter 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.tst-react-overlay-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(100deg, transparent 0 32%, rgba(126, 247, 255, 0.12) 46%, transparent 62%),
+    linear-gradient(180deg, rgba(255, 240, 166, 0.12), transparent 25%);
+  opacity: 0.52;
+  transform: translateX(-38%);
+  animation: tst-react-debug-shimmer 2.8s ease-in-out infinite;
+}
+
+.tst-react-overlay-card-header,
+.tst-react-overlay-card-body,
+.tst-react-overlay-rule {
+  position: relative;
+  z-index: 1;
+}
+
+.tst-react-overlay-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 26px 30px 16px;
+}
+
+.tst-react-overlay-kicker {
+  margin: 0 0 8px;
+  color: rgba(126, 247, 255, 0.82);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.tst-react-overlay-title {
+  margin: 0;
+  color: #fff4c2;
+  font-size: clamp(32px, 4vw, 52px);
+  line-height: 0.95;
+  text-shadow:
+    0 0 20px rgba(126, 247, 255, 0.28),
+    0 2px 0 rgba(0, 0, 0, 0.38);
+}
+
+.tst-react-overlay-header-actions {
+  flex: 0 0 auto;
+}
+
+.tst-react-overlay-rule {
+  height: 1px;
+  margin: 0 30px;
+  background: linear-gradient(90deg, rgba(126, 247, 255, 0.58), rgba(255, 240, 166, 0.32), transparent);
+  box-shadow: 0 0 18px rgba(126, 247, 255, 0.18);
+}
+
+.tst-react-overlay-card-body {
+  display: grid;
+  gap: 18px;
+  padding: 22px 30px 30px;
+}
+
+.tst-react-overlay-copy,
+.tst-react-overlay-note {
+  margin: 0;
+  color: rgba(231, 239, 255, 0.76);
+  font-family: "Trebuchet MS", "Noto Sans TC", system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.tst-react-overlay-note {
+  color: #fff0a6;
+  font-size: 14px;
+}
+
+.tst-react-overlay-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.tst-react-overlay-button {
+  min-width: 148px;
+  min-height: 42px;
+  padding: 10px 16px;
+  border: 1px solid rgba(126, 247, 255, 0.38);
+  border-radius: 7px;
+  background: linear-gradient(120deg, rgba(7, 16, 31, 0.95), rgba(39, 22, 72, 0.72));
+  color: #f8f3cf;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow:
+    inset 0 0 18px rgba(126, 247, 255, 0.08),
+    0 0 0 rgba(126, 247, 255, 0);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.tst-react-overlay-button:hover {
+  border-color: rgba(255, 240, 166, 0.82);
+  box-shadow:
+    inset 0 0 18px rgba(126, 247, 255, 0.12),
+    0 0 24px rgba(126, 247, 255, 0.22);
+  transform: translateY(-1px);
+}
+
+.tst-react-overlay-button-primary {
+  border-color: rgba(255, 240, 166, 0.7);
+  background: linear-gradient(120deg, rgba(44, 31, 70, 0.98), rgba(82, 58, 118, 0.78));
+  color: #fff4c2;
+}
+
+.tst-react-overlay-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.tst-react-overlay-stat,
+.tst-react-guide-row,
+.tst-react-guide-rule-box,
+.tst-react-settings-row,
+.tst-react-current-build-trait,
+.tst-react-current-build-upgrade,
+.tst-react-result-energy,
+.tst-react-result-sources {
+  border: 1px solid rgba(126, 247, 255, 0.18);
+  border-radius: 7px;
+  background:
+    linear-gradient(120deg, rgba(4, 8, 18, 0.64), rgba(19, 13, 40, 0.46)),
+    radial-gradient(circle at 0 50%, color-mix(in srgb, var(--tst-react-row-color, #8fe8dc) 20%, transparent), transparent 50%);
+  box-shadow: inset 0 0 20px rgba(126, 247, 255, 0.05);
+}
+
+.tst-react-overlay-stat {
+  min-width: 0;
+  padding: 13px 14px;
+}
+
+.tst-react-overlay-stat span,
+.tst-react-settings-row small,
+.tst-react-current-build-upgrade small,
+.tst-react-result-sources span {
+  display: block;
+  color: rgba(173, 221, 255, 0.72);
+  font-family: "Trebuchet MS", "Noto Sans TC", system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.tst-react-overlay-stat strong {
+  display: block;
+  margin-top: 6px;
+  overflow: hidden;
+  color: #fff4c2;
+  font-size: 22px;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tst-react-overlay-stat small {
+  display: block;
+  margin-top: 4px;
+  color: rgba(159, 180, 255, 0.72);
+  font-size: 11px;
+}
+
+.tst-react-guide-list,
+.tst-react-settings-list,
+.tst-react-current-build-upgrades,
+.tst-react-current-build-traits {
+  display: grid;
+  gap: 10px;
+}
+
+.tst-react-guide-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.35fr) 1fr;
+  gap: 22px;
+  align-items: center;
+  padding: 12px 16px;
+}
+
+.tst-react-guide-row strong {
+  color: var(--tst-react-row-color, #fff0a6);
+  font-size: 19px;
+}
+
+.tst-react-guide-row span,
+.tst-react-settings-row span,
+.tst-react-current-build-trait span,
+.tst-react-current-build-upgrade span,
+.tst-react-result-sources p {
+  margin: 0;
+  color: rgba(231, 239, 255, 0.76);
+  font-family: "Trebuchet MS", "Noto Sans TC", system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.tst-react-guide-rule-box {
+  display: grid;
+  gap: 7px;
+  padding: 14px 16px;
+  --tst-react-row-color: #fff0a6;
+}
+
+.tst-react-guide-rule-box strong {
+  color: #fff0a6;
+  font-size: 17px;
+}
+
+.tst-react-guide-rule-box span,
+.tst-react-guide-rule-box small {
+  color: rgba(231, 239, 255, 0.74);
+  font-family: "Trebuchet MS", "Noto Sans TC", system-ui, sans-serif;
+  font-weight: 800;
+}
+
+.tst-react-settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.tst-react-settings-tab {
+  min-height: 38px;
+  padding: 8px 15px;
+  border: 1px solid rgba(126, 247, 255, 0.24);
+  border-radius: 7px;
+  background: rgba(4, 8, 18, 0.6);
+  color: rgba(231, 239, 255, 0.72);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tst-react-settings-tab.is-active {
+  border-color: rgba(255, 240, 166, 0.7);
+  background: linear-gradient(120deg, rgba(75, 46, 116, 0.88), rgba(42, 26, 76, 0.72));
+  color: #fff4c2;
+}
+
+.tst-react-settings-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: center;
+  padding: 13px 16px;
+}
+
+.tst-react-settings-row strong,
+.tst-react-current-build-section h3,
+.tst-react-current-build-trait strong,
+.tst-react-current-build-upgrade strong,
+.tst-react-result-energy strong,
+.tst-react-result-rating {
+  margin: 0;
+  color: #fff4c2;
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.tst-react-settings-row span {
+  color: #8fe8dc;
+  text-align: right;
+}
+
+.tst-react-result-rating {
+  color: #fff0a6;
+  font-size: 24px;
+  text-shadow: 0 0 18px rgba(255, 240, 166, 0.28);
+}
+
+.tst-react-result-energy,
+.tst-react-result-sources {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  --tst-react-row-color: #fff0a6;
+}
+
+.tst-react-result-energy strong {
+  color: #fff0a6;
+}
+
+.tst-react-current-build-section {
+  display: grid;
+  gap: 10px;
+}
+
+.tst-react-overlay-pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.tst-react-overlay-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--tst-react-pill-color, #8fe8dc) 58%, transparent);
+  border-radius: 999px;
+  color: var(--tst-react-pill-color, #8fe8dc);
+  background: color-mix(in srgb, var(--tst-react-pill-color, #8fe8dc) 12%, transparent);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.tst-react-current-build-traits {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tst-react-current-build-trait,
+.tst-react-current-build-upgrade {
+  display: grid;
+  gap: 6px;
+  padding: 13px 15px;
+}
+
+.tst-react-current-build-trait {
+  --tst-react-row-color: var(--tst-react-pill-color, #8fe8dc);
+}
+
+.tst-react-current-build-upgrades {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tst-react-current-build-upgrade {
+  --tst-react-row-color: var(--tst-react-pill-color, #8fe8dc);
+}
+
+.tst-react-current-build-upgrade strong,
+.tst-react-current-build-trait strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tst-react-sandbox-fallback-badge {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  max-width: 320px;
+  padding: 10px 12px;
+  pointer-events: none;
+  border: 1px solid rgba(126, 247, 255, 0.34);
+  border-radius: 7px;
+  background: rgba(4, 8, 18, 0.72);
+  color: rgba(231, 239, 255, 0.72);
+  font-family: "Trebuchet MS", "Noto Sans TC", system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 0 18px rgba(126, 247, 255, 0.16);
+}
+
+@keyframes tst-react-overlay-backdrop-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes tst-react-overlay-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+    filter: brightness(1.18);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: brightness(1);
+  }
+}
+
 @keyframes tst-react-debug-enter {
   from {
     opacity: 0;
@@ -223,11 +655,15 @@
 
 @media (prefers-reduced-motion: reduce) {
   .tst-react-debug-panel,
-  .tst-react-debug-panel::before {
+  .tst-react-debug-panel::before,
+  .tst-react-overlay-backdrop,
+  .tst-react-overlay-card,
+  .tst-react-overlay-card::before {
     animation: none;
   }
 
-  .tst-react-debug-progress-fill {
+  .tst-react-debug-progress-fill,
+  .tst-react-overlay-button {
     transition: none;
   }
 }

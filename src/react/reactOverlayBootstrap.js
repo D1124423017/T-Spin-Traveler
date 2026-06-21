@@ -1,6 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import DebugPanel from "./components/DebugPanel.js";
+import ReactUiSandbox from "./components/ReactUiSandbox.js";
 import {
   getReactDebugOverlayHost,
   registerReactDebugOverlayCleanup,
@@ -37,7 +37,7 @@ export function mountReactDebugPanel({
   if (!cleanupRegistration) {
     cleanupRegistration = registerReactDebugOverlayCleanup(unmountReactDebugPanel);
   }
-  reactRoot.render(React.createElement(DebugPanel, {
+  reactRoot.render(React.createElement(ReactUiSandbox, {
     dispatchIntent,
     readSnapshot,
   }));

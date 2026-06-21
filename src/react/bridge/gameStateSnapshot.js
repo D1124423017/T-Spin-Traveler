@@ -31,6 +31,79 @@ function normalizeAssetSummary(summary = {}) {
   };
 }
 
+const REACT_UI_MIGRATED_OVERLAYS = Object.freeze([
+  "pause",
+  "guide",
+  "result",
+  "settings",
+  "currentBuild",
+]);
+
+function normalizeList(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeText(value, fallback = "") {
+  return value == null ? fallback : String(value);
+}
+
+export function getReactUiSandboxOverlayKind(state = {}) {
+  if (state.settingsOpen || state.pauseView === "settings") return "settings";
+  if (state.currentBuildOpen) return "currentBuild";
+  if (state.mode === "paused") return "pause";
+  if (state.mode === "guide") return "guide";
+  if (state.mode === "victory" || state.mode === "defeat") return "result";
+  return "";
+}
+
+export function isReactUiSandboxMigratedOverlay(kind = "") {
+  return REACT_UI_MIGRATED_OVERLAYS.includes(kind);
+}
+
+function createReactUiSandboxState(state = {}, uiModel = {}) {
+  const overlayKind = normalizeText(uiModel.overlayKind || getReactUiSandboxOverlayKind(state));
+  const migratedOverlay = isReactUiSandboxMigratedOverlay(overlayKind);
+  const canvasMode = normalizeText(state.mode || "");
+  return {
+    enabled: true,
+    overlayKind,
+    migratedOverlay,
+    fallbackCanvasMode: !migratedOverlay && canvasMode !== "start" ? canvasMode : "",
+    canvasMainMenuActive: canvasMode === "start" && !state.settingsOpen,
+    mainMenuManagedByReact: false,
+  };
+}
+
+function normalizeUiModel(model = {}) {
+  return {
+    labels: model.labels || {},
+    pause: model.pause || {},
+    guide: {
+      ...(model.guide || {}),
+      rows: normalizeList(model.guide?.rows),
+    },
+    result: {
+      ...(model.result || {}),
+      rows: normalizeList(model.result?.rows),
+      damageSources: normalizeText(model.result?.damageSources, "-"),
+    },
+    settings: {
+      ...(model.settings || {}),
+      tabs: normalizeList(model.settings?.tabs),
+      controls: normalizeList(model.settings?.controls),
+      handling: normalizeList(model.settings?.handling),
+      audio: normalizeList(model.settings?.audio),
+      languages: normalizeList(model.settings?.languages),
+    },
+    currentBuild: {
+      ...(model.currentBuild || {}),
+      stats: normalizeList(model.currentBuild?.stats),
+      traits: normalizeList(model.currentBuild?.traits),
+      upgrades: normalizeList(model.currentBuild?.upgrades),
+    },
+  };
+}
+
 function readAssetSummary(getAssetLoadingSummary) {
   try {
     return normalizeAssetSummary(getAssetLoadingSummary?.() || {});
@@ -64,11 +137,13 @@ export function createReactDebugSnapshot({
   domDiagnostics = {},
   legacyDebugVisible = false,
   reactDebug = {},
+  uiModel = {},
   now = 0,
 } = {}) {
   const debug = state.debug || {};
   const asset = normalizeAssetSummary(assetSummary);
   const timestamp = finiteNumber(now);
+  const normalizedUiModel = normalizeUiModel(uiModel);
   const snapshot = {
     mode: String(state.mode || "unknown"),
     runMode: String(state.runMode || ""),
@@ -103,6 +178,8 @@ export function createReactDebugSnapshot({
       loading: Boolean(reactDebug.loading),
       failed: Boolean(reactDebug.failed),
     },
+    ui: createReactUiSandboxState(state, uiModel),
+    ...normalizedUiModel,
     timestamp: Math.round(timestamp),
   };
   return freezeDeep(snapshot);
@@ -114,6 +191,7 @@ export function createReactDebugSnapshotReader({
   getDomOverlayDiagnostics,
   getLegacyDebugVisible = () => false,
   getReactDebugLoadState = () => ({}),
+  getUiSandboxModel = () => ({}),
   now = () => performance.now(),
 } = {}) {
   return () => createReactDebugSnapshot({
@@ -122,6 +200,7 @@ export function createReactDebugSnapshotReader({
     domDiagnostics: readDomDiagnostics(getDomOverlayDiagnostics),
     legacyDebugVisible: getLegacyDebugVisible(),
     reactDebug: getReactDebugLoadState(),
+    uiModel: getUiSandboxModel(),
     now: now(),
   });
 }

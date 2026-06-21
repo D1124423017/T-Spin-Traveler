@@ -52,6 +52,7 @@ function AnimatedPercent({ value }) {
 export default function DebugPanel({
   dispatchIntent,
   readSnapshot,
+  snapshot: providedSnapshot = null,
 } = {}) {
   const [collapsed, setCollapsed] = useState(false);
   const [snapshot, setSnapshot] = useState(() => safeReadSnapshot(readSnapshot));
@@ -59,7 +60,7 @@ export default function DebugPanel({
   useEffect(() => {
     let active = true;
     const refresh = () => {
-      if (active) setSnapshot(safeReadSnapshot(readSnapshot));
+      if (active && !providedSnapshot) setSnapshot(safeReadSnapshot(readSnapshot));
     };
     refresh();
     const interval = window.setInterval(refresh, 250);
@@ -67,12 +68,15 @@ export default function DebugPanel({
       active = false;
       window.clearInterval(interval);
     };
-  }, [readSnapshot]);
+  }, [providedSnapshot, readSnapshot]);
+
+  const renderedSnapshot = providedSnapshot || snapshot;
+  const labels = renderedSnapshot?.labels || {};
 
   const assetPercent = useMemo(() => {
-    if (!snapshot?.asset) return 0;
-    return snapshot.asset.progress * 100;
-  }, [snapshot]);
+    if (!renderedSnapshot?.asset) return 0;
+    return renderedSnapshot.asset.progress * 100;
+  }, [renderedSnapshot]);
 
   const dispatch = (type) => {
     const result = dispatchIntent?.({ type });
@@ -81,11 +85,11 @@ export default function DebugPanel({
     }
   };
 
-  if (!snapshot) {
+  if (!renderedSnapshot) {
     return h("aside", {
       className: "tst-react-debug-panel",
       "data-tst-react-debug-panel": "true",
-    }, "React Debug unavailable");
+    }, labels.reactSandboxUnavailable || "React Debug unavailable");
   }
 
   return h("aside", {
@@ -94,18 +98,18 @@ export default function DebugPanel({
   },
     h("div", { className: "tst-react-debug-header" },
       h("div", null,
-        h("p", { className: "tst-react-debug-kicker" }, "React Overlay POC"),
-        h("h2", null, "Debug Panel"),
+        h("p", { className: "tst-react-debug-kicker" }, labels.reactSandboxKicker || "React Overlay POC"),
+        h("h2", null, labels.reactSandboxDebugPanel || "Debug Panel"),
       ),
       h("button", {
         type: "button",
         className: "tst-react-debug-icon-button",
         onClick: () => setCollapsed((value) => !value),
-      }, collapsed ? "Show" : "Hide"),
+      }, collapsed ? labels.reactSandboxShow || "Show" : labels.reactSandboxHide || "Hide"),
     ),
     !collapsed && h("div", { className: "tst-react-debug-body" },
       h("div", { className: "tst-react-debug-progress" },
-        h("span", null, "Assets"),
+        h("span", null, labels.reactSandboxAssets || "Assets"),
         h(AnimatedPercent, { value: assetPercent }),
         h("div", { className: "tst-react-debug-progress-track" },
           h("div", {
@@ -115,25 +119,27 @@ export default function DebugPanel({
         ),
       ),
       h("div", { className: "tst-react-debug-grid" },
-        h(Stat, { label: "Mode", value: snapshot.mode }),
-        h(Stat, { label: "Screen", value: snapshot.screen }),
-        h(Stat, { label: "Wave", value: snapshot.gameplay.wave }),
-        h(Stat, { label: "Active", value: snapshot.gameplay.activePiece ? "yes" : "no" }),
-        h(Stat, { label: "Assets", value: `${snapshot.asset.loaded}/${snapshot.asset.total}` }),
-        h(Stat, { label: "Errors", value: snapshot.asset.error, tone: snapshot.asset.error ? "danger" : "default" }),
-        h(Stat, { label: "Draw age", value: `${snapshot.debug.drawAgeMs}ms` }),
-        h(Stat, { label: "DOM layers", value: snapshot.dom.layerCount }),
+        h(Stat, { label: labels.reactSandboxMode || "Mode", value: renderedSnapshot.mode }),
+        h(Stat, { label: labels.reactSandboxScreen || "Screen", value: renderedSnapshot.screen }),
+        h(Stat, { label: labels.waveLabel || "Wave", value: renderedSnapshot.gameplay.wave }),
+        h(Stat, { label: labels.reactSandboxActive || "Active", value: renderedSnapshot.gameplay.activePiece ? labels.on : labels.off }),
+        h(Stat, { label: labels.reactSandboxAssets || "Assets", value: `${renderedSnapshot.asset.loaded}/${renderedSnapshot.asset.total}` }),
+        h(Stat, { label: labels.reactSandboxErrors || "Errors", value: renderedSnapshot.asset.error, tone: renderedSnapshot.asset.error ? "danger" : "default" }),
+        h(Stat, { label: labels.reactSandboxDrawAge || "Draw age", value: `${renderedSnapshot.debug.drawAgeMs}ms` }),
+        h(Stat, { label: labels.reactSandboxDomLayers || "DOM layers", value: renderedSnapshot.dom.layerCount }),
       ),
-      snapshot.debug.drawError && h("p", { className: "tst-react-debug-error" }, snapshot.debug.drawError),
+      renderedSnapshot.debug.drawError && h("p", { className: "tst-react-debug-error" }, renderedSnapshot.debug.drawError),
       h("div", { className: "tst-react-debug-actions" },
         h("button", {
           type: "button",
           onClick: () => dispatch(REFRESH_SNAPSHOT_INTENT),
-        }, "Refresh"),
+        }, labels.reactSandboxRefresh || "Refresh"),
         h("button", {
           type: "button",
           onClick: () => dispatch(TOGGLE_LEGACY_DEBUG_HUD_INTENT),
-        }, snapshot.debug.legacyHudVisible ? "Hide legacy HUD" : "Show legacy HUD"),
+        }, renderedSnapshot.debug.legacyHudVisible
+          ? labels.reactSandboxHideLegacyHud || "Hide legacy HUD"
+          : labels.reactSandboxShowLegacyHud || "Show legacy HUD"),
       ),
     ),
   );
