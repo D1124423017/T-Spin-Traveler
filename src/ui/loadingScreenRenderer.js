@@ -10,6 +10,7 @@ export function createLoadingScreenRenderer({
   canvasFont,
   drawCornerGlyph,
   drawDimOverlay,
+  loadingBackground,
   roundedRect,
   translate,
   completionDelayMs = 0,
@@ -31,6 +32,7 @@ export function createLoadingScreenRenderer({
       canvasFont,
       drawCornerGlyph,
       drawDimOverlay,
+      loadingBackground,
       roundedRect,
     });
   }

@@ -14,7 +14,7 @@ function createAssetApi(records) {
 }
 
 describe("main menu first-paint readiness", () => {
-  it("waits for all critical menu and NOA images", () => {
+  it("waits for all critical loading, menu, and NOA images", () => {
     const records = MAIN_MENU_FIRST_PAINT_REQUIRED_IMAGE_IDS.map((id) => ({
       id,
       status: id === "hero-idle-canonical" ? "loading" : "loaded",

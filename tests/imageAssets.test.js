@@ -95,6 +95,15 @@ const mainMenuAssets = [
   },
 ];
 
+const loadingScreenAssets = [
+  {
+    path: "assets/images/ui/loading/loading-screen-royal-rift-bg.png",
+    width: 2560,
+    height: 1440,
+    colorType: 2,
+  },
+];
+
 const legacyAnimationNames = [
   "hero_melee_16_spritesheet_alpha.png",
   "hero_ranged_16_spritesheet_alpha.png",
@@ -481,6 +490,18 @@ describe("image assets", () => {
   it("keeps the formal main menu background and alpha button frames at production sizes", () => {
     const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
     for (const asset of mainMenuAssets) {
+      expect(assetsSource).toContain(asset.path);
+      expect(readPngInfo(asset.path)).toEqual({
+        width: asset.width,
+        height: asset.height,
+        colorType: asset.colorType,
+      });
+    }
+  });
+
+  it("keeps the formal loading screen background at production size", () => {
+    const assetsSource = fs.readFileSync(path.join(projectRoot, "src/data/assets.js"), "utf8");
+    for (const asset of loadingScreenAssets) {
       expect(assetsSource).toContain(asset.path);
       expect(readPngInfo(asset.path)).toEqual({
         width: asset.width,

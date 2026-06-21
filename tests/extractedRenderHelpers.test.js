@@ -129,6 +129,7 @@ describe("extracted render helpers", () => {
       canvasFont: vi.fn(),
       drawCornerGlyph: vi.fn(),
       drawDimOverlay: vi.fn(),
+      loadingBackground: "loading-bg",
       roundedRect: vi.fn(),
       translate: (key) => key,
       completionDelayMs: 320,
@@ -155,6 +156,8 @@ describe("extracted render helpers", () => {
       drawError: "",
       translate: expect.any(Function),
     });
-    expect(drawLoadingOverlay).toHaveBeenCalledOnce();
+    expect(drawLoadingOverlay).toHaveBeenCalledWith({}, expect.any(Object), expect.objectContaining({
+      loadingBackground: "loading-bg",
+    }));
   });
 });

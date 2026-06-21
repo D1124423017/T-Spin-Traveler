@@ -1,4 +1,4 @@
-export const ASSET_VERSION = "2026-06-18-story-ui-cinematic-motion";
+export const ASSET_VERSION = "2026-06-21-loading-screen-countup";
 
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
@@ -126,6 +126,7 @@ export const mainMenuRuneArcBack = registerImageAsset("main-menu-rune-arc-back",
 export const mainMenuPrimaryFrame = registerImageAsset("main-menu-primary-frame", "assets/images/ui/menu/main-menu-primary-frame.png");
 export const mainMenuSecondaryFrame = registerImageAsset("main-menu-secondary-frame", "assets/images/ui/menu/main-menu-secondary-frame.png");
 export const mainMenuDialogueFrame = registerImageAsset("main-menu-dialogue-frame", "assets/images/ui/menu/main-menu-dialogue-frame.png");
+export const loadingScreenRoyalRiftBg = registerImageAsset("loading-screen-royal-rift-background", "assets/images/ui/loading/loading-screen-royal-rift-bg.png");
 export const storyComicUiAssets = Object.freeze({
   titlePlaque: registerImageAsset(
     "story-ui-title-plaque",

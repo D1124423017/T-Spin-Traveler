@@ -19,6 +19,9 @@ describe("loading overlay helpers", () => {
     expect(model.realProgress).toBe(0.3);
     expect(model.progress).toBeGreaterThan(0.3);
     expect(model.progress).toBeLessThan(1);
+    expect(model.displayProgress).toBeGreaterThan(0);
+    expect(model.displayProgress).toBeLessThanOrEqual(model.progress);
+    expect(model.percentText).toMatch(/^\d+%$/);
     expect(model.gateReady).toBe(false);
     expect(model.message).toBe("Preparing rift assets...");
     expect(model.title).toBe("Rift Synchronizing");
@@ -38,6 +41,7 @@ describe("loading overlay helpers", () => {
     });
 
     expect(model.progress).toBe(1);
+    expect(model.percentText).toMatch(/^\d+%$/);
     expect(model.message).toBe("Some critical rift assets failed to load.");
     expect(model.counterText).toBe("10/10");
     expect(model.drawError).toBe("draw failed");
@@ -51,6 +55,8 @@ describe("loading overlay helpers", () => {
     });
 
     expect(model.progress).toBe(0);
+    expect(model.displayProgress).toBe(0);
+    expect(model.percentText).toBe("0%");
     expect(model.counterText).toBe("0/...");
   });
 
@@ -71,6 +77,7 @@ describe("loading overlay helpers", () => {
     expect(model.counterText).toBe("7/9");
     expect(model.realProgress).toBeCloseTo(7 / 9);
     expect(model.progress).toBeLessThan(1);
+    expect(model.displayProgress).toBeLessThanOrEqual(model.progress);
     expect(model.gateReady).toBe(false);
   });
 
@@ -93,6 +100,7 @@ describe("loading overlay helpers", () => {
     expect(model.gateReady).toBe(true);
     expect(model.completionProgress).toBe(0.5);
     expect(model.progress).toBe(1);
+    expect(model.displayProgress).toBeGreaterThan(0.98);
     expect(model.message).toBe("Rift gate aligned");
   });
 });

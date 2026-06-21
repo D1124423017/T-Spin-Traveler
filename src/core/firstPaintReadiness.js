@@ -5,6 +5,7 @@ export const MAIN_MENU_FIRST_PAINT_REQUIRED_IMAGE_IDS = Object.freeze([
   "main-menu-primary-frame",
   "main-menu-secondary-frame",
   "main-menu-dialogue-frame",
+  "loading-screen-royal-rift-background",
   "hero-idle-canonical",
   "menu-idle-cube-sheet-16",
   "menu-idle-rift-wayfinder-sheet-16",
