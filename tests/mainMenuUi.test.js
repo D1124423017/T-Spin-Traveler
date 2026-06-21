@@ -275,4 +275,15 @@ describe("main menu NOA idle variants", () => {
       "alignDrawBoxToBaseline(config.draw, CHARACTER_BASELINES.menu.localY)",
     );
   });
+
+  it("does not let the main menu hero fall through to the prototype fallback", () => {
+    const gameSource = fs.readFileSync(path.join(process.cwd(), "game.js"), "utf8");
+    const heroBaseBlock = gameSource.slice(
+      gameSource.indexOf("function drawHeroIdleBase"),
+      gameSource.indexOf("function isMenuHeroInteractive"),
+    );
+
+    expect(heroBaseBlock).toMatch(/if \(context === "menu"\)[\s\S]*?return;\s*}\s*if \(isImageReady\(noaBattleIdleArt\)\)/);
+    expect(heroBaseBlock).toMatch(/else \{\s*drawNoaFallback\(false\);\s*}/);
+  });
 });

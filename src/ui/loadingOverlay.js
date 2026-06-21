@@ -1,4 +1,27 @@
-export const LOADING_OVERLAY_RECT = Object.freeze({ x: 378, y: 214, w: 524, h: 220 });
+export const LOADING_OVERLAY_RECT = Object.freeze({ x: 344, y: 196, w: 592, h: 264 });
+
+const DEFAULT_LOADING_TEXT = Object.freeze({
+  loadingTitle: "Rift Synchronizing",
+  loadingSubtitle: "Preparing the first sight of the kingdom",
+  loadingPreparingAssets: "Preparing rift assets...",
+  loadingComplete: "Rift gate aligned",
+  loadingAssetError: "Some critical rift assets failed to load.",
+});
+
+function defaultTranslate(key) {
+  return DEFAULT_LOADING_TEXT[key] || key;
+}
+
+function easeOutCubic(value) {
+  const t = Math.max(0, Math.min(1, value));
+  return 1 - ((1 - t) ** 3);
+}
+
+function smoothstep(edge0, edge1, value) {
+  if (edge0 === edge1) return value >= edge1 ? 1 : 0;
+  const t = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
 
 export function createLoadingOverlayModel({
   summary = {},
@@ -7,6 +30,10 @@ export function createLoadingOverlayModel({
   debugEnabled = false,
   debugBuild = "",
   drawError = "",
+  firstPaintSummary = null,
+  completionStartedAt = 0,
+  completionDelayMs = 0,
+  translate = defaultTranslate,
 } = {}) {
   const safeSummary = {
     loading: summary.loading || 0,
@@ -14,23 +41,53 @@ export function createLoadingOverlayModel({
     error: summary.error || 0,
     total: summary.total || 0,
   };
+  const safeFirstPaint = firstPaintSummary ? {
+    ready: firstPaintSummary.ready === true,
+    loading: firstPaintSummary.loading?.length || 0,
+    loaded: firstPaintSummary.loaded || 0,
+    error: firstPaintSummary.error || 0,
+    total: firstPaintSummary.total || 0,
+  } : null;
   const elapsed = now - startedAt;
-  const progress = safeSummary.total > 0
-    ? Math.max(0, Math.min(1, (safeSummary.loaded + safeSummary.error) / safeSummary.total))
+  const progressSource = safeFirstPaint || safeSummary;
+  const hasProgressSource = progressSource.total > 0;
+  const realProgress = progressSource.total > 0
+    ? Math.max(0, Math.min(1, (progressSource.loaded + progressSource.error) / progressSource.total))
     : 0;
+  const stagedProgress = Math.min(0.94, 0.16 + easeOutCubic(elapsed / 1800) * 0.74);
+  const gateReady = hasProgressSource && (safeFirstPaint ? safeFirstPaint.ready : safeSummary.loading === 0);
+  const completionProgress = completionStartedAt && completionDelayMs > 0
+    ? Math.max(0, Math.min(1, (now - completionStartedAt) / completionDelayMs))
+    : 0;
+  const progress = hasProgressSource
+    ? gateReady
+      ? Math.max(realProgress, completionProgress > 0 ? 1 : 0.98)
+      : Math.min(0.96, Math.max(realProgress, stagedProgress))
+    : 0;
+  const hasError = (safeFirstPaint?.error || safeSummary.error) > 0;
+  const message = hasError
+    ? translate("loadingAssetError")
+    : completionProgress > 0
+      ? translate("loadingComplete")
+      : translate("loadingPreparingAssets");
   return {
     rect: LOADING_OVERLAY_RECT,
     summary: safeSummary,
+    firstPaintSummary: safeFirstPaint,
     now,
     elapsed,
     pulse: 0.5 + Math.sin(now * 0.006) * 0.5,
     orbit: now * 0.0012,
     scan: (now * 0.00018) % 1,
+    shimmer: (now * 0.00032) % 1,
     progress,
-    message: safeSummary.error > 0
-      ? "Some assets failed to load. The game will use fallback visuals."
-      : "Loading assets...",
-    counterText: `${safeSummary.loaded + safeSummary.error}/${safeSummary.total || "..."}`,
+    realProgress,
+    gateReady,
+    completionProgress,
+    title: translate("loadingTitle"),
+    subtitle: translate("loadingSubtitle"),
+    message,
+    counterText: `${progressSource.loaded + progressSource.error}/${progressSource.total || "..."}`,
     debugEnabled,
     debugBuild,
     drawError,
@@ -43,62 +100,88 @@ export function drawLoadingOverlay(ctx, model, {
   drawDimOverlay,
   roundedRect,
 }) {
-  const { rect, summary, elapsed, pulse, progress, message, orbit, scan } = model;
+  const {
+    rect,
+    summary,
+    elapsed,
+    pulse,
+    progress,
+    message,
+    orbit,
+    scan,
+    shimmer,
+    completionProgress,
+  } = model;
   const { x, y, w, h } = rect;
+  const canvas = ctx.canvas || {};
+  const canvasW = canvas.width || 1280;
+  const canvasH = canvas.height || 720;
 
-  drawDimOverlay(0.76);
+  drawLoadingAuroraBackdrop(ctx, canvasW, canvasH, model.now, pulse, orbit);
+  drawDimOverlay(0.34);
   ctx.save();
-  drawLoadingBackdropDial(ctx, x + w / 2, y + 112, pulse, orbit);
+  ctx.globalAlpha *= 1 - smoothstep(0.72, 1, completionProgress) * 0.55;
+  drawLoadingBackdropDial(ctx, x + w / 2, y + 132, pulse, orbit);
   const glow = ctx.createLinearGradient(x, y, x + w, y + h);
-  glow.addColorStop(0, "rgba(126, 231, 255, 0.16)");
-  glow.addColorStop(0.48, "rgba(184, 141, 255, 0.18)");
-  glow.addColorStop(1, "rgba(255, 224, 162, 0.16)");
-  ctx.fillStyle = "rgba(4, 7, 14, 0.88)";
-  ctx.shadowColor = "rgba(184, 141, 255, 0.34)";
-  ctx.shadowBlur = 28;
-  roundedRect(x, y, w, h, 10, true, false);
+  glow.addColorStop(0, "rgba(126, 231, 255, 0.14)");
+  glow.addColorStop(0.46, "rgba(184, 141, 255, 0.2)");
+  glow.addColorStop(1, "rgba(255, 224, 162, 0.13)");
+  ctx.fillStyle = "rgba(3, 5, 14, 0.9)";
+  ctx.shadowColor = completionProgress > 0
+    ? "rgba(255, 240, 166, 0.52)"
+    : "rgba(184, 141, 255, 0.38)";
+  ctx.shadowBlur = 32 + pulse * 8;
+  roundedRect(x, y, w, h, 14, true, false);
   ctx.shadowBlur = 0;
   ctx.fillStyle = glow;
-  roundedRect(x + 8, y + 8, w - 16, h - 16, 8, true, false);
+  roundedRect(x + 8, y + 8, w - 16, h - 16, 10, true, false);
   drawLoadingPanelScan(ctx, x, y, w, h, scan, roundedRect);
   drawLoadingConstellation(ctx, x, y, w, h, pulse, orbit);
-  ctx.strokeStyle = "rgba(255, 240, 166, 0.38)";
-  ctx.lineWidth = 1.8;
-  roundedRect(x, y, w, h, 10, false, true);
-  drawCornerGlyph(x + w / 2, y + 22, "#fff0a6");
+  drawLoadingRunes(ctx, x, y, w, h, orbit, pulse);
+  ctx.strokeStyle = completionProgress > 0
+    ? "rgba(255, 240, 166, 0.62)"
+    : "rgba(126, 231, 255, 0.4)";
+  ctx.lineWidth = 1.9;
+  roundedRect(x, y, w, h, 14, false, true);
+  drawCornerGlyph(x + w / 2, y + 24, completionProgress > 0 ? "#fff0a6" : "#d7c2ff");
   ctx.textAlign = "center";
-  ctx.font = canvasFont("900", 26, message, true);
-  ctx.fillStyle = summary.error > 0 ? "#ffb7bd" : "#f8f3cf";
-  ctx.fillText(message, x + w / 2, y + 92);
-  ctx.fillStyle = "rgba(238,244,252,0.68)";
-  ctx.font = canvasFont("800", 13, "ASSETS", true);
-  ctx.fillText(model.counterText, x + w / 2, y + 124);
-  const barX = x + 88;
-  const barY = y + 150;
-  const barW = w - 176;
-  ctx.fillStyle = "rgba(8, 13, 20, 0.68)";
-  roundedRect(barX, barY, barW, 12, 6, true, false);
-  const fillW = Math.max(18, barW * progress);
+  ctx.font = canvasFont("900", 30, model.title, true);
+  drawShinyText(ctx, model.title, x + w / 2, y + 76, w - 80, shimmer, {
+    base: "#f8f3cf",
+    shine: "#7ef7ff",
+    shadow: "rgba(126, 231, 255, 0.46)",
+  });
+  ctx.font = canvasFont("800", 14, model.subtitle, true);
+  ctx.fillStyle = "rgba(218, 227, 255, 0.72)";
+  ctx.fillText(model.subtitle, x + w / 2, y + 104, w - 92);
+  ctx.font = canvasFont("900", 22, message, true);
+  drawShinyText(ctx, message, x + w / 2, y + 146, w - 110, shimmer + 0.28, {
+    base: summary.error > 0 ? "#ffb7bd" : "#f8f3cf",
+    shine: "#fff0a6",
+    shadow: "rgba(184, 141, 255, 0.42)",
+  });
+  ctx.fillStyle = "rgba(238,244,252,0.66)";
+  ctx.font = canvasFont("800", 13, model.counterText, true);
+  ctx.fillText(model.counterText, x + w / 2, y + 174);
+  const barX = x + 78;
+  const barY = y + 198;
+  const barW = w - 156;
+  ctx.fillStyle = "rgba(4, 9, 20, 0.76)";
+  roundedRect(barX, barY, barW, 16, 8, true, false);
+  const fillW = Math.max(progress > 0 ? 18 : 0, barW * progress);
   const bar = ctx.createLinearGradient(barX, barY, barX + barW, barY);
   bar.addColorStop(0, "#7ef7ff");
   bar.addColorStop(0.5, "#d7c2ff");
   bar.addColorStop(1, "#fff0a6");
   ctx.globalAlpha = 0.76 + pulse * 0.24;
   ctx.fillStyle = bar;
-  roundedRect(barX, barY, fillW, 12, 6, true, false);
+  roundedRect(barX, barY, fillW, 16, 8, true, false);
   ctx.globalAlpha = 1;
-  ctx.strokeStyle = "rgba(238,244,252,0.18)";
-  roundedRect(barX, barY, barW, 12, 6, false, true);
+  ctx.strokeStyle = "rgba(238,244,252,0.2)";
+  roundedRect(barX, barY, barW, 16, 8, false, true);
   drawLoadingBarSpark(ctx, barX, barY, barW, progress, pulse);
-  for (let i = 0; i < 14; i += 1) {
-    const a = model.now * 0.0018 + i * 0.55;
-    const r = 72 + (i % 4) * 11;
-    const sx = x + w / 2 + Math.cos(a) * r;
-    const sy = y + 112 + Math.sin(a * 1.4) * 42;
-    ctx.globalAlpha = 0.2 + pulse * 0.26;
-    ctx.fillStyle = i % 3 === 0 ? "#7ef7ff" : i % 3 === 1 ? "#d7c2ff" : "#fff0a6";
-    ctx.fillRect(sx, sy, 2.5, 2.5);
-  }
+  drawLoadingParticles(ctx, x, y, w, h, model.now, pulse);
+  if (completionProgress > 0) drawCompletionShimmer(ctx, x, y, w, h, completionProgress, roundedRect);
   if (model.debugEnabled) {
     ctx.globalAlpha = 1;
     ctx.textAlign = "left";
@@ -111,6 +194,107 @@ export function drawLoadingOverlay(ctx, model, {
       ctx.fillText(`draw error: ${model.drawError.slice(0, 72)}`, x + 18, y + h - 10);
     }
   }
+  ctx.restore();
+}
+
+function drawLoadingAuroraBackdrop(ctx, width, height, now, pulse, orbit) {
+  const base = ctx.createLinearGradient(0, 0, width, height);
+  base.addColorStop(0, "#02050d");
+  base.addColorStop(0.45, "#09071e");
+  base.addColorStop(1, "#060912");
+  ctx.save();
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, width, height);
+  ctx.globalCompositeOperation = "lighter";
+  for (let i = 0; i < 4; i += 1) {
+    const cx = width * (0.2 + i * 0.22) + Math.sin(orbit * 1.5 + i) * 48;
+    const cy = height * (0.18 + (i % 2) * 0.36) + Math.cos(orbit * 1.2 + i) * 34;
+    const radius = Math.max(width, height) * (0.28 + i * 0.03);
+    const glow = ctx.createRadialGradient(cx, cy, 12, cx, cy, radius);
+    glow.addColorStop(0, i % 2 ? "rgba(126, 231, 255, 0.13)" : "rgba(156, 95, 255, 0.16)");
+    glow.addColorStop(0.42, i % 2 ? "rgba(58, 105, 255, 0.05)" : "rgba(89, 38, 170, 0.07)");
+    glow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.globalAlpha = 0.72 + pulse * 0.12;
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, width, height);
+  }
+  ctx.restore();
+}
+
+function drawShinyText(ctx, text, x, y, maxWidth, shimmer, {
+  base,
+  shine,
+  shadow,
+}) {
+  ctx.save();
+  ctx.shadowColor = shadow;
+  ctx.shadowBlur = 14;
+  const width = Math.min(maxWidth, Math.max(180, ctx.measureText(text).width + 34));
+  const sweep = x - width / 2 + ((shimmer % 1) * (width + 160)) - 80;
+  const gradient = ctx.createLinearGradient(sweep - 48, y, sweep + 82, y);
+  gradient.addColorStop(0, base);
+  gradient.addColorStop(0.48, shine);
+  gradient.addColorStop(1, base);
+  ctx.fillStyle = gradient;
+  ctx.fillText(text, x, y, maxWidth);
+  ctx.restore();
+}
+
+function drawLoadingRunes(ctx, x, y, w, h, orbit, pulse) {
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.strokeStyle = `rgba(255, 240, 166, ${0.18 + pulse * 0.12})`;
+  ctx.lineWidth = 1.1;
+  const marks = [
+    [x + 36, y + 34, 0],
+    [x + w - 36, y + 34, Math.PI / 2],
+    [x + 36, y + h - 34, -Math.PI / 2],
+    [x + w - 36, y + h - 34, Math.PI],
+  ];
+  for (const [mx, my, rotation] of marks) {
+    ctx.save();
+    ctx.translate(mx, my);
+    ctx.rotate(rotation + Math.sin(orbit * 1.2) * 0.04);
+    ctx.beginPath();
+    ctx.moveTo(-18, 0);
+    ctx.lineTo(-4, 0);
+    ctx.moveTo(4, 0);
+    ctx.lineTo(18, 0);
+    ctx.moveTo(0, -18);
+    ctx.lineTo(0, -4);
+    ctx.moveTo(0, 4);
+    ctx.lineTo(0, 18);
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawLoadingParticles(ctx, x, y, w, h, now, pulse) {
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  for (let i = 0; i < 22; i += 1) {
+    const a = now * 0.0015 + i * 0.57;
+    const r = 84 + (i % 6) * 17;
+    const sx = x + w / 2 + Math.cos(a) * r;
+    const sy = y + h / 2 + Math.sin(a * 1.34) * (46 + (i % 4) * 7);
+    ctx.globalAlpha = 0.16 + pulse * 0.24;
+    ctx.fillStyle = i % 3 === 0 ? "#7ef7ff" : i % 3 === 1 ? "#d7c2ff" : "#fff0a6";
+    ctx.fillRect(sx, sy, 2.4, 2.4);
+  }
+  ctx.restore();
+}
+
+function drawCompletionShimmer(ctx, x, y, w, h, progress, roundedRect) {
+  const sweepX = x - w * 0.35 + progress * w * 1.7;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const beam = ctx.createLinearGradient(sweepX - 80, y, sweepX + 100, y + h);
+  beam.addColorStop(0, "rgba(255, 240, 166, 0)");
+  beam.addColorStop(0.5, "rgba(255, 240, 166, 0.24)");
+  beam.addColorStop(1, "rgba(126, 231, 255, 0)");
+  ctx.fillStyle = beam;
+  roundedRect(x + 8, y + 8, w - 16, h - 16, 10, true, false);
   ctx.restore();
 }
 
@@ -190,7 +374,7 @@ function drawLoadingBarSpark(ctx, barX, barY, barW, progress, pulse) {
   ctx.shadowBlur = 16 + pulse * 8;
   ctx.fillStyle = "rgba(255, 248, 214, 0.92)";
   ctx.beginPath();
-  ctx.arc(sparkX, barY + 6, 4 + pulse * 1.8, 0, Math.PI * 2);
+  ctx.arc(sparkX, barY + 8, 4 + pulse * 1.8, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }

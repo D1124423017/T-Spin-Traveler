@@ -225,6 +225,8 @@ export function createGameState({
     lastBossPhase: 1,
     hitStopMs: 0,
     assetLoadingStartedAt: now,
+    assetLoadingCompletingAt: 0,
+    assetLoadingCompletedAt: 0,
     assetLoadingDone: false,
     lastMoveWasRotate: false,
     lastRotationKind: null,

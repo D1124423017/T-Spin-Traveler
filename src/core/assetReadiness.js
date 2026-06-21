@@ -9,7 +9,16 @@ export function getAssetLoadingSummary(assetApi = globalThis?.TST_ASSETS) {
   };
 }
 
-export function isAssetLoadingComplete(summary, elapsedMs, { minMs = 0, maxMs = Infinity } = {}) {
+export function isAssetLoadingComplete(
+  summary,
+  elapsedMs,
+  {
+    minMs = 0,
+    maxMs = Infinity,
+    criticalReady = true,
+  } = {},
+) {
+  if (!criticalReady) return false;
   const loading = summary?.loading || 0;
   return (loading === 0 && elapsedMs >= minMs) || elapsedMs >= maxMs;
 }

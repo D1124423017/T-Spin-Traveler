@@ -35,4 +35,12 @@ describe("asset readiness helpers", () => {
     expect(isAssetLoadingComplete({ loading: 0 }, 450, { minMs: 450, maxMs: 2600 })).toBe(true);
     expect(isAssetLoadingComplete({ loading: 1 }, 2600, { minMs: 450, maxMs: 2600 })).toBe(true);
   });
+
+  it("does not let timeout bypass critical first-paint assets", () => {
+    expect(isAssetLoadingComplete(
+      { loading: 1 },
+      5000,
+      { minMs: 450, maxMs: 2600, criticalReady: false },
+    )).toBe(false);
+  });
 });

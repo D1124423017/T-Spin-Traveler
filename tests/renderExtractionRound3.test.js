@@ -110,7 +110,7 @@ describe("low-risk coordinator helpers", () => {
     expect(isComplete).toHaveBeenCalledWith(
       { loaded: 5, loading: 0 },
       700,
-      { minMs: 500, maxMs: 2000 },
+      { minMs: 500, maxMs: 2000, criticalReady: true },
     );
   });
 

@@ -155,6 +155,7 @@ import {
   isAssetLoadingComplete,
 } from "./src/core/assetReadiness.js";
 import { createAssetLoadingController } from "./src/core/assetLoadingController.js";
+import { getFirstPaintReadiness } from "./src/core/firstPaintReadiness.js";
 import { createBattleCountdownCueReader } from "./src/core/battleCountdownModel.js";
 import { createBuildStatsController } from "./src/core/buildStatsController.js";
 import { createGameModeSetter } from "./src/core/gameModeHelpers.js";
@@ -544,6 +545,7 @@ const DAS_MS = 128;
 const ARR_MS = 28;
 const ASSET_LOADING_MIN_MS = 450;
 const ASSET_LOADING_MAX_MS = 2600;
+const ASSET_LOADING_COMPLETE_SHIMMER_MS = 320;
 const PLAYER_MAX_HP = 100;
 const ENEMY_DEFEAT_HEAL = 15;
 const PERFECT_CROWN_BOSS_HP_RATIO = 0.5;
@@ -1081,8 +1083,10 @@ const getCountdownCue = createBattleCountdownCueReader({
 const updateAssetLoading = createAssetLoadingController({
   state,
   getSummary: () => getAssetLoadingSummary(window.TST_ASSETS),
+  getCriticalReadiness: () => getFirstPaintReadiness(window.TST_ASSETS),
   minMs: ASSET_LOADING_MIN_MS,
   maxMs: ASSET_LOADING_MAX_MS,
+  completionDelayMs: ASSET_LOADING_COMPLETE_SHIMMER_MS,
   isComplete: isAssetLoadingComplete,
   onCompleted: () => playSfx("loadingComplete"),
 });
@@ -1535,12 +1539,15 @@ const {
   debugHudEnabled: DEBUG_HUD_ENABLED,
   debugHudBuild: DEBUG_HUD_BUILD,
   getAssetLoadingSummary,
+  getFirstPaintReadiness: () => getFirstPaintReadiness(window.TST_ASSETS),
   createLoadingOverlayModel,
   drawLoadingOverlay,
   canvasFont,
   drawCornerGlyph,
   drawDimOverlay,
   roundedRect,
+  translate: t,
+  completionDelayMs: ASSET_LOADING_COMPLETE_SHIMMER_MS,
 });
 
 const {
@@ -5778,8 +5785,9 @@ function drawHeroIdleBase(context = "battle") {
       drawImageContain(heroIdleArt, -170, -328, 340, 510);
       return;
     }
+    return;
   }
-  if (context !== "menu" && isImageReady(noaBattleIdleArt)) {
+  if (isImageReady(noaBattleIdleArt)) {
     drawImageContain(noaBattleIdleArt, -150, -280, 300, 450);
     return;
   } else if (isImageReady(heroIdleArt)) {

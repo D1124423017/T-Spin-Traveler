@@ -105,8 +105,14 @@ describe("extracted render helpers", () => {
       loaded: 3,
       total: 4,
     }));
+    const getFirstPaintReadiness = vi.fn(() => ({
+      ready: false,
+      loaded: 2,
+      total: 3,
+    }));
     const state = {
       assetLoadingStartedAt: 12,
+      assetLoadingCompletingAt: 0,
       debug: {
         drawError: "",
       },
@@ -117,12 +123,15 @@ describe("extracted render helpers", () => {
       debugHudEnabled: true,
       debugHudBuild: "test",
       getAssetLoadingSummary,
+      getFirstPaintReadiness,
       createLoadingOverlayModel,
       drawLoadingOverlay,
       canvasFont: vi.fn(),
       drawCornerGlyph: vi.fn(),
       drawDimOverlay: vi.fn(),
       roundedRect: vi.fn(),
+      translate: (key) => key,
+      completionDelayMs: 320,
     });
 
     renderer.drawAssetLoadingScreen(100);
@@ -132,11 +141,19 @@ describe("extracted render helpers", () => {
         loaded: 3,
         total: 4,
       },
+      firstPaintSummary: {
+        ready: false,
+        loaded: 2,
+        total: 3,
+      },
       now: 100,
       startedAt: 12,
+      completionStartedAt: 0,
+      completionDelayMs: 320,
       debugEnabled: true,
       debugBuild: "test",
       drawError: "",
+      translate: expect.any(Function),
     });
     expect(drawLoadingOverlay).toHaveBeenCalledOnce();
   });

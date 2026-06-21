@@ -111,6 +111,56 @@ describe("asset loading controller", () => {
     expect(updateAssetLoading(900)).toBe(false);
     expect(onCompleted).toHaveBeenCalledOnce();
   });
+
+  it("waits for critical first-paint readiness before completing", () => {
+    const state = {
+      assetLoadingDone: false,
+      assetLoadingStartedAt: 100,
+      menuRevealStartedAt: 0,
+    };
+    let criticalReady = false;
+    const updateAssetLoading = createAssetLoadingController({
+      state,
+      getSummary: () => ({ loading: 0, loaded: 5 }),
+      getCriticalReadiness: () => ({ ready: criticalReady }),
+      minMs: 500,
+      maxMs: 2000,
+      isComplete: (summary, elapsed, options) => options.criticalReady
+        && (summary.loading === 0 || elapsed >= options.maxMs),
+    });
+
+    expect(updateAssetLoading(3000)).toBe(false);
+    expect(state.assetLoadingDone).toBe(false);
+
+    criticalReady = true;
+    expect(updateAssetLoading(3100)).toBe(true);
+    expect(state.assetLoadingDone).toBe(true);
+  });
+
+  it("holds on the loading-complete shimmer before revealing the menu", () => {
+    const state = {
+      assetLoadingDone: false,
+      assetLoadingStartedAt: 100,
+      assetLoadingCompletingAt: 0,
+      menuRevealStartedAt: 0,
+    };
+    const updateAssetLoading = createAssetLoadingController({
+      state,
+      getSummary: () => ({ loading: 0, loaded: 5 }),
+      getCriticalReadiness: () => ({ ready: true }),
+      minMs: 500,
+      maxMs: 2000,
+      completionDelayMs: 320,
+      isComplete: () => true,
+    });
+
+    expect(updateAssetLoading(800)).toBe(false);
+    expect(state.assetLoadingCompletingAt).toBe(800);
+    expect(state.assetLoadingDone).toBe(false);
+    expect(updateAssetLoading(1119)).toBe(false);
+    expect(updateAssetLoading(1120)).toBe(true);
+    expect(state.menuRevealStartedAt).toBe(1120);
+  });
 });
 
 describe("battle particle spawner", () => {
