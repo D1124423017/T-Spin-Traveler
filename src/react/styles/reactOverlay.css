@@ -1,0 +1,233 @@
+.tst-react-debug-layer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 18px;
+  pointer-events: none;
+}
+
+.tst-react-debug-panel {
+  position: relative;
+  width: min(360px, 31vw);
+  max-height: calc(100% - 36px);
+  overflow: hidden;
+  pointer-events: auto;
+  color: #f8f3cf;
+  border: 1px solid rgba(126, 247, 255, 0.46);
+  border-radius: 8px;
+  background:
+    linear-gradient(132deg, rgba(4, 8, 18, 0.94), rgba(15, 10, 35, 0.78)),
+    radial-gradient(circle at 100% 0%, rgba(183, 117, 255, 0.18), transparent 42%);
+  box-shadow:
+    inset 0 0 24px rgba(126, 247, 255, 0.08),
+    0 18px 48px rgba(0, 0, 0, 0.42),
+    0 0 34px rgba(126, 247, 255, 0.18);
+  font-family: "TSpin Traveler Display", "Trebuchet MS", "Segoe UI", sans-serif;
+  letter-spacing: 0;
+  backdrop-filter: blur(9px);
+  animation: tst-react-debug-enter 260ms ease-out both;
+}
+
+.tst-react-debug-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(100deg, transparent 0 28%, rgba(126, 247, 255, 0.14) 42%, transparent 58%),
+    linear-gradient(180deg, rgba(255, 240, 166, 0.12), transparent 28%);
+  opacity: 0.58;
+  transform: translateX(-34%);
+  animation: tst-react-debug-shimmer 2.4s ease-in-out infinite;
+}
+
+.tst-react-debug-header,
+.tst-react-debug-body {
+  position: relative;
+  z-index: 1;
+}
+
+.tst-react-debug-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid rgba(126, 247, 255, 0.18);
+}
+
+.tst-react-debug-kicker {
+  margin: 0 0 4px;
+  color: rgba(126, 247, 255, 0.82);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.tst-react-debug-header h2 {
+  margin: 0;
+  color: #fff4c2;
+  font-size: 22px;
+  line-height: 1;
+  text-shadow: 0 0 16px rgba(126, 247, 255, 0.32);
+}
+
+.tst-react-debug-icon-button,
+.tst-react-debug-actions button {
+  min-height: 32px;
+  padding: 7px 11px;
+  border: 1px solid rgba(126, 247, 255, 0.4);
+  border-radius: 6px;
+  background: linear-gradient(120deg, rgba(9, 18, 34, 0.9), rgba(39, 22, 72, 0.68));
+  color: #f8f3cf;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: inset 0 0 16px rgba(126, 247, 255, 0.08);
+}
+
+.tst-react-debug-icon-button:hover,
+.tst-react-debug-actions button:hover {
+  border-color: rgba(255, 240, 166, 0.74);
+  box-shadow:
+    inset 0 0 18px rgba(126, 247, 255, 0.12),
+    0 0 18px rgba(126, 247, 255, 0.22);
+}
+
+.tst-react-debug-body {
+  display: grid;
+  gap: 12px;
+  padding: 13px 14px 14px;
+}
+
+.tst-react-debug-progress {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 7px 12px;
+  align-items: center;
+  color: rgba(231, 239, 255, 0.8);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.tst-react-debug-countup {
+  color: #fff0a6;
+  font-size: 24px;
+  line-height: 1;
+  text-shadow:
+    0 0 14px rgba(255, 240, 166, 0.5),
+    0 0 24px rgba(126, 247, 255, 0.24);
+}
+
+.tst-react-debug-progress-track {
+  grid-column: 1 / -1;
+  height: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(126, 247, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(4, 8, 18, 0.78);
+}
+
+.tst-react-debug-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7ef7ff, #b889ff, #fff0a6);
+  box-shadow: 0 0 16px rgba(126, 247, 255, 0.46);
+  transition: width 220ms ease-out;
+}
+
+.tst-react-debug-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tst-react-debug-stat {
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid rgba(126, 247, 255, 0.18);
+  border-radius: 6px;
+  background: rgba(4, 8, 18, 0.48);
+}
+
+.tst-react-debug-stat-label {
+  display: block;
+  margin-bottom: 4px;
+  color: rgba(173, 221, 255, 0.74);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.tst-react-debug-stat-value {
+  display: block;
+  overflow: hidden;
+  color: #f8f3cf;
+  font-size: 15px;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tst-react-debug-stat-danger .tst-react-debug-stat-value,
+.tst-react-debug-error {
+  color: #ff8fca;
+}
+
+.tst-react-debug-error {
+  margin: 0;
+  padding: 8px 9px;
+  border: 1px solid rgba(255, 143, 202, 0.36);
+  border-radius: 6px;
+  background: rgba(40, 8, 28, 0.48);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.tst-react-debug-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@keyframes tst-react-debug-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+    filter: brightness(1.25);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: brightness(1);
+  }
+}
+
+@keyframes tst-react-debug-shimmer {
+  0% {
+    opacity: 0;
+    transform: translateX(-42%);
+  }
+  42% {
+    opacity: 0.58;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(42%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tst-react-debug-panel,
+  .tst-react-debug-panel::before {
+    animation: none;
+  }
+
+  .tst-react-debug-progress-fill {
+    transition: none;
+  }
+}

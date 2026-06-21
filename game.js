@@ -268,6 +268,7 @@ import {
 import { createLoadingScreenRenderer } from "./src/ui/loadingScreenRenderer.js";
 import {
   cleanupDomOverlay,
+  getDomOverlayDiagnostics,
   initDomOverlayRoot,
   prefersReducedMotion,
   setDomOverlayMode,
@@ -574,6 +575,7 @@ const BOSS_WINDUP_MS = 1350;
 const HEAVY_ATTACK_WARNING_DAMAGE = 20;
 const GITHUB_FEEDBACK_URL = "https://github.com/D1124423017/T-Spin-Traveler/issues";
 const DEBUG_HUD_ENABLED = isDebugHudEnabled();
+const REACT_DEBUG_ENABLED = isReactDebugQueryEnabled();
 let debugUiController = createPendingDebugUiController({
   allowed: DEBUG_HUD_ENABLED,
   initialVisible: DEBUG_HUD_ENABLED,
@@ -581,6 +583,20 @@ let debugUiController = createPendingDebugUiController({
 let debugDiagnostics = null;
 let debugDiagnosticsPromise = null;
 let debugDiagnosticsLoadFailed = false;
+let reactDebugPanelController = null;
+let reactDebugPanelPromise = null;
+let reactDebugPanelLoadFailed = false;
+let readReactDebugSnapshot = null;
+let reactDebugIntentBridge = null;
+
+function isReactDebugQueryEnabled(search = globalThis?.location?.search || "") {
+  try {
+    const params = new URLSearchParams(search);
+    return params.get("debug") === "1" && params.get("reactDebug") === "1";
+  } catch {
+    return false;
+  }
+}
 
 function getDebugArtTuning(options = {}) {
   return debugDiagnostics?.getDebugArtTuning?.(options) || DEFAULT_DEBUG_ART_TUNING;
@@ -1217,6 +1233,79 @@ function updateDebugTools(now) {
       resetAllProgress: debugProgressTools.resetAllProgress,
     },
   });
+}
+
+function getReactDebugLoadState() {
+  return {
+    enabled: REACT_DEBUG_ENABLED,
+    loaded: Boolean(reactDebugPanelController?.isMounted?.()),
+    loading: Boolean(reactDebugPanelPromise && !reactDebugPanelController?.isMounted?.()),
+    failed: reactDebugPanelLoadFailed,
+  };
+}
+
+function clearReactDebugPanelController() {
+  reactDebugPanelController = null;
+  reactDebugPanelPromise = null;
+  readReactDebugSnapshot = null;
+  reactDebugIntentBridge = null;
+}
+
+function toggleLegacyDebugUi() {
+  if (!DEBUG_HUD_ENABLED) return false;
+  const visible = debugUiController.toggle();
+  if (!debugDiagnostics && visible) {
+    void loadDebugDiagnostics().then(() => updateDebugTools(performance.now()));
+    return visible;
+  }
+  if (debugDiagnostics) updateDebugTools(performance.now());
+  return visible;
+}
+
+function loadReactDebugPanel() {
+  if (!REACT_DEBUG_ENABLED) return Promise.resolve(null);
+  if (reactDebugPanelController?.isMounted?.()) return Promise.resolve(reactDebugPanelController);
+  if (reactDebugPanelLoadFailed) return Promise.resolve(null);
+  if (!reactDebugPanelPromise) {
+    reactDebugPanelPromise = Promise.all([
+      import("./src/react/reactOverlayBootstrap.js"),
+      import("./src/react/bridge/gameStateSnapshot.js"),
+      import("./src/react/bridge/uiIntentBridge.js"),
+    ])
+      .then(([reactOverlay, snapshotBridge, intentBridge]) => {
+        readReactDebugSnapshot = snapshotBridge.createReactDebugSnapshotReader({
+          state,
+          getAssetLoadingSummary: () => getAssetLoadingSummary(window.TST_ASSETS),
+          getDomOverlayDiagnostics,
+          getLegacyDebugVisible: () => debugUiController.isVisible(),
+          getReactDebugLoadState,
+          now: () => performance.now(),
+        });
+        reactDebugIntentBridge = intentBridge.createReactDebugIntentBridge({
+          refreshSnapshot: () => readReactDebugSnapshot?.(),
+          toggleLegacyDebugHud: toggleLegacyDebugUi,
+        });
+        reactDebugPanelController = reactOverlay.mountReactDebugPanel({
+          dispatchIntent: reactDebugIntentBridge.dispatch,
+          onUnmount: clearReactDebugPanelController,
+          readSnapshot: readReactDebugSnapshot,
+        });
+        return reactDebugPanelController;
+      })
+      .catch((error) => {
+        reactDebugPanelLoadFailed = true;
+        console.error("[T-Spin Traveler] Failed to load React debug panel:", error);
+        return null;
+      });
+  }
+  return reactDebugPanelPromise;
+}
+
+function updateReactDebugPanel() {
+  if (!REACT_DEBUG_ENABLED) return;
+  if (!reactDebugPanelController?.isMounted?.()) {
+    void loadReactDebugPanel();
+  }
 }
 
 const {
@@ -4990,6 +5079,7 @@ function update(time) {
     tickEffects(dt);
     updateScreenNoteMode();
     updateDebugTools(time);
+    updateReactDebugPanel();
     draw();
   } catch (error) {
     state.debug.drawError = String(error?.message || error);
@@ -6455,15 +6545,7 @@ const inputController = installInputController({
     startAscensionChallenge,
     startStoryScene,
     syncControlHints,
-    toggleDebugUi: () => {
-      if (!DEBUG_HUD_ENABLED) return;
-      const visible = debugUiController.toggle();
-      if (!debugDiagnostics && visible) {
-        void loadDebugDiagnostics().then(() => updateDebugTools(performance.now()));
-        return;
-      }
-      if (debugDiagnostics) updateDebugTools(performance.now());
-    },
+    toggleDebugUi: toggleLegacyDebugUi,
     toggleMute,
     toggleUpgradeDetail,
     nextStoryPanel,
@@ -6479,6 +6561,7 @@ syncControlHints();
 initDomOverlayRoot({ canvasWidth: W, canvasHeight: H });
 initFeedbackLayer({ canvasWidth: W, canvasHeight: H });
 setFeedbackMode(state.mode);
+updateReactDebugPanel();
 try {
   draw();
 } catch (error) {
