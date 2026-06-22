@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   LOADING_HUD_LAYOUT,
   LOADING_OVERLAY_RECT,
+  LOADING_PERCENT_TYPOGRAPHY,
   createLoadingOverlayModel,
 } from "../src/ui/loadingOverlay.js";
 
@@ -50,6 +51,13 @@ describe("loading overlay helpers", () => {
     expect(model.layout.barW).toBeLessThanOrEqual(1280 * 0.66);
     expect(model.layout.percentY).toBeLessThan(model.layout.barY);
     expect(model.layout.messageY).toBeGreaterThan(model.layout.barY);
+  });
+
+  it("keeps the CountUp percentage typography compact", () => {
+    expect(LOADING_PERCENT_TYPOGRAPHY.fontSize).toBeGreaterThanOrEqual(30);
+    expect(LOADING_PERCENT_TYPOGRAPHY.fontSize).toBeLessThanOrEqual(38);
+    expect(LOADING_PERCENT_TYPOGRAPHY.shadowBlur).toBeLessThanOrEqual(16);
+    expect(LOADING_PERCENT_TYPOGRAPHY.lighterAlpha).toBeLessThan(0.2);
   });
 
   it("shows the fallback warning and counts failed assets as progress", () => {

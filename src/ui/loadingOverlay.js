@@ -19,6 +19,14 @@ export const LOADING_HUD_LAYOUT = Object.freeze({
   debugY: 650,
 });
 
+export const LOADING_PERCENT_TYPOGRAPHY = Object.freeze({
+  fontSize: 36,
+  shadowAlpha: 0.42,
+  shadowBlur: 14,
+  strokeWidth: 3,
+  lighterAlpha: 0.16,
+});
+
 const DEFAULT_LOADING_TEXT = Object.freeze({
   loadingTitle: "Rift Synchronizing",
   loadingSubtitle: "Preparing the first sight of the kingdom",
@@ -400,15 +408,15 @@ function drawLoadingBackgroundParticles(ctx, width, height, now, pulse, motion) 
 function drawLoadingPercent(ctx, text, x, y, maxWidth, shimmer, canvasFont) {
   ctx.save();
   ctx.textAlign = "center";
-  ctx.font = canvasFont("900", 46, text, true);
-  ctx.shadowColor = "rgba(126, 231, 255, 0.55)";
-  ctx.shadowBlur = 20;
-  ctx.lineWidth = 4;
+  ctx.font = canvasFont("900", LOADING_PERCENT_TYPOGRAPHY.fontSize, text, true);
+  ctx.shadowColor = `rgba(126, 231, 255, ${LOADING_PERCENT_TYPOGRAPHY.shadowAlpha})`;
+  ctx.shadowBlur = LOADING_PERCENT_TYPOGRAPHY.shadowBlur;
+  ctx.lineWidth = LOADING_PERCENT_TYPOGRAPHY.strokeWidth;
   ctx.strokeStyle = "rgba(5, 6, 20, 0.78)";
   ctx.strokeText(text, x, y, maxWidth);
-  const width = Math.min(maxWidth, Math.max(128, ctx.measureText(text).width + 44));
+  const width = Math.min(maxWidth, Math.max(104, ctx.measureText(text).width + 34));
   const sweep = x - width / 2 + ((shimmer % 1) * (width + 180)) - 90;
-  const fill = ctx.createLinearGradient(sweep - 60, y - 42, sweep + 110, y + 10);
+  const fill = ctx.createLinearGradient(sweep - 54, y - 34, sweep + 96, y + 8);
   fill.addColorStop(0, "#d7c2ff");
   fill.addColorStop(0.46, "#fff0a6");
   fill.addColorStop(0.64, "#7ef7ff");
@@ -416,7 +424,7 @@ function drawLoadingPercent(ctx, text, x, y, maxWidth, shimmer, canvasFont) {
   ctx.fillStyle = fill;
   ctx.fillText(text, x, y, maxWidth);
   ctx.globalCompositeOperation = "lighter";
-  ctx.globalAlpha = 0.24;
+  ctx.globalAlpha = LOADING_PERCENT_TYPOGRAPHY.lighterAlpha;
   ctx.fillText(text, x, y, maxWidth);
   ctx.restore();
 }
