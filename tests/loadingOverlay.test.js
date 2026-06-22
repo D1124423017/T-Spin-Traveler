@@ -81,6 +81,25 @@ describe("loading overlay helpers", () => {
     expect(model.gateReady).toBe(false);
   });
 
+  it("does not show a critical warning for optional errors when first-paint assets are still valid", () => {
+    const model = createLoadingOverlayModel({
+      summary: { loading: 0, loaded: 98, error: 2, total: 100 },
+      firstPaintSummary: {
+        ready: true,
+        loaded: 9,
+        error: 0,
+        total: 9,
+        loading: [],
+      },
+      now: 900,
+      startedAt: 0,
+    });
+
+    expect(model.hasCriticalError).toBe(false);
+    expect(model.message).toBe("Preparing rift assets...");
+    expect(model.gateReady).toBe(true);
+  });
+
   it("shows complete shimmer state after first-paint is ready", () => {
     const model = createLoadingOverlayModel({
       summary: { loading: 0, loaded: 100, error: 0, total: 100 },

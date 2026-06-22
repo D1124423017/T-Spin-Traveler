@@ -1,11 +1,37 @@
 export const ASSET_VERSION = "2026-06-21-loading-screen-countup";
 
+function isExternalAssetPath(path) {
+  return /^(data:|blob:|https?:|file:)/.test(path);
+}
+
+export function getRuntimeAssetBasePath(locationLike = typeof location !== "undefined" ? location : null) {
+  if (!locationLike || locationLike.protocol === "file:") return "";
+  const pathname = String(locationLike.pathname || "/");
+  if (!pathname || pathname === "/") return "/";
+  if (pathname.endsWith("/")) return pathname;
+  const lastSlash = pathname.lastIndexOf("/");
+  const lastSegment = pathname.slice(lastSlash + 1);
+  if (lastSegment.includes(".")) return pathname.slice(0, lastSlash + 1) || "/";
+  return `${pathname}/`;
+}
+
+function joinAssetBasePath(basePath, path) {
+  if (!basePath || path.startsWith("/")) return path;
+  return `${basePath}${path}`;
+}
+
+function versionedAssetPath(path) {
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}v=${ASSET_VERSION}`;
+}
+
 export function assetPath(path) {
   const isFilePreview = typeof location !== "undefined" && location.protocol === "file:";
   const overrides = typeof window !== "undefined" ? window.TST_ASSET_OVERRIDES || {} : {};
   const resolvedPath = overrides[path] || path;
-  const externalPath = /^(data:|blob:|https?:|file:)/.test(resolvedPath);
-  return isFilePreview || externalPath ? resolvedPath : `${resolvedPath}?v=${ASSET_VERSION}`;
+  const externalPath = isExternalAssetPath(resolvedPath);
+  if (isFilePreview || externalPath) return resolvedPath;
+  return versionedAssetPath(joinAssetBasePath(getRuntimeAssetBasePath(), resolvedPath));
 }
 
 export const ASSET_REGISTRY = {

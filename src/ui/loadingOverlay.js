@@ -71,8 +71,8 @@ export function createLoadingOverlayModel({
     elapsedMs: elapsed,
     completionProgress,
   });
-  const hasError = (safeFirstPaint?.error || safeSummary.error) > 0;
-  const message = hasError
+  const hasCriticalError = safeFirstPaint ? safeFirstPaint.error > 0 : safeSummary.error > 0;
+  const message = hasCriticalError
     ? translate("loadingAssetError")
     : completionProgress > 0
       ? translate("loadingComplete")
@@ -101,6 +101,7 @@ export function createLoadingOverlayModel({
     debugEnabled,
     debugBuild,
     drawError,
+    hasCriticalError,
   };
 }
 
@@ -173,7 +174,7 @@ export function drawLoadingOverlay(ctx, model, {
   drawLoadingPercent(ctx, model.percentText, x + w / 2, y + 178, w - 110, shimmer, canvasFont);
   ctx.font = canvasFont("900", 20, message, true);
   drawShinyText(ctx, message, x + w / 2, y + 222, w - 110, shimmer + 0.28, {
-    base: summary.error > 0 ? "#ffb7bd" : "#f8f3cf",
+    base: model.hasCriticalError ? "#ffb7bd" : "#f8f3cf",
     shine: "#fff0a6",
     shadow: "rgba(184, 141, 255, 0.42)",
   });
