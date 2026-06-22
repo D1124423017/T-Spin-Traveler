@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  LOADING_HUD_LAYOUT,
   LOADING_OVERLAY_RECT,
   createLoadingOverlayModel,
 } from "../src/ui/loadingOverlay.js";
@@ -15,6 +16,7 @@ describe("loading overlay helpers", () => {
     });
 
     expect(model.rect).toBe(LOADING_OVERLAY_RECT);
+    expect(model.layout).toBe(LOADING_HUD_LAYOUT);
     expect(model.elapsed).toBe(500);
     expect(model.realProgress).toBe(0.3);
     expect(model.progress).toBeGreaterThan(0.3);
@@ -30,6 +32,24 @@ describe("loading overlay helpers", () => {
     expect(model.scan).toBeCloseTo(0.27);
     expect(model.debugEnabled).toBe(true);
     expect(model.debugBuild).toBe("debug-build");
+    expect(model.backgroundMotion.reducedMotion).toBe(false);
+  });
+
+  it("uses a bottom cinematic HUD instead of the former large center panel", () => {
+    const model = createLoadingOverlayModel({
+      summary: { loading: 1, loaded: 8, error: 0, total: 10 },
+      now: 1000,
+      startedAt: 0,
+    });
+
+    expect(model.rect.y).toBeGreaterThanOrEqual(500);
+    expect(model.rect.h).toBeLessThanOrEqual(140);
+    expect(model.layout.barY).toBeGreaterThanOrEqual(600);
+    expect(model.layout.barY + model.layout.barH).toBeLessThanOrEqual(640);
+    expect(model.layout.barW).toBeGreaterThanOrEqual(1280 * 0.58);
+    expect(model.layout.barW).toBeLessThanOrEqual(1280 * 0.66);
+    expect(model.layout.percentY).toBeLessThan(model.layout.barY);
+    expect(model.layout.messageY).toBeGreaterThan(model.layout.barY);
   });
 
   it("shows the fallback warning and counts failed assets as progress", () => {
@@ -98,6 +118,38 @@ describe("loading overlay helpers", () => {
     expect(model.hasCriticalError).toBe(false);
     expect(model.message).toBe("Preparing rift assets...");
     expect(model.gateReady).toBe(true);
+  });
+
+  it("reduces drift and particles when reduced motion is requested", () => {
+    const normal = createLoadingOverlayModel({
+      summary: { loading: 1, loaded: 5, error: 0, total: 10 },
+      now: 2000,
+      startedAt: 0,
+      reducedMotion: false,
+    });
+    const reduced = createLoadingOverlayModel({
+      summary: { loading: 1, loaded: 5, error: 0, total: 10 },
+      now: 2000,
+      startedAt: 0,
+      reducedMotion: true,
+    });
+
+    expect(reduced.backgroundMotion.reducedMotion).toBe(true);
+    expect(reduced.backgroundMotion.particleCount).toBeLessThan(normal.backgroundMotion.particleCount);
+    expect(reduced.backgroundMotion.maxDriftPx).toBeLessThan(normal.backgroundMotion.maxDriftPx);
+    expect(reduced.backgroundMotion.intensity).toBeLessThan(normal.backgroundMotion.intensity);
+  });
+
+  it("keeps debug information disabled by default", () => {
+    const model = createLoadingOverlayModel({
+      summary: { loading: 1, loaded: 5, error: 0, total: 10 },
+      now: 0,
+      startedAt: 0,
+    });
+
+    expect(model.debugEnabled).toBe(false);
+    expect(model.layout.debugX).toBeLessThan(model.layout.x);
+    expect(model.layout.debugY).toBeGreaterThan(model.layout.y);
   });
 
   it("shows complete shimmer state after first-paint is ready", () => {
