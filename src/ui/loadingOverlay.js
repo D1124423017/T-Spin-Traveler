@@ -7,8 +7,6 @@ export const LOADING_HUD_LAYOUT = Object.freeze({
   y: 530,
   w: 808,
   h: 132,
-  titleY: 544,
-  subtitleY: 565,
   percentY: 590,
   barX: 264,
   barY: 612,
@@ -17,6 +15,14 @@ export const LOADING_HUD_LAYOUT = Object.freeze({
   messageY: 646,
   debugX: 24,
   debugY: 650,
+});
+
+export const LOADING_HUD_TEXT_VISIBILITY = Object.freeze({
+  title: false,
+  subtitle: false,
+  counter: false,
+  percent: true,
+  message: true,
 });
 
 export const LOADING_PERCENT_TYPOGRAPHY = Object.freeze({
@@ -228,8 +234,6 @@ function drawCinematicLoadingHud(ctx, model, layout, {
     y,
     w,
     h,
-    titleY,
-    subtitleY,
     percentY,
     barX,
     barY,
@@ -246,58 +250,81 @@ function drawCinematicLoadingHud(ctx, model, layout, {
   ctx.save();
   ctx.globalAlpha = 0.92;
   ctx.textAlign = "center";
-  ctx.font = canvasFont("900", 18, model.title, true);
-  drawShinyText(ctx, model.title, centerX, titleY, w - 180, shimmer, {
-    base: "#f8f3cf",
-    shine: "#7ef7ff",
-    shadow: "rgba(126, 231, 255, 0.46)",
-  });
-  ctx.font = canvasFont("800", 11, model.subtitle, true);
-  ctx.fillStyle = "rgba(218, 227, 255, 0.52)";
-  ctx.fillText(model.subtitle, centerX, subtitleY, w - 190);
-  drawLoadingPercent(ctx, model.percentText, centerX, percentY, 220, shimmer, canvasFont);
+  if (LOADING_HUD_TEXT_VISIBILITY.percent) {
+    drawLoadingPercent(ctx, model.percentText, centerX, percentY, 220, shimmer, canvasFont);
+  }
 
+  const frameX = barX - 34;
+  const frameY = barY - 10;
+  const frameW = barW + 68;
+  const frameH = 36;
+  const coreY = barY + 3;
+  const coreH = Math.max(8, barH - 6);
   ctx.save();
   ctx.shadowColor = completionProgress > 0
     ? "rgba(255, 240, 166, 0.46)"
     : "rgba(126, 231, 255, 0.36)";
-  ctx.shadowBlur = 18 + pulse * 5;
-  ctx.fillStyle = "rgba(3, 5, 14, 0.36)";
-  roundedRect(barX - 24, barY - 12, barW + 48, 40, 18, true, false);
+  ctx.shadowBlur = 14 + pulse * 4;
+  const frameFill = ctx.createLinearGradient(frameX, frameY, frameX, frameY + frameH);
+  frameFill.addColorStop(0, "rgba(3, 5, 15, 0.58)");
+  frameFill.addColorStop(0.5, "rgba(10, 8, 28, 0.3)");
+  frameFill.addColorStop(1, "rgba(1, 3, 10, 0.62)");
+  ctx.fillStyle = frameFill;
+  roundedRect(frameX, frameY, frameW, frameH, 18, true, false);
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = "rgba(126, 231, 255, 0.16)";
-  ctx.lineWidth = 1.2;
-  roundedRect(barX - 24, barY - 12, barW + 48, 40, 18, false, true);
+  const frameStroke = ctx.createLinearGradient(frameX, frameY, frameX + frameW, frameY);
+  frameStroke.addColorStop(0, "rgba(255, 240, 166, 0.32)");
+  frameStroke.addColorStop(0.22, "rgba(126, 231, 255, 0.34)");
+  frameStroke.addColorStop(0.5, "rgba(184, 141, 255, 0.4)");
+  frameStroke.addColorStop(0.78, "rgba(126, 231, 255, 0.3)");
+  frameStroke.addColorStop(1, "rgba(255, 240, 166, 0.32)");
+  ctx.strokeStyle = frameStroke;
+  ctx.lineWidth = 1.4;
+  roundedRect(frameX, frameY, frameW, frameH, 18, false, true);
+  ctx.strokeStyle = "rgba(255, 240, 166, 0.16)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(frameX + 38, frameY + 7);
+  ctx.lineTo(frameX + frameW - 38, frameY + 7);
+  ctx.stroke();
   drawLoadingRailGlyphs(ctx, barX, barY, barW, barH, pulse);
-  drawLoadingRailScan(ctx, barX, barY - 12, barW, 40, scan, roundedRect);
+  drawLoadingRailScan(ctx, frameX + 4, frameY + 4, frameW - 8, frameH - 8, scan, roundedRect);
   ctx.restore();
 
-  ctx.fillStyle = "rgba(4, 9, 20, 0.72)";
-  roundedRect(barX, barY, barW, barH, barH / 2, true, false);
-  const fillW = Math.max(displayProgress > 0 ? barH : 0, barW * displayProgress);
-  const bar = ctx.createLinearGradient(barX, barY, barX + barW, barY);
-  bar.addColorStop(0, "#7ef7ff");
-  bar.addColorStop(0.5, "#d7c2ff");
+  const coreTrack = ctx.createLinearGradient(barX, coreY, barX, coreY + coreH);
+  coreTrack.addColorStop(0, "rgba(2, 8, 22, 0.96)");
+  coreTrack.addColorStop(0.5, "rgba(7, 8, 24, 0.78)");
+  coreTrack.addColorStop(1, "rgba(1, 3, 12, 0.96)");
+  ctx.fillStyle = coreTrack;
+  roundedRect(barX, coreY, barW, coreH, coreH / 2, true, false);
+  const fillW = Math.max(displayProgress > 0 ? coreH : 0, barW * displayProgress);
+  const bar = ctx.createLinearGradient(barX, coreY, barX + barW, coreY);
+  bar.addColorStop(0, "#62f1ff");
+  bar.addColorStop(0.36, "#7e77ff");
+  bar.addColorStop(0.68, "#c49dff");
   bar.addColorStop(1, "#fff0a6");
-  ctx.globalAlpha = 0.72 + pulse * 0.22;
+  ctx.globalAlpha = 0.82 + pulse * 0.16;
+  ctx.shadowColor = "rgba(126, 231, 255, 0.42)";
+  ctx.shadowBlur = 10 + pulse * 6;
   ctx.fillStyle = bar;
-  roundedRect(barX, barY, fillW, barH, barH / 2, true, false);
+  roundedRect(barX, coreY, fillW, coreH, coreH / 2, true, false);
   ctx.globalAlpha = 1;
-  ctx.strokeStyle = "rgba(238,244,252,0.22)";
-  roundedRect(barX, barY, barW, barH, barH / 2, false, true);
+  ctx.shadowBlur = 0;
+  drawLoadingBarEnergyFlow(ctx, barX, coreY, fillW, coreH, scan, pulse, roundedRect);
+  ctx.strokeStyle = "rgba(238,244,252,0.26)";
+  roundedRect(barX, coreY, barW, coreH, coreH / 2, false, true);
   ctx.fillStyle = railGlow;
-  roundedRect(barX, barY + barH - 3, barW, 3, 2, true, false);
-  drawLoadingBarSpark(ctx, barX, barY, barW, displayProgress, pulse);
+  roundedRect(barX, coreY + coreH - 2, barW, 2, 2, true, false);
+  drawLoadingBarSpark(ctx, barX, coreY, barW, displayProgress, pulse, coreH);
 
-  ctx.font = canvasFont("800", 13, message, true);
-  drawShinyText(ctx, message, centerX, messageY, w - 220, shimmer + 0.28, {
-    base: model.hasCriticalError ? "#ffb7bd" : "#f8f3cf",
-    shine: "#fff0a6",
-    shadow: "rgba(184, 141, 255, 0.42)",
-  });
-  ctx.fillStyle = "rgba(238,244,252,0.66)";
-  ctx.font = canvasFont("800", 10, model.counterText, true);
-  ctx.fillText(model.counterText, centerX + barW / 2 + 36, barY + 12);
+  if (LOADING_HUD_TEXT_VISIBILITY.message) {
+    ctx.font = canvasFont("800", 13, message, true);
+    drawShinyText(ctx, message, centerX, messageY, w - 220, shimmer + 0.28, {
+      base: model.hasCriticalError ? "#ffb7bd" : "#f8f3cf",
+      shine: "#fff0a6",
+      shadow: "rgba(184, 141, 255, 0.42)",
+    });
+  }
   drawCornerGlyph(barX - 42, barY + barH / 2, completionProgress > 0 ? "#fff0a6" : "#d7c2ff");
   drawCornerGlyph(barX + barW + 42, barY + barH / 2, completionProgress > 0 ? "#fff0a6" : "#d7c2ff");
   ctx.restore();
@@ -457,6 +484,31 @@ function drawLoadingRailScan(ctx, x, y, w, h, scan, roundedRect) {
   ctx.restore();
 }
 
+function drawLoadingBarEnergyFlow(ctx, barX, barY, fillW, barH, scan, pulse, roundedRect) {
+  if (fillW <= 0) return;
+  const sweepX = barX + scan * (fillW + 120) - 64;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const flow = ctx.createLinearGradient(sweepX - 46, barY, sweepX + 80, barY + barH);
+  flow.addColorStop(0, "rgba(126, 231, 255, 0)");
+  flow.addColorStop(0.38, `rgba(126, 231, 255, ${0.18 + pulse * 0.06})`);
+  flow.addColorStop(0.62, `rgba(255, 240, 166, ${0.16 + pulse * 0.05})`);
+  flow.addColorStop(1, "rgba(255, 240, 166, 0)");
+  ctx.fillStyle = flow;
+  roundedRect(barX, barY, fillW, barH, barH / 2, true, false);
+  ctx.globalAlpha = 0.22 + pulse * 0.08;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.72)";
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 5; i += 1) {
+    const lineX = barX + ((scan * 120 + i * 137) % Math.max(fillW, 1));
+    ctx.beginPath();
+    ctx.moveTo(lineX, barY + 1);
+    ctx.lineTo(Math.min(barX + fillW, lineX + 24), barY + barH - 1);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawCompletionLightSweep(ctx, width, height, progress) {
   const sweepX = -width * 0.35 + progress * width * 1.7;
   ctx.save();
@@ -508,16 +560,16 @@ function drawShinyText(ctx, text, x, y, maxWidth, shimmer, {
   ctx.restore();
 }
 
-function drawLoadingBarSpark(ctx, barX, barY, barW, progress, pulse) {
+function drawLoadingBarSpark(ctx, barX, barY, barW, progress, pulse, barH = 16) {
   if (progress <= 0) return;
   const sparkX = barX + Math.max(10, Math.min(barW - 2, barW * progress));
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   ctx.shadowColor = "rgba(255, 240, 166, 0.76)";
-  ctx.shadowBlur = 16 + pulse * 8;
+  ctx.shadowBlur = 14 + pulse * 7;
   ctx.fillStyle = "rgba(255, 248, 214, 0.92)";
   ctx.beginPath();
-  ctx.arc(sparkX, barY + 8, 4 + pulse * 1.8, 0, Math.PI * 2);
+  ctx.arc(sparkX, barY + barH / 2, 3.4 + pulse * 1.5, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }

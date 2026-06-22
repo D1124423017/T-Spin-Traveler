@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   LOADING_HUD_LAYOUT,
+  LOADING_HUD_TEXT_VISIBILITY,
   LOADING_OVERLAY_RECT,
   LOADING_PERCENT_TYPOGRAPHY,
   createLoadingOverlayModel,
@@ -51,6 +52,18 @@ describe("loading overlay helpers", () => {
     expect(model.layout.barW).toBeLessThanOrEqual(1280 * 0.66);
     expect(model.layout.percentY).toBeLessThan(model.layout.barY);
     expect(model.layout.messageY).toBeGreaterThan(model.layout.barY);
+  });
+
+  it("keeps loading HUD text minimal over the background art", () => {
+    expect(LOADING_HUD_TEXT_VISIBILITY).toEqual({
+      title: false,
+      subtitle: false,
+      counter: false,
+      percent: true,
+      message: true,
+    });
+    expect("titleY" in LOADING_HUD_LAYOUT).toBe(false);
+    expect("subtitleY" in LOADING_HUD_LAYOUT).toBe(false);
   });
 
   it("keeps the CountUp percentage typography compact", () => {
