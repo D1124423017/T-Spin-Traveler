@@ -35,6 +35,7 @@ export function createMenuScreenRenderer({
   drawMainMenuScene,
   drawMenuHeroShowcase,
   drawMenuHeroDialogueBubble,
+  isReactMainMenuActive = () => false,
   onMenuMotionUpdate = () => {},
   prefersReducedMotion = () => false,
   now = () => performance.now(),
@@ -80,47 +81,50 @@ export function createMenuScreenRenderer({
 
     drawMainMenuScene(menuMotion);
     drawMenuHeroShowcase();
-    drawTitle(menuMotion);
+    const reactMainMenuActive = Boolean(isReactMainMenuActive());
+    if (!reactMainMenuActive) {
+      drawTitle(menuMotion);
 
-    ctx.save();
-    ctx.globalAlpha *= menuMotion.rightPanelAlpha;
-    ctx.translate(menuMotion.rightPanelOffsetX, 0);
-    buttonMotions.forEach(({ action, motion, focus }, index) => {
-      const rect = getMainMenuVisualButtonRect(
-        mainMenuLayout,
-        action.id,
-        focus.scaleProgress,
-      );
-      const floatOffsetY = menuMotion.reducedMotion
-        ? 0
-        : Math.sin(currentTime * 0.0016 + index * 1.13) * 1.6;
-      const floatOffsetX = menuMotion.reducedMotion
-        ? 0
-        : Math.cos(currentTime * 0.00135 + index * 0.91) * 1.8;
-      drawMenuButton(
-        rect.x + floatOffsetX,
-        rect.y + floatOffsetY,
-        rect.w,
-        rect.h,
-        menuActionText(action.labelKey),
-        "",
-        index === selectedIndex ? "primary" : "secondary",
-        {
-          disabled: action.enabled === false,
-          frameStyle: "mainMenu",
-          focusProgress: focus.focusProgress,
-          hitOffsetX: menuMotion.rightPanelOffsetX,
-          interactionRect: mainMenuLayout.interactionRects[action.id],
-          motion,
-          rotation: rect.rotation,
-          selected: index === selectedIndex,
-        },
-      );
-    });
+      ctx.save();
+      ctx.globalAlpha *= menuMotion.rightPanelAlpha;
+      ctx.translate(menuMotion.rightPanelOffsetX, 0);
+      buttonMotions.forEach(({ action, motion, focus }, index) => {
+        const rect = getMainMenuVisualButtonRect(
+          mainMenuLayout,
+          action.id,
+          focus.scaleProgress,
+        );
+        const floatOffsetY = menuMotion.reducedMotion
+          ? 0
+          : Math.sin(currentTime * 0.0016 + index * 1.13) * 1.6;
+        const floatOffsetX = menuMotion.reducedMotion
+          ? 0
+          : Math.cos(currentTime * 0.00135 + index * 0.91) * 1.8;
+        drawMenuButton(
+          rect.x + floatOffsetX,
+          rect.y + floatOffsetY,
+          rect.w,
+          rect.h,
+          menuActionText(action.labelKey),
+          "",
+          index === selectedIndex ? "primary" : "secondary",
+          {
+            disabled: action.enabled === false,
+            frameStyle: "mainMenu",
+            focusProgress: focus.focusProgress,
+            hitOffsetX: menuMotion.rightPanelOffsetX,
+            interactionRect: mainMenuLayout.interactionRects[action.id],
+            motion,
+            rotation: rect.rotation,
+            selected: index === selectedIndex,
+          },
+        );
+      });
 
-    drawSelectedActionDescription(selectedAction);
-    drawFooter();
-    ctx.restore();
+      drawSelectedActionDescription(selectedAction);
+      drawFooter();
+      ctx.restore();
+    }
     drawMenuHeroDialogueBubble();
   }
 
@@ -169,21 +173,6 @@ export function createMenuScreenRenderer({
     ctx.lineTo(titleX + 338, underlineY);
     ctx.stroke();
     drawMenuTitleWake(ctx, menuMotion, { x: titleX, y: underlineY, w: 338 });
-
-    ctx.shadowColor = "rgba(126, 238, 255, 0.34)";
-    ctx.shadowBlur = 9;
-    label(t("startTagline").toUpperCase(), titleX + 8, title.y + 162, 15, "#e0d2ff");
-    ctx.shadowBlur = 0;
-    wrapText(
-      t("startWorldHint"),
-      titleX + 8,
-      title.y + 191,
-      title.w - 56,
-      21,
-      "rgba(245,248,255,0.78)",
-      14,
-    );
-    label(t("menuWorldLocation"), titleX + 8, title.y + 226, 10, "#9bcff2");
     ctx.restore();
   }
 

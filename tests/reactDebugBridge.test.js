@@ -2,18 +2,23 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createReactDebugSnapshot,
   createReactDebugSnapshotReader,
+  createReactMainMenuSnapshot,
+  createReactMainMenuSnapshotReader,
   getReactUiSandboxOverlayKind,
   isReactUiSandboxMigratedOverlay,
 } from "../src/react/bridge/gameStateSnapshot.js";
 import {
   REACT_DEBUG_INTENTS,
+  REACT_MAIN_MENU_INTENTS,
   createReactDebugIntentBridge,
+  createReactMainMenuIntentBridge,
   isReactDebugEnabled,
 } from "../src/react/bridge/uiIntentBridge.js";
 import {
   createReactUiSandboxIntentHandlers,
   createReactUiSandboxModelReader,
 } from "../src/react/bridge/reactUiSandboxModel.js";
+import { createReactMainMenuIntentHandlers } from "../src/react/bridge/mainMenuIntentHandlers.js";
 import { isDebugHudEnabled } from "../src/debug/debugBootstrap.js";
 
 describe("React debug POC bridge", () => {
@@ -244,5 +249,168 @@ describe("React debug POC bridge", () => {
       type: REACT_DEBUG_INTENTS.setSettingsTab,
       tab: "audio",
     });
+  });
+
+  it("creates a frozen React main menu view model without owning game state", () => {
+    const state = {
+      assetLoadingDone: true,
+      language: "en",
+      mainMenuSelectedIndex: 1,
+      mode: "start",
+    };
+    const translate = (key) => ({
+      endless: "Endless",
+      mainMenuStory: "Main Stage",
+      mainStageEgyptDescription: "Story first",
+      mainStageEgyptShort: "Prologue",
+      menuControlHint: "Keys",
+      menuWorldLocation: "Kingdom",
+      startGame: "Start Game",
+      startTagline: "Line clear x combat",
+      startTitle: "T-Spin Traveler",
+      startWorldHint: "NOA crosses the rift.",
+    }[key] || key);
+
+    const snapshot = createReactMainMenuSnapshot({
+      buttonFrames: {
+        primary: "/T-Spin-Traveler/assets/images/ui/menu/main-menu-primary-frame.png?v=test",
+        secondary: "/T-Spin-Traveler/assets/images/ui/menu/main-menu-secondary-frame.png?v=test",
+      },
+      state,
+      formatActionLabel: (action) => translate(action.labelKey).toUpperCase(),
+      now: 200,
+      translate,
+    });
+
+    expect(Object.isFrozen(snapshot)).toBe(true);
+    expect(Object.isFrozen(snapshot.actions)).toBe(true);
+    expect(Object.isFrozen(snapshot.actions[1])).toBe(true);
+    expect(snapshot.enabled).toBe(true);
+    expect(snapshot.selectedIndex).toBe(1);
+    expect(snapshot.selectedAction).toMatchObject({
+      id: "mainStage",
+      label: "MAIN STAGE",
+      description: "Story first",
+      hint: "Prologue",
+    });
+    expect(snapshot.buttonFrames).toEqual({
+      primary: "/T-Spin-Traveler/assets/images/ui/menu/main-menu-primary-frame.png?v=test",
+      secondary: "/T-Spin-Traveler/assets/images/ui/menu/main-menu-secondary-frame.png?v=test",
+    });
+    expect(snapshot.ui).toMatchObject({
+      canvasMainMenuActive: false,
+      mainMenuManagedByReact: true,
+    });
+
+    state.mainMenuSelectedIndex = 4;
+    expect(snapshot.selectedIndex).toBe(1);
+  });
+
+  it("keeps the React main menu snapshot disabled during first-paint loading", () => {
+    const readSnapshot = createReactMainMenuSnapshotReader({
+      state: {
+        assetLoadingDone: false,
+        mainMenuSelectedIndex: 0,
+        mode: "start",
+      },
+      translate: (key) => key,
+      now: () => 100,
+    });
+
+    expect(readSnapshot()).toMatchObject({
+      enabled: false,
+      selectedAction: { id: "start" },
+    });
+  });
+
+  it("dispatches React main menu intents only through whitelisted callbacks", () => {
+    const activateMenuAction = vi.fn(() => true);
+    const hoverMenuAction = vi.fn(() => true);
+    const refreshSnapshot = vi.fn(() => ({ mode: "start" }));
+    const bridge = createReactMainMenuIntentBridge({
+      activateMenuAction,
+      hoverMenuAction,
+      refreshSnapshot,
+    });
+
+    expect(bridge.dispatch({
+      type: REACT_MAIN_MENU_INTENTS.hoverMenuAction,
+      actionId: "equipment",
+    })).toEqual({
+      ok: true,
+      type: REACT_MAIN_MENU_INTENTS.hoverMenuAction,
+      value: true,
+    });
+    expect(bridge.dispatch({
+      type: REACT_MAIN_MENU_INTENTS.activateMenuAction,
+      actionId: "start",
+    })).toEqual({
+      ok: true,
+      type: REACT_MAIN_MENU_INTENTS.activateMenuAction,
+      value: true,
+    });
+    expect(bridge.dispatch(REACT_MAIN_MENU_INTENTS.refreshSnapshot)).toEqual({
+      ok: true,
+      type: REACT_MAIN_MENU_INTENTS.refreshSnapshot,
+      value: { mode: "start" },
+    });
+    expect(bridge.dispatch({ type: "setGameMode", mode: "defeat" })).toEqual({
+      ok: false,
+      reason: "unsupported-intent",
+      type: "setGameMode",
+    });
+    expect(hoverMenuAction).toHaveBeenCalledWith({
+      type: REACT_MAIN_MENU_INTENTS.hoverMenuAction,
+      actionId: "equipment",
+    });
+    expect(activateMenuAction).toHaveBeenCalledWith({
+      type: REACT_MAIN_MENU_INTENTS.activateMenuAction,
+      actionId: "start",
+    });
+    expect(refreshSnapshot).toHaveBeenCalledOnce();
+  });
+
+  it("routes React main menu actions through existing callbacks", () => {
+    const state = {
+      assetLoadingDone: true,
+      mainMenuSelectedIndex: 0,
+      mode: "start",
+    };
+    const resetGame = vi.fn(() => true);
+    const startStoryScene = vi.fn(() => true);
+    const unlockAudio = vi.fn();
+    const playSfx = vi.fn();
+    const handlers = createReactMainMenuIntentHandlers({
+      playSfx,
+      resetGame,
+      startStoryScene,
+      state,
+      unlockAudio,
+    });
+
+    expect(handlers.hoverMenuAction({ actionId: "mainStage" })).toBe(true);
+    expect(state.mainMenuSelectedIndex).toBe(1);
+    expect(playSfx).toHaveBeenCalledWith("uiHover");
+    expect(handlers.activateMenuAction({ actionId: "start" })).toBe(true);
+    expect(resetGame).toHaveBeenCalledWith("endless");
+    expect(unlockAudio).toHaveBeenCalled();
+    expect(handlers.activateMenuAction({ actionId: "mainStage" })).toBe(true);
+    expect(startStoryScene).toHaveBeenCalledWith("prologue", "storyEgypt");
+  });
+
+  it("does not let React main menu actions bypass the loading gate", () => {
+    const state = {
+      assetLoadingDone: false,
+      mainMenuSelectedIndex: 0,
+      mode: "start",
+    };
+    const resetGame = vi.fn(() => true);
+    const handlers = createReactMainMenuIntentHandlers({
+      resetGame,
+      state,
+    });
+
+    expect(handlers.activateMenuAction({ actionId: "start" })).toBe(false);
+    expect(resetGame).not.toHaveBeenCalled();
   });
 });

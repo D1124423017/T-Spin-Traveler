@@ -1,3 +1,8 @@
+import {
+  getMainMenuActions,
+  normalizeMainMenuSelectedIndex,
+} from "../../ui/mainMenuModel.js";
+
 function finiteNumber(value, fallback = 0) {
   return Number.isFinite(value) ? value : fallback;
 }
@@ -129,6 +134,81 @@ function readDomDiagnostics(getDomOverlayDiagnostics) {
       layerCount: 0,
     };
   }
+}
+
+function normalizeMainMenuAction(action = {}, index = 0, {
+  formatActionLabel,
+  translate,
+} = {}) {
+  const label = typeof formatActionLabel === "function"
+    ? formatActionLabel(action, index)
+    : translate?.(action.labelKey) || action.labelKey || action.id || "";
+  return {
+    id: normalizeText(action.id, `action-${index}`),
+    label: normalizeText(label),
+    description: normalizeText(translate?.(action.descriptionKey) || action.descriptionKey || ""),
+    hint: action.hintKey ? normalizeText(translate?.(action.hintKey) || action.hintKey) : "",
+    enabled: action.enabled !== false,
+  };
+}
+
+export function createReactMainMenuSnapshot({
+  state = {},
+  actions = getMainMenuActions(),
+  buttonFrames = {},
+  formatActionLabel,
+  now = 0,
+  translate = (key) => key,
+} = {}) {
+  const list = Array.isArray(actions) && actions.length > 0 ? actions : getMainMenuActions();
+  const selectedIndex = normalizeMainMenuSelectedIndex(state.mainMenuSelectedIndex, list.length);
+  const normalizedActions = list.map((action, index) => normalizeMainMenuAction(action, index, {
+    formatActionLabel,
+    translate,
+  }));
+  const selectedAction = normalizedActions[selectedIndex] || normalizedActions[0] || {};
+  const snapshot = {
+    enabled: state.mode === "start" && !state.settingsOpen && state.assetLoadingDone !== false,
+    mode: normalizeText(state.mode),
+    language: normalizeText(state.language || "zh"),
+    title: normalizeText(translate("startTitle")),
+    tagline: normalizeText(translate("startTagline")),
+    worldHint: normalizeText(translate("startWorldHint")),
+    location: normalizeText(translate("menuWorldLocation")),
+    controlHint: normalizeText(translate("menuControlHint")),
+    navigationLabel: normalizeText(translate("startTitle")),
+    actions: normalizedActions,
+    buttonFrames: {
+      primary: normalizeText(buttonFrames.primary),
+      secondary: normalizeText(buttonFrames.secondary),
+    },
+    selectedAction,
+    selectedIndex,
+    timestamp: Math.round(finiteNumber(now)),
+    ui: {
+      mainMenuManagedByReact: true,
+      canvasMainMenuActive: false,
+    },
+  };
+  return freezeDeep(snapshot);
+}
+
+export function createReactMainMenuSnapshotReader({
+  actions = getMainMenuActions(),
+  buttonFrames = {},
+  formatActionLabel,
+  now = () => performance.now(),
+  state,
+  translate = (key) => key,
+} = {}) {
+  return () => createReactMainMenuSnapshot({
+    state,
+    actions,
+    buttonFrames,
+    formatActionLabel,
+    now: now(),
+    translate,
+  });
 }
 
 export function createReactDebugSnapshot({

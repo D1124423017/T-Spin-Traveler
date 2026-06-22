@@ -5,6 +5,7 @@ import GuideOverlay from "./GuideOverlay.js";
 import PauseOverlay from "./PauseOverlay.js";
 import ResultOverlay from "./ResultOverlay.js";
 import SettingsOverlay from "./SettingsOverlay.js";
+import "../styles/reactOverlay.css";
 
 const h = React.createElement;
 

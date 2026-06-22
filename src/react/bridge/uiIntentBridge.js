@@ -15,6 +15,12 @@ export const REACT_DEBUG_INTENTS = Object.freeze({
   toggleLegacyDebugHud: "toggleLegacyDebugHud",
 });
 
+export const REACT_MAIN_MENU_INTENTS = Object.freeze({
+  activateMenuAction: "activateMenuAction",
+  hoverMenuAction: "hoverMenuAction",
+  refreshSnapshot: "refreshSnapshot",
+});
+
 const INTENT_CALLBACK_NAMES = Object.freeze({
   [REACT_DEBUG_INTENTS.closeCurrentBuild]: "closeCurrentBuild",
   [REACT_DEBUG_INTENTS.closeGuide]: "closeGuide",
@@ -26,6 +32,11 @@ const INTENT_CALLBACK_NAMES = Object.freeze({
   [REACT_DEBUG_INTENTS.retryRun]: "retryRun",
   [REACT_DEBUG_INTENTS.returnToMainMenu]: "returnToMainMenu",
   [REACT_DEBUG_INTENTS.setSettingsTab]: "setSettingsTab",
+});
+
+const MAIN_MENU_INTENT_CALLBACK_NAMES = Object.freeze({
+  [REACT_MAIN_MENU_INTENTS.activateMenuAction]: "activateMenuAction",
+  [REACT_MAIN_MENU_INTENTS.hoverMenuAction]: "hoverMenuAction",
 });
 
 export function isReactDebugEnabled(search = globalThis?.location?.search || "") {
@@ -81,6 +92,43 @@ export function createReactDebugIntentBridge({
       };
     }
     const callbackName = INTENT_CALLBACK_NAMES[type];
+    if (callbackName) {
+      return {
+        ok: true,
+        type,
+        value: callbacks[callbackName](intent || {}),
+      };
+    }
+    return {
+      ok: false,
+      reason: "unsupported-intent",
+      type: type || "",
+    };
+  }
+
+  return Object.freeze({ dispatch });
+}
+
+export function createReactMainMenuIntentBridge({
+  activateMenuAction = () => false,
+  hoverMenuAction = () => false,
+  refreshSnapshot = () => null,
+} = {}) {
+  const callbacks = {
+    activateMenuAction,
+    hoverMenuAction,
+  };
+
+  function dispatch(intent) {
+    const type = typeof intent === "string" ? intent : intent?.type;
+    if (type === REACT_MAIN_MENU_INTENTS.refreshSnapshot) {
+      return {
+        ok: true,
+        type,
+        value: refreshSnapshot(),
+      };
+    }
+    const callbackName = MAIN_MENU_INTENT_CALLBACK_NAMES[type];
     if (callbackName) {
       return {
         ok: true,

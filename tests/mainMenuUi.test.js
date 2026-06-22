@@ -129,6 +129,84 @@ describe("main menu model and layout", () => {
     expect(mainMenuButtonBlock).not.toContain("hovered || selected");
     expect(mainMenuButtonBlock).toContain("active = !disabled && selected");
   });
+
+  it("keeps Canvas scene and NOA while letting React own the menu controls", () => {
+    const root = process.cwd();
+    const menuSource = fs.readFileSync(path.join(root, "src/ui/menuScreen.js"), "utf8");
+    const startOverlayBlock = menuSource.slice(
+      menuSource.indexOf("function drawStartMenuOverlay"),
+      menuSource.indexOf("function drawTitle"),
+    );
+
+    expect(menuSource).toContain("isReactMainMenuActive = () => false");
+    expect(startOverlayBlock).toContain("drawMainMenuScene(menuMotion);");
+    expect(startOverlayBlock).toContain("drawMenuHeroShowcase();");
+    expect(startOverlayBlock).toContain("const reactMainMenuActive = Boolean(isReactMainMenuActive());");
+    expect(startOverlayBlock).toContain("if (!reactMainMenuActive)");
+    expect(startOverlayBlock).toContain("drawMenuButton(");
+    expect(startOverlayBlock).toContain("drawMenuHeroDialogueBubble();");
+  });
+
+  it("shows only the game title in the top-left brand area", () => {
+    const root = process.cwd();
+    const overlaySource = fs.readFileSync(
+      path.join(root, "src/react/components/MainMenuOverlay.js"),
+      "utf8",
+    );
+    const menuSource = fs.readFileSync(path.join(root, "src/ui/menuScreen.js"), "utf8");
+    const titleBlock = menuSource.slice(
+      menuSource.indexOf("function drawTitle"),
+      menuSource.indexOf("function drawSelectedActionDescription"),
+    );
+
+    expect(overlaySource).toContain("tst-main-menu-title");
+    expect(overlaySource).not.toContain("tst-main-menu-tagline");
+    expect(overlaySource).not.toContain("tst-main-menu-world-hint");
+    expect(overlaySource).not.toContain("tst-main-menu-location");
+    expect(titleBlock).not.toContain("startTagline");
+    expect(titleBlock).not.toContain("startWorldHint");
+    expect(titleBlock).not.toContain("menuWorldLocation");
+    expect(menuSource).toContain("function drawSelectedActionDescription");
+    expect(menuSource).toContain("function drawFooter");
+  });
+
+  it("keeps React menu plaques free of moving sweep bars while preserving glow states", () => {
+    const root = process.cwd();
+    const menuCss = fs.readFileSync(path.join(root, "src/react/styles/mainMenuOverlay.css"), "utf8");
+
+    expect(menuCss).not.toContain("tst-main-menu-title-shimmer");
+    expect(menuCss).not.toContain("tst-main-menu-button-sweep");
+    expect(menuCss).not.toContain(".tst-main-menu-title::after");
+    expect(menuCss).not.toContain(".tst-main-menu-button-inner::after");
+    expect(menuCss).not.toContain("radial-gradient(ellipse at 16% 50%, rgba(126, 247, 255, 0.32)");
+    expect(menuCss).toContain(".tst-main-menu-button-core");
+    expect(menuCss).toContain("rgba(3, 5, 12, 0.78)");
+    expect(menuCss).toContain(".tst-main-menu-button.is-selected .tst-main-menu-button-glow {\n  opacity: 0.5;");
+    expect(menuCss).toContain(".tst-main-menu-button-frame-glow");
+    expect(menuCss).toContain(".tst-main-menu-button.is-selected .tst-main-menu-button-frame-glow");
+    expect(menuCss).toContain(".tst-main-menu-button:hover .tst-main-menu-button-glow");
+  });
+
+  it("adds a non-interactive React ambient layer with reduced-motion support", () => {
+    const root = process.cwd();
+    const overlaySource = fs.readFileSync(path.join(root, "src/react/components/MainMenuOverlay.js"), "utf8");
+    const ambientSource = fs.readFileSync(
+      path.join(root, "src/react/components/MainMenuAmbientOverlay.js"),
+      "utf8",
+    );
+    const ambientCss = fs.readFileSync(
+      path.join(root, "src/react/styles/mainMenuAmbientOverlay.css"),
+      "utf8",
+    );
+
+    expect(overlaySource).toContain("MainMenuAmbientOverlay");
+    expect(ambientSource).toContain("data-tst-main-menu-ambient");
+    expect(ambientSource).toContain("tst-main-menu-ambient-rift");
+    expect(ambientSource).toContain("tst-main-menu-noa-mist");
+    expect(ambientSource).toContain("tst-main-menu-dust-particle");
+    expect(ambientCss).toContain("pointer-events: none");
+    expect(ambientCss).toContain("@media (prefers-reduced-motion: reduce)");
+  });
 });
 
 describe("main menu input router", () => {

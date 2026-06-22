@@ -303,7 +303,10 @@ import {
   getNextUpgradeSelectionIndex,
 } from "./src/ui/upgradeCards.js";
 import { createUpgradeScreenRenderer } from "./src/ui/upgradeScreen.js";
-import { createMenuScreenRenderer } from "./src/ui/menuScreen.js";
+import {
+  createMenuScreenRenderer,
+  getMenuActionText,
+} from "./src/ui/menuScreen.js";
 import {
   MAIN_MENU_HERO_DIALOGUE_KEYS,
   drawMainMenuHeroDialogue,
@@ -588,6 +591,11 @@ let reactDebugPanelPromise = null;
 let reactDebugPanelLoadFailed = false;
 let readReactDebugSnapshot = null;
 let reactDebugIntentBridge = null;
+let reactMainMenuController = null;
+let reactMainMenuPromise = null;
+let reactMainMenuLoadFailed = false;
+let readReactMainMenuSnapshot = null;
+let reactMainMenuIntentBridge = null;
 
 function isReactDebugQueryEnabled(search = globalThis?.location?.search || "") {
   try {
@@ -1350,6 +1358,90 @@ function updateReactDebugPanel() {
   }
 }
 
+function canShowReactMainMenuOverlay() {
+  return state.mode === "start" && state.assetLoadingDone !== false && !state.settingsOpen;
+}
+
+function isReactMainMenuOverlayActive() {
+  return canShowReactMainMenuOverlay()
+    && !reactMainMenuLoadFailed
+    && Boolean(reactMainMenuController?.isMounted?.());
+}
+
+function clearReactMainMenuController() {
+  reactMainMenuController = null;
+  reactMainMenuPromise = null;
+  readReactMainMenuSnapshot = null;
+  reactMainMenuIntentBridge = null;
+}
+
+function formatReactMainMenuActionLabel(action) {
+  return getMenuActionText(action.labelKey, {
+    language: state.language,
+    translate: t,
+  });
+}
+
+function loadReactMainMenuOverlay() {
+  if (!canShowReactMainMenuOverlay()) return Promise.resolve(null);
+  if (reactMainMenuController?.isMounted?.()) return Promise.resolve(reactMainMenuController);
+  if (reactMainMenuLoadFailed) return Promise.resolve(null);
+  if (!reactMainMenuPromise) {
+    reactMainMenuPromise = Promise.all([
+      import("./src/react/reactOverlayBootstrap.js"),
+      import("./src/react/bridge/gameStateSnapshot.js"),
+      import("./src/react/bridge/uiIntentBridge.js"),
+      import("./src/react/bridge/mainMenuIntentHandlers.js"),
+    ])
+      .then(([reactOverlay, snapshotBridge, intentBridge, mainMenuHandlersBridge]) => {
+        const reactMainMenuHandlers = mainMenuHandlersBridge.createReactMainMenuIntentHandlers({
+          loadMetaProgress,
+          openEquipmentScreen,
+          playSfx,
+          resetGame,
+          setGameMode,
+          startStoryScene,
+          state,
+          unlockAudio,
+        });
+        readReactMainMenuSnapshot = snapshotBridge.createReactMainMenuSnapshotReader({
+          buttonFrames: {
+            primary: getImageAssetRecord(mainMenuPrimaryFrame)?.url,
+            secondary: getImageAssetRecord(mainMenuSecondaryFrame)?.url,
+          },
+          formatActionLabel: formatReactMainMenuActionLabel,
+          now: () => performance.now(),
+          state,
+          translate: t,
+        });
+        reactMainMenuIntentBridge = intentBridge.createReactMainMenuIntentBridge({
+          activateMenuAction: reactMainMenuHandlers.activateMenuAction,
+          hoverMenuAction: reactMainMenuHandlers.hoverMenuAction,
+          refreshSnapshot: () => readReactMainMenuSnapshot?.(),
+        });
+        reactMainMenuController = reactOverlay.mountReactMainMenuOverlay({
+          dispatchIntent: reactMainMenuIntentBridge.dispatch,
+          onUnmount: clearReactMainMenuController,
+          readSnapshot: readReactMainMenuSnapshot,
+        });
+        return reactMainMenuController;
+      })
+      .catch((error) => {
+        reactMainMenuLoadFailed = true;
+        console.error("[T-Spin Traveler] Failed to load React main menu overlay:", error);
+        return null;
+      });
+  }
+  return reactMainMenuPromise;
+}
+
+function updateReactMainMenuOverlay() {
+  if (!canShowReactMainMenuOverlay()) return;
+  if (!reactMainMenuController?.isMounted?.()) {
+    void loadReactMainMenuOverlay();
+  }
+}
+
 const {
   drawEquipmentRoulette,
   equipEquipmentItem,
@@ -1821,6 +1913,7 @@ const {
   drawMainMenuScene: drawMainMenuSceneBackground,
   drawMenuHeroShowcase,
   drawMenuHeroDialogueBubble,
+  isReactMainMenuActive: isReactMainMenuOverlayActive,
   onMenuMotionUpdate: (motion) => {
     mainMenuHitMotion = motion;
   },
@@ -5122,6 +5215,7 @@ function update(time) {
     updateScreenNoteMode();
     updateDebugTools(time);
     updateReactDebugPanel();
+    updateReactMainMenuOverlay();
     draw();
   } catch (error) {
     state.debug.drawError = String(error?.message || error);
@@ -6604,6 +6698,7 @@ initDomOverlayRoot({ canvasWidth: W, canvasHeight: H });
 initFeedbackLayer({ canvasWidth: W, canvasHeight: H });
 setFeedbackMode(state.mode);
 updateReactDebugPanel();
+updateReactMainMenuOverlay();
 try {
   draw();
 } catch (error) {
