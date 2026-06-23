@@ -48,35 +48,9 @@
   box-shadow: 0 0 18px rgba(126, 247, 255, 0.28);
 }
 
-.tst-main-menu-tagline,
-.tst-main-menu-world-hint,
-.tst-main-menu-location,
 .tst-main-menu-description,
 .tst-main-menu-control-hint {
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.86);
-}
-
-.tst-main-menu-tagline {
-  margin: 0 0 14px;
-  color: rgba(231, 221, 255, 0.92);
-  font-size: clamp(17px, 1.45vw, 24px);
-  font-weight: 900;
-}
-
-.tst-main-menu-world-hint {
-  margin: 0;
-  max-width: 500px;
-  color: rgba(241, 245, 255, 0.78);
-  font-size: clamp(13px, 1.05vw, 18px);
-  font-weight: 800;
-  line-height: 1.48;
-}
-
-.tst-main-menu-location {
-  margin: 24px 0 0;
-  color: rgba(126, 247, 255, 0.78);
-  font-size: clamp(11px, 0.9vw, 14px);
-  font-weight: 900;
 }
 
 .tst-main-menu-actions {

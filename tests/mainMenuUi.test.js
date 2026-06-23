@@ -157,6 +157,7 @@ describe("main menu model and layout", () => {
       path.join(root, "src/react/components/MainMenuOverlay.js"),
       "utf8",
     );
+    const menuCss = fs.readFileSync(path.join(root, "src/react/styles/mainMenuOverlay.css"), "utf8");
     const menuSource = fs.readFileSync(path.join(root, "src/ui/menuScreen.js"), "utf8");
     const titleBlock = menuSource.slice(
       menuSource.indexOf("function drawTitle"),
@@ -167,6 +168,9 @@ describe("main menu model and layout", () => {
     expect(overlaySource).not.toContain("tst-main-menu-tagline");
     expect(overlaySource).not.toContain("tst-main-menu-world-hint");
     expect(overlaySource).not.toContain("tst-main-menu-location");
+    expect(menuCss).not.toContain("tst-main-menu-tagline");
+    expect(menuCss).not.toContain("tst-main-menu-world-hint");
+    expect(menuCss).not.toContain("tst-main-menu-location");
     expect(titleBlock).not.toContain("startTagline");
     expect(titleBlock).not.toContain("startWorldHint");
     expect(titleBlock).not.toContain("menuWorldLocation");
