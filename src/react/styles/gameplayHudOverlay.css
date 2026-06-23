@@ -1,0 +1,203 @@
+.tst-react-gameplay-hud-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  font-family: "TSpin Traveler Display", "Noto Sans TC", system-ui, sans-serif;
+  letter-spacing: 0;
+}
+
+.tst-gameplay-hud-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: rgba(252, 244, 214, 0.96);
+}
+
+.tst-gameplay-hud-stack {
+  position: absolute;
+  left: 3.35%;
+  bottom: 5.1%;
+  width: min(316px, 24vw);
+  min-width: 252px;
+}
+
+.tst-gameplay-hud-compact {
+  position: relative;
+  overflow: hidden;
+  padding: 9px 12px 10px;
+  border: 1px solid rgba(112, 213, 255, 0.34);
+  border-radius: 7px;
+  background:
+    linear-gradient(90deg, rgba(4, 7, 16, 0.78), rgba(12, 10, 28, 0.68), rgba(4, 7, 16, 0.78)),
+    radial-gradient(ellipse at 7% 20%, rgba(126, 247, 255, 0.12), transparent 38%),
+    radial-gradient(ellipse at 96% 88%, rgba(151, 83, 255, 0.16), transparent 42%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 226, 150, 0.08),
+    inset 0 0 18px rgba(0, 0, 0, 0.58),
+    0 0 14px rgba(99, 76, 212, 0.24);
+  backdrop-filter: blur(5px);
+}
+
+.tst-gameplay-hud-compact::before,
+.tst-gameplay-hud-compact::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.tst-gameplay-hud-compact::before {
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, rgba(255, 222, 134, 0.15), transparent 18%, transparent 82%, rgba(126, 247, 255, 0.14)),
+    radial-gradient(circle at 0 50%, rgba(126, 247, 255, 0.28), transparent 12%),
+    radial-gradient(circle at 100% 50%, rgba(161, 91, 255, 0.28), transparent 12%);
+  opacity: 0.48;
+  mix-blend-mode: screen;
+}
+
+.tst-gameplay-hud-compact::after {
+  left: 12px;
+  right: 12px;
+  bottom: 6px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 223, 141, 0.34), rgba(126, 247, 255, 0.22), transparent);
+  opacity: 0.56;
+}
+
+.tst-gameplay-hud-row {
+  position: relative;
+  z-index: 1;
+}
+
+.tst-gameplay-hud-row.is-ready .tst-gameplay-hud-meter-fill {
+  animation: tst-gameplay-hud-ready-pulse 3.8s ease-in-out infinite;
+}
+
+.tst-gameplay-hud-row.is-active .tst-gameplay-hud-title {
+  color: rgba(255, 224, 140, 0.92);
+}
+
+.tst-gameplay-hud-row-top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tst-gameplay-hud-divider {
+  position: relative;
+  z-index: 1;
+  height: 1px;
+  margin: 8px 0 7px;
+  background: linear-gradient(90deg, transparent, rgba(126, 247, 255, 0.24), rgba(255, 223, 141, 0.16), transparent);
+  opacity: 0.86;
+}
+
+.tst-gameplay-hud-title {
+  color: rgba(154, 229, 255, 0.88);
+  font-size: clamp(10px, 0.84vw, 13px);
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(126, 247, 255, 0.34);
+  white-space: nowrap;
+}
+
+.tst-gameplay-hud-value {
+  color: rgba(255, 245, 205, 0.98);
+  font-size: clamp(14px, 1.22vw, 18px);
+  font-weight: 950;
+  line-height: 1;
+  text-shadow:
+    0 0 10px rgba(255, 222, 143, 0.28),
+    0 2px 3px rgba(0, 0, 0, 0.72);
+  white-space: nowrap;
+}
+
+.tst-gameplay-hud-value.is-badge {
+  padding: 2px 8px 3px;
+  border: 1px solid rgba(255, 224, 140, 0.42);
+  border-radius: 999px;
+  color: rgba(255, 228, 158, 0.98);
+  background: rgba(14, 12, 25, 0.66);
+  font-size: clamp(10px, 0.82vw, 12px);
+  letter-spacing: 0;
+  box-shadow:
+    inset 0 0 10px rgba(255, 208, 108, 0.11),
+    0 0 10px rgba(255, 195, 86, 0.16);
+}
+
+.tst-gameplay-hud-meter {
+  position: relative;
+  z-index: 1;
+  height: 5px;
+  margin-top: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(126, 247, 255, 0.22);
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(3, 6, 14, 0.94), rgba(9, 8, 22, 0.86)),
+    repeating-linear-gradient(90deg, transparent 0 24px, rgba(255, 255, 255, 0.055) 24px 25px);
+  box-shadow:
+    inset 0 0 9px rgba(0, 0, 0, 0.75),
+    0 0 8px rgba(126, 247, 255, 0.12);
+}
+
+.tst-gameplay-hud-meter-fill {
+  display: block;
+  height: 100%;
+  min-width: 3px;
+  border-radius: inherit;
+  transition: width 180ms ease-out;
+  box-shadow:
+    0 0 8px rgba(126, 247, 255, 0.44),
+    0 0 14px rgba(135, 79, 255, 0.24);
+}
+
+.tst-gameplay-hud-meter-fill-ultimate {
+  background:
+    linear-gradient(90deg, rgba(102, 133, 255, 0.9), rgba(151, 83, 255, 0.92), rgba(255, 204, 108, 0.94)),
+    radial-gradient(circle at 100% 50%, rgba(255, 248, 214, 0.96), transparent 38%);
+}
+
+.tst-gameplay-hud-meter-fill-upgrade {
+  background:
+    linear-gradient(90deg, rgba(71, 221, 255, 0.86), rgba(128, 112, 255, 0.9), rgba(255, 224, 133, 0.9)),
+    radial-gradient(circle at 100% 50%, rgba(255, 248, 214, 0.84), transparent 38%);
+}
+
+.tst-gameplay-hud-detail {
+  position: relative;
+  z-index: 1;
+  margin: 4px 0 0;
+  color: rgba(224, 232, 255, 0.82);
+  font-size: clamp(10px, 0.82vw, 12px);
+  font-weight: 850;
+  line-height: 1.25;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.76);
+}
+
+@keyframes tst-gameplay-hud-ready-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 0.82;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tst-gameplay-hud-row.is-ready .tst-gameplay-hud-meter-fill {
+    animation: none;
+  }
+
+  .tst-gameplay-hud-meter-fill {
+    transition: none;
+  }
+}

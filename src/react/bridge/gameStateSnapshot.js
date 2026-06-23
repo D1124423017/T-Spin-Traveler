@@ -52,6 +52,26 @@ function normalizeText(value, fallback = "") {
   return value == null ? fallback : String(value);
 }
 
+function formatViewText({
+  fallback = "",
+  format,
+  key,
+  translate,
+  vars = {},
+} = {}) {
+  if (typeof format === "function") return normalizeText(format(key, vars), fallback);
+  const template = normalizeText(translate?.(key), fallback || key);
+  return template.replace(/\{(\w+)\}/g, (_, name) => (vars[name] ?? `{${name}}`));
+}
+
+function normalizePositiveInteger(value, fallback = 1) {
+  return Math.max(1, Math.round(finiteNumber(value, fallback)));
+}
+
+function normalizeNonNegativeInteger(value, fallback = 0) {
+  return Math.max(0, Math.round(finiteNumber(value, fallback)));
+}
+
 export function getReactUiSandboxOverlayKind(state = {}) {
   if (state.settingsOpen || state.pauseView === "settings") return "settings";
   if (state.currentBuildOpen) return "currentBuild";
@@ -208,6 +228,99 @@ export function createReactMainMenuSnapshotReader({
     formatActionLabel,
     now: now(),
     translate,
+  });
+}
+
+export function createReactGameplayHudSnapshot({
+  format,
+  now = 0,
+  state = {},
+  translate = (key) => key,
+  ultimateRequiredLines = 40,
+  upgradeGrowthPerTier = 4,
+} = {}) {
+  const ultimateTarget = normalizePositiveInteger(ultimateRequiredLines, 40);
+  const rawUltimateCharge = normalizeNonNegativeInteger(state.ultimateCharge);
+  const ultimateCurrent = Math.min(ultimateTarget, rawUltimateCharge);
+  const ultimateActive = Boolean(state.ultimateActive);
+  const ultimateReady = ultimateCurrent >= ultimateTarget;
+  const ultimateRemaining = Math.max(0, ultimateTarget - ultimateCurrent);
+
+  const nextUpgradeAt = normalizePositiveInteger(state.nextUpgradeAt, 8);
+  const upgradeTier = normalizeNonNegativeInteger(state.upgradeTier);
+  const tierStep = upgradeTier > 0
+    ? normalizePositiveInteger(upgradeGrowthPerTier, 4) * upgradeTier
+    : nextUpgradeAt;
+  const previousUpgradeTarget = Math.max(0, nextUpgradeAt - tierStep);
+  const upgradeTarget = Math.max(1, nextUpgradeAt - previousUpgradeTarget);
+  const rawUpgradeMeter = normalizeNonNegativeInteger(state.upgradeMeter);
+  const upgradeReady = Boolean(state.upgradeReady) || rawUpgradeMeter >= nextUpgradeAt;
+  const upgradeCurrent = upgradeReady
+    ? upgradeTarget
+    : Math.max(0, Math.min(upgradeTarget, rawUpgradeMeter - previousUpgradeTarget));
+  const upgradeRemaining = Math.max(0, upgradeTarget - upgradeCurrent);
+
+  const enabled = state.mode === "playing" && state.assetLoadingDone !== false && !state.settingsOpen;
+  const snapshot = {
+    enabled,
+    mode: normalizeText(state.mode),
+    fourWide: {
+      active: ultimateActive,
+      current: ultimateActive ? ultimateTarget : ultimateCurrent,
+      displayMode: ultimateActive ? "active" : "charge",
+      badge: ultimateActive
+        ? formatViewText({ format, key: "gameplayHudFourWideActiveBadge", translate })
+        : "",
+      detail: ultimateActive
+        ? formatViewText({ format, key: "gameplayHudFourWideActiveCompact", translate })
+        : ultimateRemaining > 0
+          ? formatViewText({ format, key: "gameplayHudFourWideRemaining", translate, vars: { lines: ultimateRemaining } })
+          : formatViewText({ format, key: "gameplayHudFourWideReady", translate }),
+      ratio: ultimateActive ? 1 : clampRatio(ultimateCurrent / ultimateTarget),
+      ready: ultimateReady,
+      remaining: ultimateActive ? 0 : ultimateRemaining,
+      target: ultimateTarget,
+      title: normalizeText(translate("gameplayHudFourWideTitle")),
+      value: ultimateActive
+        ? formatViewText({ format, key: "gameplayHudFourWideActiveBadge", translate })
+        : `${ultimateCurrent} / ${ultimateTarget}`,
+    },
+    upgrade: {
+      current: upgradeCurrent,
+      detail: upgradeReady
+        ? formatViewText({ format, key: "gameplayHudUpgradeReady", translate })
+        : formatViewText({ format, key: "gameplayHudUpgradeRemaining", translate, vars: { count: upgradeRemaining } }),
+      ratio: upgradeReady ? 1 : clampRatio(upgradeCurrent / upgradeTarget),
+      ready: upgradeReady,
+      remaining: upgradeRemaining,
+      target: upgradeTarget,
+      title: normalizeText(translate("gameplayHudUpgradeTitle")),
+      value: `${upgradeCurrent} / ${upgradeTarget}`,
+    },
+    timestamp: Math.round(finiteNumber(now)),
+    ui: {
+      canvasRelicProgressActive: !enabled,
+      reactGameplayHudActive: enabled,
+    },
+  };
+  return freezeDeep(snapshot);
+}
+
+export function createReactGameplayHudSnapshotReader({
+  format,
+  now = () => performance.now(),
+  state,
+  translate = (key) => key,
+  ultimateRequiredLines = 40,
+  upgradeGrowthPerTier = 4,
+} = {}) {
+  return () => createReactGameplayHudSnapshot({
+    format,
+    now: now(),
+    state,
+    translate,
+    ultimateRequiredLines,
+    upgradeGrowthPerTier,
   });
 }
 

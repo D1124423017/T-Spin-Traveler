@@ -347,6 +347,7 @@ import {
 import { createControlStateAdapter } from "./src/input/controlStateAdapter.js";
 import { installInputController } from "./src/input/inputController.js";
 import { createMetaScreenPointerRouter } from "./src/input/metaScreenPointerRouter.js";
+import { createReactGameplayHudController } from "./src/react/gameplayHudController.js";
 import { createReactMainMenuOverlayController } from "./src/react/mainMenuOverlayController.js";
 
 const canvas = document.getElementById("game");
@@ -592,6 +593,7 @@ let reactDebugPanelPromise = null;
 let reactDebugPanelLoadFailed = false;
 let readReactDebugSnapshot = null;
 let reactDebugIntentBridge = null;
+let reactGameplayHudController = null;
 let reactMainMenuOverlayController = null;
 
 function isReactDebugQueryEnabled(search = globalThis?.location?.search || "") {
@@ -1355,6 +1357,14 @@ function updateReactDebugPanel() {
   }
 }
 
+function isReactGameplayHudActive() {
+  return Boolean(reactGameplayHudController?.isActive?.());
+}
+
+function updateReactGameplayHud() {
+  reactGameplayHudController?.update?.();
+}
+
 function isReactMainMenuOverlayActive() {
   return Boolean(reactMainMenuOverlayController?.isActive?.());
 }
@@ -1408,6 +1418,14 @@ reactMainMenuOverlayController = createReactMainMenuOverlayController({
   state,
   translate: t,
   unlockAudio,
+});
+
+reactGameplayHudController = createReactGameplayHudController({
+  format: fmt,
+  state,
+  translate: t,
+  ultimateRequiredLines: ULTIMATE_REQUIRED_LINES,
+  upgradeGrowthPerTier: BALANCE.upgradeGrowthPerTier,
 });
 
 const {
@@ -2027,6 +2045,11 @@ const enemyPanelRenderer = createEnemyPanelRenderer({
   enemyWeaknessToken,
 });
 
+function drawPlayerRelicProgressFallback() {
+  if (isReactGameplayHudActive()) return;
+  battleHudRenderer.drawPlayerRelicProgress();
+}
+
 const {
   drawPlayer,
 } = createPlayerStageRenderer({
@@ -2051,7 +2074,7 @@ const {
   drawHeroIdleBase,
   drawHeroIdleEnergy,
   drawFallbackHeroAttackAnimation,
-  drawPlayerRelicProgress: battleHudRenderer.drawPlayerRelicProgress,
+  drawPlayerRelicProgress: drawPlayerRelicProgressFallback,
   drawSpriteAnimationFrame,
   isImageReady,
   t,
@@ -5160,6 +5183,7 @@ function update(time) {
     updateScreenNoteMode();
     updateDebugTools(time);
     updateReactDebugPanel();
+    updateReactGameplayHud();
     updateReactMainMenuOverlay();
     draw();
   } catch (error) {
@@ -6643,6 +6667,7 @@ initDomOverlayRoot({ canvasWidth: W, canvasHeight: H });
 initFeedbackLayer({ canvasWidth: W, canvasHeight: H });
 setFeedbackMode(state.mode);
 updateReactDebugPanel();
+updateReactGameplayHud();
 updateReactMainMenuOverlay();
 try {
   draw();

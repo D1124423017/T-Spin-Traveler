@@ -1,13 +1,29 @@
 import {
+  isImageReady,
+  upgradeTypeIcons,
+} from "../data/assets.js";
+import {
   clamp,
   hexToRgba,
   pointInRect,
 } from "../render/drawUtils.js";
 import { getRunRiftEnergyHudLayout } from "./hudLayout.js";
 import {
-  getTraitHudLabel as getTraitHudLabelForPanel,
   getTraitProgressStatusText as getTraitProgressStatusTextForPanel,
 } from "./traitPanel.js";
+
+const TRAIT_HUD_ICON_ASSET_BY_TAG = Object.freeze({
+  B2B: "attack",
+  "Boss Killer": "attack",
+  Burst: "attack",
+  Combo: "combo",
+  Defense: "defense",
+  Garbage: "garbage",
+  Perfect: "rift",
+  Spin: "spin",
+  Survival: "survival",
+  Utility: "rift",
+});
 
 export function createBattleHudRenderer({
   ctx,
@@ -89,20 +105,34 @@ function drawTraitListRow(trait, x, y, w, h) {
   roundedRect(x, y, w, h, 6, false, true);
   ctx.fillStyle = hexToRgba(color, active ? 0.24 : 0.08);
   roundedRect(x + 4, y + 3, 16, h - 6, 5, true, false);
-  ctx.textAlign = "center";
-  ctx.font = canvasFont("900", 10, trait.def.icon, true);
-  ctx.fillStyle = active ? color : "rgba(238,244,252,0.44)";
-  ctx.fillText(trait.def.icon, x + 12, y + 14);
-  ctx.textAlign = "left";
-  fitLabel(getTraitHudLabelForPanel(trait, { translate: t }), x + 26, y + 14, 48, 10, active ? "#f5f1e6" : "rgba(238,244,252,0.48)", 8, "800", true);
+  drawTraitHudIcon(trait, x + 2, y + 1, 20, color, active);
   ctx.textAlign = "right";
-  fitLabel(getTraitProgressStatusTextForPanel(trait, { format: fmt, getFullCount: getTraitFullCount }), x + w - 56, y + 14, 52, 10, active ? color : "rgba(238,244,252,0.44)", 7, "900", true);
+  fitLabel(getTraitProgressStatusTextForPanel(trait, { format: fmt, getFullCount: getTraitFullCount }), x + w - 6, y + 14, 78, 10, active ? color : "rgba(238,244,252,0.44)", 7, "900", true);
   if (active) {
     ctx.fillStyle = color;
     ctx.globalAlpha = trait.isFull ? 0.9 : 0.64;
     ctx.fillRect(x + w - 26, y + h - 4, Math.min(20, 6 + trait.stage * 5), 2);
   }
   ctx.restore();
+}
+
+function drawTraitHudIcon(trait, x, y, size, color, active) {
+  const iconKey = TRAIT_HUD_ICON_ASSET_BY_TAG[trait.tag] || "rift";
+  const iconImage = upgradeTypeIcons[iconKey];
+  if (isImageReady(iconImage) && typeof drawImageContain === "function") {
+    ctx.save();
+    ctx.globalAlpha *= active ? 0.96 : 0.58;
+    ctx.shadowColor = hexToRgba(color, active ? 0.42 : 0.18);
+    ctx.shadowBlur = active ? 8 : 3;
+    drawImageContain(iconImage, x, y, size, size);
+    ctx.restore();
+    return;
+  }
+
+  ctx.textAlign = "center";
+  ctx.font = canvasFont("900", 10, trait.def.icon, true);
+  ctx.fillStyle = active ? color : "rgba(238,244,252,0.44)";
+  ctx.fillText(trait.def.icon, x + size / 2, y + size - 7);
 }
 
 function getRelicProgressInfo() {

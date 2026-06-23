@@ -1,12 +1,16 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import GameplayHudOverlay from "./components/GameplayHudOverlay.js";
 import MainMenuOverlay from "./components/MainMenuOverlay.js";
 import {
   getReactDebugOverlayHost,
+  getReactGameplayHudOverlayHost,
   getReactMainMenuOverlayHost,
   registerReactDebugOverlayCleanup,
+  registerReactGameplayHudOverlayCleanup,
   registerReactMainMenuOverlayCleanup,
 } from "./domOverlayHost.js";
+import "./styles/gameplayHudOverlay.css";
 import "./styles/mainMenuOverlay.css";
 import "./styles/mainMenuAmbientOverlay.css";
 
@@ -64,6 +68,11 @@ const mainMenuSlot = createMountSlot({
   registerCleanup: registerReactMainMenuOverlayCleanup,
 });
 
+const gameplayHudSlot = createMountSlot({
+  getHost: getReactGameplayHudOverlayHost,
+  registerCleanup: registerReactGameplayHudOverlayCleanup,
+});
+
 export function mountReactDebugPanel({
   dispatchIntent,
   onUnmount,
@@ -76,6 +85,18 @@ export function mountReactDebugPanel({
         readSnapshot,
       }),
     ),
+    onUnmount,
+  );
+}
+
+export function mountReactGameplayHudOverlay({
+  onUnmount,
+  readSnapshot,
+} = {}) {
+  return gameplayHudSlot.mount(
+    React.createElement(GameplayHudOverlay, {
+      readSnapshot,
+    }),
     onUnmount,
   );
 }
