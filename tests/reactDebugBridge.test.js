@@ -19,6 +19,7 @@ import {
   createReactUiSandboxModelReader,
 } from "../src/react/bridge/reactUiSandboxModel.js";
 import { createReactMainMenuIntentHandlers } from "../src/react/bridge/mainMenuIntentHandlers.js";
+import { createReactMainMenuOverlayController } from "../src/react/mainMenuOverlayController.js";
 import { isDebugHudEnabled } from "../src/debug/debugBootstrap.js";
 
 describe("React debug POC bridge", () => {
@@ -412,5 +413,81 @@ describe("React debug POC bridge", () => {
 
     expect(handlers.activateMenuAction({ actionId: "start" })).toBe(false);
     expect(resetGame).not.toHaveBeenCalled();
+  });
+
+  it("keeps React main menu overlay wiring inside a focused controller", async () => {
+    const state = {
+      assetLoadingDone: true,
+      language: "en",
+      mainMenuSelectedIndex: 0,
+      mode: "start",
+    };
+    const mountedController = {
+      isMounted: vi.fn(() => true),
+      unmount: vi.fn(),
+    };
+    const mountReactMainMenuOverlay = vi.fn(() => mountedController);
+    const createReactMainMenuSnapshotReader = vi.fn((deps) => {
+      expect(deps.buttonFrames).toEqual({
+        primary: "/primary.png",
+        secondary: "/secondary.png",
+      });
+      expect(deps.state).toBe(state);
+      return () => ({ enabled: true, mode: state.mode });
+    });
+    const createReactMainMenuIntentBridgeMock = vi.fn(() => ({
+      dispatch: vi.fn(() => ({ ok: true })),
+    }));
+    const createReactMainMenuIntentHandlersMock = vi.fn(() => ({
+      activateMenuAction: vi.fn(() => true),
+      hoverMenuAction: vi.fn(() => true),
+    }));
+    const controller = createReactMainMenuOverlayController({
+      formatActionLabel: (action) => action.labelKey,
+      getButtonFrames: () => ({
+        primary: "/primary.png",
+        secondary: "/secondary.png",
+      }),
+      loaders: {
+        reactOverlay: () => Promise.resolve({ mountReactMainMenuOverlay }),
+        snapshotBridge: () => Promise.resolve({ createReactMainMenuSnapshotReader }),
+        intentBridge: () => Promise.resolve({
+          createReactMainMenuIntentBridge: createReactMainMenuIntentBridgeMock,
+        }),
+        mainMenuHandlers: () => Promise.resolve({
+          createReactMainMenuIntentHandlers: createReactMainMenuIntentHandlersMock,
+        }),
+      },
+      state,
+      translate: (key) => key,
+    });
+
+    expect(controller.isActive()).toBe(false);
+    await controller.load();
+    expect(mountReactMainMenuOverlay).toHaveBeenCalledOnce();
+    expect(createReactMainMenuSnapshotReader).toHaveBeenCalledOnce();
+    expect(createReactMainMenuIntentBridgeMock).toHaveBeenCalledOnce();
+    expect(controller.isActive()).toBe(true);
+    state.mode = "playing";
+    expect(controller.isActive()).toBe(false);
+  });
+
+  it("does not mount the React main menu overlay before first-paint is ready", async () => {
+    const state = {
+      assetLoadingDone: false,
+      mainMenuSelectedIndex: 0,
+      mode: "start",
+    };
+    const mountReactMainMenuOverlay = vi.fn();
+    const controller = createReactMainMenuOverlayController({
+      loaders: {
+        reactOverlay: () => Promise.resolve({ mountReactMainMenuOverlay }),
+      },
+      state,
+    });
+
+    await expect(controller.load()).resolves.toBeNull();
+    expect(mountReactMainMenuOverlay).not.toHaveBeenCalled();
+    expect(controller.isActive()).toBe(false);
   });
 });

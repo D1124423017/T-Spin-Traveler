@@ -347,6 +347,7 @@ import {
 import { createControlStateAdapter } from "./src/input/controlStateAdapter.js";
 import { installInputController } from "./src/input/inputController.js";
 import { createMetaScreenPointerRouter } from "./src/input/metaScreenPointerRouter.js";
+import { createReactMainMenuOverlayController } from "./src/react/mainMenuOverlayController.js";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -591,11 +592,7 @@ let reactDebugPanelPromise = null;
 let reactDebugPanelLoadFailed = false;
 let readReactDebugSnapshot = null;
 let reactDebugIntentBridge = null;
-let reactMainMenuController = null;
-let reactMainMenuPromise = null;
-let reactMainMenuLoadFailed = false;
-let readReactMainMenuSnapshot = null;
-let reactMainMenuIntentBridge = null;
+let reactMainMenuOverlayController = null;
 
 function isReactDebugQueryEnabled(search = globalThis?.location?.search || "") {
   try {
@@ -1358,21 +1355,8 @@ function updateReactDebugPanel() {
   }
 }
 
-function canShowReactMainMenuOverlay() {
-  return state.mode === "start" && state.assetLoadingDone !== false && !state.settingsOpen;
-}
-
 function isReactMainMenuOverlayActive() {
-  return canShowReactMainMenuOverlay()
-    && !reactMainMenuLoadFailed
-    && Boolean(reactMainMenuController?.isMounted?.());
-}
-
-function clearReactMainMenuController() {
-  reactMainMenuController = null;
-  reactMainMenuPromise = null;
-  readReactMainMenuSnapshot = null;
-  reactMainMenuIntentBridge = null;
+  return Boolean(reactMainMenuOverlayController?.isActive?.());
 }
 
 function formatReactMainMenuActionLabel(action) {
@@ -1382,64 +1366,8 @@ function formatReactMainMenuActionLabel(action) {
   });
 }
 
-function loadReactMainMenuOverlay() {
-  if (!canShowReactMainMenuOverlay()) return Promise.resolve(null);
-  if (reactMainMenuController?.isMounted?.()) return Promise.resolve(reactMainMenuController);
-  if (reactMainMenuLoadFailed) return Promise.resolve(null);
-  if (!reactMainMenuPromise) {
-    reactMainMenuPromise = Promise.all([
-      import("./src/react/reactOverlayBootstrap.js"),
-      import("./src/react/bridge/gameStateSnapshot.js"),
-      import("./src/react/bridge/uiIntentBridge.js"),
-      import("./src/react/bridge/mainMenuIntentHandlers.js"),
-    ])
-      .then(([reactOverlay, snapshotBridge, intentBridge, mainMenuHandlersBridge]) => {
-        const reactMainMenuHandlers = mainMenuHandlersBridge.createReactMainMenuIntentHandlers({
-          loadMetaProgress,
-          openEquipmentScreen,
-          playSfx,
-          resetGame,
-          setGameMode,
-          startStoryScene,
-          state,
-          unlockAudio,
-        });
-        readReactMainMenuSnapshot = snapshotBridge.createReactMainMenuSnapshotReader({
-          buttonFrames: {
-            primary: getImageAssetRecord(mainMenuPrimaryFrame)?.url,
-            secondary: getImageAssetRecord(mainMenuSecondaryFrame)?.url,
-          },
-          formatActionLabel: formatReactMainMenuActionLabel,
-          now: () => performance.now(),
-          state,
-          translate: t,
-        });
-        reactMainMenuIntentBridge = intentBridge.createReactMainMenuIntentBridge({
-          activateMenuAction: reactMainMenuHandlers.activateMenuAction,
-          hoverMenuAction: reactMainMenuHandlers.hoverMenuAction,
-          refreshSnapshot: () => readReactMainMenuSnapshot?.(),
-        });
-        reactMainMenuController = reactOverlay.mountReactMainMenuOverlay({
-          dispatchIntent: reactMainMenuIntentBridge.dispatch,
-          onUnmount: clearReactMainMenuController,
-          readSnapshot: readReactMainMenuSnapshot,
-        });
-        return reactMainMenuController;
-      })
-      .catch((error) => {
-        reactMainMenuLoadFailed = true;
-        console.error("[T-Spin Traveler] Failed to load React main menu overlay:", error);
-        return null;
-      });
-  }
-  return reactMainMenuPromise;
-}
-
 function updateReactMainMenuOverlay() {
-  if (!canShowReactMainMenuOverlay()) return;
-  if (!reactMainMenuController?.isMounted?.()) {
-    void loadReactMainMenuOverlay();
-  }
+  reactMainMenuOverlayController?.update?.();
 }
 
 const {
@@ -1463,6 +1391,23 @@ const {
   getMotionState: getEquipmentMotionState,
   showToast,
   playSfx,
+});
+
+reactMainMenuOverlayController = createReactMainMenuOverlayController({
+  formatActionLabel: formatReactMainMenuActionLabel,
+  getButtonFrames: () => ({
+    primary: getImageAssetRecord(mainMenuPrimaryFrame)?.url,
+    secondary: getImageAssetRecord(mainMenuSecondaryFrame)?.url,
+  }),
+  loadMetaProgress,
+  openEquipmentScreen,
+  playSfx,
+  resetGame,
+  setGameMode,
+  startStoryScene,
+  state,
+  translate: t,
+  unlockAudio,
 });
 
 const {
