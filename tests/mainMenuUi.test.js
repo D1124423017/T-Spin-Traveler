@@ -3,6 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { translations } from "../src/data/i18n.js";
 import { createMainMenuInputRouter } from "../src/input/mainMenuInputRouter.js";
+import {
+  MAIN_MENU_AMBIENT_PARTICLE_COUNT,
+  MAIN_MENU_AMBIENT_PARTICLE_LIMIT,
+} from "../src/react/components/MainMenuAmbientOverlay.js";
 import { MAIN_MENU_BUTTON_STYLE } from "../src/ui/menuButtonRenderer.js";
 import {
   MAIN_MENU_DIALOGUE_STYLE,
@@ -181,10 +185,13 @@ describe("main menu model and layout", () => {
     expect(menuCss).not.toContain("radial-gradient(ellipse at 16% 50%, rgba(126, 247, 255, 0.32)");
     expect(menuCss).toContain(".tst-main-menu-button-core");
     expect(menuCss).toContain("rgba(3, 5, 12, 0.78)");
-    expect(menuCss).toContain(".tst-main-menu-button.is-selected .tst-main-menu-button-glow {\n  opacity: 0.5;");
+    expect(menuCss).toContain(".tst-main-menu-button.is-selected .tst-main-menu-button-glow {\n  opacity: 0.58;");
     expect(menuCss).toContain(".tst-main-menu-button-frame-glow");
     expect(menuCss).toContain(".tst-main-menu-button.is-selected .tst-main-menu-button-frame-glow");
     expect(menuCss).toContain(".tst-main-menu-button:hover .tst-main-menu-button-glow");
+    expect(menuCss).toContain(".tst-main-menu-button.is-selected::before");
+    expect(menuCss).toContain("@keyframes tst-main-menu-button-edge-pulse");
+    expect(menuCss).toContain("@keyframes tst-main-menu-button-gem-pulse");
   });
 
   it("adds a non-interactive React ambient layer with reduced-motion support", () => {
@@ -201,11 +208,19 @@ describe("main menu model and layout", () => {
 
     expect(overlaySource).toContain("MainMenuAmbientOverlay");
     expect(ambientSource).toContain("data-tst-main-menu-ambient");
+    expect(ambientSource).toContain("data-tst-ambient-particle-count");
+    expect(ambientSource).toContain("tst-main-menu-aurora-rift");
     expect(ambientSource).toContain("tst-main-menu-ambient-rift");
     expect(ambientSource).toContain("tst-main-menu-noa-mist");
     expect(ambientSource).toContain("tst-main-menu-dust-particle");
     expect(ambientCss).toContain("pointer-events: none");
+    expect(ambientCss).toContain("@keyframes tst-main-menu-aurora-breathe");
+    expect(ambientCss).toContain(".tst-main-menu-aurora-rift-stream");
     expect(ambientCss).toContain("@media (prefers-reduced-motion: reduce)");
+    expect(MAIN_MENU_AMBIENT_PARTICLE_COUNT).toBeGreaterThanOrEqual(24);
+    expect(MAIN_MENU_AMBIENT_PARTICLE_COUNT).toBeLessThanOrEqual(
+      MAIN_MENU_AMBIENT_PARTICLE_LIMIT,
+    );
   });
 });
 

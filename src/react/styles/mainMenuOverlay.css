@@ -115,10 +115,68 @@
   isolation: isolate;
 }
 
+.tst-main-menu-button::before,
+.tst-main-menu-button::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    filter 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.tst-main-menu-button::before {
+  inset: -20% -7%;
+  z-index: -2;
+  border-radius: 999px;
+  background:
+    radial-gradient(ellipse at 4% 50%, rgba(126, 247, 255, 0.35), transparent 28%),
+    radial-gradient(ellipse at 96% 50%, rgba(160, 82, 255, 0.44), transparent 30%),
+    radial-gradient(ellipse at 50% 50%, rgba(255, 225, 142, 0.12), transparent 52%);
+  filter: blur(11px);
+  mix-blend-mode: screen;
+}
+
+.tst-main-menu-button::after {
+  inset: -7% -2%;
+  z-index: 2;
+  background:
+    radial-gradient(circle at 4% 50%, rgba(146, 246, 255, 0.55), transparent 8%),
+    radial-gradient(circle at 96% 50%, rgba(184, 98, 255, 0.58), transparent 8%),
+    radial-gradient(circle at 50% 6%, rgba(255, 229, 152, 0.18), transparent 7%),
+    radial-gradient(circle at 50% 94%, rgba(149, 92, 255, 0.2), transparent 7%);
+  filter: blur(1.6px);
+  mix-blend-mode: screen;
+}
+
 .tst-main-menu-button.is-selected {
   filter:
     drop-shadow(0 0 18px rgba(133, 78, 255, 0.58))
     drop-shadow(0 0 8px rgba(255, 220, 126, 0.34));
+}
+
+.tst-main-menu-button:hover::before,
+.tst-main-menu-button:focus-visible::before {
+  opacity: 0.34;
+}
+
+.tst-main-menu-button:hover::after,
+.tst-main-menu-button:focus-visible::after {
+  opacity: 0.38;
+}
+
+.tst-main-menu-button.is-selected::before {
+  opacity: 0.68;
+  filter: blur(13px);
+  animation: tst-main-menu-button-edge-pulse 3.9s ease-in-out infinite;
+}
+
+.tst-main-menu-button.is-selected::after {
+  opacity: 0.72;
+  filter: blur(1.8px);
+  animation: tst-main-menu-button-gem-pulse 3.9s ease-in-out infinite;
 }
 
 .tst-main-menu-button.is-disabled {
@@ -155,9 +213,9 @@
 }
 
 .tst-main-menu-button.is-selected .tst-main-menu-button-frame-glow {
-  opacity: 0.78;
-  filter: blur(6px);
-  transform: scale(1.06);
+  opacity: 0.86;
+  filter: blur(7px);
+  transform: scale(1.065);
 }
 
 .tst-main-menu-button-inner {
@@ -234,7 +292,7 @@
 .tst-main-menu-button:hover .tst-main-menu-button-inner::before,
 .tst-main-menu-button:focus-visible .tst-main-menu-button-inner::before,
 .tst-main-menu-button.is-selected .tst-main-menu-button-inner::before {
-  opacity: 0.42;
+  opacity: 0.5;
 }
 
 .tst-main-menu-button-glow {
@@ -258,7 +316,8 @@
 }
 
 .tst-main-menu-button.is-selected .tst-main-menu-button-glow {
-  opacity: 0.5;
+  opacity: 0.58;
+  animation: tst-main-menu-button-halo-pulse 4.2s ease-in-out infinite;
 }
 
 .tst-main-menu-button-label {
@@ -360,6 +419,38 @@
   }
 }
 
+@keyframes tst-main-menu-button-edge-pulse {
+  0%,
+  100% {
+    opacity: 0.48;
+    transform: scaleX(0.98) scaleY(0.96);
+  }
+  50% {
+    opacity: 0.74;
+    transform: scaleX(1.025) scaleY(1.04);
+  }
+}
+
+@keyframes tst-main-menu-button-gem-pulse {
+  0%,
+  100% {
+    opacity: 0.52;
+  }
+  50% {
+    opacity: 0.82;
+  }
+}
+
+@keyframes tst-main-menu-button-halo-pulse {
+  0%,
+  100% {
+    opacity: 0.44;
+  }
+  50% {
+    opacity: 0.64;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tst-main-menu-brand,
   .tst-main-menu-actions,
@@ -370,5 +461,11 @@
 
   .tst-main-menu-button {
     transform: none;
+  }
+
+  .tst-main-menu-button::before,
+  .tst-main-menu-button::after,
+  .tst-main-menu-button.is-selected .tst-main-menu-button-glow {
+    animation: none;
   }
 }
