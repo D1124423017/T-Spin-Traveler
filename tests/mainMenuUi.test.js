@@ -198,6 +198,33 @@ describe("main menu model and layout", () => {
     expect(menuCss).toContain("@keyframes tst-main-menu-button-gem-pulse");
   });
 
+  it("uses global rift click sparks without wrapping React menu buttons", () => {
+    const root = process.cwd();
+    const buttonSource = fs.readFileSync(
+      path.join(root, "src/react/components/MainMenuButton.js"),
+      "utf8",
+    );
+    const bootstrapSource = fs.readFileSync(
+      path.join(root, "src/react/reactOverlayBootstrap.js"),
+      "utf8",
+    );
+    const hostSource = fs.readFileSync(
+      path.join(root, "src/react/domOverlayHost.js"),
+      "utf8",
+    );
+
+    expect(buttonSource).not.toContain("RiftClickSpark");
+    expect(buttonSource).not.toContain("tst-main-menu-button-spark");
+    expect(buttonSource).toContain('onClick: () => dispatch("activateMenuAction")');
+    expect(buttonSource).toContain('onKeyDown: handleKeyDown');
+    expect(bootstrapSource).toContain("import RiftClickSpark");
+    expect(bootstrapSource).toContain("mountGlobalRiftClickSpark");
+    expect(bootstrapSource).toContain("React.createElement(RiftClickSpark)");
+    expect(bootstrapSource).toContain('./styles/riftClickSpark.css');
+    expect(hostSource).toContain("getReactGlobalClickSparkHost");
+    expect(hostSource).toContain("tst-react-global-rift-click-spark-layer");
+  });
+
   it("adds a non-interactive React ambient layer with reduced-motion support", () => {
     const root = process.cwd();
     const overlaySource = fs.readFileSync(path.join(root, "src/react/components/MainMenuOverlay.js"), "utf8");

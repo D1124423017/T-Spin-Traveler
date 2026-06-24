@@ -2,9 +2,11 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import GameplayHudOverlay from "./components/GameplayHudOverlay.js";
 import MainMenuOverlay from "./components/MainMenuOverlay.js";
+import RiftClickSpark from "./components/RiftClickSpark.js";
 import {
   getReactDebugOverlayHost,
   getReactGameplayHudOverlayHost,
+  getReactGlobalClickSparkHost,
   getReactMainMenuOverlayHost,
   registerReactDebugOverlayCleanup,
   registerReactGameplayHudOverlayCleanup,
@@ -13,8 +15,20 @@ import {
 import "./styles/gameplayHudOverlay.css";
 import "./styles/mainMenuOverlay.css";
 import "./styles/mainMenuAmbientOverlay.css";
+import "./styles/riftClickSpark.css";
 
 const ReactUiSandbox = React.lazy(() => import("./components/ReactUiSandbox.js"));
+let globalClickSparkRoot = null;
+
+export function mountGlobalRiftClickSpark() {
+  const host = getReactGlobalClickSparkHost();
+  if (!host) return null;
+  if (!globalClickSparkRoot) globalClickSparkRoot = createRoot(host);
+  globalClickSparkRoot.render(React.createElement(RiftClickSpark));
+  return {
+    isMounted: () => Boolean(globalClickSparkRoot),
+  };
+}
 
 function createMountSlot({
   getHost,
@@ -72,6 +86,8 @@ const gameplayHudSlot = createMountSlot({
   getHost: getReactGameplayHudOverlayHost,
   registerCleanup: registerReactGameplayHudOverlayCleanup,
 });
+
+mountGlobalRiftClickSpark();
 
 export function mountReactDebugPanel({
   dispatchIntent,
