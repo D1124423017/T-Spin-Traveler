@@ -2,7 +2,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "vite build",
+    "build": "vite build && npm run copy-runtime-assets",
+    "copy-runtime-assets": "node scripts/copyRuntimeAssets.mjs",
     "check": "node --check game.js",
     "test": "vitest run"
   },
