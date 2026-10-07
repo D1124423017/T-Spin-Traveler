@@ -1,3 +1,5 @@
+export const ASSET_LOADING_MAX_MS = 2600;
+
 export function getAssetLoadingSummary(assetApi = globalThis?.TST_ASSETS) {
   const summary = assetApi?.getSummary?.();
   const counts = summary?.counts || {};
@@ -15,10 +17,11 @@ export function isAssetLoadingComplete(
   {
     minMs = 0,
     maxMs = Infinity,
-    criticalReady = true,
+    criticalReady,
   } = {},
 ) {
-  if (!criticalReady) return false;
+  if (elapsedMs >= maxMs) return true;
   const loading = summary?.loading || 0;
-  return (loading === 0 && elapsedMs >= minMs) || elapsedMs >= maxMs;
+  const ready = criticalReady ?? (loading === 0);
+  return ready && elapsedMs >= minMs;
 }

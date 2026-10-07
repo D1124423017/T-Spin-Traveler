@@ -11,7 +11,7 @@ export function getAssetLoadingTransition({
   isComplete,
 } = {}) {
   const elapsed = Math.max(0, now - startedAt);
-  const criticalReady = criticalReadiness?.ready !== false;
+  const criticalReady = criticalReadiness?.ready ?? (summary?.loading || 0) === 0;
   const loadingComplete = isComplete(summary, elapsed, { minMs, maxMs, criticalReady });
   const completionStartedAt = completingAt || (loadingComplete ? now : 0);
   const completionElapsed = completionStartedAt ? Math.max(0, now - completionStartedAt) : 0;
@@ -24,6 +24,45 @@ export function getAssetLoadingTransition({
     elapsed,
     summary,
   };
+}
+
+export function createStartupAssetScheduler({
+  criticalIds = [],
+  maxWaitMs,
+  scheduleTimeout = setTimeout,
+  cancelTimeout = clearTimeout,
+} = {}) {
+  const pending = new Set(criticalIds);
+  const deferred = [];
+  let released = pending.size === 0;
+  let timeout = null;
+
+  function release() {
+    if (released) return;
+    released = true;
+    if (timeout !== null) cancelTimeout(timeout);
+    timeout = null;
+    for (const start of deferred.splice(0)) start();
+  }
+
+  function enqueue(id, start) {
+    if (!released && timeout === null && Number.isFinite(maxWaitMs)) {
+      timeout = scheduleTimeout(release, maxWaitMs);
+      timeout?.unref?.();
+    }
+    if (released || pending.has(id)) {
+      start();
+    } else {
+      deferred.push(start);
+    }
+  }
+
+  function settled(id) {
+    pending.delete(id);
+    if (pending.size === 0) release();
+  }
+
+  return { enqueue, settled };
 }
 
 export function createAssetLoadingController({

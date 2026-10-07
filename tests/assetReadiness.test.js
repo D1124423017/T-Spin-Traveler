@@ -36,11 +36,37 @@ describe("asset readiness helpers", () => {
     expect(isAssetLoadingComplete({ loading: 1 }, 2600, { minMs: 450, maxMs: 2600 })).toBe(true);
   });
 
-  it("does not let timeout bypass critical first-paint assets", () => {
+  it("waits for critical first-paint assets before the timeout", () => {
     expect(isAssetLoadingComplete(
       { loading: 1 },
+      2500,
+      { minMs: 450, maxMs: 2600, criticalReady: false },
+    )).toBe(false);
+  });
+
+  it("releases the loading screen when critical assets stall or fail", () => {
+    expect(isAssetLoadingComplete(
+      { loading: 1 },
+      2600,
+      { minMs: 450, maxMs: 2600, criticalReady: false },
+    )).toBe(true);
+    expect(isAssetLoadingComplete(
+      { loading: 0, error: 1 },
       5000,
       { minMs: 450, maxMs: 2600, criticalReady: false },
+    )).toBe(true);
+  });
+
+  it("opens the menu once critical assets are ready without waiting for optional assets", () => {
+    expect(isAssetLoadingComplete(
+      { loading: 100 },
+      450,
+      { minMs: 450, maxMs: 2600, criticalReady: true },
+    )).toBe(true);
+    expect(isAssetLoadingComplete(
+      { loading: 100 },
+      400,
+      { minMs: 450, maxMs: 2600, criticalReady: true },
     )).toBe(false);
   });
 });

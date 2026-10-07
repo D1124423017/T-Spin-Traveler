@@ -1,4 +1,14 @@
-export const ASSET_VERSION = "2026-06-21-loading-screen-countup";
+import { createStartupAssetScheduler } from "../core/assetLoadingController.js";
+import { ASSET_LOADING_MAX_MS } from "../core/assetReadiness.js";
+import { MAIN_MENU_FIRST_PAINT_REQUIRED_IMAGE_IDS } from "../core/firstPaintReadiness.js";
+
+export const ASSET_VERSION = "2026-10-07-startup-loading-fix";
+
+const criticalImageIds = new Set(MAIN_MENU_FIRST_PAINT_REQUIRED_IMAGE_IDS);
+const startupAssetScheduler = createStartupAssetScheduler({
+  criticalIds: criticalImageIds,
+  maxWaitMs: ASSET_LOADING_MAX_MS,
+});
 
 function isExternalAssetPath(path) {
   return /^(data:|blob:|https?:|file:)/.test(path);
@@ -67,19 +77,22 @@ export function registerImageAsset(id, path) {
   ASSET_REGISTRY.images.push(record);
   ASSET_REGISTRY.byImage.set(image, record);
   image.decoding = "async";
+  image.fetchPriority = criticalImageIds.has(id) ? "high" : "low";
   image.addEventListener("load", () => {
     record.status = image.naturalWidth > 0 ? "loaded" : "error";
     if (record.status === "error") {
       record.error = "Image loaded with empty dimensions.";
       warnAssetOnce(record, record.error);
     }
+    startupAssetScheduler.settled(id);
   });
   image.addEventListener("error", () => {
     record.status = "error";
     record.error = `Failed to load image: ${record.path}`;
     warnAssetOnce(record, record.error);
+    startupAssetScheduler.settled(id);
   });
-  image.src = record.url;
+  startupAssetScheduler.enqueue(id, () => { image.src = record.url; });
   return image;
 }
 
@@ -110,8 +123,10 @@ export function registerAudioAsset(id, path, options = {}) {
     record.error = `Failed to load audio: ${record.path}`;
     warnAssetOnce(record, record.error);
   });
-  audioElement.src = record.url;
-  audioElement.load();
+  startupAssetScheduler.enqueue(id, () => {
+    audioElement.src = record.url;
+    audioElement.load();
+  });
   return audioElement;
 }
 

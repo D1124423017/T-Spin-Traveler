@@ -152,6 +152,7 @@ import {
   startAscensionChallengeRun,
 } from "./src/core/ascensionChallenge.js";
 import {
+  ASSET_LOADING_MAX_MS,
   getAssetLoadingSummary,
   isAssetLoadingComplete,
 } from "./src/core/assetReadiness.js";
@@ -551,7 +552,6 @@ const LOCK_DELAY_MS = 500;
 const DAS_MS = 128;
 const ARR_MS = 28;
 const ASSET_LOADING_MIN_MS = 450;
-const ASSET_LOADING_MAX_MS = 2600;
 const ASSET_LOADING_COMPLETE_SHIMMER_MS = 320;
 const PLAYER_MAX_HP = 100;
 const ENEMY_DEFEAT_HEAL = 15;
