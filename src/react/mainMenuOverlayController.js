@@ -1,17 +1,21 @@
+import * as gameStateSnapshot from "./bridge/gameStateSnapshot.js";
+import * as uiIntentBridge from "./bridge/uiIntentBridge.js";
+import * as mainMenuIntentHandlers from "./bridge/mainMenuIntentHandlers.js";
+
 function loadReactOverlayBootstrap() {
   return import("./reactOverlayBootstrap.js");
 }
 
 function loadGameStateSnapshotBridge() {
-  return import("./bridge/gameStateSnapshot.js");
+  return Promise.resolve(gameStateSnapshot);
 }
 
 function loadUiIntentBridge() {
-  return import("./bridge/uiIntentBridge.js");
+  return Promise.resolve(uiIntentBridge);
 }
 
 function loadMainMenuIntentHandlers() {
-  return import("./bridge/mainMenuIntentHandlers.js");
+  return Promise.resolve(mainMenuIntentHandlers);
 }
 
 export function createReactMainMenuOverlayController({
