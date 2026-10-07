@@ -1,4 +1,6 @@
-export const ASSET_LOADING_MAX_MS = 2600;
+// Give complete menu art a chance to arrive on slow connections, while still
+// recovering if an image request never settles.
+export const ASSET_LOADING_MAX_MS = 15000;
 
 export function getAssetLoadingSummary(assetApi = globalThis?.TST_ASSETS) {
   const summary = assetApi?.getSummary?.();

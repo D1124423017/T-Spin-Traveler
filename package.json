@@ -1,14 +1,17 @@
 {
   "type": "module",
   "scripts": {
+    "predev": "npm run prepare-web-assets",
     "dev": "vite --host 127.0.0.1",
-    "build": "vite build && npm run copy-runtime-assets",
+    "prepare-web-assets": "node scripts/prepareWebAssets.mjs",
+    "build": "npm run prepare-web-assets && vite build && npm run copy-runtime-assets",
     "copy-runtime-assets": "node scripts/copyRuntimeAssets.mjs",
     "check": "node --check game.js",
     "test": "vitest run"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.2",
+    "sharp": "0.35.5",
     "vitest": "latest"
   },
   "dependencies": {

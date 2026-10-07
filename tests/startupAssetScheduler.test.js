@@ -45,6 +45,41 @@ describe("startup asset scheduling", () => {
     scheduler.enqueue("image", start);
     expect(start).toHaveBeenCalledOnce();
   });
+
+  it("bounds background image downloads and releases slots on success or error", () => {
+    const scheduler = createStartupAssetScheduler({ criticalIds: ["menu"], maxConcurrent: 2 });
+    const started = [];
+    for (const id of ["a", "b", "c", "d"]) scheduler.enqueue(id, () => started.push(id));
+    scheduler.settled("menu");
+    expect(started).toEqual(["a", "b"]);
+    scheduler.settled("a");
+    expect(started).toEqual(["a", "b", "c"]);
+    scheduler.settled("a");
+    expect(started).toEqual(["a", "b", "c"]);
+    scheduler.settled("b");
+    expect(started).toEqual(["a", "b", "c", "d"]);
+  });
+
+  it("keeps media from blocking background image queue slots", () => {
+    const scheduler = createStartupAssetScheduler({ criticalIds: ["menu"], maxConcurrent: 1 });
+    const started = [];
+    scheduler.enqueue("music", () => started.push("music"), { unbounded: true });
+    scheduler.enqueue("battle", () => started.push("battle"));
+    expect(started).toEqual([]);
+    scheduler.settled("menu");
+    expect(started).toEqual(["battle", "music"]);
+  });
+
+  it("loads first-battle art before story and equipment art", () => {
+    const scheduler = createStartupAssetScheduler({ criticalIds: ["menu"], maxConcurrent: 1 });
+    const started = [];
+    scheduler.enqueue("story", () => started.push("story"));
+    scheduler.enqueue("battle", () => started.push("battle"), { priority: 1 });
+    scheduler.settled("menu");
+    expect(started).toEqual(["battle"]);
+    scheduler.settled("battle");
+    expect(started).toEqual(["battle", "story"]);
+  });
 });
 
 describe("loading recovery", () => {

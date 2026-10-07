@@ -29,37 +29,58 @@ export function getAssetLoadingTransition({
 export function createStartupAssetScheduler({
   criticalIds = [],
   maxWaitMs,
+  maxConcurrent = Infinity,
   scheduleTimeout = setTimeout,
   cancelTimeout = clearTimeout,
 } = {}) {
   const pending = new Set(criticalIds);
   const deferred = [];
+  const deferredMedia = [];
+  const active = new Set();
   let released = pending.size === 0;
   let timeout = null;
+
+  function drain() {
+    if (!released) return;
+    while (deferred.length && active.size < maxConcurrent) {
+      const { id, start } = deferred.shift();
+      active.add(id);
+      start();
+    }
+  }
 
   function release() {
     if (released) return;
     released = true;
     if (timeout !== null) cancelTimeout(timeout);
     timeout = null;
-    for (const start of deferred.splice(0)) start();
+    drain();
+    for (const start of deferredMedia.splice(0)) start();
   }
 
-  function enqueue(id, start) {
+  function enqueue(id, start, { unbounded = false, priority = 0 } = {}) {
     if (!released && timeout === null && Number.isFinite(maxWaitMs)) {
       timeout = scheduleTimeout(release, maxWaitMs);
       timeout?.unref?.();
     }
-    if (released || pending.has(id)) {
+    if (pending.has(id)) {
       start();
+    } else if (unbounded) {
+      // Media manages its own range requests; don't occupy image queue slots.
+      if (released) start();
+      else deferredMedia.push(start);
     } else {
-      deferred.push(start);
+      deferred.push({ id, start, priority });
+      deferred.sort((left, right) => right.priority - left.priority);
+      drain();
     }
   }
 
   function settled(id) {
     pending.delete(id);
+    active.delete(id);
     if (pending.size === 0) release();
+    drain();
   }
 
   return { enqueue, settled };

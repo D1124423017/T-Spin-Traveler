@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceDir = path.join(rootDir, "assets");
 const targetDir = path.join(rootDir, "dist", "assets");
-const runtimeAssetDirs = new Set(["audio", "fonts", "future", "images"]);
+const runtimeAssetDirs = new Set(["audio", "fonts", "optimized"]);
 
 await mkdir(targetDir, { recursive: true });
 
@@ -19,6 +19,7 @@ for (const entry of entries) {
   await cp(sourcePath, targetPath, {
     force: true,
     recursive: true,
+    filter: (file) => !/[/\\]bgm[/\\]bgm_menu_0[1-6]\.wav$/.test(file),
   });
   copied.push(entry.name);
 }

@@ -37,7 +37,7 @@ describe("asset path resolution", () => {
 
     expect(getRuntimeAssetBasePath()).toBe("/T-Spin-Traveler/");
     expect(assetPath("assets/images/ui/menu/main-menu-home-kingdom-bg.png")).toBe(
-      `/T-Spin-Traveler/assets/images/ui/menu/main-menu-home-kingdom-bg.png?v=${ASSET_VERSION}`,
+      `/T-Spin-Traveler/assets/optimized/images/ui/menu/main-menu-home-kingdom-bg.webp?v=${ASSET_VERSION}`,
     );
   });
 
@@ -46,7 +46,7 @@ describe("asset path resolution", () => {
 
     expect(getRuntimeAssetBasePath()).toBe("/T-Spin-Traveler/");
     expect(assetPath("assets/images/ui/menu/main-menu-home-kingdom-bg.png")).toBe(
-      `/T-Spin-Traveler/assets/images/ui/menu/main-menu-home-kingdom-bg.png?v=${ASSET_VERSION}`,
+      `/T-Spin-Traveler/assets/optimized/images/ui/menu/main-menu-home-kingdom-bg.webp?v=${ASSET_VERSION}`,
     );
   });
 
@@ -55,7 +55,7 @@ describe("asset path resolution", () => {
 
     expect(getRuntimeAssetBasePath()).toBe("/");
     expect(assetPath("assets/images/ui/loading/loading-screen-royal-rift-bg.png")).toBe(
-      `/assets/images/ui/loading/loading-screen-royal-rift-bg.png?v=${ASSET_VERSION}`,
+      `/assets/optimized/images/ui/loading/loading-screen-royal-rift-bg.webp?v=${ASSET_VERSION}`,
     );
   });
 
@@ -66,5 +66,22 @@ describe("asset path resolution", () => {
       "assets/images/ui/menu/main-menu-home-kingdom-bg.png",
     );
     expect(assetPath("https://example.test/asset.png")).toBe("https://example.test/asset.png");
+  });
+
+  it("uses compressed music on hosted pages", () => {
+    setLocation({ protocol: "https:", pathname: "/" });
+    expect(assetPath("assets/audio/bgm/bgm_menu_01.wav")).toBe(
+      `/assets/audio/bgm/bgm_menu_01.mp3?v=${ASSET_VERSION}`,
+    );
+  });
+
+  it("preserves explicit preview overrides", () => {
+    setLocation({ protocol: "https:", pathname: "/" });
+    globalThis.window = { TST_ASSET_OVERRIDES: { "assets/images/custom.png": "/preview/custom.png" } };
+    try {
+      expect(assetPath("assets/images/custom.png")).toBe(`/preview/custom.png?v=${ASSET_VERSION}`);
+    } finally {
+      delete globalThis.window;
+    }
   });
 });

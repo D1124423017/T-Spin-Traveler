@@ -1,13 +1,25 @@
 import { createStartupAssetScheduler } from "../core/assetLoadingController.js";
 import { ASSET_LOADING_MAX_MS } from "../core/assetReadiness.js";
 import { MAIN_MENU_FIRST_PAINT_REQUIRED_IMAGE_IDS } from "../core/firstPaintReadiness.js";
+import { getWebAssetPath } from "./webAssetPaths.js";
 
-export const ASSET_VERSION = "2026-10-07-startup-loading-fix";
+export const ASSET_VERSION = "2026-10-07-web-assets";
 
 const criticalImageIds = new Set(MAIN_MENU_FIRST_PAINT_REQUIRED_IMAGE_IDS);
+const earlyGameplayImageIds = new Set([
+  "default-ancient-rift-background",
+  "stage-egypt-star-tomb-exterior-rift",
+  "enemy-battle-egypt-rift-scarab-scout-left",
+  "enemy-egypt-rift-scarab-attack-sheet-16",
+  "hero-line-clear-slash-sheet-16",
+  "hero-hit-sheet-16",
+  "menu-idle-meditate-sheet-16",
+  "menu-idle-star-map-listener-sheet-16",
+]);
 const startupAssetScheduler = createStartupAssetScheduler({
   criticalIds: criticalImageIds,
   maxWaitMs: ASSET_LOADING_MAX_MS,
+  maxConcurrent: 6,
 });
 
 function isExternalAssetPath(path) {
@@ -41,7 +53,8 @@ export function assetPath(path) {
   const resolvedPath = overrides[path] || path;
   const externalPath = isExternalAssetPath(resolvedPath);
   if (isFilePreview || externalPath) return resolvedPath;
-  return versionedAssetPath(joinAssetBasePath(getRuntimeAssetBasePath(), resolvedPath));
+  const webPath = overrides[path] ? resolvedPath : getWebAssetPath(resolvedPath);
+  return versionedAssetPath(joinAssetBasePath(getRuntimeAssetBasePath(), webPath));
 }
 
 export const ASSET_REGISTRY = {
@@ -92,7 +105,9 @@ export function registerImageAsset(id, path) {
     warnAssetOnce(record, record.error);
     startupAssetScheduler.settled(id);
   });
-  startupAssetScheduler.enqueue(id, () => { image.src = record.url; });
+  startupAssetScheduler.enqueue(id, () => { image.src = record.url; }, {
+    priority: earlyGameplayImageIds.has(id) ? 1 : 0,
+  });
   return image;
 }
 
@@ -108,7 +123,7 @@ export function registerAudioAsset(id, path, options = {}) {
     element: audioElement,
   };
   ASSET_REGISTRY.audio.push(record);
-  audioElement.preload = "auto";
+  audioElement.preload = path.startsWith("assets/audio/bgm/") ? "metadata" : "auto";
   audioElement.loop = Boolean(options.loop);
   const markLoaded = () => {
     if (record.status !== "error") record.status = "loaded";
@@ -126,7 +141,7 @@ export function registerAudioAsset(id, path, options = {}) {
   startupAssetScheduler.enqueue(id, () => {
     audioElement.src = record.url;
     audioElement.load();
-  });
+  }, { unbounded: true });
   return audioElement;
 }
 
